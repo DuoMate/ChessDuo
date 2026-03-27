@@ -1,0 +1,67 @@
+import { LocalGame, GameStatus } from '../localGame'
+import { Team } from '../gameState'
+
+describe('Win/Lose/Draw Detection', () => {
+  test('detects checkmate after move is applied', async () => {
+    const game = new LocalGame()
+    game.addPlayer('w1', Team.WHITE)
+    game.addPlayer('w2', Team.WHITE)
+    game.addPlayer('b1', Team.BLACK)
+    game.addPlayer('b2', Team.BLACK)
+    game.start()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+
+    game.selectMove('w1', 'Qf7#')
+    game.selectMove('w2', 'Qf7#')
+    await game.lockAndResolve()
+
+    expect(game.isGameOver()).toBe(true)
+    expect(game.getResult()).toContain('White wins by checkmate')
+    expect(game.status).toBe(GameStatus.GAME_OVER)
+  })
+
+  test('detects game over status after checkmate', async () => {
+    const game = new LocalGame()
+    game.addPlayer('w1', Team.WHITE)
+    game.addPlayer('w2', Team.WHITE)
+    game.addPlayer('b1', Team.BLACK)
+    game.addPlayer('b2', Team.BLACK)
+    game.start()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+
+    game.selectMove('w1', 'Qf7#')
+    game.selectMove('w2', 'Qf7#')
+    await game.lockAndResolve()
+
+    expect(game.status).toBe(GameStatus.GAME_OVER)
+  })
+
+  test('returns game in progress for ongoing game', () => {
+    const game = new LocalGame()
+    game.addPlayer('w1', Team.WHITE)
+    game.addPlayer('w2', Team.WHITE)
+    game.addPlayer('b1', Team.BLACK)
+    game.addPlayer('b2', Team.BLACK)
+    game.start()
+
+    expect(game.isGameOver()).toBe(false)
+    expect(game.getResult()).toBe('Game in progress')
+  })
+
+  test('returns correct winner for checkmate', async () => {
+    const game = new LocalGame()
+    game.addPlayer('w1', Team.WHITE)
+    game.addPlayer('w2', Team.WHITE)
+    game.addPlayer('b1', Team.BLACK)
+    game.addPlayer('b2', Team.BLACK)
+    game.start()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+
+    game.selectMove('w1', 'Qf7#')
+    game.selectMove('w2', 'Qf7#')
+    await game.lockAndResolve()
+
+    const result = game.getResult()
+    expect(result).toMatch(/White wins/)
+  })
+})
