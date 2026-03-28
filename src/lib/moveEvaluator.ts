@@ -17,6 +17,7 @@ export interface MoveComparison {
 
 export class MoveEvaluator {
   private stockfishReady: boolean = false
+  private stockfishWorker: Worker | null = null
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -25,7 +26,47 @@ export class MoveEvaluator {
   }
 
   private initStockfish(): void {
-    console.log('Using enhanced position-based evaluation for move accuracy')
+    if (typeof window === 'undefined') return
+    
+    try {
+      const workerCode = `
+        let stockfish = null;
+        self.onmessage = function(e) {
+          if (e.data === 'init') {
+            importScripts('/stockfish/stockfish-18-asm.js');
+            stockfish = new Stockfish();
+            stockfish.onmessage = function(msg) {
+              self.postMessage(msg);
+            };
+            self.postMessage('ready');
+          } else if (stockfish) {
+            stockfish.postMessage(e.data);
+          }
+        };
+      `
+      
+      const blob = new Blob([workerCode], { type: 'application/javascript' })
+      const workerUrl = URL.createObjectURL(blob)
+      this.stockfishWorker = new Worker(workerUrl)
+      
+      const readyHandler = (e: MessageEvent) => {
+        if (e.data === 'ready') {
+          this.stockfishReady = true
+          console.log('Stockfish loaded successfully')
+        }
+      }
+      
+      this.stockfishWorker.addEventListener('message', readyHandler)
+      this.stockfishWorker.postMessage('init')
+      
+      setTimeout(() => {
+        if (!this.stockfishReady) {
+          console.warn('Stockfish initialization timeout, using fallback evaluation')
+        }
+      }, 10000)
+    } catch (error) {
+      console.warn('Failed to load Stockfish:', error)
+    }
   }
 
   async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
@@ -131,7 +172,52 @@ export class MoveEvaluator {
       return 0
     }
 
+    if (this.stockfishReady && this.stockfishWorker) {
+      try {
+        const score = await this.evaluateWithStockfish(fen)
+        if (score !== null) {
+          return score
+        }
+      } catch {
+        // Fall back to simple evaluation
+      }
+    }
+    
     return this.simpleEvaluate(fen)
+  }
+
+  private evaluateWithStockfish(fen: string): Promise<number | null> {
+    return new Promise((resolve) => {
+      if (!this.stockfishReady || !this.stockfishWorker) {
+        resolve(null)
+        return
+      }
+
+      const timeout = setTimeout(() => {
+        resolve(null)
+      }, 3000)
+
+      const messageHandler = (e: MessageEvent) => {
+        const line = e.data
+        if (line && line.startsWith && line.startsWith('info') && line.includes('score cp')) {
+          const match = line.match(/score cp (-?\d+)/)
+          if (match) {
+            const score = parseInt(match[1], 10)
+            clearTimeout(timeout)
+            this.stockfishWorker?.removeEventListener('message', messageHandler)
+            resolve(score)
+          }
+        } else if (line && line.startsWith && line.startsWith('bestmove')) {
+          clearTimeout(timeout)
+          this.stockfishWorker?.removeEventListener('message', messageHandler)
+          resolve(null)
+        }
+      }
+
+      this.stockfishWorker!.addEventListener('message', messageHandler)
+      this.stockfishWorker!.postMessage(`position fen ${fen}`)
+      this.stockfishWorker!.postMessage('go depth 10')
+    })
   }
 
   private simpleEvaluate(fen: string): number {
