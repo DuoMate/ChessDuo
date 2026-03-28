@@ -1,4 +1,4 @@
-import { Chess, Move } from 'chess.js'
+import { Chess } from 'chess.js'
 
 export interface MoveEvaluation {
   move: string
@@ -29,22 +29,30 @@ export class MoveEvaluator {
     if (typeof window === 'undefined') return
     
     try {
-      this.stockfishWorker = new Worker('/stockfish/worker.js')
+      this.stockfishWorker = new Worker('/stockfish/stockfish.js')
       
-      const readyHandler = (e: MessageEvent) => {
-        if (e.data === 'ready') {
+      this.stockfishWorker.addEventListener('message', (e) => {
+        const msg = e.data
+        console.log('Stockfish message:', msg)
+        if (!this.stockfishReady) {
           this.stockfishReady = true
-          console.log('Stockfish loaded successfully')
+          console.log('Stockfish is ready')
         }
-      }
+      })
       
-      this.stockfishWorker.addEventListener('message', readyHandler)
+      this.stockfishWorker.addEventListener('error', (e) => {
+        console.error('Stockfish worker error:', e)
+      })
+      
+      this.stockfishWorker.postMessage('uci')
       
       setTimeout(() => {
-        if (!this.stockfishReady) {
+        if (this.stockfishReady) {
+          console.log('Stockfish initialized successfully')
+        } else {
           console.warn('Stockfish initialization timeout, using fallback evaluation')
         }
-      }, 10000)
+      }, 5000)
     } catch (error) {
       console.warn('Failed to load Stockfish:', error)
     }
@@ -180,7 +188,7 @@ export class MoveEvaluator {
 
       const messageHandler = (e: MessageEvent) => {
         const line = e.data
-        if (line && line.startsWith && line.startsWith('info') && line.includes('score cp')) {
+        if (line && typeof line === 'string' && line.startsWith('info') && line.includes('score cp')) {
           const match = line.match(/score cp (-?\d+)/)
           if (match) {
             const score = parseInt(match[1], 10)
@@ -188,7 +196,7 @@ export class MoveEvaluator {
             this.stockfishWorker?.removeEventListener('message', messageHandler)
             resolve(score)
           }
-        } else if (line && line.startsWith && line.startsWith('bestmove')) {
+        } else if (line && typeof line === 'string' && line.startsWith('bestmove')) {
           clearTimeout(timeout)
           this.stockfishWorker?.removeEventListener('message', messageHandler)
           resolve(null)
@@ -269,13 +277,13 @@ export class MoveEvaluator {
     ]
 
     const rookBonus: number[][] = [
-      [0,  0,  0,  0,  0,  0, 0, 0],
+      [0,  0,  0,  0,  0, 0, 0, 0],
       [5, 10, 10, 10, 10, 10, 10,  5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,   0,  0, -5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
       [0,  0,  0,  5,  5,  0,  0,  0]
     ]
 
