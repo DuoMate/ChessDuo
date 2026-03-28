@@ -135,7 +135,7 @@ export class LocalGame {
       console.log(`[Accuracy] BOT MOVE: ${winningMove} | Skipped`)
     }
     
-    this.gameState.resolve()
+    this.gameState.resolve(winningMove)
 
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER

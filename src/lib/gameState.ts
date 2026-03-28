@@ -122,7 +122,7 @@ export class GameState {
     }
   }
 
-  resolve(): MoveResult | null {
+  resolve(forcedWinningMove?: string): MoveResult | null {
     if (this._phase !== GamePhase.LOCKED) {
       return null
     }
@@ -137,7 +137,15 @@ export class GameState {
     let winningMove = move1
     let winner = currentPlayers[0]
 
-    if (move1 !== move2) {
+    if (forcedWinningMove) {
+      if (forcedWinningMove === move1) {
+        winner = currentPlayers[0]
+        winningMove = move1
+      } else if (forcedWinningMove === move2) {
+        winner = currentPlayers[1]
+        winningMove = move2
+      }
+    } else if (move1 !== move2) {
       const result1 = this.tryMove(move1)
       const result2 = this.tryMove(move2)
 
