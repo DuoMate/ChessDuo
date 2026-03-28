@@ -25,50 +25,7 @@ export class MoveEvaluator {
   }
 
   private initStockfish(): void {
-    if (typeof window === 'undefined' || typeof URL === 'undefined') {
-      console.warn('Stockfish requires browser environment')
-      return
-    }
-    
-    try {
-      const workerCode = `
-        let stockfish = null;
-        self.onmessage = function(e) {
-          if (e.data === 'init') {
-            importScripts('https://cdn.jsdelivr.net/npm/stockfish.js@18.0.5/stockfish-18-asm.js');
-            stockfish = Stockfish();
-            stockfish.onmessage = function(msg) {
-              self.postMessage(msg);
-            };
-            self.postMessage('ready');
-          } else if (stockfish) {
-            stockfish.postMessage(e.data);
-          }
-        };
-      `
-      
-      const blob = new Blob([workerCode], { type: 'application/javascript' })
-      const workerUrl = URL.createObjectURL(blob)
-      const worker = new Worker(workerUrl)
-      
-      const readyHandler = (e: MessageEvent) => {
-        if (e.data === 'ready') {
-          this.stockfishReady = true
-          console.log('Stockfish loaded successfully')
-        }
-      }
-      
-      worker.addEventListener('message', readyHandler)
-      worker.postMessage('init')
-      
-      setTimeout(() => {
-        if (!this.stockfishReady) {
-          console.warn('Stockfish initialization timeout, using fallback evaluation')
-        }
-      }, 5000)
-    } catch (error) {
-      console.warn('Failed to load Stockfish:', error)
-    }
+    console.log('Using enhanced position-based evaluation for move accuracy')
   }
 
   async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
