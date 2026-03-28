@@ -104,6 +104,31 @@ export class MoveEvaluator {
     }
   }
 
+  async getBestScore(fen: string): Promise<MoveEvaluation> {
+    const chess = new Chess(fen)
+    const moves = chess.moves()
+    
+    if (moves.length === 0) {
+      return { move: '', score: 0 }
+    }
+
+    let bestMove = moves[0]
+    let bestScore = -Infinity
+
+    for (const move of moves) {
+      const evalResult = await this.evaluateMove(move, fen)
+      if (evalResult.score > bestScore) {
+        bestScore = evalResult.score
+        bestMove = move
+      }
+    }
+
+    return {
+      move: bestMove,
+      score: bestScore
+    }
+  }
+
   private async getEngineScore(fen: string): Promise<number> {
     const chess = new Chess(fen)
     

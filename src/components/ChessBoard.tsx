@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Chess } from 'chess.js'
 
@@ -19,12 +19,31 @@ interface ChessBoardProps {
   lastMove?: { from: string; to: string } | null
 }
 
+const SQUARE_SIZE = 12.5
+
+function getSquarePosition(square: string, orientation: 'white' | 'black'): { left: string; top: string } {
+  const file = square.charCodeAt(0) - 97
+  const rank = parseInt(square[1]) - 1
+  
+  let left: number, top: number
+  
+  if (orientation === 'white') {
+    left = file * SQUARE_SIZE
+    top = (8 - rank) * SQUARE_SIZE
+  } else {
+    left = (7 - file) * SQUARE_SIZE
+    top = rank * SQUARE_SIZE
+  }
+  
+  return { left: `${left}%`, top: `${top}%` }
+}
+
 export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white', lastMove }: ChessBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const boardRef = useRef<Chessboard | null>(null)
   const onMoveRef = useRef(onMove)
   const fenRef = useRef(fen)
-  const prevLastMoveRef = useRef<string | null>(null)
+  const [markers, setMarkers] = useState<{ from: string; to: string } | null>(null)
 
   useEffect(() => {
     onMoveRef.current = onMove
@@ -33,6 +52,12 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
   useEffect(() => {
     fenRef.current = fen
   }, [fen])
+
+  useEffect(() => {
+    if (lastMove) {
+      setMarkers(lastMove)
+    }
+  }, [lastMove])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -54,37 +79,6 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
       boardRef.current.setPosition(fen, true)
     }
   }, [fen])
-
-  useEffect(() => {
-    if (!boardRef.current) return
-    
-    const currentMoveKey = lastMove ? `${lastMove.from}-${lastMove.to}` : null
-    
-    if (prevLastMoveRef.current !== currentMoveKey) {
-      prevLastMoveRef.current = currentMoveKey
-      
-      if (boardRef.current) {
-        const markersContainer = document.getElementById('chessboard-markers')
-        if (markersContainer) {
-          markersContainer.innerHTML = ''
-          
-          if (lastMove) {
-            const { from, to } = lastMove
-            
-            const createMarker = (square: string) => {
-              const marker = document.createElement('div')
-              marker.className = 'move-marker'
-              marker.dataset.square = square
-              markersContainer.appendChild(marker)
-            }
-            
-            createMarker(from)
-            createMarker(to)
-          }
-        }
-      }
-    }
-  }, [lastMove, fen])
 
   const checkPromotion = (from: string, to: string): PromotionPiece | null => {
     try {
@@ -167,86 +161,34 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
     }
   }, [enabled, orientation])
 
+  const currentOrientation = orientation === 'white' ? 'white' : 'black'
+
   return (
-    <div className="relative">
+    <div className="relative w-full pt-[100%]">
       <div
         ref={containerRef}
-        className="w-full h-full"
+        className="absolute inset-0"
       />
-      <style>{`
-        .move-marker {
-          position: absolute;
-          width: 12.5%;
-          height: 12.5%;
-          background: rgba(255, 215, 0, 0.4);
-          border-radius: 50%;
-          pointer-events: none;
-        }
-        .move-marker[data-square="a1"] { left: 87.5%; top: 87.5%; }
-        .move-marker[data-square="b1"] { left: 75%; top: 87.5%; }
-        .move-marker[data-square="c1"] { left: 62.5%; top: 87.5%; }
-        .move-marker[data-square="d1"] { left: 50%; top: 87.5%; }
-        .move-marker[data-square="e1"] { left: 37.5%; top: 87.5%; }
-        .move-marker[data-square="f1"] { left: 25%; top: 87.5%; }
-        .move-marker[data-square="g1"] { left: 12.5%; top: 87.5%; }
-        .move-marker[data-square="h1"] { left: 0%; top: 87.5%; }
-        .move-marker[data-square="a2"] { left: 87.5%; top: 75%; }
-        .move-marker[data-square="b2"] { left: 75%; top: 75%; }
-        .move-marker[data-square="c2"] { left: 62.5%; top: 75%; }
-        .move-marker[data-square="d2"] { left: 50%; top: 75%; }
-        .move-marker[data-square="e2"] { left: 37.5%; top: 75%; }
-        .move-marker[data-square="f2"] { left: 25%; top: 75%; }
-        .move-marker[data-square="g2"] { left: 12.5%; top: 75%; }
-        .move-marker[data-square="h2"] { left: 0%; top: 75%; }
-        .move-marker[data-square="a3"] { left: 87.5%; top: 62.5%; }
-        .move-marker[data-square="b3"] { left: 75%; top: 62.5%; }
-        .move-marker[data-square="c3"] { left: 62.5%; top: 62.5%; }
-        .move-marker[data-square="d3"] { left: 50%; top: 62.5%; }
-        .move-marker[data-square="e3"] { left: 37.5%; top: 62.5%; }
-        .move-marker[data-square="f3"] { left: 25%; top: 62.5%; }
-        .move-marker[data-square="g3"] { left: 12.5%; top: 62.5%; }
-        .move-marker[data-square="h3"] { left: 0%; top: 62.5%; }
-        .move-marker[data-square="a4"] { left: 87.5%; top: 50%; }
-        .move-marker[data-square="b4"] { left: 75%; top: 50%; }
-        .move-marker[data-square="c4"] { left: 62.5%; top: 50%; }
-        .move-marker[data-square="d4"] { left: 50%; top: 50%; }
-        .move-marker[data-square="e4"] { left: 37.5%; top: 50%; }
-        .move-marker[data-square="f4"] { left: 25%; top: 50%; }
-        .move-marker[data-square="g4"] { left: 12.5%; top: 50%; }
-        .move-marker[data-square="h4"] { left: 0%; top: 50%; }
-        .move-marker[data-square="a5"] { left: 87.5%; top: 37.5%; }
-        .move-marker[data-square="b5"] { left: 75%; top: 37.5%; }
-        .move-marker[data-square="c5"] { left: 62.5%; top: 37.5%; }
-        .move-marker[data-square="d5"] { left: 50%; top: 37.5%; }
-        .move-marker[data-square="e5"] { left: 37.5%; top: 37.5%; }
-        .move-marker[data-square="f5"] { left: 25%; top: 37.5%; }
-        .move-marker[data-square="g5"] { left: 12.5%; top: 37.5%; }
-        .move-marker[data-square="h5"] { left: 0%; top: 37.5%; }
-        .move-marker[data-square="a6"] { left: 87.5%; top: 25%; }
-        .move-marker[data-square="b6"] { left: 75%; top: 25%; }
-        .move-marker[data-square="c6"] { left: 62.5%; top: 25%; }
-        .move-marker[data-square="d6"] { left: 50%; top: 25%; }
-        .move-marker[data-square="e6"] { left: 37.5%; top: 25%; }
-        .move-marker[data-square="f6"] { left: 25%; top: 25%; }
-        .move-marker[data-square="g6"] { left: 12.5%; top: 25%; }
-        .move-marker[data-square="h6"] { left: 0%; top: 25%; }
-        .move-marker[data-square="a7"] { left: 87.5%; top: 12.5%; }
-        .move-marker[data-square="b7"] { left: 75%; top: 12.5%; }
-        .move-marker[data-square="c7"] { left: 62.5%; top: 12.5%; }
-        .move-marker[data-square="d7"] { left: 50%; top: 12.5%; }
-        .move-marker[data-square="e7"] { left: 37.5%; top: 12.5%; }
-        .move-marker[data-square="f7"] { left: 25%; top: 12.5%; }
-        .move-marker[data-square="g7"] { left: 12.5%; top: 12.5%; }
-        .move-marker[data-square="h7"] { left: 0%; top: 12.5%; }
-        .move-marker[data-square="a8"] { left: 87.5%; top: 0%; }
-        .move-marker[data-square="b8"] { left: 75%; top: 0%; }
-        .move-marker[data-square="c8"] { left: 62.5%; top: 0%; }
-        .move-marker[data-square="d8"] { left: 50%; top: 0%; }
-        .move-marker[data-square="e8"] { left: 37.5%; top: 0%; }
-        .move-marker[data-square="f8"] { left: 25%; top: 0%; }
-        .move-marker[data-square="g8"] { left: 12.5%; top: 0%; }
-        .move-marker[data-square="h8"] { left: 0%; top: 0%; }
-      `}</style>
+      {markers && (
+        <>
+          <div
+            className="absolute w-[12.5%] h-[12.5%] rounded-full pointer-events-none"
+            style={{
+              ...getSquarePosition(markers.from, currentOrientation),
+              background: 'rgba(255, 215, 0, 0.4)',
+              transform: 'translate(0%, 0%)'
+            }}
+          />
+          <div
+            className="absolute w-[12.5%] h-[12.5%] rounded-full pointer-events-none"
+            style={{
+              ...getSquarePosition(markers.to, currentOrientation),
+              background: 'rgba(255, 215, 0, 0.4)',
+              transform: 'translate(0%, 0%)'
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }

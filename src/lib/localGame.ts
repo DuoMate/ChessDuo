@@ -107,12 +107,20 @@ export class LocalGame {
       this.gameState.fen
     )
 
+    const bestScore = await this.evaluator.getBestScore(this.gameState.fen)
+    const playerScore = await this.evaluator.evaluateMove(move1, this.gameState.fen)
+    
+    let centipawnLoss = comparison.centipawnLoss
+    if (bestScore.score !== -Infinity && playerScore.score !== -Infinity) {
+      centipawnLoss = Math.abs(bestScore.score - playerScore.score)
+    }
+
     const moveParts = this.getMoveParts(move1, this.gameState.fen)
     if (moveParts) {
       this._lastMove = moveParts
     }
 
-    this.updateStats(move1 === move2, comparison.winner !== 'draw', comparison.centipawnLoss)
+    this.updateStats(move1 === move2, comparison.winner !== 'draw', centipawnLoss)
     
     this.gameState.resolve()
 
