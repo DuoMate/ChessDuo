@@ -289,3 +289,261 @@ describe('Accuracy Calculation', () => {
     expect(eval1.score).not.toBe(eval2.score)
   })
 })
+
+describe('Individual Player Accuracy Tracking', () => {
+  let game: LocalGame
+
+  beforeEach(() => {
+    game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+  })
+
+  test('initializes with player1Accuracy and player2Accuracy at 0', () => {
+    const stats = game.getStats()
+    expect(stats.player1Accuracy).toBe(0)
+    expect(stats.player2Accuracy).toBe(0)
+  })
+
+  test('initializes with lastMoveAccuracy and lastMoveAccuracyP2 at 100', () => {
+    const stats = game.getStats()
+    expect(stats.lastMoveAccuracy).toBe(100)
+    expect(stats.lastMoveAccuracyP2).toBe(100)
+  })
+
+  test('tracks different accuracies for player1 and player2 on same move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.movesPlayed).toBe(1)
+    expect(stats.player1Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player1Accuracy).toBeLessThanOrEqual(100)
+    expect(stats.player2Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player2Accuracy).toBeLessThanOrEqual(100)
+    expect(stats.lastMoveAccuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.lastMoveAccuracyP2).toBeGreaterThanOrEqual(0)
+  })
+
+  test('updates lastMoveAccuracy for both players after move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.lastMoveAccuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.lastMoveAccuracyP2).toBeGreaterThanOrEqual(0)
+    expect(stats.lastMoveAccuracy).toBeLessThanOrEqual(100)
+    expect(stats.lastMoveAccuracyP2).toBeLessThanOrEqual(100)
+  })
+
+  test('accumulates player1Accuracy over multiple moves', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.movesPlayed).toBe(2)
+    expect(stats.player1Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player1Accuracy).toBeLessThanOrEqual(100)
+  })
+
+  test('accumulates player2Accuracy over multiple moves', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.movesPlayed).toBe(2)
+    expect(stats.player2Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player2Accuracy).toBeLessThanOrEqual(100)
+  })
+})
+
+describe('Better Move Selection', () => {
+  let game: LocalGame
+
+  beforeEach(() => {
+    game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+  })
+
+  test('selects move with higher accuracy when players choose different moves', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.conflicts).toBe(1)
+  })
+
+  test('records sync rate correctly when moves are same', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.syncRate).toBe(1)
+  })
+
+  test('records sync rate correctly when moves are different', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.syncRate).toBe(0)
+  })
+
+  test('continues tracking stats over multiple turns with different moves', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    game.selectMove('player1', 'd4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.movesPlayed).toBe(3)
+    expect(stats.syncRate).toBeGreaterThan(0)
+  })
+})
+
+describe('Bot Move Skip Stats', () => {
+  let game: LocalGame
+
+  beforeEach(() => {
+    game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+  })
+
+  test('lockAndResolve with skipStatsUpdate=true does not update stats', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const statsBefore = game.getStats()
+    expect(statsBefore.movesPlayed).toBe(1)
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve(true)
+
+    const statsAfter = game.getStats()
+    expect(statsAfter.movesPlayed).toBe(1)
+  })
+
+  test('lockAndResolve with skipStatsUpdate=false updates stats', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const statsBefore = game.getStats()
+    expect(statsBefore.movesPlayed).toBe(1)
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve(false)
+
+    const statsAfter = game.getStats()
+    expect(statsAfter.movesPlayed).toBe(2)
+  })
+})
+
+describe('Move Resolution with Forced Winning Move', () => {
+  let game: LocalGame
+
+  beforeEach(() => {
+    game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+  })
+
+  test('game alternates turns correctly without forced move', async () => {
+    expect(game.currentTurn).toBe(Team.WHITE)
+
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+    expect(game.currentTurn).toBe(Team.BLACK)
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+    expect(game.currentTurn).toBe(Team.WHITE)
+  })
+
+  test('game continues after multiple moves without forced move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    game.selectMove('player1', 'd4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    expect(game.currentTurn).toBe(Team.BLACK)
+  })
+})
+
+describe('GameStats Interface Complete', () => {
+  test('GameStats has all required properties', () => {
+    const game = new LocalGame()
+    const stats = game.getStats()
+    
+    expect(stats).toHaveProperty('movesPlayed')
+    expect(stats).toHaveProperty('syncRate')
+    expect(stats).toHaveProperty('conflicts')
+    expect(stats).toHaveProperty('winningMoves')
+    expect(stats).toHaveProperty('player1Accuracy')
+    expect(stats).toHaveProperty('player2Accuracy')
+    expect(stats).toHaveProperty('lastMoveAccuracy')
+    expect(stats).toHaveProperty('lastMoveAccuracyP2')
+  })
+
+  test('GameStats values are correct types', () => {
+    const game = new LocalGame()
+    const stats = game.getStats()
+    
+    expect(typeof stats.movesPlayed).toBe('number')
+    expect(typeof stats.syncRate).toBe('number')
+    expect(typeof stats.conflicts).toBe('number')
+    expect(typeof stats.winningMoves).toBe('number')
+    expect(typeof stats.player1Accuracy).toBe('number')
+    expect(typeof stats.player2Accuracy).toBe('number')
+    expect(typeof stats.lastMoveAccuracy).toBe('number')
+    expect(typeof stats.lastMoveAccuracyP2).toBe('number')
+  })
+})
