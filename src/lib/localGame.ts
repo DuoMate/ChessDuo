@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js'
-import { GameState, GamePhase, Team, Player } from './gameState'
+import { GameState, GamePhase, Team, Player, CapturedPieces } from './gameState'
 import { MoveEvaluator } from './moveEvaluator'
 
 export enum GameStatus {
@@ -46,6 +46,10 @@ export class LocalGame {
 
   get board(): Chess {
     return this.gameState.board
+  }
+
+  getCapturedPieces(): CapturedPieces {
+    return this.gameState.capturedPieces
   }
 
   addPlayer(player: Player, team: Team): void {
@@ -141,9 +145,35 @@ export class LocalGame {
     if (board.isStalemate()) {
       return 'Draw by stalemate'
     }
+    if (board.isThreefoldRepetition()) {
+      return 'Draw by threefold repetition'
+    }
+    if (board.isInsufficientMaterial()) {
+      return 'Draw by insufficient material'
+    }
     if (board.isDraw()) {
       return 'Draw'
     }
     return 'Game in progress'
+  }
+
+  getGameOverReason(): string | null {
+    const board = this.gameState.board
+    if (board.isCheckmate()) {
+      return 'checkmate'
+    }
+    if (board.isStalemate()) {
+      return 'stalemate'
+    }
+    if (board.isThreefoldRepetition()) {
+      return 'threefoldRepetition'
+    }
+    if (board.isInsufficientMaterial()) {
+      return 'insufficientMaterial'
+    }
+    if (board.isDraw()) {
+      return 'draw'
+    }
+    return null
   }
 }

@@ -21,6 +21,11 @@ export interface MoveResult {
   team: Team
 }
 
+export interface CapturedPieces {
+  white: string[]
+  black: string[]
+}
+
 export class GameState {
   private chess: Chess
   private _phase: GamePhase
@@ -29,6 +34,8 @@ export class GameState {
   private blackPlayers: Player[]
   private selections: Map<Player, string>
   private locked: Set<Player>
+  private _capturedByWhite: string[]
+  private _capturedByBlack: string[]
 
   constructor() {
     this.chess = new Chess()
@@ -38,6 +45,8 @@ export class GameState {
     this.blackPlayers = []
     this.selections = new Map()
     this.locked = new Set()
+    this._capturedByWhite = []
+    this._capturedByBlack = []
   }
 
   get phase(): GamePhase {
@@ -54,6 +63,13 @@ export class GameState {
 
   get fen(): string {
     return this.chess.fen()
+  }
+
+  get capturedPieces(): CapturedPieces {
+    return {
+      white: [...this._capturedByWhite],
+      black: [...this._capturedByBlack]
+    }
   }
 
   getPlayers(team: Team): Player[] {
@@ -137,7 +153,10 @@ export class GameState {
       }
     }
 
-    this.chess.move(winningMove)
+    const moveResult = this.chess.move(winningMove)
+    if (moveResult && moveResult.captured) {
+      this.trackCapturedPiece(this._currentTeam, moveResult.captured)
+    }
     
     const result: MoveResult = {
       move: winningMove,
@@ -160,6 +179,15 @@ export class GameState {
       return result !== null
     } catch {
       return false
+    }
+  }
+
+  private trackCapturedPiece(team: Team, piece: string): void {
+    const lowercasePiece = piece.toLowerCase()
+    if (team === Team.WHITE) {
+      this._capturedByWhite.push(lowercasePiece)
+    } else {
+      this._capturedByBlack.push(lowercasePiece)
     }
   }
 
