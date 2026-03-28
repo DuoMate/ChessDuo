@@ -172,7 +172,7 @@ export function Game() {
     game.selectMove('player3', sanMove)
     game.selectMove('player4', sanMove)
     
-    await game.lockAndResolve()
+    await game.lockAndResolve(true)
     updateStateRef.current()
   }, [game, bot])
 

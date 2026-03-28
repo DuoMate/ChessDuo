@@ -90,7 +90,7 @@ export class LocalGame {
     return this.gameState.getSelectedMove(player)
   }
 
-  async lockAndResolve(): Promise<void> {
+  async lockAndResolve(skipStatsUpdate: boolean = false): Promise<void> {
     const currentTeam = this.gameState.currentTeam
     const players = this.gameState.getPlayers(currentTeam)
     
@@ -120,7 +120,9 @@ export class LocalGame {
       this._lastMove = moveParts
     }
 
-    this.updateStats(move1 === move2, comparison.winner !== 'draw', centipawnLoss)
+    if (!skipStatsUpdate) {
+      this.updateStats(move1 === move2, comparison.winner !== 'draw', centipawnLoss)
+    }
     
     this.gameState.resolve()
 
