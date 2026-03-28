@@ -38,6 +38,9 @@ interface GameState {
   capturedByBlack: string[]
   isBotThinking: boolean
   pendingPromotion: { from: string; to: string } | null
+  lastMove: { from: string; to: string } | null
+  moveAccuracy: number
+  totalMoves: number
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -119,11 +122,15 @@ export function Game() {
     capturedByWhite: [],
     capturedByBlack: [],
     isBotThinking: false,
-    pendingPromotion: null
+    pendingPromotion: null,
+    lastMove: null,
+    moveAccuracy: 100,
+    totalMoves: 0
   })
 
   const updateState = useCallback(() => {
     const captured = game.getCapturedPieces()
+    const stats = game.getStats()
     setGameState(prev => ({
       ...prev,
       status: game.status,
@@ -133,7 +140,10 @@ export function Game() {
       phase: game.status === GameStatus.PLAYING ? 'selecting' : 'waiting',
       capturedByWhite: captured.white,
       capturedByBlack: captured.black,
-      isMyTurn: game.currentTurn === Team.WHITE && game.status === GameStatus.PLAYING
+      isMyTurn: game.currentTurn === Team.WHITE && game.status === GameStatus.PLAYING,
+      lastMove: game.lastMove,
+      moveAccuracy: stats.lastMoveAccuracy,
+      totalMoves: stats.movesPlayed
     }))
   }, [game])
 
@@ -256,6 +266,7 @@ export function Game() {
               onMove={handleMove}
               enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
               orientation={gameState.currentTurn === Team.WHITE ? 'white' : 'black'}
+              lastMove={gameState.lastMove}
             />
           </div>
           
@@ -280,7 +291,10 @@ export function Game() {
             <div>Moves: {game.getStats().movesPlayed}</div>
             <div>Sync Rate: {Math.round(game.getStats().syncRate * 100)}%</div>
             <div>Conflicts: {game.getStats().conflicts}</div>
-            <div>Accuracy: {Math.round(game.getStats().averageAccuracy)}%</div>
+            <div>Overall Accuracy: {Math.round(game.getStats().averageAccuracy)}%</div>
+            {gameState.moveAccuracy < 100 && (
+              <div className="col-span-2 text-yellow-400">Last Move Accuracy: {gameState.moveAccuracy}%</div>
+            )}
           </div>
         </div>
       </div>

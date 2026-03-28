@@ -15,6 +15,7 @@ export interface GameStats {
   conflicts: number
   winningMoves: number
   averageAccuracy: number
+  lastMoveAccuracy: number
 }
 
 export class LocalGame {
@@ -22,6 +23,7 @@ export class LocalGame {
   private evaluator: MoveEvaluator
   private _status: GameStatus
   private stats: GameStats
+  private _lastMove: { from: string; to: string } | null = null
 
   constructor() {
     this.gameState = new GameState()
@@ -32,7 +34,8 @@ export class LocalGame {
       syncRate: 0,
       conflicts: 0,
       winningMoves: 0,
-      averageAccuracy: 0
+      averageAccuracy: 0,
+      lastMoveAccuracy: 100
     }
   }
 
@@ -46,6 +49,10 @@ export class LocalGame {
 
   get board(): Chess {
     return this.gameState.board
+  }
+
+  get lastMove(): { from: string; to: string } | null {
+    return this._lastMove
   }
 
   getCapturedPieces(): CapturedPieces {
@@ -100,6 +107,11 @@ export class LocalGame {
       this.gameState.fen
     )
 
+    const moveParts = this.getMoveParts(move1, this.gameState.fen)
+    if (moveParts) {
+      this._lastMove = moveParts
+    }
+
     this.updateStats(move1 === move2, comparison.winner !== 'draw', comparison.centipawnLoss)
     
     this.gameState.resolve()
@@ -107,6 +119,20 @@ export class LocalGame {
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
+  }
+
+  private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
+    try {
+      const chess = new Chess(fen)
+      const moves = chess.moves({ verbose: true })
+      const matchedMove = moves.find(m => m.san === move || m.san.replace(/[+#]/g, '') === move)
+      if (matchedMove) {
+        return { from: matchedMove.from, to: matchedMove.to }
+      }
+    } catch {
+      return null
+    }
+    return null
   }
 
   private updateStats(isSync: boolean, won: boolean, centipawnLoss: number): void {
@@ -125,8 +151,11 @@ export class LocalGame {
       this.stats.winningMoves++
     }
 
+    const moveAccuracy = Math.max(0, Math.min(100, 100 - (centipawnLoss / 10)))
+    this.stats.lastMoveAccuracy = Math.round(moveAccuracy)
+
     const totalAccuracy = this.stats.averageAccuracy * (this.stats.movesPlayed - 1)
-    this.stats.averageAccuracy = (totalAccuracy + Math.max(0, 100 - centipawnLoss)) / this.stats.movesPlayed
+    this.stats.averageAccuracy = (totalAccuracy + moveAccuracy) / this.stats.movesPlayed
   }
 
   getStats(): GameStats {

@@ -1,4 +1,4 @@
-import { Chess } from 'chess.js'
+import { Chess, Move } from 'chess.js'
 
 export interface MoveEvaluation {
   move: string
@@ -33,8 +33,6 @@ export class MoveEvaluator {
   }
 
   private initStockfish(): void {
-    // Stockfish WASM requires SharedArrayBuffer which needs COOP/COEP headers
-    // For now, use fallback evaluation. Can add server-side Stockfish later.
     console.warn('Stockfish requires COOP/COEP headers. Using fallback evaluation.')
   }
 
@@ -65,19 +63,19 @@ export class MoveEvaluator {
     move2: string,
     fen: string
   ): Promise<MoveComparison> {
+    const eval1 = await this.evaluateMove(move1, fen)
+    const eval2 = await this.evaluateMove(move2, fen)
+
     if (move1 === move2) {
       return {
         move1,
         move2,
-        score1: 0,
-        score2: 0,
+        score1: eval1.score,
+        score2: eval2.score,
         winner: 'draw',
         centipawnLoss: 0
       }
     }
-
-    const eval1 = await this.evaluateMove(move1, fen)
-    const eval2 = await this.evaluateMove(move2, fen)
 
     let winner: string
     if (eval1.score === -Infinity && eval2.score === -Infinity) {
@@ -173,19 +171,117 @@ export class MoveEvaluator {
     let score = 0
     const board = chess.board()
 
-    for (const row of board) {
-      for (const piece of row) {
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board[row].length; col++) {
+        const piece = board[row][col]
         if (piece) {
-          score += pieceValues[piece.color === 'w' ? piece.type : piece.type.toLowerCase()] * 
-                   (piece.color === 'w' ? 1 : -1)
+          const value = pieceValues[piece.color === 'w' ? piece.type : piece.type.toLowerCase()]
+          const multiplier = piece.color === 'w' ? 1 : -1
+          const positionBonus = this.getPositionBonus(piece, row, col)
+          score += (value + positionBonus) * multiplier
         }
       }
     }
 
     if (chess.isCheck()) {
-      score += pieceValues[chess.turn() === 'w' ? 'K' : 'k'] > 0 ? -50 : 50
+      score += chess.turn() === 'w' ? -50 : 50
     }
 
+    const mobilityScore = this.getMobilityScore(chess)
+    score += mobilityScore
+
     return score
+  }
+
+  private getPositionBonus(piece: { type: string; color: 'w' | 'b' }, row: number, col: number): number {
+    const pawnBonus: number[][] = [
+      [0,  0,  0,  0,  0,  0,  0,  0],
+      [50, 50, 50, 50, 50, 50, 50, 50],
+      [10, 10, 20, 30, 30, 20, 10, 10],
+      [5,  5, 10, 25, 25, 10,  5,  5],
+      [0,  0,  0, 20, 20,  0,  0,  0],
+      [5, -5, -10,  0,  0, -10, -5,  5],
+      [5, 10, 10, -20, -20, 10, 10,  5],
+      [0,  0,  0,  0,  0,  0,  0,  0]
+    ]
+
+    const knightBonus: number[][] = [
+      [-50, -40, -30, -30, -30, -30, -40, -50],
+      [-40, -20,  0,  0,  0,  0, -20, -40],
+      [-30,  0, 10, 15, 15, 10,  0, -30],
+      [-30,  5, 15, 20, 20, 15,  5, -30],
+      [-30,  0, 15, 20, 20, 15,  0, -30],
+      [-30,  5, 10, 15, 15, 10,  5, -30],
+      [-40, -20,  0,  5,  5,  0, -20, -40],
+      [-50, -40, -30, -30, -30, -30, -40, -50]
+    ]
+
+    const bishopBonus: number[][] = [
+      [-20, -10, -10, -10, -10, -10, -10, -20],
+      [-10,  0,  0,  0,  0,  0,  0, -10],
+      [-10,  0,  5, 10, 10,  5,  0, -10],
+      [-10,  5,  5, 10, 10,  5,  5, -10],
+      [-10,  0, 10, 10, 10, 10,  0, -10],
+      [-10, 10, 10, 10, 10, 10, 10, -10],
+      [-10,  5,  0,  0,  0,  0,  5, -10],
+      [-20, -10, -10, -10, -10, -10, -10, -20]
+    ]
+
+    const rookBonus: number[][] = [
+      [0,  0,  0,  0,  0,  0,  0,  0],
+      [5, 10, 10, 10, 10, 10, 10,  5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [0,  0,  0,  5,  5,  0,  0,  0]
+    ]
+
+    const queenBonus: number[][] = [
+      [-20, -10, -10, -5, -5, -10, -10, -20],
+      [-10,  0,  0,  0,  0,  0,  0, -10],
+      [-10,  0,  5,  5,  5,  5,  0, -10],
+      [-5,  0,  5,  5,  5,  5,  0, -5],
+      [0,  0,  5,  5,  5,  5,  0, -5],
+      [-10,  5,  5,  5,  5,  5,  0, -10],
+      [-10,  0,  5,  0,  0,  0,  0, -10],
+      [-20, -10, -10, -5, -5, -10, -10, -20]
+    ]
+
+    const kingBonus: number[][] = [
+      [-30, -40, -40, -50, -50, -40, -40, -30],
+      [-30, -40, -40, -50, -50, -40, -40, -30],
+      [-30, -40, -40, -50, -50, -40, -40, -30],
+      [-30, -40, -40, -50, -50, -40, -40, -30],
+      [-20, -30, -30, -40, -40, -30, -30, -20],
+      [-10, -20, -20, -20, -20, -20, -20, -10],
+      [20, 20,  0,  0,  0,  0, 20, 20],
+      [20, 30, 10,  0,  0, 10, 30, 20]
+    ]
+
+    const isBlack = piece.color === 'b'
+    let adjustedRow = isBlack ? row : 7 - row
+
+    switch (piece.type) {
+      case 'p': return pawnBonus[adjustedRow][col]
+      case 'n': return knightBonus[adjustedRow][col]
+      case 'b': return bishopBonus[adjustedRow][col]
+      case 'r': return rookBonus[adjustedRow][col]
+      case 'q': return queenBonus[adjustedRow][col]
+      case 'k': return kingBonus[adjustedRow][col]
+      default: return 0
+    }
+  }
+
+  private getMobilityScore(chess: Chess): number {
+    const moves = chess.moves()
+    const baseMobility = moves.length * 5
+    
+    if (chess.turn() === 'w') {
+      return baseMobility
+    } else {
+      return -baseMobility
+    }
   }
 }
