@@ -137,7 +137,7 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white' 
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-[500px] mx-auto"
+      className="w-full h-full"
     />
   )
 }
