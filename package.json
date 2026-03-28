@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
+    "precheck": "npm run lint && npm test",
     "clean": "rm -rf node_modules .next package-lock.json",
     "reinstall": "npm run clean && npm install",
     "setup": "npm install"

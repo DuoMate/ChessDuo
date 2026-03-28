@@ -32,8 +32,22 @@ npm install
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run test` | Run tests |
+| `npm run precheck` | Run lint + tests (same as pre-commit) |
 | `npm run clean` | Clean build artifacts |
 | `npm run reinstall` | Full clean reinstall |
+
+## Pre-commit Hook
+
+A pre-commit hook runs automatically before each `git commit`. It will:
+1. Run ESLint
+2. Run all tests
+
+If either fails, the commit is blocked.
+
+To run checks manually:
+```bash
+npm run precheck
+```
 
 ## Troubleshooting
 
