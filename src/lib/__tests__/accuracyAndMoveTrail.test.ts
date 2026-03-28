@@ -60,15 +60,17 @@ describe('LocalGame Accuracy Tracking', () => {
     expect(stats.lastMoveAccuracy).toBe(100)
   })
 
-  test('tracks average accuracy', async () => {
+  test('tracks average accuracy for both players', async () => {
     game.selectMove('player1', 'e4')
     game.selectMove('player2', 'e4')
     await game.lockAndResolve()
 
     const stats = game.getStats()
     expect(stats.movesPlayed).toBe(1)
-    expect(stats.averageAccuracy).toBeGreaterThanOrEqual(0)
-    expect(stats.averageAccuracy).toBeLessThanOrEqual(100)
+    expect(stats.player1Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player1Accuracy).toBeLessThanOrEqual(100)
+    expect(stats.player2Accuracy).toBeGreaterThanOrEqual(0)
+    expect(stats.player2Accuracy).toBeLessThanOrEqual(100)
   })
 
   test('tracks per-move accuracy', async () => {

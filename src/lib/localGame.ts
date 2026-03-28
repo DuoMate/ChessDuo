@@ -14,8 +14,10 @@ export interface GameStats {
   syncRate: number
   conflicts: number
   winningMoves: number
-  averageAccuracy: number
+  player1Accuracy: number
+  player2Accuracy: number
   lastMoveAccuracy: number
+  lastMoveAccuracyP2: number
 }
 
 export class LocalGame {
@@ -34,8 +36,10 @@ export class LocalGame {
       syncRate: 0,
       conflicts: 0,
       winningMoves: 0,
-      averageAccuracy: 0,
-      lastMoveAccuracy: 100
+      player1Accuracy: 0,
+      player2Accuracy: 0,
+      lastMoveAccuracy: 100,
+      lastMoveAccuracyP2: 100
     }
   }
 
@@ -98,34 +102,37 @@ export class LocalGame {
       this.gameState.lockMove(player)
     }
 
-    const move1 = this.gameState.getSelectedMove(players[0])!
-    const move2 = this.gameState.getSelectedMove(players[1])!
-
-    const comparison = await this.evaluator.compareMoves(
-      move1,
-      move2,
-      this.gameState.fen
-    )
+    const player1Move = this.gameState.getSelectedMove(players[0])!
+    const player2Move = this.gameState.getSelectedMove(players[1])!
 
     const bestScore = await this.evaluator.getBestScore(this.gameState.fen)
-    const playerScore = await this.evaluator.evaluateMove(move1, this.gameState.fen)
+    const player1Score = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
+    const player2Score = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
     
-    let centipawnLoss = comparison.centipawnLoss
-    if (bestScore.score !== -Infinity && playerScore.score !== -Infinity) {
-      centipawnLoss = Math.abs(bestScore.score - playerScore.score)
-    }
+    const player1Loss = (bestScore.score !== -Infinity && player1Score.score !== -Infinity)
+      ? Math.abs(bestScore.score - player1Score.score)
+      : Infinity
+    const player2Loss = (bestScore.score !== -Infinity && player2Score.score !== -Infinity)
+      ? Math.abs(bestScore.score - player2Score.score)
+      : Infinity
 
-    const moveParts = this.getMoveParts(move1, this.gameState.fen)
+    const player1Accuracy = Math.max(0, Math.min(100, 100 - (player1Loss / 10)))
+    const player2Accuracy = Math.max(0, Math.min(100, 100 - (player2Loss / 10)))
+
+    const winningMove = player1Loss <= player2Loss ? player1Move : player2Move
+    const isSync = player1Move === player2Move
+    const chosenLoss = player1Loss <= player2Loss ? player1Loss : player2Loss
+
+    const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
     if (moveParts) {
       this._lastMove = moveParts
     }
 
     if (!skipStatsUpdate) {
-      const accuracy = Math.max(0, Math.min(100, 100 - (centipawnLoss / 10)))
-      console.log(`[Accuracy] Move: ${move1} | Centipawn Loss: ${centipawnLoss} | Accuracy: ${accuracy}%`)
-      this.updateStats(move1 === move2, comparison.winner !== 'draw', centipawnLoss)
+      console.log(`[Accuracy] P1: ${player1Move} (${player1Accuracy}%) vs P2: ${player2Move} (${player2Accuracy}%) | Chosen: ${winningMove} (${Math.round(100 - chosenLoss / 10)}%)`)
+      this.updateStats(isSync, chosenLoss, player1Accuracy, player2Accuracy)
     } else {
-      console.log(`[Accuracy] BOT MOVE: ${move1} | Skipped`)
+      console.log(`[Accuracy] BOT MOVE: ${winningMove} | Skipped`)
     }
     
     this.gameState.resolve()
@@ -149,7 +156,7 @@ export class LocalGame {
     return null
   }
 
-  private updateStats(isSync: boolean, won: boolean, centipawnLoss: number): void {
+  private updateStats(isSync: boolean, chosenLoss: number, player1Accuracy: number, player2Accuracy: number): void {
     this.stats.movesPlayed++
     
     if (isSync) {
@@ -161,15 +168,14 @@ export class LocalGame {
       this.stats.syncRate = currentSyncMoves / this.stats.movesPlayed
     }
 
-    if (won) {
-      this.stats.winningMoves++
-    }
+    this.stats.lastMoveAccuracy = Math.round(player1Accuracy)
+    this.stats.lastMoveAccuracyP2 = Math.round(player2Accuracy)
 
-    const moveAccuracy = Math.max(0, Math.min(100, 100 - (centipawnLoss / 10)))
-    this.stats.lastMoveAccuracy = Math.round(moveAccuracy)
-
-    const totalAccuracy = this.stats.averageAccuracy * (this.stats.movesPlayed - 1)
-    this.stats.averageAccuracy = (totalAccuracy + moveAccuracy) / this.stats.movesPlayed
+    const totalP1 = this.stats.player1Accuracy * (this.stats.movesPlayed - 1)
+    this.stats.player1Accuracy = (totalP1 + player1Accuracy) / this.stats.movesPlayed
+    
+    const totalP2 = this.stats.player2Accuracy * (this.stats.movesPlayed - 1)
+    this.stats.player2Accuracy = (totalP2 + player2Accuracy) / this.stats.movesPlayed
   }
 
   getStats(): GameStats {

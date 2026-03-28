@@ -40,6 +40,7 @@ interface GameState {
   pendingPromotion: { from: string; to: string } | null
   lastMove: { from: string; to: string } | null
   moveAccuracy: number
+  moveAccuracyP2: number
   totalMoves: number
 }
 
@@ -112,6 +113,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 export function Game() {
   const [game] = useState(() => new LocalGame())
   const [bot] = useState(() => createBot({ skillLevel: 3 }))
+  const [teammateBot] = useState(() => createBot({ skillLevel: 5 }))
   const [gameState, setGameState] = useState<GameState>({
     status: GameStatus.WAITING,
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -125,6 +127,7 @@ export function Game() {
     pendingPromotion: null,
     lastMove: null,
     moveAccuracy: 100,
+    moveAccuracyP2: 100,
     totalMoves: 0
   })
 
@@ -143,6 +146,7 @@ export function Game() {
       isMyTurn: game.currentTurn === Team.WHITE && game.status === GameStatus.PLAYING,
       lastMove: game.lastMove,
       moveAccuracy: stats.lastMoveAccuracy,
+      moveAccuracyP2: stats.lastMoveAccuracyP2,
       totalMoves: stats.movesPlayed
     }))
   }, [game])
@@ -184,7 +188,14 @@ export function Game() {
       }
       
       game.selectMove('player1', sanMove)
-      game.selectMove('player2', sanMove)
+      
+      const teammateMove = teammateBot.selectMove(game.board.fen())
+      if (teammateMove) {
+        const teammateSanMove = uciToSan(teammateMove, game.board.fen(), promotion)
+        if (teammateSanMove) {
+          game.selectMove('player2', teammateSanMove)
+        }
+      }
       
       await game.lockAndResolve()
       updateStateRef.current()
@@ -201,7 +212,7 @@ export function Game() {
     } catch (e) {
       console.warn('Invalid move:', uciMove, e)
     }
-  }, [game, executeBotMove])
+  }, [game, executeBotMove, teammateBot])
 
   useEffect(() => {
     game.addPlayer('player1', Team.WHITE)
@@ -291,9 +302,10 @@ export function Game() {
             <div>Moves: {game.getStats().movesPlayed}</div>
             <div>Sync Rate: {Math.round(game.getStats().syncRate * 100)}%</div>
             <div>Conflicts: {game.getStats().conflicts}</div>
-            <div>Overall Accuracy: {Math.round(game.getStats().averageAccuracy)}%</div>
+            <div>P1 Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
+            <div>P2 Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
             {gameState.moveAccuracy < 100 && (
-              <div className="col-span-2 text-yellow-400">Last Move Accuracy: {gameState.moveAccuracy}%</div>
+              <div className="col-span-2 text-yellow-400">Last Move: P1 {gameState.moveAccuracy}% | P2 {gameState.moveAccuracyP2}%</div>
             )}
           </div>
         </div>
