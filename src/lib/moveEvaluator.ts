@@ -29,25 +29,7 @@ export class MoveEvaluator {
     if (typeof window === 'undefined') return
     
     try {
-      const workerCode = `
-        let stockfish = null;
-        self.onmessage = function(e) {
-          if (e.data === 'init') {
-            importScripts('/stockfish/stockfish-18-asm.js');
-            stockfish = new Stockfish();
-            stockfish.onmessage = function(msg) {
-              self.postMessage(msg);
-            };
-            self.postMessage('ready');
-          } else if (stockfish) {
-            stockfish.postMessage(e.data);
-          }
-        };
-      `
-      
-      const blob = new Blob([workerCode], { type: 'application/javascript' })
-      const workerUrl = URL.createObjectURL(blob)
-      this.stockfishWorker = new Worker(workerUrl)
+      this.stockfishWorker = new Worker('/stockfish/worker.js')
       
       const readyHandler = (e: MessageEvent) => {
         if (e.data === 'ready') {
@@ -57,7 +39,6 @@ export class MoveEvaluator {
       }
       
       this.stockfishWorker.addEventListener('message', readyHandler)
-      this.stockfishWorker.postMessage('init')
       
       setTimeout(() => {
         if (!this.stockfishReady) {
