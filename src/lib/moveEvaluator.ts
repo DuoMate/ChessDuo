@@ -15,16 +15,8 @@ export interface MoveComparison {
   centipawnLoss: number
 }
 
-type StockfishInstance = {
-  postMessage: (msg: string) => void
-  addMessageListener: (fn: (line: string) => void) => void
-  removeMessageListener: (fn: (line: string) => void) => void
-  terminate: () => void
-}
-
 export class MoveEvaluator {
-  private stockfish: StockfishInstance | null = null
-  private ready: boolean = false
+  private stockfishReady: boolean = false
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -33,7 +25,50 @@ export class MoveEvaluator {
   }
 
   private initStockfish(): void {
-    console.warn('Stockfish requires COOP/COEP headers. Using fallback evaluation.')
+    if (typeof window === 'undefined' || typeof URL === 'undefined') {
+      console.warn('Stockfish requires browser environment')
+      return
+    }
+    
+    try {
+      const workerCode = `
+        let stockfish = null;
+        self.onmessage = function(e) {
+          if (e.data === 'init') {
+            importScripts('https://cdn.jsdelivr.net/npm/stockfish.js@18.0.5/stockfish-18-asm.js');
+            stockfish = Stockfish();
+            stockfish.onmessage = function(msg) {
+              self.postMessage(msg);
+            };
+            self.postMessage('ready');
+          } else if (stockfish) {
+            stockfish.postMessage(e.data);
+          }
+        };
+      `
+      
+      const blob = new Blob([workerCode], { type: 'application/javascript' })
+      const workerUrl = URL.createObjectURL(blob)
+      const worker = new Worker(workerUrl)
+      
+      const readyHandler = (e: MessageEvent) => {
+        if (e.data === 'ready') {
+          this.stockfishReady = true
+          console.log('Stockfish loaded successfully')
+        }
+      }
+      
+      worker.addEventListener('message', readyHandler)
+      worker.postMessage('init')
+      
+      setTimeout(() => {
+        if (!this.stockfishReady) {
+          console.warn('Stockfish initialization timeout, using fallback evaluation')
+        }
+      }, 5000)
+    } catch (error) {
+      console.warn('Failed to load Stockfish:', error)
+    }
   }
 
   async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
@@ -139,50 +174,7 @@ export class MoveEvaluator {
       return 0
     }
 
-    if (this.stockfish && this.ready) {
-      try {
-        const score = await this.evaluateWithStockfish(fen)
-        if (score !== null) {
-          return score
-        }
-      } catch {
-        // Fall back to simple evaluation
-      }
-    }
-    
     return this.simpleEvaluate(fen)
-  }
-
-  private evaluateWithStockfish(fen: string): Promise<number | null> {
-    return new Promise((resolve) => {
-      if (!this.stockfish) {
-        resolve(null)
-        return
-      }
-
-      const timeout = setTimeout(() => {
-        resolve(null)
-      }, 2000)
-
-      let score: number | null = null
-
-      const messageHandler = (line: string) => {
-        if (line.startsWith('info') && line.includes('score cp')) {
-          const match = line.match(/score cp (-?\d+)/)
-          if (match) {
-            score = parseInt(match[1], 10)
-          }
-        } else if (line.startsWith('bestmove')) {
-          clearTimeout(timeout)
-          this.stockfish?.removeMessageListener(messageHandler)
-          resolve(score)
-        }
-      }
-
-      this.stockfish.addMessageListener(messageHandler)
-      this.stockfish.postMessage(`position fen ${fen}`)
-      this.stockfish.postMessage('go depth 10')
-    })
   }
 
   private simpleEvaluate(fen: string): number {
@@ -253,13 +245,13 @@ export class MoveEvaluator {
     ]
 
     const rookBonus: number[][] = [
-      [0,  0,  0,  0,  0,  0,  0,  0],
+      [0,  0,  0,  0,  0,  0, 0, 0],
       [5, 10, 10, 10, 10, 10, 10,  5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
       [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
+      [-5,  0,  0,  0,  0,   0,  0, -5],
       [0,  0,  0,  5,  5,  0,  0,  0]
     ]
 
