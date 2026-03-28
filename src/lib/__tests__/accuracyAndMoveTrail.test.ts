@@ -172,3 +172,118 @@ describe('GameStats Interface', () => {
     expect(game.getStats().conflicts).toBe(0)
   })
 })
+
+describe('Stockfish Integration', () => {
+  test('evaluator initializes without errors', () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    expect(() => new MoveEvaluator()).not.toThrow()
+  })
+
+  test('evaluateMove returns score for valid position', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const result = await evaluator.evaluateMove('e4', fen)
+    
+    expect(result).toHaveProperty('move', 'e4')
+    expect(result).toHaveProperty('score')
+    expect(typeof result.score).toBe('number')
+  })
+
+  test('evaluateMove returns -Infinity for invalid move', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const result = await evaluator.evaluateMove('e10', fen)
+    
+    expect(result.score).toBe(-Infinity)
+  })
+
+  test('getBestScore returns the best move from available moves', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const result = await evaluator.getBestScore(fen)
+    
+    expect(result).toHaveProperty('move')
+    expect(result).toHaveProperty('score')
+    expect(typeof result.move).toBe('string')
+    expect(result.move.length).toBeGreaterThan(0)
+  })
+
+  test('compareMoves returns correct centipawn loss for different moves', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const result = await evaluator.compareMoves('e4', 'a4', fen)
+    
+    expect(result.centipawnLoss).toBeGreaterThanOrEqual(0)
+  })
+
+  test('compareMoves returns 0 centipawn loss for same moves', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const result = await evaluator.compareMoves('e4', 'e4', fen)
+    
+    expect(result.centipawnLoss).toBe(0)
+    expect(result.winner).toBe('draw')
+  })
+})
+
+describe('Accuracy Calculation', () => {
+  test('accuracy formula: 100 - (centipawnLoss / 10) is bounded 0-100', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    
+    const result100 = await evaluator.compareMoves('e4', 'e4', fen)
+    const accuracy100 = Math.max(0, Math.min(100, 100 - (result100.centipawnLoss / 10)))
+    expect(accuracy100).toBe(100)
+    
+    const resultBad = await evaluator.compareMoves('e4', 'a4', fen)
+    const accuracyBad = Math.max(0, Math.min(100, 100 - (resultBad.centipawnLoss / 10)))
+    expect(accuracyBad).toBeLessThan(100)
+    expect(accuracyBad).toBeGreaterThanOrEqual(0)
+  })
+
+  test('lastMoveAccuracy updates after each move in game', async () => {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+
+    const stats1 = game.getStats()
+    expect(stats1.lastMoveAccuracy).toBe(100)
+
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const stats2 = game.getStats()
+    expect(stats2.movesPlayed).toBe(1)
+    expect(stats2.lastMoveAccuracy).toBeGreaterThanOrEqual(0)
+    expect(stats2.lastMoveAccuracy).toBeLessThanOrEqual(100)
+  })
+
+  test('different positions yield different evaluation scores', async () => {
+    const { MoveEvaluator } = require('../moveEvaluator')
+    const evaluator = new MoveEvaluator()
+    
+    const fen1 = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    const fen2 = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4'
+    
+    const eval1 = await evaluator.evaluateMove('e4', fen1)
+    const eval2 = await evaluator.evaluateMove('Qxf7', fen2)
+    
+    expect(eval1.score).not.toBe(eval2.score)
+  })
+})
