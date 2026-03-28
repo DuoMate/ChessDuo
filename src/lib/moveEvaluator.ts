@@ -33,28 +33,27 @@ export class MoveEvaluator {
       
       this.stockfishWorker.addEventListener('message', (e) => {
         const msg = e.data
-        console.log('Stockfish message:', msg)
         if (!this.stockfishReady) {
           this.stockfishReady = true
-          console.log('Stockfish is ready')
+          console.log('[Stockfish] Ready')
         }
       })
       
       this.stockfishWorker.addEventListener('error', (e) => {
-        console.error('Stockfish worker error:', e)
+        console.error('[Stockfish] Worker error:', e)
       })
       
       this.stockfishWorker.postMessage('uci')
       
       setTimeout(() => {
         if (this.stockfishReady) {
-          console.log('Stockfish initialized successfully')
+          console.log('[Stockfish] Initialized')
         } else {
-          console.warn('Stockfish initialization timeout, using fallback evaluation')
+          console.warn('[Stockfish] Timeout - using fallback')
         }
       }, 5000)
     } catch (error) {
-      console.warn('Failed to load Stockfish:', error)
+      console.warn('[Stockfish] Failed:', error)
     }
   }
 

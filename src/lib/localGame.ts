@@ -121,7 +121,11 @@ export class LocalGame {
     }
 
     if (!skipStatsUpdate) {
+      const accuracy = Math.max(0, Math.min(100, 100 - (centipawnLoss / 10)))
+      console.log(`[Accuracy] Move: ${move1} | Centipawn Loss: ${centipawnLoss} | Accuracy: ${accuracy}%`)
       this.updateStats(move1 === move2, comparison.winner !== 'draw', centipawnLoss)
+    } else {
+      console.log(`[Accuracy] BOT MOVE: ${move1} | Skipped`)
     }
     
     this.gameState.resolve()
