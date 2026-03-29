@@ -41,6 +41,34 @@ describe('LocalGame LastMove Tracking', () => {
     expect(firstLastMove?.to).toBe('e4')
     expect(secondLastMove?.to).toBe('e5')
   })
+
+  test('tracks correct lastMove for black player move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    expect(game.lastMove).not.toBeNull()
+    expect(game.lastMove?.from).toBe('e7')
+    expect(game.lastMove?.to).toBe('e5')
+  })
+
+  test('lastMove reflects actual move origin, not mirrored position', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+    expect(game.lastMove?.from).toBe('e2')
+    expect(game.lastMove?.to).toBe('e4')
+
+    game.selectMove('player3', 'd5')
+    game.selectMove('player4', 'd5')
+    await game.lockAndResolve()
+    expect(game.lastMove?.from).toBe('d7')
+    expect(game.lastMove?.to).toBe('d5')
+  })
 })
 
 describe('LocalGame Accuracy Tracking', () => {
@@ -531,6 +559,9 @@ describe('GameStats Interface Complete', () => {
     expect(stats).toHaveProperty('player2Accuracy')
     expect(stats).toHaveProperty('lastMoveAccuracy')
     expect(stats).toHaveProperty('lastMoveAccuracyP2')
+    expect(stats).toHaveProperty('whiteMovesPlayed')
+    expect(stats).toHaveProperty('whiteSyncRate')
+    expect(stats).toHaveProperty('whiteConflicts')
   })
 
   test('GameStats values are correct types', () => {
@@ -545,5 +576,226 @@ describe('GameStats Interface Complete', () => {
     expect(typeof stats.player2Accuracy).toBe('number')
     expect(typeof stats.lastMoveAccuracy).toBe('number')
     expect(typeof stats.lastMoveAccuracyP2).toBe('number')
+    expect(typeof stats.whiteMovesPlayed).toBe('number')
+    expect(typeof stats.whiteSyncRate).toBe('number')
+    expect(typeof stats.whiteConflicts).toBe('number')
+  })
+})
+
+describe('MoveComparison Data', () => {
+  let game: LocalGame
+
+  beforeEach(() => {
+    game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+  })
+
+  test('starts with null lastMoveComparison', () => {
+    expect(game.lastMoveComparison).toBeNull()
+  })
+
+  test('populates lastMoveComparison after move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    expect(game.lastMoveComparison).not.toBeNull()
+    expect(game.lastMoveComparison?.player1Move).toBe('e4')
+    expect(game.lastMoveComparison?.player2Move).toBe('e4')
+    expect(game.lastMoveComparison?.winningMove).toBe('e4')
+    expect(game.lastMoveComparison?.isSync).toBe(true)
+  })
+
+  test('captures different moves in lastMoveComparison', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    expect(game.lastMoveComparison).not.toBeNull()
+    expect(game.lastMoveComparison?.player1Move).toBe('e4')
+    expect(game.lastMoveComparison?.player2Move).toBe('d4')
+    expect(game.lastMoveComparison?.isSync).toBe(false)
+  })
+
+  test('includes accuracy scores in lastMoveComparison', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    expect(game.lastMoveComparison).not.toBeNull()
+    expect(typeof game.lastMoveComparison?.player1Accuracy).toBe('number')
+    expect(typeof game.lastMoveComparison?.player2Accuracy).toBe('number')
+    expect(game.lastMoveComparison?.player1Accuracy).toBeGreaterThanOrEqual(0)
+    expect(game.lastMoveComparison?.player1Accuracy).toBeLessThanOrEqual(100)
+    expect(game.lastMoveComparison?.player2Accuracy).toBeGreaterThanOrEqual(0)
+    expect(game.lastMoveComparison?.player2Accuracy).toBeLessThanOrEqual(100)
+  })
+
+  test('includes engine scores in lastMoveComparison', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    expect(game.lastMoveComparison).not.toBeNull()
+    expect(typeof game.lastMoveComparison?.player1Score).toBe('number')
+    expect(typeof game.lastMoveComparison?.player2Score).toBe('number')
+    expect(typeof game.lastMoveComparison?.bestEngineScore).toBe('number')
+  })
+
+  test('updates lastMoveComparison after each white move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+    const firstComparison = game.lastMoveComparison
+    expect(firstComparison?.winningMove).toBe('e4')
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+    const secondComparison = game.lastMoveComparison
+
+    expect(firstComparison).toBe(secondComparison)
+  })
+
+  test('includes centipawn loss in lastMoveComparison', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    expect(game.lastMoveComparison).not.toBeNull()
+    expect(typeof game.lastMoveComparison?.player1Loss).toBe('number')
+    expect(typeof game.lastMoveComparison?.player2Loss).toBe('number')
+    expect(game.lastMoveComparison?.player1Loss).toBeGreaterThanOrEqual(0)
+    expect(game.lastMoveComparison?.player2Loss).toBeGreaterThanOrEqual(0)
+  })
+
+  test('winner has lower centipawn loss', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    const winnerMove = comparison.winningMove
+    
+    if (winnerMove === comparison.player1Move) {
+      expect(comparison.player1Loss).toBeLessThanOrEqual(comparison.player2Loss)
+    } else {
+      expect(comparison.player2Loss).toBeLessThanOrEqual(comparison.player1Loss)
+    }
+  })
+
+  test('same move has identical accuracy for both players', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    expect(comparison.player1Accuracy).toBe(comparison.player2Accuracy)
+    expect(comparison.player1Loss).toBe(comparison.player2Loss)
+    expect(comparison.player1Score).toBe(comparison.player2Score)
+    expect(comparison.isSync).toBe(true)
+  })
+
+  test('different moves can have different accuracy', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    expect(comparison.isSync).toBe(false)
+  })
+
+  test('winning move is the one with lower loss', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    if (comparison.player1Loss < comparison.player2Loss) {
+      expect(comparison.winningMove).toBe(comparison.player1Move)
+    } else if (comparison.player2Loss < comparison.player1Loss) {
+      expect(comparison.winningMove).toBe(comparison.player2Move)
+    }
+  })
+
+  test('centipawn loss is non-negative', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    expect(comparison.player1Loss).toBeGreaterThanOrEqual(0)
+    expect(comparison.player2Loss).toBeGreaterThanOrEqual(0)
+  })
+
+  test('lastMoveComparison is updated after each move', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+    const firstComparison = game.lastMoveComparison
+    expect(firstComparison?.winningMove).toBe('e4')
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+    const secondComparison = game.lastMoveComparison
+
+    expect(firstComparison).toBe(secondComparison)
+    expect(firstComparison?.winningMove).toBe('e4')
+  })
+
+  test('white team stats only track white moves', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    let stats = game.getStats()
+    expect(stats.whiteMovesPlayed).toBe(1)
+    expect(stats.whiteSyncRate).toBe(1)
+    expect(stats.whiteConflicts).toBe(0)
+
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    stats = game.getStats()
+    expect(stats.whiteMovesPlayed).toBe(1)
+    expect(stats.whiteSyncRate).toBe(1)
+    expect(stats.whiteConflicts).toBe(0)
+  })
+
+  test('white team conflicts are tracked separately', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const stats = game.getStats()
+    expect(stats.whiteMovesPlayed).toBe(1)
+    expect(stats.whiteSyncRate).toBe(0)
+    expect(stats.whiteConflicts).toBe(1)
+    expect(stats.player1Accuracy).toBeGreaterThan(0)
+    expect(stats.player2Accuracy).toBeGreaterThan(0)
+  })
+
+  test('different moves should not be marked as synchronized', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    expect(comparison.isSync).toBe(false)
+  })
+
+  test('same moves should be marked as synchronized', async () => {
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+
+    const comparison = game.lastMoveComparison!
+    expect(comparison.isSync).toBe(true)
   })
 })

@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChessBoard, PromotionPiece } from './ChessBoard'
-import { LocalGame, GameStatus } from '@/lib/localGame'
+import { LocalGame, GameStatus, MoveComparison } from '@/lib/localGame'
 import { Team } from '@/lib/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/lib/chessBot'
+import { getBotConfig } from '@/lib/botConfig'
 
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string | null {
   try {
@@ -42,6 +43,7 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
+  moveComparison: MoveComparison | null
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -112,8 +114,9 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 
 export function Game() {
   const [game] = useState(() => new LocalGame())
-  const [bot] = useState(() => createBot({ skillLevel: 3 }))
-  const [teammateBot] = useState(() => createBot({ skillLevel: 5 }))
+  const botConfig = getBotConfig()
+  const [bot] = useState(() => createBot({ skillLevel: botConfig.opponentSkillLevel }))
+  const [teammateBot] = useState(() => createBot({ skillLevel: botConfig.teammateSkillLevel }))
   const [gameState, setGameState] = useState<GameState>({
     status: GameStatus.WAITING,
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -128,27 +131,39 @@ export function Game() {
     lastMove: null,
     moveAccuracy: 100,
     moveAccuracyP2: 100,
-    totalMoves: 0
+    totalMoves: 0,
+    moveComparison: null
   })
 
   const updateState = useCallback(() => {
     const captured = game.getCapturedPieces()
     const stats = game.getStats()
-    setGameState(prev => ({
-      ...prev,
-      status: game.status,
-      fen: game.board.fen(),
-      currentTurn: game.currentTurn,
-      selectedMove: game.getSelectedMove('player1'),
-      phase: game.status === GameStatus.PLAYING ? 'selecting' : 'waiting',
-      capturedByWhite: captured.white,
-      capturedByBlack: captured.black,
-      isMyTurn: game.currentTurn === Team.WHITE && game.status === GameStatus.PLAYING,
-      lastMove: game.lastMove,
-      moveAccuracy: stats.lastMoveAccuracy,
-      moveAccuracyP2: stats.lastMoveAccuracyP2,
-      totalMoves: stats.movesPlayed
-    }))
+    const currentTurn = game.currentTurn
+    
+    let comparison: MoveComparison | null = null
+    if (currentTurn === Team.WHITE) {
+      comparison = game.lastMoveComparison
+    }
+    
+    setGameState(prev => {
+      const newState = {
+        ...prev,
+        status: game.status,
+        fen: game.board.fen(),
+        currentTurn,
+        selectedMove: game.getSelectedMove('player1'),
+        phase: game.status === GameStatus.PLAYING ? 'selecting' : 'waiting',
+        capturedByWhite: captured.white,
+        capturedByBlack: captured.black,
+        isMyTurn: currentTurn === Team.WHITE && game.status === GameStatus.PLAYING,
+        lastMove: game.lastMove,
+        moveAccuracy: stats.lastMoveAccuracy,
+        moveAccuracyP2: stats.lastMoveAccuracyP2,
+        totalMoves: stats.movesPlayed,
+        moveComparison: comparison
+      }
+      return newState
+    })
   }, [game])
 
   const updateStateRef = useRef(updateState)
@@ -276,7 +291,7 @@ export function Game() {
               fen={gameState.fen}
               onMove={handleMove}
               enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
-              orientation={gameState.currentTurn === Team.WHITE ? 'white' : 'black'}
+              orientation="white"
               lastMove={gameState.lastMove}
             />
           </div>
@@ -296,17 +311,70 @@ export function Game() {
           )}
         </div>
 
-        <div className="mt-8 p-4 bg-gray-800 rounded">
-          <h2 className="font-bold mb-2">Stats</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>Moves: {game.getStats().movesPlayed}</div>
-            <div>Sync Rate: {Math.round(game.getStats().syncRate * 100)}%</div>
-            <div>Conflicts: {game.getStats().conflicts}</div>
-            <div>P1 Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
-            <div>P2 Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
-            {gameState.moveAccuracy < 100 && (
-              <div className="col-span-2 text-yellow-400">Last Move: P1 {gameState.moveAccuracy}% | P2 {gameState.moveAccuracyP2}%</div>
+        {gameState.moveComparison && gameState.currentTurn === Team.WHITE && (
+          <div className="mt-4 p-4 bg-gray-800 rounded border border-gray-600">
+            <h3 className="font-bold mb-3 text-center text-lg">Last Move Analysis</h3>
+            <div className="text-center text-sm text-gray-400 mb-3">
+              {gameState.currentTurn === Team.WHITE ? "White Team's Turn" : "Black Team's Turn"}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-gray-700'}`}>
+                <div className="text-sm text-gray-400 mb-1">
+                  {gameState.currentTurn === Team.WHITE ? "Player 1 (You)" : "Player 3 (Bot)"}
+                </div>
+                <div className="text-2xl font-bold text-white">{gameState.moveComparison.player1Move}</div>
+                <div className="text-sm">
+                  Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player1Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player1Loss)}</span>
+                </div>
+                <div className="text-lg font-bold">
+                  Accuracy: {Math.round(gameState.moveComparison.player1Accuracy)}%
+                </div>
+                {!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy && (
+                  <div className="text-xs text-green-400 mt-1">✓ Winner</div>
+                )}
+              </div>
+              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-gray-700'}`}>
+                <div className="text-sm text-gray-400 mb-1">
+                  {gameState.currentTurn === Team.WHITE ? "Player 2 (Teammate)" : "Player 4 (Bot)"}
+                </div>
+                <div className="text-2xl font-bold text-white">{gameState.moveComparison.player2Move}</div>
+                <div className="text-sm">
+                  Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player2Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player2Loss)}</span>
+                </div>
+                <div className="text-lg font-bold">
+                  Accuracy: {Math.round(gameState.moveComparison.player2Accuracy)}%
+                </div>
+                {!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy && (
+                  <div className="text-xs text-green-400 mt-1">✓ Winner</div>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 p-2 bg-blue-900/40 rounded text-center">
+              {gameState.moveComparison.isSync ? (
+                <span className="text-green-400 font-bold">Synchronized! Both chose the same move.</span>
+              ) : (
+                <span>
+                  <span className="text-white font-bold">{gameState.moveComparison.winningMove}</span>
+                  <span className="text-gray-400"> was chosen (lower centipawn loss = better)</span>
+                </span>
+              )}
+            </div>
+            {gameState.moveComparison.bestEngineMove && gameState.moveComparison.bestEngineMove !== gameState.moveComparison.winningMove && (
+              <div className="mt-2 text-center text-sm text-gray-500">
+                Engine's best: {gameState.moveComparison.bestEngineMove} (your centipawn loss vs engine: {Math.round(gameState.moveComparison.bestEngineScore - gameState.moveComparison.winningScore)})
+              </div>
             )}
+          </div>
+        )}
+
+        <div className="mt-8 p-4 bg-gray-800 rounded">
+          <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>White Moves: {game.getStats().whiteMovesPlayed}</div>
+            <div>Sync Rate: {Math.round(game.getStats().whiteSyncRate * 100)}%</div>
+            <div>Conflicts: {game.getStats().whiteConflicts}</div>
+            <div>Player 1 Avg Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
+            <div>Player 2 Avg Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
           </div>
         </div>
       </div>

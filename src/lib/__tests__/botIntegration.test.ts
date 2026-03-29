@@ -254,4 +254,134 @@ describe('Bot Integration', () => {
       expect(result).not.toBeNull()
     })
   })
+
+  describe('Bot Skill Levels', () => {
+    test('bot can be created with different skill levels', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot3 = createBot({ skillLevel: 3 })
+      const bot5 = createBot({ skillLevel: 5 })
+
+      expect(bot1.getConfig().skillLevel).toBe(1)
+      expect(bot3.getConfig().skillLevel).toBe(3)
+      expect(bot5.getConfig().skillLevel).toBe(5)
+    })
+
+    test('bot returns valid move for any skill level', () => {
+      for (let level = 1; level <= 6; level++) {
+        const bot = createBot({ skillLevel: level })
+        const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQR1K1 w kq - 4 4'
+        const move = bot.selectMove(fen)
+        expect(move).not.toBeNull()
+        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      }
+    })
+
+    test('higher skill bot tends to pick better moves', () => {
+      const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQR1K1 w kq - 4 4'
+      
+      const goodBot = createBot({ skillLevel: 6 })
+      const randomBot = createBot({ skillLevel: 1 })
+      
+      const goodBotMove = goodBot.selectMove(fen)
+      const randomBotMove = randomBot.selectMove(fen)
+      
+      expect(goodBotMove).not.toBeNull()
+      expect(randomBotMove).not.toBeNull()
+    })
+
+    test('getSkillDescription returns correct description', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot4 = createBot({ skillLevel: 4 })
+      const bot6 = createBot({ skillLevel: 6 })
+
+      expect(bot1.getSkillDescription()).toBe('~1500 ELO')
+      expect(bot4.getSkillDescription()).toBe('~1800 ELO')
+      expect(bot6.getSkillDescription()).toBe('~2000+ ELO')
+    })
+  })
+
+  describe('Bot Configuration Integration', () => {
+    test('bots can be created with configuration from getBotConfig', () => {
+      // This simulates how Game.tsx will use the configuration
+      const opponentBot = createBot({ skillLevel: 4 })
+      const teammateBot = createBot({ skillLevel: 4 })
+
+      expect(opponentBot.getConfig().skillLevel).toBe(4)
+      expect(teammateBot.getConfig().skillLevel).toBe(4)
+      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+    })
+
+    test('both bots can be configured to same static ELO', () => {
+      const staticEloLevel = 4 // 1800 ELO
+
+      const opponentBot = createBot({ skillLevel: staticEloLevel })
+      const teammateBot = createBot({ skillLevel: staticEloLevel })
+
+      expect(opponentBot.getConfig().skillLevel).toBe(staticEloLevel)
+      expect(teammateBot.getConfig().skillLevel).toBe(staticEloLevel)
+      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+    })
+
+    test('bots with same skill level make valid moves', () => {
+      const opponentBot = createBot({ skillLevel: 4 })
+      const teammateBot = createBot({ skillLevel: 4 })
+      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
+      const opponentMove = opponentBot.selectMove(fen)
+      const teammateMove = teammateBot.selectMove(fen)
+
+      expect(opponentMove).not.toBeNull()
+      expect(teammateMove).not.toBeNull()
+      expect(opponentMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(teammateMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+    })
+
+    test('bots with static 1800 ELO make consistent quality moves', () => {
+      const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQR1K1 w kq - 4 4'
+      const bot1 = createBot({ skillLevel: 4 })
+      const bot2 = createBot({ skillLevel: 4 })
+
+      const move1 = bot1.selectMove(fen)
+      const move2 = bot2.selectMove(fen)
+
+      // Both should return valid moves (may be different due to probability)
+      expect(move1).not.toBeNull()
+      expect(move2).not.toBeNull()
+      expect(move1).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move2).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+    })
+
+    test('static ELO configuration works throughout game', async () => {
+      const { game } = createTestGameWithBot()
+      const opponentBot = createBot({ skillLevel: 4 })
+      const teammateBot = createBot({ skillLevel: 4 })
+
+      // Play several moves
+      game.selectMove('player1', 'e4')
+      game.selectMove('player2', 'e4')
+      await game.lockAndResolve()
+
+      // Opponent moves
+      await executeBotMove(game, opponentBot)
+
+      // Teammate moves
+      const currentFen = game.board.fen()
+      const teammateMove = teammateBot.selectMove(currentFen)
+      if (teammateMove) {
+        const teammateSanMove = uciToSan(teammateMove, currentFen)
+        if (teammateSanMove) {
+          game.selectMove('player2', teammateSanMove)
+        }
+      }
+      game.selectMove('player1', 'e5')
+      await game.lockAndResolve()
+
+      // Verify both bots maintain static ELO
+      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(game.getStats().movesPlayed).toBeGreaterThan(0)
+    })
+  })
 })

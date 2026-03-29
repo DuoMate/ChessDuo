@@ -18,54 +18,83 @@ export interface MoveComparison {
 export class MoveEvaluator {
   private stockfishReady: boolean = false
   private stockfishWorker: Worker | null = null
+  private initPromise: Promise<boolean> | null = null
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.initStockfish()
+    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
+      this.initPromise = this.initStockfish()
     }
   }
 
-  private initStockfish(): void {
-    if (typeof window === 'undefined') return
+  private async initStockfish(): Promise<boolean> {
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') return false
     
     try {
       this.stockfishWorker = new Worker('/stockfish/stockfish.js')
       
-      this.stockfishWorker.addEventListener('message', (e) => {
-        const msg = e.data
-        if (!this.stockfishReady) {
-          this.stockfishReady = true
-          console.log('[Stockfish] Ready')
+      const readyPromise = new Promise<boolean>((resolve) => {
+        const messageHandler = (e: MessageEvent) => {
+          const msg = e.data
+          if (msg === 'uciok') {
+            this.stockfishReady = true
+            this.stockfishWorker?.removeEventListener('message', messageHandler)
+            console.log('[Stockfish] Ready')
+            resolve(true)
+          }
         }
+        this.stockfishWorker?.addEventListener('message', messageHandler)
       })
-      
+
       this.stockfishWorker.addEventListener('error', (e) => {
         console.error('[Stockfish] Worker error:', e)
       })
       
       this.stockfishWorker.postMessage('uci')
       
-      setTimeout(() => {
-        if (this.stockfishReady) {
-          console.log('[Stockfish] Initialized')
-        } else {
-          console.warn('[Stockfish] Timeout - using fallback')
-        }
-      }, 5000)
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => {
+          console.warn('[Stockfish] Timeout')
+          resolve(false)
+        }, 5000)
+      })
+
+      return Promise.race([readyPromise, timeoutPromise])
     } catch (error) {
       console.warn('[Stockfish] Failed:', error)
+      return false
     }
+  }
+
+  private async ensureStockfishReady(): Promise<boolean> {
+    if (this.stockfishReady) return true
+    if (this.initPromise) {
+      return this.initPromise
+    }
+    return false
+  }
+
+  isUsingStockfish(): boolean {
+    return this.stockfishReady
+  }
+
+  isReady(): boolean {
+    return this.stockfishReady || this.initPromise === null
   }
 
   async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
     const chess = new Chess(fen)
     
     try {
+      const turnBeforeMove = chess.turn()
       chess.move(move)
       const newFen = chess.fen()
       chess.undo()
       
-      const score = await this.getEngineScore(newFen)
+      let score = await this.getEngineScore(newFen)
+      
+      if (turnBeforeMove === 'b') {
+        score = -score
+      }
       
       return {
         move,
@@ -160,18 +189,25 @@ export class MoveEvaluator {
       return 0
     }
 
-    if (this.stockfishReady && this.stockfishWorker) {
+    const isReady = await this.ensureStockfishReady()
+    let score: number
+    if (isReady && this.stockfishWorker) {
       try {
-        const score = await this.evaluateWithStockfish(fen)
-        if (score !== null) {
-          return score
+        const stockfishScore = await this.evaluateWithStockfish(fen)
+        if (stockfishScore !== null) {
+          score = stockfishScore
+        } else {
+          score = this.simpleEvaluate(fen)
         }
-      } catch {
-        // Fall back to simple evaluation
+      } catch (error) {
+        console.warn('[Stockfish] Evaluation failed, using simple eval:', error)
+        score = this.simpleEvaluate(fen)
       }
+    } else {
+      score = this.simpleEvaluate(fen)
     }
-    
-    return this.simpleEvaluate(fen)
+
+    return score
   }
 
   private evaluateWithStockfish(fen: string): Promise<number | null> {

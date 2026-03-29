@@ -39,5 +39,41 @@ declare module 'cm-chessboard' {
     enableMoveInput(handler: (event: InputEvent) => boolean, color?: 'white' | 'black'): void
     disableMoveInput(): void
     destroy(): void
+    setOrientation(orientation: 'white' | 'black'): void
+    addMarker(type: MarkerType, square: string): void
+    removeMarkers(type?: MarkerType): void
+    getMarkers(type?: MarkerType): Marker[]
+  }
+
+  export interface MarkerType {
+    class: string
+    slice: string
+    position?: string
+  }
+
+  export interface Marker {
+    square: string
+    type: MarkerType
+  }
+}
+
+declare module 'cm-chessboard/src/extensions/markers/Markers' {
+  import { Chessboard, MarkerType } from 'cm-chessboard'
+  
+  export const MARKER_TYPE: {
+    frame: MarkerType
+    framePrimary: MarkerType
+    frameDanger: MarkerType
+    circle: MarkerType
+    circlePrimary: MarkerType
+    circleDanger: MarkerType
+    circleDangerFilled: MarkerType
+    square: MarkerType
+    dot: MarkerType
+    bevel: MarkerType
+  }
+
+  export class Markers {
+    constructor(chessboard: Chessboard, props?: object)
   }
 }

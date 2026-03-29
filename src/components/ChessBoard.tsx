@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
+import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess } from 'chess.js'
 
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
@@ -19,31 +20,12 @@ interface ChessBoardProps {
   lastMove?: { from: string; to: string } | null
 }
 
-const SQUARE_SIZE = 12.5
-
-function getSquarePosition(square: string, orientation: 'white' | 'black'): { left: string; top: string } {
-  const file = square.charCodeAt(0) - 97
-  const rank = parseInt(square[1]) - 1
-  
-  let left: number, top: number
-  
-  if (orientation === 'white') {
-    left = file * SQUARE_SIZE
-    top = (8 - rank) * SQUARE_SIZE
-  } else {
-    left = (7 - file) * SQUARE_SIZE
-    top = rank * SQUARE_SIZE
-  }
-  
-  return { left: `${left}%`, top: `${top}%` }
-}
-
 export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white', lastMove }: ChessBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const boardRef = useRef<Chessboard | null>(null)
   const onMoveRef = useRef(onMove)
   const fenRef = useRef(fen)
-  const [markers, setMarkers] = useState<{ from: string; to: string } | null>(null)
+  const lastMoveRef = useRef(lastMove)
 
   useEffect(() => {
     onMoveRef.current = onMove
@@ -54,9 +36,7 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
   }, [fen])
 
   useEffect(() => {
-    if (lastMove) {
-      setMarkers(lastMove)
-    }
+    lastMoveRef.current = lastMove
   }, [lastMove])
 
   useEffect(() => {
@@ -65,7 +45,8 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
     boardRef.current = new Chessboard(containerRef.current, {
       position: fen,
       orientation: orientation === 'white' ? COLOR.white : COLOR.black,
-      assetsUrl: '/cm-chessboard/'
+      assetsUrl: '/cm-chessboard/',
+      extensions: [{ class: Markers }]
     })
 
     return () => {
@@ -79,6 +60,23 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
       boardRef.current.setPosition(fen, true)
     }
   }, [fen])
+
+  useEffect(() => {
+    if (boardRef.current) {
+      boardRef.current.setOrientation(orientation === 'white' ? COLOR.white : COLOR.black)
+    }
+  }, [orientation])
+
+  useEffect(() => {
+    if (!boardRef.current) return
+
+    boardRef.current.removeMarkers()
+
+    if (lastMove) {
+      boardRef.current.addMarker(MARKER_TYPE.dot, lastMove.from)
+      boardRef.current.addMarker(MARKER_TYPE.dot, lastMove.to)
+    }
+  }, [lastMove])
 
   const checkPromotion = (from: string, to: string): PromotionPiece | null => {
     try {
@@ -161,34 +159,12 @@ export function ChessBoard({ fen, onMove, enabled = true, orientation = 'white',
     }
   }, [enabled, orientation])
 
-  const currentOrientation = orientation === 'white' ? 'white' : 'black'
-
   return (
     <div className="relative w-full pt-[100%]">
       <div
         ref={containerRef}
         className="absolute inset-0"
       />
-      {markers && (
-        <>
-          <div
-            className="absolute w-[12.5%] h-[12.5%] rounded-full pointer-events-none"
-            style={{
-              ...getSquarePosition(markers.from, currentOrientation),
-              background: 'rgba(255, 215, 0, 0.4)',
-              transform: 'translate(0%, 0%)'
-            }}
-          />
-          <div
-            className="absolute w-[12.5%] h-[12.5%] rounded-full pointer-events-none"
-            style={{
-              ...getSquarePosition(markers.to, currentOrientation),
-              background: 'rgba(255, 215, 0, 0.4)',
-              transform: 'translate(0%, 0%)'
-            }}
-          />
-        </>
-      )}
     </div>
   )
 }

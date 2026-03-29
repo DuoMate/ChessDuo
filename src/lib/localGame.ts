@@ -18,6 +18,25 @@ export interface GameStats {
   player2Accuracy: number
   lastMoveAccuracy: number
   lastMoveAccuracyP2: number
+  whiteMovesPlayed: number
+  whiteSyncRate: number
+  whiteConflicts: number
+}
+
+export interface MoveComparison {
+  player1Move: string
+  player2Move: string
+  player1Score: number
+  player2Score: number
+  player1Accuracy: number
+  player2Accuracy: number
+  player1Loss: number
+  player2Loss: number
+  winningMove: string
+  winningScore: number
+  isSync: boolean
+  bestEngineMove: string
+  bestEngineScore: number
 }
 
 export class LocalGame {
@@ -26,6 +45,7 @@ export class LocalGame {
   private _status: GameStatus
   private stats: GameStats
   private _lastMove: { from: string; to: string } | null = null
+  private _lastMoveComparison: MoveComparison | null = null
 
   constructor() {
     this.gameState = new GameState()
@@ -39,7 +59,10 @@ export class LocalGame {
       player1Accuracy: 0,
       player2Accuracy: 0,
       lastMoveAccuracy: 100,
-      lastMoveAccuracyP2: 100
+      lastMoveAccuracyP2: 100,
+      whiteMovesPlayed: 0,
+      whiteSyncRate: 0,
+      whiteConflicts: 0
     }
   }
 
@@ -57,6 +80,10 @@ export class LocalGame {
 
   get lastMove(): { from: string; to: string } | null {
     return this._lastMove
+  }
+
+  get lastMoveComparison(): MoveComparison | null {
+    return this._lastMoveComparison
   }
 
   getCapturedPieces(): CapturedPieces {
@@ -105,9 +132,16 @@ export class LocalGame {
     const player1Move = this.gameState.getSelectedMove(players[0])!
     const player2Move = this.gameState.getSelectedMove(players[1])!
 
+    const isSync = player1Move === player2Move
+
     const bestScore = await this.evaluator.getBestScore(this.gameState.fen)
-    const player1Score = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
-    const player2Score = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
+    
+    let player1Score = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
+    let player2Score = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
+
+    if (isSync) {
+      player2Score = { ...player1Score }
+    }
     
     const player1Loss = (bestScore.score !== -Infinity && player1Score.score !== -Infinity)
       ? Math.abs(bestScore.score - player1Score.score)
@@ -120,7 +154,7 @@ export class LocalGame {
     const player2Accuracy = Math.max(0, Math.min(100, 100 - (player2Loss / 10)))
 
     const winningMove = player1Loss <= player2Loss ? player1Move : player2Move
-    const isSync = player1Move === player2Move
+    const winningScore = player1Loss <= player2Loss ? player1Score.score : player2Score.score
     const chosenLoss = player1Loss <= player2Loss ? player1Loss : player2Loss
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -128,11 +162,26 @@ export class LocalGame {
       this._lastMove = moveParts
     }
 
+    if (currentTeam === Team.WHITE) {
+      this._lastMoveComparison = {
+        player1Move,
+        player2Move,
+        player1Score: player1Score.score,
+        player2Score: player2Score.score,
+        player1Accuracy,
+        player2Accuracy,
+        player1Loss,
+        player2Loss,
+        winningMove,
+        winningScore,
+        isSync,
+        bestEngineMove: bestScore.move,
+        bestEngineScore: bestScore.score
+      }
+    }
+
     if (!skipStatsUpdate) {
-      console.log(`[Accuracy] P1: ${player1Move} (${player1Accuracy}%) vs P2: ${player2Move} (${player2Accuracy}%) | Chosen: ${winningMove} (${Math.round(100 - chosenLoss / 10)}%)`)
       this.updateStats(isSync, chosenLoss, player1Accuracy, player2Accuracy)
-    } else {
-      console.log(`[Accuracy] BOT MOVE: ${winningMove} | Skipped`)
     }
     
     this.gameState.resolve(winningMove)
@@ -157,6 +206,20 @@ export class LocalGame {
   }
 
   private updateStats(isSync: boolean, chosenLoss: number, player1Accuracy: number, player2Accuracy: number): void {
+    const isWhiteTeam = this.gameState.currentTeam === Team.WHITE
+    
+    if (isWhiteTeam) {
+      this.stats.whiteMovesPlayed++
+      if (isSync) {
+        const currentSyncMoves = this.stats.whiteSyncRate * (this.stats.whiteMovesPlayed - 1)
+        this.stats.whiteSyncRate = (currentSyncMoves + 1) / this.stats.whiteMovesPlayed
+      } else {
+        this.stats.whiteConflicts++
+        const currentSyncMoves = this.stats.whiteSyncRate * (this.stats.whiteMovesPlayed - 1)
+        this.stats.whiteSyncRate = currentSyncMoves / this.stats.whiteMovesPlayed
+      }
+    }
+
     this.stats.movesPlayed++
     
     if (isSync) {
@@ -168,14 +231,16 @@ export class LocalGame {
       this.stats.syncRate = currentSyncMoves / this.stats.movesPlayed
     }
 
-    this.stats.lastMoveAccuracy = Math.round(player1Accuracy)
-    this.stats.lastMoveAccuracyP2 = Math.round(player2Accuracy)
+    if (isWhiteTeam) {
+      this.stats.lastMoveAccuracy = Math.round(player1Accuracy)
+      this.stats.lastMoveAccuracyP2 = Math.round(player2Accuracy)
 
-    const totalP1 = this.stats.player1Accuracy * (this.stats.movesPlayed - 1)
-    this.stats.player1Accuracy = (totalP1 + player1Accuracy) / this.stats.movesPlayed
-    
-    const totalP2 = this.stats.player2Accuracy * (this.stats.movesPlayed - 1)
-    this.stats.player2Accuracy = (totalP2 + player2Accuracy) / this.stats.movesPlayed
+      const totalP1 = this.stats.player1Accuracy * (this.stats.whiteMovesPlayed - 1)
+      this.stats.player1Accuracy = (totalP1 + player1Accuracy) / this.stats.whiteMovesPlayed
+      
+      const totalP2 = this.stats.player2Accuracy * (this.stats.whiteMovesPlayed - 1)
+      this.stats.player2Accuracy = (totalP2 + player2Accuracy) / this.stats.whiteMovesPlayed
+    }
   }
 
   getStats(): GameStats {

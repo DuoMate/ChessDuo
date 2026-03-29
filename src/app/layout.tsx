@@ -29,6 +29,7 @@ export default function RootLayout({
     >
       <head>
         <link rel="stylesheet" href="/cm-chessboard/chessboard.css" />
+        <link rel="stylesheet" href="/cm-chessboard/extensions/markers/markers.css" />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
