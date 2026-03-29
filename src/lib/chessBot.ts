@@ -6,12 +6,12 @@ export interface BotConfig {
 }
 
 const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-  1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 5 },
-  2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 7 },
-  3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 10 },
-  4: { bestMoveChance: 0.75, description: '~1800 ELO', searchDepth: 12 },
-  5: { bestMoveChance: 0.85, description: '~1900 ELO', searchDepth: 15 },
-  6: { bestMoveChance: 0.95, description: '~2000+ ELO', searchDepth: 20 },
+  1: { bestMoveChance: 0.95, description: '~1500 ELO', searchDepth: 1 },
+  2: { bestMoveChance: 0.97, description: '~1600 ELO', searchDepth: 2 },
+  3: { bestMoveChance: 0.98, description: '~1700 ELO', searchDepth: 3 },
+  4: { bestMoveChance: 0.99, description: '~1800 ELO', searchDepth: 4 },
+  5: { bestMoveChance: 0.995, description: '~1900 ELO', searchDepth: 5 },
+  6: { bestMoveChance: 1.0, description: '~2000+ ELO', searchDepth: 10 },
 }
 
 export class ChessBot {
@@ -35,7 +35,8 @@ export class ChessBot {
   private initializeMoveEvaluator(): void {
     if (typeof window !== 'undefined') {
       import('./moveEvaluator').then(({ MoveEvaluator }) => {
-        this.moveEvaluator = new MoveEvaluator()
+        const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
+        this.moveEvaluator = new MoveEvaluator(skillConfig.searchDepth)
         // Check if Stockfish becomes ready
         setTimeout(() => {
           this.stockfishReady = this.moveEvaluator?.isUsingStockfish() || false
@@ -161,12 +162,12 @@ export class ChessBot {
     const bestMoveChance = skillConfig.bestMoveChance
 
     const roll = Math.random()
-    if (roll < bestMoveChance || this.config.skillLevel >= 6) {
+    if (roll < bestMoveChance) {
       return evaluatedMoves[0].move
     }
 
-    const topMovesCount = Math.max(2, Math.floor(evaluatedMoves.length * 0.3))
-    const randomIndex = Math.floor(Math.random() * Math.min(topMovesCount, evaluatedMoves.length))
+    const topMovesCount = Math.min(3, evaluatedMoves.length)
+    const randomIndex = Math.floor(Math.random() * topMovesCount)
     return evaluatedMoves[randomIndex].move
   }
 

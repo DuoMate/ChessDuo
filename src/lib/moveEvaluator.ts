@@ -19,41 +19,59 @@ export class MoveEvaluator {
   private stockfishReady: boolean = false
   private stockfishWorker: Worker | null = null
   private initPromise: Promise<boolean> | null = null
+  private searchDepth: number = 10
 
-  constructor() {
+  constructor(searchDepth: number = 10) {
+    this.searchDepth = Math.max(1, Math.min(searchDepth, 20))
     if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
       this.initPromise = this.initStockfish()
     }
   }
 
+  setSearchDepth(depth: number): void {
+    this.searchDepth = Math.max(1, Math.min(depth, 20))
+  }
+
+  getSearchDepth(): number {
+    return this.searchDepth
+  }
+
   private async initStockfish(): Promise<boolean> {
-    if (typeof window === 'undefined' || typeof Worker === 'undefined') return false
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+      console.log('[Stockfish] Skipped: No window or Worker support')
+      return false
+    }
     
     try {
+      console.log('[Stockfish] Creating worker...')
       this.stockfishWorker = new Worker('/stockfish/stockfish.js')
+      console.log('[Stockfish] Worker created:', this.stockfishWorker)
       
       const readyPromise = new Promise<boolean>((resolve) => {
         const messageHandler = (e: MessageEvent) => {
           const msg = e.data
+          console.log('[Stockfish] Message received:', JSON.stringify(msg))
           if (msg === 'uciok') {
             this.stockfishReady = true
             this.stockfishWorker?.removeEventListener('message', messageHandler)
-            console.log('[Stockfish] Ready')
+            console.log('[Stockfish] Ready!')
             resolve(true)
           }
         }
         this.stockfishWorker?.addEventListener('message', messageHandler)
+        console.log('[Stockfish] Message handler attached')
       })
 
       this.stockfishWorker.addEventListener('error', (e) => {
         console.error('[Stockfish] Worker error:', e)
       })
       
+      console.log('[Stockfish] Sending uci command...')
       this.stockfishWorker.postMessage('uci')
       
       const timeoutPromise = new Promise<boolean>((resolve) => {
         setTimeout(() => {
-          console.warn('[Stockfish] Timeout')
+          console.warn('[Stockfish] Timeout after 5s')
           resolve(false)
         }, 5000)
       })
@@ -66,6 +84,7 @@ export class MoveEvaluator {
   }
 
   private async ensureStockfishReady(): Promise<boolean> {
+    console.log('[Stockfish] ensureStockfishReady called, ready:', this.stockfishReady)
     if (this.stockfishReady) return true
     if (this.initPromise) {
       return this.initPromise
@@ -191,12 +210,14 @@ export class MoveEvaluator {
 
     const isReady = await this.ensureStockfishReady()
     let score: number
+    
     if (isReady && this.stockfishWorker) {
       try {
         const stockfishScore = await this.evaluateWithStockfish(fen)
         if (stockfishScore !== null) {
           score = stockfishScore
         } else {
+          console.log('[Eval] Stockfish returned null, falling back to simple')
           score = this.simpleEvaluate(fen)
         }
       } catch (error) {
@@ -204,6 +225,7 @@ export class MoveEvaluator {
         score = this.simpleEvaluate(fen)
       }
     } else {
+      console.log('[Eval] Stockfish not ready, using simple evaluation')
       score = this.simpleEvaluate(fen)
     }
 
@@ -213,34 +235,41 @@ export class MoveEvaluator {
   private evaluateWithStockfish(fen: string): Promise<number | null> {
     return new Promise((resolve) => {
       if (!this.stockfishReady || !this.stockfishWorker) {
+        console.log('[Stockfish] evaluateWithStockfish: not ready, worker:', this.stockfishWorker, 'ready:', this.stockfishReady)
         resolve(null)
         return
       }
 
+      console.log('[Stockfish] evaluateWithStockfish: evaluating FEN:', fen)
       const timeout = setTimeout(() => {
+        console.log('[Stockfish] evaluateWithStockfish: timeout')
         resolve(null)
       }, 3000)
 
       const messageHandler = (e: MessageEvent) => {
         const line = e.data
+        console.log('[Stockfish] eval message:', line)
         if (line && typeof line === 'string' && line.startsWith('info') && line.includes('score cp')) {
           const match = line.match(/score cp (-?\d+)/)
           if (match) {
             const score = parseInt(match[1], 10)
             clearTimeout(timeout)
             this.stockfishWorker?.removeEventListener('message', messageHandler)
+            console.log('[Stockfish] eval score:', score)
             resolve(score)
           }
         } else if (line && typeof line === 'string' && line.startsWith('bestmove')) {
           clearTimeout(timeout)
           this.stockfishWorker?.removeEventListener('message', messageHandler)
+          console.log('[Stockfish] eval bestmove received')
           resolve(null)
         }
       }
 
       this.stockfishWorker!.addEventListener('message', messageHandler)
       this.stockfishWorker!.postMessage(`position fen ${fen}`)
-      this.stockfishWorker!.postMessage('go depth 10')
+      console.log(`[Stockfish] Evaluating at depth ${this.searchDepth}`)
+      this.stockfishWorker!.postMessage(`go depth ${this.searchDepth}`)
     })
   }
 

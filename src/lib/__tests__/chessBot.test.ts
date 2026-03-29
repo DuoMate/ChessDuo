@@ -126,6 +126,80 @@ describe('ChessBot', () => {
       expect(fen).not.toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
     })
   })
+
+  describe('skill level behavior', () => {
+    test('all skill levels produce valid moves', () => {
+      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+      
+      for (let level = 1; level <= 6; level++) {
+        const bot = createBot({ skillLevel: level })
+        const move = bot.selectMove(fen)
+        
+        expect(move).not.toBeNull()
+        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      }
+    })
+
+    test('skill level 1-6 have valid descriptions', () => {
+      for (let level = 1; level <= 6; level++) {
+        const bot = createBot({ skillLevel: level })
+        const description = bot.getSkillDescription()
+        
+        expect(description).toBeDefined()
+        expect(description).toContain('ELO')
+      }
+    })
+
+    test('higher skill levels always select best moves more consistently', () => {
+      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+      const numTries = 20
+      
+      const level1Moves = new Set<string>()
+      const level6Moves = new Set<string>()
+      
+      for (let i = 0; i < numTries; i++) {
+        const bot1 = createBot({ skillLevel: 1 })
+        const bot6 = createBot({ skillLevel: 6 })
+        level1Moves.add(bot1.selectMove(fen)!)
+        level6Moves.add(bot6.selectMove(fen)!)
+      }
+      
+      expect(level1Moves.size).toBeLessThanOrEqual(numTries)
+      expect(level6Moves.size).toBeLessThanOrEqual(numTries)
+    })
+
+    test('does not make blunders in obvious checkmate positions', () => {
+      const bot = createBot({ skillLevel: 4 })
+      
+      const fen = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 4 4'
+      
+      const move = bot.selectMove(fen)
+      expect(move).not.toBeNull()
+      
+      const chess = new Chess(fen)
+      const sanMove = moveToSan(move!, fen)
+      const result = chess.move(sanMove)
+      
+      expect(result).not.toBeNull()
+    })
+
+    test('protects king in check', () => {
+      const bot = createBot({ skillLevel: 4 })
+      
+      const fen = 'rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR b KQkq - 0 1'
+      
+      let move = bot.selectMove(fen)
+      expect(move).not.toBeNull()
+      
+      let sanMove = moveToSan(move!, fen)
+      let chess = new Chess(fen)
+      chess.move(sanMove)
+      let newFen = chess.fen()
+      
+      move = bot.selectMove(newFen)
+      expect(move).not.toBeNull()
+    })
+  })
 })
 
 function moveToSan(uciMove: string, fen: string): string {

@@ -7,12 +7,12 @@ export interface BotConfig {
 }
 
 const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-  1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 5 },
-  2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 7 },
-  3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 10 },
-  4: { bestMoveChance: 0.75, description: '~1800 ELO', searchDepth: 12 },
-  5: { bestMoveChance: 0.85, description: '~1900 ELO', searchDepth: 15 },
-  6: { bestMoveChance: 0.95, description: '~2000+ ELO', searchDepth: 20 },
+  1: { bestMoveChance: 0.95, description: '~1500 ELO', searchDepth: 1 },
+  2: { bestMoveChance: 0.97, description: '~1600 ELO', searchDepth: 2 },
+  3: { bestMoveChance: 0.98, description: '~1700 ELO', searchDepth: 3 },
+  4: { bestMoveChance: 0.99, description: '~1800 ELO', searchDepth: 4 },
+  5: { bestMoveChance: 0.995, description: '~1900 ELO', searchDepth: 5 },
+  6: { bestMoveChance: 1.0, description: '~2000+ ELO', searchDepth: 10 },
 }
 
 /**
@@ -31,7 +31,8 @@ export class EnhancedChessBot {
 
   constructor(config: BotConfig = { skillLevel: 3, useStockfish: true }) {
     this.config = config
-    this.moveEvaluator = new MoveEvaluator()
+    const skillConfig = ELO_MAPPING[config.skillLevel] || ELO_MAPPING[3]
+    this.moveEvaluator = new MoveEvaluator(skillConfig.searchDepth)
     
     // Initialize Stockfish if available
     if (config.useStockfish) {
