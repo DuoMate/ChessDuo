@@ -175,7 +175,9 @@ export function Game() {
     if (game.status === GameStatus.GAME_OVER) return
     
     const currentFen = game.board.fen()
-    const botUciMove = bot.selectMove(currentFen)
+    
+    // Use async move selection with Stockfish if available
+    const botUciMove = await bot.selectMoveAsync(currentFen)
     
     if (!botUciMove) {
       console.warn('Bot could not find a move')
@@ -204,7 +206,8 @@ export function Game() {
       
       game.selectMove('player1', sanMove)
       
-      const teammateMove = teammateBot.selectMove(game.board.fen())
+      // Use async move selection for teammate bot with Stockfish
+      const teammateMove = await teammateBot.selectMoveAsync(game.board.fen())
       if (teammateMove) {
         const teammateSanMove = uciToSan(teammateMove, game.board.fen(), promotion)
         if (teammateSanMove) {
