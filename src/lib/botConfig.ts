@@ -3,6 +3,12 @@
  * Manages bot skill levels through environment variables with sensible defaults
  */
 
+export interface SkillLevel {
+  level: number
+  description: string
+  label: string
+}
+
 export interface BotSkillConfig {
   /**
    * Opponent bot skill level (1-6)
@@ -50,6 +56,34 @@ export function getBotConfig(): BotSkillConfig {
   return {
     opponentSkillLevel,
     teammateSkillLevel,
+  }
+}
+
+/**
+ * Create bot configuration with specified skill levels
+ * Validates and clamps skill levels to valid range (1-6)
+ * @param opponentSkillLevel - Opponent bot skill level (1-6)
+ * @param teammateSkillLevel - Teammate bot skill level (1-6)
+ * @returns BotSkillConfig with validated skill levels
+ */
+export function createBotConfig(
+  opponentSkillLevel: number,
+  teammateSkillLevel: number
+): BotSkillConfig {
+  const validateLevel = (level: number, defaultLevel: number): number => {
+    if (isNaN(level)) {
+      return defaultLevel
+    }
+    const rounded = Math.round(level)
+    if (rounded < 1 || rounded > 6) {
+      return defaultLevel
+    }
+    return rounded
+  }
+
+  return {
+    opponentSkillLevel: validateLevel(opponentSkillLevel, 4),
+    teammateSkillLevel: validateLevel(teammateSkillLevel, 4),
   }
 }
 
@@ -104,7 +138,7 @@ export function getSkillLevelDescription(skillLevel: number): string {
  * Get all available skill levels with descriptions
  * Useful for UI components that let users select skill levels
  */
-export function getAvailableSkillLevels() {
+export function getAvailableSkillLevels(): SkillLevel[] {
   return [
     { level: 1, description: '~1500 ELO', label: 'Beginner' },
     { level: 2, description: '~1600 ELO', label: 'Novice' },

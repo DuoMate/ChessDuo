@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { ChessBoard, PromotionPiece } from './ChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/lib/localGame'
 import { Team } from '@/lib/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/lib/chessBot'
-import { getBotConfig } from '@/lib/botConfig'
+import { createBotConfig, getBotConfig } from '@/lib/botConfig'
+
+interface GameProps {
+  level?: number
+}
 
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string | null {
   try {
@@ -112,11 +116,28 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game() {
+export function Game({ level }: GameProps) {
   const [game] = useState(() => new LocalGame())
-  const botConfig = getBotConfig()
-  const [bot] = useState(() => createBot({ skillLevel: botConfig.opponentSkillLevel }))
-  const [teammateBot] = useState(() => createBot({ skillLevel: botConfig.teammateSkillLevel }))
+
+  const botConfig = useMemo(() => {
+    if (level && level >= 1 && level <= 6) {
+      console.log(`[Game] Using selected level: ${level} for opponent`)
+      return createBotConfig(level, 4)
+    }
+    console.log('[Game] No level selected, using default config')
+    return getBotConfig()
+  }, [level])
+
+  const [bot] = useState(() => {
+    const botInstance = createBot({ skillLevel: botConfig.opponentSkillLevel })
+    console.log(`[Game] Opponent bot created with level: ${botConfig.opponentSkillLevel}, description: ${botInstance.getSkillDescription()}`)
+    return botInstance
+  })
+  const [teammateBot] = useState(() => {
+    const botInstance = createBot({ skillLevel: botConfig.teammateSkillLevel })
+    console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
+    return botInstance
+  })
   const [gameState, setGameState] = useState<GameState>({
     status: GameStatus.WAITING,
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -233,13 +254,14 @@ export function Game() {
   }, [game, executeBotMove, teammateBot])
 
   useEffect(() => {
-    game.addPlayer('player1', Team.WHITE)
-    game.addPlayer('player2', Team.WHITE)
-    game.addPlayer('player3', Team.BLACK)
-    game.addPlayer('player4', Team.BLACK)
-    game.start()
-
-    updateStateRef.current()
+    if (game.status.valueOf() === GameStatus.WAITING.valueOf()) {
+      game.addPlayer('player1', Team.WHITE)
+      game.addPlayer('player2', Team.WHITE)
+      game.addPlayer('player3', Team.BLACK)
+      game.addPlayer('player4', Team.BLACK)
+      game.start()
+      updateStateRef.current()
+    }
   }, [game])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
@@ -364,7 +386,7 @@ export function Game() {
             </div>
             {gameState.moveComparison.bestEngineMove && gameState.moveComparison.bestEngineMove !== gameState.moveComparison.winningMove && (
               <div className="mt-2 text-center text-sm text-gray-500">
-                Engine's best: {gameState.moveComparison.bestEngineMove} (your centipawn loss vs engine: {Math.round(gameState.moveComparison.bestEngineScore - gameState.moveComparison.winningScore)})
+                Engine&apos;s best: {gameState.moveComparison.bestEngineMove} (your centipawn loss vs engine: {Math.round(gameState.moveComparison.bestEngineScore - gameState.moveComparison.winningScore)})
               </div>
             )}
           </div>

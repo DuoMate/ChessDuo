@@ -46,6 +46,7 @@ export class LocalGame {
   private stats: GameStats
   private _lastMove: { from: string; to: string } | null = null
   private _lastMoveComparison: MoveComparison | null = null
+  private initialized = false
 
   constructor() {
     this.gameState = new GameState()
@@ -64,6 +65,7 @@ export class LocalGame {
       whiteSyncRate: 0,
       whiteConflicts: 0
     }
+    this.initialized = false
   }
 
   get status(): GameStatus {
@@ -91,7 +93,20 @@ export class LocalGame {
   }
 
   addPlayer(player: Player, team: Team): void {
-    this.gameState.addPlayer(player, team)
+    if (this.initialized) {
+      return
+    }
+    
+    try {
+      this.gameState.addPlayer(player, team)
+    } catch (e) {
+      const error = e as Error
+      if (error.message.includes('already has 2 players')) {
+        this.initialized = true
+        return
+      }
+      throw e
+    }
     
     const whitePlayers = this.gameState.getPlayers(Team.WHITE)
     const blackPlayers = this.gameState.getPlayers(Team.BLACK)
@@ -153,9 +168,13 @@ export class LocalGame {
     const player1Accuracy = Math.max(0, Math.min(100, 100 - (player1Loss / 10)))
     const player2Accuracy = Math.max(0, Math.min(100, 100 - (player2Loss / 10)))
 
-    const winningMove = player1Loss <= player2Loss ? player1Move : player2Move
-    const winningScore = player1Loss <= player2Loss ? player1Score.score : player2Score.score
-    const chosenLoss = player1Loss <= player2Loss ? player1Loss : player2Loss
+    console.log(`[Accuracy] Player1: ${player1Move} loss=${player1Loss} accuracy=${player1Accuracy}%`)
+    console.log(`[Accuracy] Player2: ${player2Move} loss=${player2Loss} accuracy=${player2Accuracy}%`)
+    console.log(`[Accuracy] Best: ${bestScore.move} score=${bestScore.score}`)
+
+    const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
+    const winningScore = winningMove === player1Move ? player1Score.score : player2Score.score
+    const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
     if (moveParts) {

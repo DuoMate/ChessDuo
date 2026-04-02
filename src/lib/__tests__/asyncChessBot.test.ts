@@ -1,10 +1,60 @@
 import { ChessBot, createBot } from '../chessBot'
 import { Chess } from 'chess.js'
 
+// Mock MoveEvaluator for testing - simulates Stockfish behavior
+class MockMoveEvaluator {
+  private searchDepth: number
+  private useStockfish: boolean = true
+
+  constructor(searchDepth: number = 10) {
+    this.searchDepth = searchDepth
+  }
+
+  isUsingStockfish(): boolean {
+    return this.useStockfish
+  }
+
+  isReady(): boolean {
+    return true
+  }
+
+  async evaluateMove(move: string, fen: string): Promise<{ move: string; score: number }> {
+    const chess = new Chess(fen)
+    const pieceValues: Record<string, number> = {
+      'P': 100, 'N': 320, 'B': 330, 'R': 500, 'Q': 900, 'K': 20000,
+      'p': -100, 'n': -320, 'b': -330, 'r': -500, 'q': -900, 'k': -20000
+    }
+
+    try {
+      chess.move(move)
+      let score = 0
+      const board = chess.board()
+      for (let row = 0; row < board.length; row++) {
+        for (let col = 0; col < board[row].length; col++) {
+          const piece = board[row][col]
+          if (piece) {
+            const value = pieceValues[piece.color === 'w' ? piece.type : piece.type.toLowerCase()]
+            const multiplier = piece.color === 'w' ? 1 : -1
+            score += value * multiplier
+          }
+        }
+      }
+      return { move, score }
+    } catch {
+      return { move, score: -Infinity }
+    }
+  }
+}
+
+function createMockBot(skillLevel: number = 4): ChessBot {
+  const mockEvaluator = new MockMoveEvaluator(10)
+  return new ChessBot({ skillLevel, useStockfish: true, mockMoveEvaluator: mockEvaluator })
+}
+
 describe('ChessBot Async Support', () => {
   describe('Async Move Selection', () => {
     test('selectMoveAsync returns valid UCI move', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
@@ -14,7 +64,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('selectMoveAsync returns null when no moves available', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = '6k1/8/8/8/8/8/8/7 w - - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
@@ -23,7 +73,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('selectMoveAsync returns only move when one available', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = '8/7K/8/8/8/8/8/7k w - - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
@@ -33,7 +83,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('selectMoveAsync returns legal move', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
@@ -50,7 +100,7 @@ describe('ChessBot Async Support', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       for (let level = 1; level <= 6; level++) {
-        const bot = createBot({ skillLevel: level })
+        const bot = createMockBot(level)
         const move = await bot.selectMoveAsync(fen)
         
         expect(move).not.toBeNull()
@@ -61,7 +111,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Backward Compatibility', () => {
     test('sync selectMove still works', () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createBot({ skillLevel: 4, useStockfish: false })
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = bot.selectMove(fen)
@@ -71,7 +121,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('sync selectMove returns null when no moves', () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createBot({ skillLevel: 4, useStockfish: false })
       const fen = '6k1/8/8/8/8/8/8/7 w - - 0 1'
 
       const move = bot.selectMove(fen)
@@ -80,7 +130,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('both sync and async return valid moves', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'
 
       const syncMove = bot.selectMove(fen)
@@ -119,13 +169,12 @@ describe('ChessBot Async Support', () => {
   })
 
   describe('Stockfish Ready Check', () => {
-    test('bot can check if Stockfish is ready', () => {
-      const bot = createBot({ useStockfish: true })
+    test('mock bot reports Stockfish ready', () => {
+      const bot = createMockBot(4)
 
       const ready = bot.isStockfishReady()
 
-      // Should be boolean (may be false if Stockfish not loaded in test env)
-      expect(typeof ready).toBe('boolean')
+      expect(ready).toBe(true)
     })
 
     test('bot without Stockfish returns false', () => {
@@ -145,7 +194,7 @@ describe('ChessBot Async Support', () => {
       const movesByLevel: Record<number, string[]> = {}
       
       for (let level = 1; level <= 6; level++) {
-        const bot = createBot({ skillLevel: level })
+        const bot = createMockBot(level)
         movesByLevel[level] = []
         
         // Get 5 moves per level to see distribution
@@ -164,7 +213,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('skill level 6 always plays best move', async () => {
-      const bot = createBot({ skillLevel: 6 })
+      const bot = createMockBot(6)
       const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'
 
       // Run multiple times - skill level 6 should always pick best move
@@ -174,15 +223,14 @@ describe('ChessBot Async Support', () => {
         if (move) moves.push(move)
       }
 
-      // With 95% bestMoveChance, most moves should be the same
-      // But we can't guarantee this deterministically due to randomness
+      // With 99% bestMoveChance, most moves should be the same
       expect(moves.length).toBe(10)
     })
   })
 
   describe('Error Handling', () => {
     test('handles invalid FEN gracefully in async', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
 
       // Should not throw, should return null
       const move = await bot.selectMoveAsync('invalid-fen')
@@ -192,7 +240,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('handles empty FEN gracefully', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
 
       const move = await bot.selectMoveAsync('')
 
@@ -200,7 +248,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('handles malformed UCI move in async context', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
@@ -214,7 +262,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Integration with Game Flow', () => {
     test('async moves can be used in game context', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       // Simulate game flow
@@ -234,7 +282,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('async moves work in multi-move sequence', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const chess = new Chess()
 
       // Play 3 moves
@@ -261,7 +309,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Performance Considerations', () => {
     test('async move selection completes in reasonable time', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const startTime = Date.now()
@@ -271,12 +319,12 @@ describe('ChessBot Async Support', () => {
       const duration = endTime - startTime
 
       expect(move).not.toBeNull()
-      // Should complete within 5 seconds (generous for Stockfish)
-      expect(duration).toBeLessThan(5000)
+      // Should complete within 2 seconds with mock
+      expect(duration).toBeLessThan(2000)
     })
 
     test('multiple async moves can be awaited', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       // Await multiple moves sequentially
@@ -292,7 +340,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Config Integration', () => {
     test('skill description accessible after creation', () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
 
       const description = bot.getSkillDescription()
 
@@ -300,7 +348,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('config accessible after creation', () => {
-      const bot = createBot({ skillLevel: 5, useStockfish: true })
+      const bot = createMockBot(5)
 
       const config = bot.getConfig()
 
@@ -320,7 +368,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Promotions', () => {
     test('handles promotion position async', async () => {
-      const bot = createBot({ skillLevel: 4 })
+      const bot = createMockBot(4)
       const fen = 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4'
 
       const move = await bot.selectMoveAsync(fen)

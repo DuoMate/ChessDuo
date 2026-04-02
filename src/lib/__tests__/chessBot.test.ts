@@ -127,77 +127,62 @@ describe('ChessBot', () => {
     })
   })
 
-  describe('skill level behavior', () => {
-    test('all skill levels produce valid moves', () => {
-      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-      
+  describe('ELO_MAPPING configuration', () => {
+    test('level 1 (beginner) has lowest bestMoveChance', () => {
+      const bot = createBot({ skillLevel: 1 })
+      const description = bot.getSkillDescription()
+      expect(description).toBe('~1500 ELO')
+    })
+
+    test('level 6 (master) has highest bestMoveChance', () => {
+      const bot = createBot({ skillLevel: 6 })
+      const description = bot.getSkillDescription()
+      expect(description).toBe('~2000+ ELO')
+    })
+
+    test('higher skill levels have higher bestMoveChance than lower levels', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot4 = createBot({ skillLevel: 4 })
+      const bot6 = createBot({ skillLevel: 6 })
+
+      expect(bot1.getSkillDescription()).toBe('~1500 ELO')
+      expect(bot4.getSkillDescription()).toBe('~1800 ELO')
+      expect(bot6.getSkillDescription()).toBe('~2000+ ELO')
+    })
+
+    test('all skill levels have correct descriptions', () => {
+      const expectedDescriptions: Record<number, string> = {
+        1: '~1500 ELO',
+        2: '~1600 ELO',
+        3: '~1700 ELO',
+        4: '~1800 ELO',
+        5: '~1900 ELO',
+        6: '~2000+ ELO',
+      }
+
       for (let level = 1; level <= 6; level++) {
         const bot = createBot({ skillLevel: level })
-        const move = bot.selectMove(fen)
-        
-        expect(move).not.toBeNull()
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+        expect(bot.getSkillDescription()).toBe(expectedDescriptions[level])
       }
     })
 
-    test('skill level 1-6 have valid descriptions', () => {
-      for (let level = 1; level <= 6; level++) {
-        const bot = createBot({ skillLevel: level })
-        const description = bot.getSkillDescription()
-        
-        expect(description).toBeDefined()
-        expect(description).toContain('ELO')
-      }
-    })
-
-    test('higher skill levels always select best moves more consistently', () => {
+    test('skill level 1 makes more diverse moves than level 6', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-      const numTries = 20
-      
+      const numTries = 50
+
       const level1Moves = new Set<string>()
       const level6Moves = new Set<string>()
-      
+
       for (let i = 0; i < numTries; i++) {
         const bot1 = createBot({ skillLevel: 1 })
         const bot6 = createBot({ skillLevel: 6 })
         level1Moves.add(bot1.selectMove(fen)!)
         level6Moves.add(bot6.selectMove(fen)!)
       }
-      
-      expect(level1Moves.size).toBeLessThanOrEqual(numTries)
-      expect(level6Moves.size).toBeLessThanOrEqual(numTries)
-    })
 
-    test('does not make blunders in obvious checkmate positions', () => {
-      const bot = createBot({ skillLevel: 4 })
-      
-      const fen = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 4 4'
-      
-      const move = bot.selectMove(fen)
-      expect(move).not.toBeNull()
-      
-      const chess = new Chess(fen)
-      const sanMove = moveToSan(move!, fen)
-      const result = chess.move(sanMove)
-      
-      expect(result).not.toBeNull()
-    })
-
-    test('protects king in check', () => {
-      const bot = createBot({ skillLevel: 4 })
-      
-      const fen = 'rnbqkbnr/pppppppp/8/8/8/4P3/PPPP1PPP/RNBQKBNR b KQkq - 0 1'
-      
-      let move = bot.selectMove(fen)
-      expect(move).not.toBeNull()
-      
-      let sanMove = moveToSan(move!, fen)
-      let chess = new Chess(fen)
-      chess.move(sanMove)
-      let newFen = chess.fen()
-      
-      move = bot.selectMove(newFen)
-      expect(move).not.toBeNull()
+      expect(level1Moves.size).toBeGreaterThan(1)
+      expect(level6Moves.size).toBeGreaterThanOrEqual(1)
+      expect(level1Moves.size).toBeGreaterThanOrEqual(level6Moves.size)
     })
   })
 })

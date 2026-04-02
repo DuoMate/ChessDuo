@@ -69,14 +69,8 @@ export class MoveEvaluator {
       console.log('[Stockfish] Sending uci command...')
       this.stockfishWorker.postMessage('uci')
       
-      const timeoutPromise = new Promise<boolean>((resolve) => {
-        setTimeout(() => {
-          console.warn('[Stockfish] Timeout after 5s')
-          resolve(false)
-        }, 5000)
-      })
-
-      return Promise.race([readyPromise, timeoutPromise])
+      // Wait indefinitely for Stockfish to be ready
+      return await readyPromise
     } catch (error) {
       console.warn('[Stockfish] Failed:', error)
       return false
@@ -209,27 +203,19 @@ export class MoveEvaluator {
     }
 
     const isReady = await this.ensureStockfishReady()
-    let score: number
     
-    if (isReady && this.stockfishWorker) {
-      try {
-        const stockfishScore = await this.evaluateWithStockfish(fen)
-        if (stockfishScore !== null) {
-          score = stockfishScore
-        } else {
-          console.log('[Eval] Stockfish returned null, falling back to simple')
-          score = this.simpleEvaluate(fen)
-        }
-      } catch (error) {
-        console.warn('[Stockfish] Evaluation failed, using simple eval:', error)
-        score = this.simpleEvaluate(fen)
-      }
-    } else {
-      console.log('[Eval] Stockfish not ready, using simple evaluation')
-      score = this.simpleEvaluate(fen)
+    if (!isReady || !this.stockfishWorker) {
+      console.error('[Eval] FATAL: Stockfish not ready, cannot evaluate')
+      throw new Error('Stockfish not available')
     }
 
-    return score
+    const stockfishScore = await this.evaluateWithStockfish(fen)
+    if (stockfishScore === null) {
+      console.error('[Eval] FATAL: Stockfish returned null')
+      throw new Error('Stockfish evaluation failed')
+    }
+
+    return stockfishScore
   }
 
   private evaluateWithStockfish(fen: string): Promise<number | null> {
@@ -241,28 +227,40 @@ export class MoveEvaluator {
       }
 
       console.log('[Stockfish] evaluateWithStockfish: evaluating FEN:', fen)
+      
+      // Wait up to 5 minutes for Stockfish evaluation (deep analysis takes time)
       const timeout = setTimeout(() => {
-        console.log('[Stockfish] evaluateWithStockfish: timeout')
+        console.error('[Stockfish] evaluateWithStockfish: timeout after 5 minutes!')
         resolve(null)
-      }, 3000)
+      }, 300000)
 
+      let lastScore: number | null = null
+      
       const messageHandler = (e: MessageEvent) => {
         const line = e.data
         console.log('[Stockfish] eval message:', line)
+        
+        // Always capture the latest score
         if (line && typeof line === 'string' && line.startsWith('info') && line.includes('score cp')) {
           const match = line.match(/score cp (-?\d+)/)
           if (match) {
-            const score = parseInt(match[1], 10)
-            clearTimeout(timeout)
-            this.stockfishWorker?.removeEventListener('message', messageHandler)
-            console.log('[Stockfish] eval score:', score)
-            resolve(score)
+            lastScore = parseInt(match[1], 10)
           }
-        } else if (line && typeof line === 'string' && line.startsWith('bestmove')) {
+        }
+        
+        // Only resolve when we have a bestmove AND a score
+        if (line && typeof line === 'string' && line.startsWith('bestmove')) {
           clearTimeout(timeout)
           this.stockfishWorker?.removeEventListener('message', messageHandler)
-          console.log('[Stockfish] eval bestmove received')
-          resolve(null)
+          console.log('[Stockfish] eval bestmove received, score:', lastScore)
+          
+          if (lastScore !== null) {
+            resolve(lastScore)
+          } else {
+            // No score found - this is a problem with Stockfish output
+            console.error('[Stockfish] FATAL: No score in output before bestmove')
+            resolve(null)
+          }
         }
       }
 

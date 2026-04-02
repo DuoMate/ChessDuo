@@ -3,15 +3,16 @@ import { Chess, Move } from 'chess.js'
 export interface BotConfig {
   skillLevel: number
   useStockfish?: boolean
+  mockMoveEvaluator?: any
 }
 
 const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-  1: { bestMoveChance: 0.95, description: '~1500 ELO', searchDepth: 1 },
-  2: { bestMoveChance: 0.97, description: '~1600 ELO', searchDepth: 2 },
-  3: { bestMoveChance: 0.98, description: '~1700 ELO', searchDepth: 3 },
-  4: { bestMoveChance: 0.99, description: '~1800 ELO', searchDepth: 4 },
-  5: { bestMoveChance: 0.995, description: '~1900 ELO', searchDepth: 5 },
-  6: { bestMoveChance: 1.0, description: '~2000+ ELO', searchDepth: 10 },
+  1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 1 },
+  2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 2 },
+  3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 3 },
+  4: { bestMoveChance: 0.80, description: '~1800 ELO', searchDepth: 4 },
+  5: { bestMoveChance: 0.92, description: '~1900 ELO', searchDepth: 5 },
+  6: { bestMoveChance: 0.99, description: '~2000+ ELO', searchDepth: 10 },
 }
 
 export class ChessBot {
@@ -21,6 +22,13 @@ export class ChessBot {
 
   constructor(config: BotConfig = { skillLevel: 3 }) {
     this.config = config
+    
+    // Use mock MoveEvaluator if provided (for testing)
+    if (config.mockMoveEvaluator) {
+      this.moveEvaluator = config.mockMoveEvaluator
+      this.stockfishReady = true
+      return
+    }
     
     // Lazy load MoveEvaluator for Stockfish support
     if (config.useStockfish) {
@@ -55,8 +63,8 @@ export class ChessBot {
   }
 
   /**
-   * ASYNC: Select move using Stockfish if available
-   * Falls back to sync evaluation if Stockfish unavailable
+   * ASYNC: Select move using Stockfish only (no fallback)
+   * Throws error if Stockfish is unavailable
    */
   async selectMoveAsync(fen: string): Promise<string | null> {
     try {
@@ -71,20 +79,57 @@ export class ChessBot {
         return this.moveToUci(moves[0])
       }
 
-      // Use Stockfish if available and ready
-      if (this.moveEvaluator && this.moveEvaluator.isUsingStockfish()) {
-        const selectedMove = await this.pickSmartMoveAsync(moves, fen)
-        return this.moveToUci(selectedMove)
-      } else {
-        // Fallback to sync evaluation
-        const selectedMove = this.pickSmartMoveSync(moves, fen)
-        return this.moveToUci(selectedMove)
+      // ALWAYS use Stockfish - wait until ready
+      if (!this.moveEvaluator) {
+        throw new Error('MoveEvaluator not initialized')
       }
+
+      // Wait indefinitely for Stockfish to be ready
+      console.log('[ChessBot] Waiting for Stockfish...')
+      await this.waitForStockfish(30000) // Wait up to 30s
+      
+      if (!this.moveEvaluator.isUsingStockfish()) {
+        throw new Error('Stockfish failed to initialize after 30s')
+      }
+
+      console.log('[ChessBot] Stockfish ready, evaluating move...')
+      const selectedMove = await this.pickSmartMoveAsync(moves, fen)
+      return this.moveToUci(selectedMove)
     } catch (error) {
-      console.warn('Error in selectMoveAsync:', error)
-      // Fallback to sync on error
-      return this.selectMove(fen)
+      // Re-throw Stockfish-related errors
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      if (errorMsg.includes('Stockfish') || errorMsg.includes('MoveEvaluator')) {
+        console.error('[ChessBot] Fatal error - Stockfish unavailable:', error)
+        throw error
+      }
+      // For other errors (like invalid FEN), return null
+      console.warn('[ChessBot] Move selection failed:', error)
+      return null
     }
+  }
+
+  private waitForStockfish(timeoutMs: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const startTime = Date.now()
+      
+      const checkReady = () => {
+        if (this.moveEvaluator && this.moveEvaluator.isUsingStockfish()) {
+          console.log('[ChessBot] Stockfish is ready!')
+          resolve(true)
+          return
+        }
+        
+        if (Date.now() - startTime >= timeoutMs) {
+          console.warn(`[ChessBot] Stockfish not ready after ${timeoutMs}ms`)
+          resolve(false)
+          return
+        }
+        
+        setTimeout(checkReady, 500)
+      }
+      
+      checkReady()
+    })
   }
 
   /**

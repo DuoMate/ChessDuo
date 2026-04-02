@@ -1,8 +1,10 @@
 import {
   getBotConfig,
+  createBotConfig,
   getSkillLevelDescription,
   getAvailableSkillLevels,
   BotSkillConfig,
+  SkillLevel,
 } from '../botConfig'
 
 describe('Bot Configuration Module', () => {
@@ -351,6 +353,79 @@ describe('Bot Configuration Module', () => {
       expect(config.opponentSkillLevel).toBe(3)
       expect(config.teammateSkillLevel).toBe(5)
       expect(config.opponentSkillLevel).not.toBe(config.teammateSkillLevel)
+    })
+  })
+
+  describe('createBotConfig', () => {
+    test('creates config with specified skill levels', () => {
+      const config = createBotConfig(3, 5)
+
+      expect(config.opponentSkillLevel).toBe(3)
+      expect(config.teammateSkillLevel).toBe(5)
+    })
+
+    test('accepts all valid skill levels (1-6)', () => {
+      for (let level = 1; level <= 6; level++) {
+        const config = createBotConfig(level, level)
+
+        expect(config.opponentSkillLevel).toBe(level)
+        expect(config.teammateSkillLevel).toBe(level)
+      }
+    })
+
+    test('clamps skill level below 1 to 4 (default)', () => {
+      const config = createBotConfig(0, -5)
+
+      expect(config.opponentSkillLevel).toBe(4)
+      expect(config.teammateSkillLevel).toBe(4)
+    })
+
+    test('clamps skill level above 6 to 4 (default)', () => {
+      const config = createBotConfig(7, 100)
+
+      expect(config.opponentSkillLevel).toBe(4)
+      expect(config.teammateSkillLevel).toBe(4)
+    })
+
+    test('clamps NaN to default level 4', () => {
+      const config = createBotConfig(NaN, NaN)
+
+      expect(config.opponentSkillLevel).toBe(4)
+      expect(config.teammateSkillLevel).toBe(4)
+    })
+
+    test('handles decimal values by rounding', () => {
+      const config = createBotConfig(4.9, 1.1)
+
+      expect(config.opponentSkillLevel).toBe(5)
+      expect(config.teammateSkillLevel).toBe(1)
+    })
+
+    test('allows different levels for opponent and teammate', () => {
+      const config = createBotConfig(2, 5)
+
+      expect(config.opponentSkillLevel).toBe(2)
+      expect(config.teammateSkillLevel).toBe(5)
+    })
+
+    test('returns BotSkillConfig type', () => {
+      const config = createBotConfig(3, 4)
+
+      expect(config).toHaveProperty('opponentSkillLevel')
+      expect(config).toHaveProperty('teammateSkillLevel')
+      expect(typeof config.opponentSkillLevel).toBe('number')
+      expect(typeof config.teammateSkillLevel).toBe('number')
+    })
+
+    test('works with all ELO levels from getAvailableSkillLevels', () => {
+      const levels = getAvailableSkillLevels()
+
+      levels.forEach(({ level }) => {
+        const config = createBotConfig(level, level)
+
+        expect(config.opponentSkillLevel).toBe(level)
+        expect(config.teammateSkillLevel).toBe(level)
+      })
     })
   })
 })
