@@ -1,12 +1,12 @@
 # render.yaml - Render Zero-Config Deployment
-# Place this in the server/ directory
+# Placed at repo root, points to server/ directory
 
 services:
   - type: web
     name: chessduo-stockfish
     region: oregon
     plan: free
-    rootDir: ./
+    rootDir: ./server
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
