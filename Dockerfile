@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Stockfish Server
-# Stage 1: Build Node.js app
-FROM node:20-alpine AS builder
+# Stage 1: Build the TypeScript app
+FROM node:20 AS builder
 
 WORKDIR /app
 
@@ -12,27 +12,23 @@ COPY server/src ./src
 
 RUN npm run build
 
-# Stage 2: Production - download Stockfish binary
-FROM alpine:3.19 AS production
+# Stage 2: Production runtime with Stockfish
+FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Download and extract Stockfish - tar has stockfish/ subdirectory
-RUN wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
-    -O /tmp/stockfish.tar \
-    && mkdir -p /usr/local/bin \
-    && tar -xf /tmp/stockfish.tar -C /usr/local/bin \
-    && rm /tmp/stockfish.tar \
-    && chmod +x /usr/local/bin/stockfish/stockfish
+# Install Stockfish and Node.js
+RUN apt-get update && apt-get install -y \
+    stockfish \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy built app from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
-# Install Node.js runtime
-RUN apk add --no-cache nodejs npm \
-    && npm ci --only=production \
-    && rm -rf /var/cache/apk/*
+RUN npm ci --only=production
 
 EXPOSE 3001
 
