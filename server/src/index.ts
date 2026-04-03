@@ -25,27 +25,31 @@ interface StockfishInstance {
 
 const instances: Map<string, StockfishInstance> = new Map()
 const STOCKFISH_PATHS = [
-  '/usr/local/bin/stockfish/stockfish',
+  '/usr/games/stockfish',
   '/usr/local/bin/stockfish',
-  'stockfish',
   '/usr/bin/stockfish',
-  './stockfish-linux',
-  path.join(__dirname, '../stockfish/stockfish16nnue')
+  'stockfish'
 ]
 
 function findStockfishPath(): string {
+  const fs = require('fs')
   for (const p of STOCKFISH_PATHS) {
     try {
-      return p
+      if (fs.existsSync(p)) {
+        console.log(`[STOCKFISH] Found at: ${p}`)
+        return p
+      }
     } catch {
       continue
     }
   }
+  console.log('[STOCKFISH] Using default: stockfish')
   return 'stockfish'
 }
 
 function createStockfishInstance(instanceId: string): StockfishInstance {
   const stockfishPath = findStockfishPath()
+  console.log(`[STOCKFISH] Starting with path: ${stockfishPath}`)
   
   const proc = spawn(stockfishPath, [], {
     stdio: ['pipe', 'pipe', 'pipe']
