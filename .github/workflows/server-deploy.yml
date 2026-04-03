@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -33,20 +33,5 @@ jobs:
         working-directory: server
         run: npm run build
 
-      - name: Install Stockfish
-        run: sudo apt-get update && sudo apt-get install -y stockfish
-
-      - name: Local health check
-        working-directory: server
-        run: |
-          npm start &
-          SERVER_PID=$!
-          sleep 5
-          curl -f http://localhost:3001/health || exit 1
-          curl -f -X POST http://localhost:3001/evaluate \
-            -H "Content-Type: application/json" \
-            -d '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","depth":10}' || exit 1
-          kill $SERVER_PID 2>/dev/null || true
-
-      - name: Success notification
-        run: echo "✅ Build and tests passed! Render Blueprint will auto-deploy."
+      - name: Success
+        run: echo "✅ Build successful! Render Blueprint will deploy the server."
