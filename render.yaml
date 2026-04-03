@@ -7,6 +7,7 @@ services:
     region: oregon
     plan: free
     dockerfilePath: Dockerfile
+    buildContext: .
     healthCheckPath: /health
     envVars:
       - key: PORT
