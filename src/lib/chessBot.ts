@@ -1,4 +1,5 @@
 import { Chess, Move } from 'chess.js'
+import { getBookMove, isInOpeningBook } from './openings'
 
 export interface BotConfig {
   skillLevel: number
@@ -44,7 +45,7 @@ export class ChessBot {
     if (typeof window !== 'undefined') {
       import('./moveEvaluator').then(({ MoveEvaluator }) => {
         const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
-        this.moveEvaluator = new MoveEvaluator(skillConfig.searchDepth)
+        this.moveEvaluator = new MoveEvaluator(this.config.skillLevel)
         // Check if Stockfish becomes ready
         setTimeout(() => {
           this.stockfishReady = this.moveEvaluator?.isUsingStockfish() || false
@@ -77,6 +78,16 @@ export class ChessBot {
 
       if (moves.length === 1) {
         return this.moveToUci(moves[0])
+      }
+
+      // Check opening book first
+      const bookMove = getBookMove(fen, this.config.skillLevel)
+      if (bookMove) {
+        const matchedMove = moves.find(m => m.san === bookMove || m.lan === bookMove || (m.from + m.to) === bookMove)
+        if (matchedMove) {
+          console.log(`[ChessBot:Opening Book] Move: ${bookMove}`)
+          return this.moveToUci(matchedMove)
+        }
       }
 
       // ALWAYS use Stockfish - wait until ready
@@ -158,9 +169,15 @@ export class ChessBot {
 
   /**
    * ASYNC: Pick move using Stockfish evaluation
+   * For WHITE's turn: higher score = better
+   * For BLACK's turn: lower (more negative) score = better
    */
   private async pickSmartMoveAsync(moves: Move[], fen: string): Promise<Move> {
+    const botLabel = this.config.useStockfish ? 'Stockfish Bot' : 'Basic Bot'
+    const isBlackTurn = new Chess(fen).turn() === 'b'
+    
     if (moves.length === 1) {
+      console.log(`[ChessBot:${botLabel}] Only one move available: ${moves[0].san}`)
       return moves[0]
     }
 
@@ -177,13 +194,27 @@ export class ChessBot {
       } catch {
         evaluatedMoves.push({
           move,
-          score: -Infinity
+          score: isBlackTurn ? Infinity : -Infinity
         })
       }
     }
 
-    evaluatedMoves.sort((a, b) => b.score - a.score)
-    return this.applyEloBasedSelection(evaluatedMoves)
+    if (isBlackTurn) {
+      evaluatedMoves.sort((a, b) => a.score - b.score)
+    } else {
+      evaluatedMoves.sort((a, b) => b.score - a.score)
+    }
+    
+    const topMovesDisplay = evaluatedMoves.slice(0, Math.min(5, evaluatedMoves.length))
+      .map((m, i) => `${i + 1}. ${m.move.san}(${m.score})`)
+      .join(' | ')
+    console.log(`\n[ChessBot:${botLabel}:L${this.config.skillLevel}] Evaluating ${moves.length} moves`)
+    console.log(`[ChessBot] Top moves: ${topMovesDisplay}`)
+
+    const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
+    console.log(`[ChessBot:${botLabel}:L${this.config.skillLevel}] Selected: ${selectedMove.san} (score: ${evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score})`)
+    
+    return selectedMove
   }
 
   private pickSmartMoveSync(moves: Move[], fen: string): Move {
@@ -192,7 +223,13 @@ export class ChessBot {
     }
 
     const evaluatedMoves = this.evaluateMovesSync(moves, fen)
-    evaluatedMoves.sort((a, b) => b.score - a.score)
+    const isBlackTurn = new Chess(fen).turn() === 'b'
+    
+    if (isBlackTurn) {
+      evaluatedMoves.sort((a, b) => a.score - b.score)
+    } else {
+      evaluatedMoves.sort((a, b) => b.score - a.score)
+    }
     
     return this.applyEloBasedSelection(evaluatedMoves)
   }
@@ -201,18 +238,23 @@ export class ChessBot {
    * Apply ELO-based selection logic
    * Higher ELO = more likely to play best move
    * Lower ELO = more randomness to simulate weakness
+   * When not picking best, picks from top N where N decreases with higher skill
    */
   private applyEloBasedSelection(evaluatedMoves: { move: Move; score: number }[]): Move {
     const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
     const bestMoveChance = skillConfig.bestMoveChance
+    const skillLevel = this.config.skillLevel
 
     const roll = Math.random()
     if (roll < bestMoveChance) {
+      console.log(`[ChessBot:Selection] L${skillLevel}: Picked BEST (${(bestMoveChance * 100).toFixed(0)}% chance, rolled ${(roll * 100).toFixed(1)}%)`)
       return evaluatedMoves[0].move
     }
 
-    const topMovesCount = Math.min(3, evaluatedMoves.length)
+    const maxTopMoves = Math.max(1, Math.ceil((7 - skillLevel) / 1.5))
+    const topMovesCount = Math.min(maxTopMoves, evaluatedMoves.length)
     const randomIndex = Math.floor(Math.random() * topMovesCount)
+    console.log(`[ChessBot:Selection] L${skillLevel}: Picked from top ${topMovesCount} (rolled ${(roll * 100).toFixed(1)}% < ${(bestMoveChance * 100).toFixed(0)}%), index ${randomIndex}`)
     return evaluatedMoves[randomIndex].move
   }
 

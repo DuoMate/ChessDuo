@@ -12,24 +12,21 @@ interface GameProps {
   level?: number
 }
 
-function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string | null {
-  try {
-    const [from, to] = uciMove.split('-')
-    const chess = new Chess(fen)
-    const moves = chess.moves({ verbose: true })
-    
-    for (const move of moves) {
-      if (move.from === from && move.to === to) {
-        if (promotion) {
-          return `${from}${to}=${promotion.toUpperCase()}`
-        }
-        return move.san
+function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
+  const [from, to] = uciMove.split('-')
+  const chess = new Chess(fen)
+  const moves = chess.moves({ verbose: true })
+  
+  for (const move of moves) {
+    if (move.from === from && move.to === to) {
+      if (promotion) {
+        return `${from}${to}=${promotion.toUpperCase()}`
       }
+      return move.san
     }
-  } catch (e) {
-    console.warn('Error converting UCI to SAN:', e)
   }
-  return null
+  
+  throw new Error(`uciToSan: Move ${uciMove} not found in legal moves from position ${fen}`)
 }
 
 interface GameState {
@@ -122,7 +119,7 @@ export function Game({ level }: GameProps) {
   const botConfig = useMemo(() => {
     if (level && level >= 1 && level <= 6) {
       console.log(`[Game] Using selected level: ${level} for opponent`)
-      return createBotConfig(level, 4)
+      return createBotConfig(level, level)
     }
     console.log('[Game] No level selected, using default config')
     return getBotConfig()
@@ -162,7 +159,7 @@ export function Game({ level }: GameProps) {
     const currentTurn = game.currentTurn
     
     let comparison: MoveComparison | null = null
-    if (currentTurn === Team.WHITE) {
+    if (currentTurn === Team.BLACK) {
       comparison = game.lastMoveComparison
     }
     
@@ -193,53 +190,69 @@ export function Game({ level }: GameProps) {
   }, [updateState])
 
   const executeBotMove = useCallback(async () => {
-    if (game.status === GameStatus.GAME_OVER) return
+    if (game.status === GameStatus.GAME_OVER) {
+      console.log(`[OPPONENT] Game is over, not making move`)
+      return
+    }
     
     const currentFen = game.board.fen()
+    const currentTurn = game.currentTurn
     
-    // Use async move selection with Stockfish if available
+    console.log(`\n[OPPONENT] Bot thinking... (current turn: ${currentTurn})`)
+    
     const botUciMove = await bot.selectMoveAsync(currentFen)
     
     if (!botUciMove) {
-      console.warn('Bot could not find a move')
+      console.warn('[OPPONENT] Bot could not find a move')
       return
     }
     
     const sanMove = uciToSan(botUciMove, currentFen)
-    if (!sanMove) {
-      console.warn('Bot move UCI to SAN conversion failed')
-      return
-    }
+    console.log(`[OPPONENT] Selected move: ${sanMove}`)
     
     game.selectMove('player3', sanMove)
     game.selectMove('player4', sanMove)
     
     await game.lockAndResolve(true)
     updateStateRef.current()
+    
+    console.log(`[DEBUG] After opponent turn, currentTurn: ${game.currentTurn}`)
   }, [game, bot])
 
   const executeMove = useCallback(async (uciMove: string, promotion?: PromotionPiece) => {
+    const currentTurn = game.currentTurn
+    
+    console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
+    
+    if (currentTurn !== Team.WHITE) {
+      console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
+      return
+    }
+    
+    console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
+    
     try {
       const sanMove = uciToSan(uciMove, game.board.fen(), promotion)
-      if (!sanMove) {
-        return
-      }
       
+      console.log(`[HUMAN] Proposing move: ${sanMove}`)
       game.selectMove('player1', sanMove)
       
-      // Use async move selection for teammate bot with Stockfish
+      console.log(`[TEAMMATE] Bot is thinking...`)
       const teammateMove = await teammateBot.selectMoveAsync(game.board.fen())
       if (teammateMove) {
         const teammateSanMove = uciToSan(teammateMove, game.board.fen(), promotion)
-        if (teammateSanMove) {
-          game.selectMove('player2', teammateSanMove)
-        }
+        console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
+        game.selectMove('player2', teammateSanMove)
       }
       
+      console.log(`[LOCK] Resolving moves...`)
       await game.lockAndResolve()
       updateStateRef.current()
       
-      if (game.status !== GameStatus.GAME_OVER && game.currentTurn === Team.BLACK) {
+      const newTurn = game.currentTurn
+      console.log(`[DEBUG] After lockAndResolve, newTurn: ${newTurn}`)
+      
+      if (game.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK) {
         setGameState(prev => ({ ...prev, isBotThinking: true }))
         
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -249,7 +262,7 @@ export function Game({ level }: GameProps) {
         setGameState(prev => ({ ...prev, isBotThinking: false }))
       }
     } catch (e) {
-      console.warn('Invalid move:', uciMove, e)
+      console.warn('[HUMAN] Invalid move:', uciMove, e)
     }
   }, [game, executeBotMove, teammateBot])
 
@@ -336,18 +349,18 @@ export function Game({ level }: GameProps) {
           )}
         </div>
 
-        {gameState.moveComparison && gameState.currentTurn === Team.WHITE && (
+        {gameState.moveComparison && gameState.currentTurn === Team.BLACK && (
           <div className="mt-4 p-4 bg-gray-800 rounded border border-gray-600">
             <h3 className="font-bold mb-3 text-center text-lg">Last Move Analysis</h3>
             <div className="text-center text-sm text-gray-400 mb-3">
-              {gameState.currentTurn === Team.WHITE ? "White Team's Turn" : "Black Team's Turn"}
+              {gameState.currentTurn === Team.BLACK ? "White Team's Move" : "Black Team's Move"}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-gray-700'}`}>
-                <div className="text-sm text-gray-400 mb-1">
-                  {gameState.currentTurn === Team.WHITE ? "Player 1 (You)" : "Player 3 (Bot)"}
+              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-blue-900/30 border border-blue-700'}`}>
+                <div className="text-sm mb-1">
+                  <span className="text-blue-400 font-bold">● Player 1 (You)</span>
                 </div>
-                <div className="text-2xl font-bold text-white">{gameState.moveComparison.player1Move}</div>
+                <div className="text-2xl font-bold text-blue-300">{gameState.moveComparison.player1Move}</div>
                 <div className="text-sm">
                   Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player1Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player1Loss)}</span>
                 </div>
@@ -358,11 +371,11 @@ export function Game({ level }: GameProps) {
                   <div className="text-xs text-green-400 mt-1">✓ Winner</div>
                 )}
               </div>
-              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-gray-700'}`}>
-                <div className="text-sm text-gray-400 mb-1">
-                  {gameState.currentTurn === Team.WHITE ? "Player 2 (Teammate)" : "Player 4 (Bot)"}
+              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-green-900/30 border border-green-700'}`}>
+                <div className="text-sm mb-1">
+                  <span className="text-green-400 font-bold">● Player 2 (Teammate)</span>
                 </div>
-                <div className="text-2xl font-bold text-white">{gameState.moveComparison.player2Move}</div>
+                <div className="text-2xl font-bold text-green-300">{gameState.moveComparison.player2Move}</div>
                 <div className="text-sm">
                   Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player2Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player2Loss)}</span>
                 </div>

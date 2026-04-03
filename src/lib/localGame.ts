@@ -139,64 +139,85 @@ export class LocalGame {
   async lockAndResolve(skipStatsUpdate: boolean = false): Promise<void> {
     const currentTeam = this.gameState.currentTeam
     const players = this.gameState.getPlayers(currentTeam)
+    const isBlackTurn = currentTeam === Team.BLACK
+    
+    const teamColor = isBlackTurn ? '🔴 BLACK' : '🟢 WHITE'
+    const player1Id = players[0]
+    const player2Id = players[1]
+    
+    const getPlayerLabel = (playerId: string): string => {
+      if (playerId === 'player1') return 'player1 (Human)'
+      if (playerId === 'player2') return 'player2 (Teammate)'
+      if (playerId === 'player3') return 'player3 (Opponent)'
+      if (playerId === 'player4') return 'player4 (Opponent)'
+      return playerId
+    }
     
     for (const player of players) {
       this.gameState.lockMove(player)
     }
 
-    const player1Move = this.gameState.getSelectedMove(players[0])!
-    const player2Move = this.gameState.getSelectedMove(players[1])!
+    const player1Move = this.gameState.getSelectedMove(player1Id)!
+    const player2Move = this.gameState.getSelectedMove(player2Id)!
 
     const isSync = player1Move === player2Move
 
-    const bestScore = await this.evaluator.getBestScore(this.gameState.fen)
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`[TURN] ${teamColor} team to move`)
+    console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
     
-    let player1Score = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
-    let player2Score = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
+    const bestMoveResult = await this.evaluator.getBestScore(this.gameState.fen)
+    const bestMoveScore = bestMoveResult.score
+    
+    const player1Eval = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
+    const player2Eval = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
+    
+    const player1Score = player1Eval.score
+    const player2Score = player2Eval.score
 
+    const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
+    const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
+    
     if (isSync) {
-      player2Score = { ...player1Score }
+      console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
     }
+
+    const player1Accuracy = this.calculateAccuracy(player1Loss)
+    const player2Accuracy = this.calculateAccuracy(player2Loss)
+
+    console.log(`\n[EVALUATION]`)
+    console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+    console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
+    console.log(`  [Engine Best] ${bestMoveResult.move}: score=${bestMoveScore}`)
     
-    const player1Loss = (bestScore.score !== -Infinity && player1Score.score !== -Infinity)
-      ? Math.abs(bestScore.score - player1Score.score)
-      : Infinity
-    const player2Loss = (bestScore.score !== -Infinity && player2Score.score !== -Infinity)
-      ? Math.abs(bestScore.score - player2Score.score)
-      : Infinity
-
-    const player1Accuracy = Math.max(0, Math.min(100, 100 - (player1Loss / 10)))
-    const player2Accuracy = Math.max(0, Math.min(100, 100 - (player2Loss / 10)))
-
-    console.log(`[Accuracy] Player1: ${player1Move} loss=${player1Loss} accuracy=${player1Accuracy}%`)
-    console.log(`[Accuracy] Player2: ${player2Move} loss=${player2Loss} accuracy=${player2Accuracy}%`)
-    console.log(`[Accuracy] Best: ${bestScore.move} score=${bestScore.score}`)
-
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
-    const winningScore = winningMove === player1Move ? player1Score.score : player2Score.score
+    const winningScore = winningMove === player1Move ? player1Score : player2Score
     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
+    const winnerId = winningMove === player1Move ? player1Id : player2Id
+    
+    console.log(`\n[RESULT] Winner: ${getPlayerLabel(winnerId)} with move ${winningMove}`)
+    console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+    console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
     if (moveParts) {
       this._lastMove = moveParts
     }
 
-    if (currentTeam === Team.WHITE) {
-      this._lastMoveComparison = {
-        player1Move,
-        player2Move,
-        player1Score: player1Score.score,
-        player2Score: player2Score.score,
-        player1Accuracy,
-        player2Accuracy,
-        player1Loss,
-        player2Loss,
-        winningMove,
-        winningScore,
-        isSync,
-        bestEngineMove: bestScore.move,
-        bestEngineScore: bestScore.score
-      }
+    this._lastMoveComparison = {
+      player1Move,
+      player2Move,
+      player1Score,
+      player2Score,
+      player1Accuracy,
+      player2Accuracy,
+      player1Loss,
+      player2Loss,
+      winningMove,
+      winningScore,
+      isSync,
+      bestEngineMove: bestMoveResult.move,
+      bestEngineScore: bestMoveScore
     }
 
     if (!skipStatsUpdate) {
@@ -208,6 +229,12 @@ export class LocalGame {
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
+  }
+
+  private calculateAccuracy(centipawnLoss: number): number {
+    if (centipawnLoss === Infinity || centipawnLoss < 0) return 0
+    if (centipawnLoss === 0) return 100
+    return Math.max(0, Math.min(100, 100 * 200 / (centipawnLoss + 200)))
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {

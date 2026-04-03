@@ -19,13 +19,36 @@ export class MoveEvaluator {
   private stockfishReady: boolean = false
   private stockfishWorker: Worker | null = null
   private initPromise: Promise<boolean> | null = null
-  private searchDepth: number = 10
+  private searchDepth: number = 8
+  private skillLevel: number = 4
+  
+  private evaluationQueue: Array<{
+    fen: string
+    resolve: (score: number) => void
+    reject: (error: Error) => void
+  }> = []
+  
+  private isProcessing: boolean = false
+  private currentHandler: ((e: MessageEvent) => void) | null = null
 
-  constructor(searchDepth: number = 10) {
-    this.searchDepth = Math.max(1, Math.min(searchDepth, 20))
+  constructor(skillLevel: number = 4) {
+    this.skillLevel = Math.max(1, Math.min(skillLevel, 6))
+    this.searchDepth = this.getDepthForSkill(skillLevel)
     if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
       this.initPromise = this.initStockfish()
     }
+  }
+
+  private getDepthForSkill(skillLevel: number): number {
+    if (skillLevel <= 2) return 8
+    if (skillLevel <= 4) return 12
+    return 15
+  }
+
+  private getMoveTimeForSkill(): number {
+    if (this.skillLevel <= 2) return 2000
+    if (this.skillLevel <= 4) return 4000
+    return 6000
   }
 
   setSearchDepth(depth: number): void {
@@ -38,50 +61,61 @@ export class MoveEvaluator {
 
   private async initStockfish(): Promise<boolean> {
     if (typeof window === 'undefined' || typeof Worker === 'undefined') {
-      console.log('[Stockfish] Skipped: No window or Worker support')
       return false
     }
     
     try {
-      console.log('[Stockfish] Creating worker...')
       this.stockfishWorker = new Worker('/stockfish/stockfish.js')
-      console.log('[Stockfish] Worker created:', this.stockfishWorker)
       
       const readyPromise = new Promise<boolean>((resolve) => {
-        const messageHandler = (e: MessageEvent) => {
+        const handler = (e: MessageEvent) => {
           const msg = e.data
-          console.log('[Stockfish] Message received:', JSON.stringify(msg))
           if (msg === 'uciok') {
-            this.stockfishReady = true
-            this.stockfishWorker?.removeEventListener('message', messageHandler)
-            console.log('[Stockfish] Ready!')
+            this.stockfishWorker?.removeEventListener('message', handler)
             resolve(true)
           }
         }
-        this.stockfishWorker?.addEventListener('message', messageHandler)
-        console.log('[Stockfish] Message handler attached')
+        this.stockfishWorker?.addEventListener('message', handler)
       })
 
       this.stockfishWorker.addEventListener('error', (e) => {
         console.error('[Stockfish] Worker error:', e)
       })
       
-      console.log('[Stockfish] Sending uci command...')
       this.stockfishWorker.postMessage('uci')
       
-      // Wait indefinitely for Stockfish to be ready
-      return await readyPromise
-    } catch (error) {
-      console.warn('[Stockfish] Failed:', error)
+      const uciReady = await readyPromise
+      if (uciReady) {
+        this.stockfishWorker?.postMessage(`setoption name Skill Level value ${this.getStockfishSkill()}`)
+        await new Promise(r => setTimeout(r, 100))
+        this.stockfishReady = true
+        console.log('[Stockfish] Initialization complete')
+      }
+      
+      return uciReady
+    } catch (e) {
+      console.error('[Stockfish] Initialization failed:', e)
       return false
     }
   }
 
+  private getStockfishSkill(): number {
+    const skillMap: Record<number, number> = {
+      1: 4,
+      2: 8,
+      3: 12,
+      4: 16,
+      5: 19,
+      6: 20
+    }
+    return skillMap[this.skillLevel] || 10
+  }
+
   private async ensureStockfishReady(): Promise<boolean> {
-    console.log('[Stockfish] ensureStockfishReady called, ready:', this.stockfishReady)
     if (this.stockfishReady) return true
     if (this.initPromise) {
-      return this.initPromise
+      const result = await this.initPromise
+      return result
     }
     return false
   }
@@ -91,33 +125,21 @@ export class MoveEvaluator {
   }
 
   isReady(): boolean {
-    return this.stockfishReady || this.initPromise === null
+    return this.stockfishReady
   }
 
   async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
     const chess = new Chess(fen)
     
-    try {
-      const turnBeforeMove = chess.turn()
-      chess.move(move)
-      const newFen = chess.fen()
-      chess.undo()
-      
-      let score = await this.getEngineScore(newFen)
-      
-      if (turnBeforeMove === 'b') {
-        score = -score
-      }
-      
-      return {
-        move,
-        score
-      }
-    } catch {
-      return {
-        move,
-        score: -Infinity
-      }
+    chess.move(move)
+    const newFen = chess.fen()
+    chess.undo()
+    
+    const score = await this.getEngineScore(newFen)
+    
+    return {
+      move,
+      score
     }
   }
 
@@ -141,13 +163,7 @@ export class MoveEvaluator {
     }
 
     let winner: string
-    if (eval1.score === -Infinity && eval2.score === -Infinity) {
-      winner = 'draw'
-    } else if (eval1.score === -Infinity) {
-      winner = move2
-    } else if (eval2.score === -Infinity) {
-      winner = move1
-    } else if (eval1.score > eval2.score) {
+    if (eval1.score > eval2.score) {
       winner = move1
     } else if (eval2.score > eval1.score) {
       winner = move2
@@ -155,41 +171,146 @@ export class MoveEvaluator {
       winner = move1
     }
 
-    const centipawnLoss = Math.abs(eval1.score - eval2.score)
-
     return {
       move1,
       move2,
       score1: eval1.score,
       score2: eval2.score,
       winner,
-      centipawnLoss
+      centipawnLoss: Math.abs(eval1.score - eval2.score)
     }
   }
 
   async getBestScore(fen: string): Promise<MoveEvaluation> {
     const chess = new Chess(fen)
     const moves = chess.moves()
+    const isBlackTurn = chess.turn() === 'b'
     
     if (moves.length === 0) {
       return { move: '', score: 0 }
     }
 
-    let bestMove = moves[0]
-    let bestScore = -Infinity
+    if (moves.length === 1) {
+      return { move: moves[0], score: 0 }
+    }
 
+    const score = await this.getEngineScore(fen)
+    let bestMove = moves[0]
+    
     for (const move of moves) {
-      const evalResult = await this.evaluateMove(move, fen)
-      if (evalResult.score > bestScore) {
-        bestScore = evalResult.score
-        bestMove = move
+      try {
+        const evalResult = await this.evaluateMove(move, fen)
+        if (isBlackTurn) {
+          if (evalResult.score < score) {
+            return { move, score: evalResult.score }
+          }
+        } else {
+          if (evalResult.score > score) {
+            return { move, score: evalResult.score }
+          }
+        }
+      } catch {
       }
     }
 
-    return {
-      move: bestMove,
-      score: bestScore
+    return { move: bestMove, score }
+  }
+
+  private processQueue(): void {
+    if (this.isProcessing || this.evaluationQueue.length === 0) {
+      return
     }
+
+    const item = this.evaluationQueue.shift()
+    if (!item) return
+
+    this.isProcessing = true
+    this.executeEvaluation(item.fen, item.resolve, item.reject)
+  }
+
+  private executeEvaluation(
+    fen: string, 
+    resolve: (score: number) => void, 
+    reject: (error: Error) => void
+  ): void {
+    if (!this.stockfishWorker) {
+      reject(new Error('Stockfish worker not available'))
+      this.isProcessing = false
+      this.processQueue()
+      return
+    }
+
+    const moveTime = this.getMoveTimeForSkill()
+    let lastScore: number | null = null
+    let resolved = false
+
+    const messageHandler = (e: MessageEvent) => {
+      const line = e.data
+      
+      if (typeof line !== 'string' || resolved) return
+
+      if (line.includes('score cp')) {
+        const match = line.match(/score cp (-?\d+)/)
+        if (match) {
+          lastScore = parseInt(match[1], 10)
+        }
+      }
+      
+      if (line.includes('score mate')) {
+        const match = line.match(/score mate (-?\d+)/)
+        if (match) {
+          const mateIn = parseInt(match[1], 10)
+          lastScore = mateIn > 0 ? 10000 : -10000
+        }
+      }
+      
+      if (line.startsWith('bestmove')) {
+        resolved = true
+        
+        if (this.currentHandler) {
+          this.stockfishWorker?.removeEventListener('message', this.currentHandler)
+          this.currentHandler = null
+        }
+        clearTimeout(timeout)
+        
+        if (lastScore !== null) {
+          resolve(lastScore)
+        } else {
+          resolve(0)
+        }
+        
+        this.isProcessing = false
+        setTimeout(() => this.processQueue(), 0)
+      }
+    }
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        
+        if (this.currentHandler) {
+          this.stockfishWorker?.removeEventListener('message', this.currentHandler)
+          this.currentHandler = null
+        }
+        
+        console.log('[Stockfish] Timeout, using last score:', lastScore)
+        
+        if (lastScore !== null) {
+          resolve(lastScore)
+        } else {
+          resolve(0)
+        }
+        
+        this.isProcessing = false
+        setTimeout(() => this.processQueue(), 0)
+      }
+    }, moveTime)
+
+    this.currentHandler = messageHandler
+    this.stockfishWorker.addEventListener('message', messageHandler)
+    
+    this.stockfishWorker.postMessage(`position fen ${fen}`)
+    this.stockfishWorker.postMessage(`go depth ${this.searchDepth} movetime ${moveTime}`)
   }
 
   private async getEngineScore(fen: string): Promise<number> {
@@ -203,196 +324,16 @@ export class MoveEvaluator {
     }
 
     const isReady = await this.ensureStockfishReady()
-    
-    if (!isReady || !this.stockfishWorker) {
-      console.error('[Eval] FATAL: Stockfish not ready, cannot evaluate')
+    if (!isReady) {
       throw new Error('Stockfish not available')
     }
 
-    const stockfishScore = await this.evaluateWithStockfish(fen)
-    if (stockfishScore === null) {
-      console.error('[Eval] FATAL: Stockfish returned null')
-      throw new Error('Stockfish evaluation failed')
-    }
-
-    return stockfishScore
-  }
-
-  private evaluateWithStockfish(fen: string): Promise<number | null> {
-    return new Promise((resolve) => {
-      if (!this.stockfishReady || !this.stockfishWorker) {
-        console.log('[Stockfish] evaluateWithStockfish: not ready, worker:', this.stockfishWorker, 'ready:', this.stockfishReady)
-        resolve(null)
-        return
-      }
-
-      console.log('[Stockfish] evaluateWithStockfish: evaluating FEN:', fen)
+    return new Promise((resolve, reject) => {
+      this.evaluationQueue.push({ fen, resolve, reject })
       
-      // Wait up to 5 minutes for Stockfish evaluation (deep analysis takes time)
-      const timeout = setTimeout(() => {
-        console.error('[Stockfish] evaluateWithStockfish: timeout after 5 minutes!')
-        resolve(null)
-      }, 300000)
-
-      let lastScore: number | null = null
-      
-      const messageHandler = (e: MessageEvent) => {
-        const line = e.data
-        console.log('[Stockfish] eval message:', line)
-        
-        // Always capture the latest score
-        if (line && typeof line === 'string' && line.startsWith('info') && line.includes('score cp')) {
-          const match = line.match(/score cp (-?\d+)/)
-          if (match) {
-            lastScore = parseInt(match[1], 10)
-          }
-        }
-        
-        // Only resolve when we have a bestmove AND a score
-        if (line && typeof line === 'string' && line.startsWith('bestmove')) {
-          clearTimeout(timeout)
-          this.stockfishWorker?.removeEventListener('message', messageHandler)
-          console.log('[Stockfish] eval bestmove received, score:', lastScore)
-          
-          if (lastScore !== null) {
-            resolve(lastScore)
-          } else {
-            // No score found - this is a problem with Stockfish output
-            console.error('[Stockfish] FATAL: No score in output before bestmove')
-            resolve(null)
-          }
-        }
-      }
-
-      this.stockfishWorker!.addEventListener('message', messageHandler)
-      this.stockfishWorker!.postMessage(`position fen ${fen}`)
-      console.log(`[Stockfish] Evaluating at depth ${this.searchDepth}`)
-      this.stockfishWorker!.postMessage(`go depth ${this.searchDepth}`)
+      setTimeout(() => {
+        this.processQueue()
+      }, 0)
     })
-  }
-
-  private simpleEvaluate(fen: string): number {
-    const chess = new Chess(fen)
-    
-    const pieceValues: Record<string, number> = {
-      'P': 100, 'N': 320, 'B': 330, 'R': 500, 'Q': 900, 'K': 20000,
-      'p': -100, 'n': -320, 'b': -330, 'r': -500, 'q': -900, 'k': -20000
-    }
-
-    let score = 0
-    const board = chess.board()
-
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board[row].length; col++) {
-        const piece = board[row][col]
-        if (piece) {
-          const value = pieceValues[piece.color === 'w' ? piece.type : piece.type.toLowerCase()]
-          const multiplier = piece.color === 'w' ? 1 : -1
-          const positionBonus = this.getPositionBonus(piece, row, col)
-          score += (value + positionBonus) * multiplier
-        }
-      }
-    }
-
-    if (chess.isCheck()) {
-      score += chess.turn() === 'w' ? -50 : 50
-    }
-
-    const mobilityScore = this.getMobilityScore(chess)
-    score += mobilityScore
-
-    return score
-  }
-
-  private getPositionBonus(piece: { type: string; color: 'w' | 'b' }, row: number, col: number): number {
-    const pawnBonus: number[][] = [
-      [0,  0,  0,  0,  0,  0,  0,  0],
-      [50, 50, 50, 50, 50, 50, 50, 50],
-      [10, 10, 20, 30, 30, 20, 10, 10],
-      [5,  5, 10, 25, 25, 10,  5,  5],
-      [0,  0,  0, 20, 20,  0,  0,  0],
-      [5, -5, -10,  0,  0, -10, -5,  5],
-      [5, 10, 10, -20, -20, 10, 10,  5],
-      [0,  0,  0,  0,  0,  0,  0,  0]
-    ]
-
-    const knightBonus: number[][] = [
-      [-50, -40, -30, -30, -30, -30, -40, -50],
-      [-40, -20,  0,  0,  0,  0, -20, -40],
-      [-30,  0, 10, 15, 15, 10,  0, -30],
-      [-30,  5, 15, 20, 20, 15,  5, -30],
-      [-30,  0, 15, 20, 20, 15,  0, -30],
-      [-30,  5, 10, 15, 15, 10,  5, -30],
-      [-40, -20,  0,  5,  5,  0, -20, -40],
-      [-50, -40, -30, -30, -30, -30, -40, -50]
-    ]
-
-    const bishopBonus: number[][] = [
-      [-20, -10, -10, -10, -10, -10, -10, -20],
-      [-10,  0,  0,  0,  0,  0,  0, -10],
-      [-10,  0,  5, 10, 10,  5,  0, -10],
-      [-10,  5,  5, 10, 10,  5,  5, -10],
-      [-10,  0, 10, 10, 10, 10,  0, -10],
-      [-10, 10, 10, 10, 10, 10, 10, -10],
-      [-10,  5,  0,  0,  0,  0,  5, -10],
-      [-20, -10, -10, -10, -10, -10, -10, -20]
-    ]
-
-    const rookBonus: number[][] = [
-      [0,  0,  0,  0,  0, 0, 0, 0],
-      [5, 10, 10, 10, 10, 10, 10,  5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
-      [-5,  0,  0,  0,  0,  0,  0, -5],
-      [0,  0,  0,  5,  5,  0,  0,  0]
-    ]
-
-    const queenBonus: number[][] = [
-      [-20, -10, -10, -5, -5, -10, -10, -20],
-      [-10,  0,  0,  0,  0,  0,  0, -10],
-      [-10,  0,  5,  5,  5,  5,  0, -10],
-      [-5,  0,  5,  5,  5,  5,  0, -5],
-      [0,  0,  5,  5,  5,  5,  0, -5],
-      [-10,  5,  5,  5,  5,  5,  0, -10],
-      [-10,  0,  5,  0,  0,  0,  0, -10],
-      [-20, -10, -10, -5, -5, -10, -10, -20]
-    ]
-
-    const kingBonus: number[][] = [
-      [-30, -40, -40, -50, -50, -40, -40, -30],
-      [-30, -40, -40, -50, -50, -40, -40, -30],
-      [-30, -40, -40, -50, -50, -40, -40, -30],
-      [-30, -40, -40, -50, -50, -40, -40, -30],
-      [-20, -30, -30, -40, -40, -30, -30, -20],
-      [-10, -20, -20, -20, -20, -20, -20, -10],
-      [20, 20,  0,  0,  0,  0, 20, 20],
-      [20, 30, 10,  0,  0, 10, 30, 20]
-    ]
-
-    const isBlack = piece.color === 'b'
-    let adjustedRow = isBlack ? row : 7 - row
-
-    switch (piece.type) {
-      case 'p': return pawnBonus[adjustedRow][col]
-      case 'n': return knightBonus[adjustedRow][col]
-      case 'b': return bishopBonus[adjustedRow][col]
-      case 'r': return rookBonus[adjustedRow][col]
-      case 'q': return queenBonus[adjustedRow][col]
-      case 'k': return kingBonus[adjustedRow][col]
-      default: return 0
-    }
-  }
-
-  private getMobilityScore(chess: Chess): number {
-    const moves = chess.moves()
-    const baseMobility = moves.length * 5
-    
-    if (chess.turn() === 'w') {
-      return baseMobility
-    } else {
-      return -baseMobility
-    }
   }
 }

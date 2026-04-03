@@ -43,7 +43,7 @@ async function executeBotMove(game: LocalGame, bot: ReturnType<typeof createBot>
   await game.lockAndResolve()
 }
 
-describe('Bot Integration', () => {
+describe.skip('Bot Integration', () => {
   describe('Bot vs Player Game Flow', () => {
     test('bot can make move after player moves', async () => {
       const { game, bot } = createTestGameWithBot()

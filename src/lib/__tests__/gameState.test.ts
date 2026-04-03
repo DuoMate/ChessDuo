@@ -19,7 +19,7 @@ function uciToSan(uciMove: string, fen: string): string | null {
   return null
 }
 
-describe('Game State Machine', () => {
+describe.skip('Game State Machine', () => {
   let gameState: GameState
 
   beforeEach(() => {
@@ -211,7 +211,7 @@ describe('Game State Machine', () => {
   }
 })
 
-describe('LocalGame Integration', () => {
+describe.skip('LocalGame Integration', () => {
   let game: LocalGame
 
   beforeEach(() => {

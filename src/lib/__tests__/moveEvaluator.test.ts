@@ -1,32 +1,34 @@
 import { MoveEvaluator } from '../moveEvaluator'
 
 describe('Move Evaluator', () => {
-  describe('search depth configuration', () => {
-    test('constructor accepts search depth parameter', () => {
-      const eval1 = new MoveEvaluator(5)
-      const eval2 = new MoveEvaluator(15)
+  describe('skill level configuration (production settings)', () => {
+    test('constructor accepts skill level parameter', () => {
+      const eval1 = new MoveEvaluator(1)
+      const eval2 = new MoveEvaluator(4)
+      const eval3 = new MoveEvaluator(6)
       
-      expect(eval1.getSearchDepth()).toBe(5)
-      expect(eval2.getSearchDepth()).toBe(15)
+      expect(eval1.getSearchDepth()).toBe(8)
+      expect(eval2.getSearchDepth()).toBe(12)
+      expect(eval3.getSearchDepth()).toBe(15)
     })
 
-    test('search depth is clamped to valid range', () => {
+    test('skill level is clamped to valid range', () => {
       const evalLow = new MoveEvaluator(-5)
       const evalHigh = new MoveEvaluator(100)
       const evalZero = new MoveEvaluator(0)
       
-      expect(evalLow.getSearchDepth()).toBe(1)
-      expect(evalHigh.getSearchDepth()).toBe(20)
-      expect(evalZero.getSearchDepth()).toBe(1)
+      expect(evalLow.getSearchDepth()).toBe(8)
+      expect(evalHigh.getSearchDepth()).toBe(15)
+      expect(evalZero.getSearchDepth()).toBe(8)
     })
 
     test('setSearchDepth updates the depth', () => {
-      const evaluator = new MoveEvaluator(5)
+      const evaluator = new MoveEvaluator(4)
       
-      expect(evaluator.getSearchDepth()).toBe(5)
+      expect(evaluator.getSearchDepth()).toBe(12)
       
-      evaluator.setSearchDepth(8)
-      expect(evaluator.getSearchDepth()).toBe(8)
+      evaluator.setSearchDepth(12)
+      expect(evaluator.getSearchDepth()).toBe(12)
       
       evaluator.setSearchDepth(25)
       expect(evaluator.getSearchDepth()).toBe(20)
@@ -36,24 +38,21 @@ describe('Move Evaluator', () => {
     })
 
     test('isUsingStockfish returns boolean', () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = evaluator.isUsingStockfish()
       expect(typeof result).toBe('boolean')
     })
 
     test('isReady returns boolean', () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = evaluator.isReady()
       expect(typeof result).toBe('boolean')
     })
   })
 
   describe('Stockfish-dependent tests (require browser environment)', () => {
-    // These tests require Stockfish which needs browser Worker API
-    // They are skipped in test environment but will work in browser
-
     test.skip('evaluates a single move and returns score (requires Stockfish)', async () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const evaluation = await evaluator.evaluateMove('e4', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
       
       expect(evaluation.score).toBeDefined()
@@ -61,7 +60,7 @@ describe('Move Evaluator', () => {
     })
 
     test.skip('compares two moves and returns winner (requires Stockfish)', async () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = await evaluator.compareMoves(
         'e4',
         'd4',
@@ -75,7 +74,7 @@ describe('Move Evaluator', () => {
     })
 
     test.skip('handles same moves as draw (requires Stockfish)', async () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = await evaluator.compareMoves(
         'e4',
         'e4',
@@ -86,7 +85,7 @@ describe('Move Evaluator', () => {
     })
 
     test.skip('returns centipawn loss (requires Stockfish)', async () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = await evaluator.compareMoves(
         'e4',
         'a4',
@@ -98,7 +97,7 @@ describe('Move Evaluator', () => {
     })
 
     test.skip('handles illegal moves gracefully (requires Stockfish)', async () => {
-      const evaluator = new MoveEvaluator(10)
+      const evaluator = new MoveEvaluator(4)
       const result = await evaluator.compareMoves(
         'e5',
         'e4',
@@ -112,7 +111,7 @@ describe('Move Evaluator', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
       const eval1 = new MoveEvaluator(1)
-      const eval2 = new MoveEvaluator(10)
+      const eval2 = new MoveEvaluator(6)
       
       const score1 = await eval1.evaluateMove('e4', fen)
       const score2 = await eval2.evaluateMove('e4', fen)
