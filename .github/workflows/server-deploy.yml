@@ -7,10 +7,11 @@ on:
     paths:
       - 'server/**'
       - 'render.yaml'
+      - 'Dockerfile'
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-test:
     runs-on: ubuntu-latest
     
     steps:
@@ -42,15 +43,10 @@ jobs:
           SERVER_PID=$!
           sleep 5
           curl -f http://localhost:3001/health || exit 1
+          curl -f -X POST http://localhost:3001/evaluate \
+            -H "Content-Type: application/json" \
+            -d '{"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","depth":10}' || exit 1
           kill $SERVER_PID 2>/dev/null || true
 
-      - name: Deploy to Render
-        if: github.ref == 'refs/heads/main'
-        run: |
-          curl -X POST https://api.render.com/v1/services \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "serviceId": "${{ secrets.RENDER_SERVICE_ID }}",
-              "trigger": "DEPLOY"
-            }'
+      - name: Success notification
+        run: echo "✅ Build and tests passed! Render Blueprint will auto-deploy."
