@@ -17,11 +17,17 @@ FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Install Stockfish and Node.js
+# Install newer Node.js and Stockfish
 RUN apt-get update && apt-get install -y \
-    stockfish \
+    wget \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/* \
+    && wget -q https://deb.nodesource.com/setup_20.x -O /tmp/nodesource_setup.sh \
+    && chmod +x /tmp/nodesource_setup.sh \
+    && bash /tmp/nodesource_setup.sh \
+    && apt-get update && apt-get install -y \
     nodejs \
-    npm \
+    stockfish \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy built app from builder
