@@ -12,23 +12,25 @@ COPY server/src ./src
 
 RUN npm run build
 
-# Stage 2: Production runtime with Stockfish
+# Stage 2: Production runtime
 FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Install newer Node.js and Stockfish
+# Install Node.js 20 and download Stockfish directly
 RUN apt-get update && apt-get install -y \
     wget \
-    software-properties-common \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
-    && wget -q https://deb.nodesource.com/setup_20.x -O /tmp/nodesource_setup.sh \
-    && chmod +x /tmp/nodesource_setup.sh \
-    && bash /tmp/nodesource_setup.sh \
-    && apt-get update && apt-get install -y \
-    nodejs \
-    stockfish \
-    && rm -rf /var/lib/apt/lists/*
+    && curl -sL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
+    -O /tmp/sf.tar \
+    && mkdir -p /usr/local/bin \
+    && tar -xf /tmp/sf.tar -C /usr/local/bin \
+    && chmod +x /usr/local/bin/stockfish/stockfish \
+    && ln -sf /usr/local/bin/stockfish/stockfish /usr/local/bin/stockfish \
+    && rm /tmp/sf.tar
 
 # Copy built app from builder
 COPY --from=builder /app/dist ./dist

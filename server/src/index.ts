@@ -25,9 +25,9 @@ interface StockfishInstance {
 
 const instances: Map<string, StockfishInstance> = new Map()
 const STOCKFISH_PATHS = [
-  '/usr/games/stockfish',
   '/usr/local/bin/stockfish',
   '/usr/bin/stockfish',
+  '/usr/games/stockfish',
   'stockfish'
 ]
 
@@ -38,6 +38,10 @@ function findStockfishPath(): string {
       if (fs.existsSync(p)) {
         console.log(`[STOCKFISH] Found at: ${p}`)
         return p
+      }
+      if (fs.existsSync(p + '/stockfish')) {
+        console.log(`[STOCKFISH] Found at: ${p}/stockfish`)
+        return p + '/stockfish'
       }
     } catch {
       continue
@@ -81,7 +85,10 @@ function createStockfishInstance(instanceId: string): StockfishInstance {
   })
 
   proc.stderr?.on('data', (data: Buffer) => {
-    console.error(`[Stockfish:${instanceId}] stderr:`, data.toString())
+    const output = data.toString()
+    if (output.trim()) {
+      console.log(`[Stockfish:${instanceId}] stderr:`, output)
+    }
   })
 
   sendUciCommand(instanceId, 'uci')
@@ -91,10 +98,17 @@ function createStockfishInstance(instanceId: string): StockfishInstance {
 
 function sendUciCommand(instanceId: string, command: string): void {
   const instance = instances.get(instanceId)
-  if (!instance || !instance.process.stdin) return
+  if (!instance || !instance.process.stdin) {
+    console.log(`[Stockfish:${instanceId}] Cannot send command: stdin not available`)
+    return
+  }
   
-  instance.process.stdin.write(command + '\n')
-  console.log(`[Stockfish:${instanceId}] >>> ${command}`)
+  try {
+    instance.process.stdin.write(command + '\n')
+    console.log(`[Stockfish:${instanceId}] >>> ${command}`)
+  } catch (e) {
+    console.log(`[Stockfish:${instanceId}] Error sending command:`, e)
+  }
 }
 
 function handleStockfishOutput(instanceId: string, line: string): void {
@@ -177,7 +191,7 @@ async function evaluatePosition(fen: string, depth: number = 15): Promise<number
       const timeout = setTimeout(() => {
         cleanupInstance(instanceId)
         reject(new Error('Stockfish initialization timeout'))
-      }, 15000)
+      }, 30000)
       
       const checkReady = setInterval(() => {
         const inst = instances.get(instanceId)
