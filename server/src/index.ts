@@ -25,8 +25,9 @@ interface StockfishInstance {
 
 const instances: Map<string, StockfishInstance> = new Map()
 const STOCKFISH_PATHS = [
-  'stockfish',
   '/usr/local/bin/stockfish',
+  '/usr/local/bin/stockfish/stockfish',
+  'stockfish',
   '/usr/bin/stockfish',
   './stockfish-linux',
   path.join(__dirname, '../stockfish/stockfish16nnue')

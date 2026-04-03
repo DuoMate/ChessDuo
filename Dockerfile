@@ -17,13 +17,14 @@ FROM alpine:3.19 AS production
 
 WORKDIR /app
 
-# Download Stockfish NNUE binary from GitHub releases
+# Download and extract Stockfish to /usr/local/bin
 RUN wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
-    -O /tmp/stockfish.tar.xz \
-    && mkdir -p /usr/local/bin \
-    && tar -xf /tmp/stockfish.tar.xz -C /usr/local/bin \
-    && rm /tmp/stockfish.tar.xz \
-    && chmod +x /usr/local/bin/stockfish
+    -O /tmp/stockfish.tar \
+    && mkdir -p /usr/local/bin/stockfish \
+    && tar -xf /tmp/stockfish.tar -C /usr/local/bin/stockfish --strip-components=1 \
+    && rm /tmp/stockfish.tar \
+    && chmod +x /usr/local/bin/stockfish/stockfish \
+    && ln -s /usr/local/bin/stockfish/stockfish /usr/local/bin/stockfish
 
 # Copy built app from builder
 COPY --from=builder /app/dist ./dist
