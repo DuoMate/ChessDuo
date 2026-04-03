@@ -11,8 +11,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      working-directory: server
     
     steps:
       - name: Checkout
@@ -26,15 +24,18 @@ jobs:
           cache-dependency-path: server/package-lock.json
 
       - name: Install dependencies
+        working-directory: server
         run: npm ci
 
       - name: TypeScript compilation
+        working-directory: server
         run: npm run build
 
       - name: Install Stockfish
         run: sudo apt-get update && sudo apt-get install -y stockfish
 
       - name: Local health check
+        working-directory: server
         run: |
           npm start &
           SERVER_PID=$!
