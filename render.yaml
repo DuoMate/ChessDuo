@@ -6,7 +6,7 @@ services:
     name: chessduo-stockfish
     region: oregon
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: Dockerfile
     healthCheckPath: /health
     envVars:
       - key: PORT
