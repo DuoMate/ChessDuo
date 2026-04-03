@@ -1,0 +1,16 @@
+# render.yaml - Render Zero-Config Deployment
+# Place this in the server/ directory
+
+services:
+  - type: web
+    name: chessduo-stockfish
+    region: oregon
+    plan: free
+    rootDir: ./
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
