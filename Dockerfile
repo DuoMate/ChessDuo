@@ -1,7 +1,5 @@
 # Multi-stage Dockerfile for Stockfish Server
-# Using Alpine Linux
-
-# Stage 1: Build
+# Stage 1: Build Node.js app
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -14,18 +12,27 @@ COPY server/src ./src
 
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
+# Stage 2: Production - download Stockfish binary
+FROM alpine:3.19 AS production
 
 WORKDIR /app
 
-# Install Stockfish using Alpine's package manager
-RUN apk add --no-cache stockfish
+# Download Stockfish NNUE binary directly
+RUN wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-linux-x86-64-avx2.tar \
+    -O /tmp/stockfish.tar.xz \
+    && mkdir -p /usr/local/bin \
+    && tar -xf /tmp/stockfish.tar.xz -C /usr/local/bin \
+    && rm /tmp/stockfish.tar.xz \
+    && chmod +x /usr/local/bin/stockfish
 
+# Copy built app from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
-RUN npm ci --only=production
+# Install Node.js runtime
+RUN apk add --no-cache nodejs npm \
+    && npm ci --only=production \
+    && rm -rf /var/cache/apk/*
 
 EXPOSE 3001
 
