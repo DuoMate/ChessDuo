@@ -1,13 +1,12 @@
-# render.yaml - Render Zero-Config Deployment
-# Placed at repo root, points to server/ directory
+# render.yaml - Render Deployment with Docker
+# Stockfish requires native binary, so we use Docker
 
 services:
   - type: web
     name: chessduo-stockfish
     region: oregon
     plan: free
-    rootDir: ./server
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: server/Dockerfile
     healthCheckPath: /health
     envVars:
       - key: PORT
