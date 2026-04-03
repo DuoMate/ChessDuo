@@ -17,8 +17,8 @@ FROM alpine:3.19 AS production
 
 WORKDIR /app
 
-# Download Stockfish NNUE binary directly
-RUN wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-linux-x86-64-avx2.tar \
+# Download Stockfish NNUE binary from GitHub releases
+RUN wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
     -O /tmp/stockfish.tar.xz \
     && mkdir -p /usr/local/bin \
     && tar -xf /tmp/stockfish.tar.xz -C /usr/local/bin \
