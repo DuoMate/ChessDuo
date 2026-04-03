@@ -172,7 +172,7 @@ async function evaluatePosition(fen: string, depth: number = 15): Promise<number
       const timeout = setTimeout(() => {
         cleanupInstance(instanceId)
         reject(new Error('Stockfish initialization timeout'))
-      }, 5000)
+      }, 15000)
       
       const checkReady = setInterval(() => {
         const inst = instances.get(instanceId)
@@ -202,7 +202,7 @@ async function evaluatePosition(fen: string, depth: number = 15): Promise<number
         inst.pendingResolve = null
         inst.pendingReject = null
       }
-    }, 3000)
+    }, 10000)
 
     sendUciCommand(instanceId, `position fen ${fen}`)
     sendUciCommand(instanceId, `go depth ${depth}`)
