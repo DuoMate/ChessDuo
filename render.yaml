@@ -1,12 +1,12 @@
 # render.yaml - Render Deployment with Docker
-# Stockfish requires native binary, so we use Docker
+# Stockfish requires native binary, so we use Docker with Alpine
 
 services:
   - type: web
     name: chessduo-stockfish
     region: oregon
     plan: free
-    dockerfilePath: server/Dockerfile
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: PORT
