@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'server/**'
+      - 'render.yaml'
   workflow_dispatch:
 
 jobs:
@@ -45,7 +46,11 @@ jobs:
 
       - name: Deploy to Render
         if: github.ref == 'refs/heads/main'
-        uses: render/deploy-action@v1
-        with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST https://api.render.com/v1/services \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "serviceId": "${{ secrets.RENDER_SERVICE_ID }}",
+              "trigger": "DEPLOY"
+            }'
