@@ -1,6 +1,8 @@
 import { Chess } from 'chess.js'
 import { GameState, GamePhase, Team, Player, CapturedPieces } from './gameState'
-import { MoveEvaluator } from './moveEvaluator'
+import { ServerMoveEvaluator } from './serverMoveEvaluator'
+
+const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
 export enum GameStatus {
   WAITING = 'WAITING',
@@ -41,7 +43,7 @@ export interface MoveComparison {
 
 export class LocalGame {
   private gameState: GameState
-  private evaluator: MoveEvaluator
+  private evaluator: ServerMoveEvaluator
   private _status: GameStatus
   private stats: GameStats
   private _lastMove: { from: string; to: string } | null = null
@@ -50,7 +52,15 @@ export class LocalGame {
 
   constructor() {
     this.gameState = new GameState()
-    this.evaluator = new MoveEvaluator()
+    
+    if (SERVER_URL) {
+      console.log(`[LocalGame] Using server evaluator: ${SERVER_URL}`)
+      this.evaluator = new ServerMoveEvaluator(SERVER_URL)
+    } else {
+      console.warn('[LocalGame] No server URL configured - evaluations will fail')
+      this.evaluator = new ServerMoveEvaluator('')
+    }
+    
     this._status = GameStatus.WAITING
     this.stats = {
       movesPlayed: 0,

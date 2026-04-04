@@ -1,9 +1,11 @@
 import { Chess, Move } from 'chess.js'
-import { getBookMove, isInOpeningBook } from './openings'
+import { getBookMove } from './openings'
+import { ServerMoveEvaluator } from './serverMoveEvaluator'
+
+const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
 export interface BotConfig {
   skillLevel: number
-  useStockfish?: boolean
   mockMoveEvaluator?: any
 }
 
@@ -19,54 +21,27 @@ const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string;
 export class ChessBot {
   private config: BotConfig
   private moveEvaluator: any = null
-  private stockfishReady: boolean = false
 
   constructor(config: BotConfig = { skillLevel: 3 }) {
     this.config = config
     
-    // Use mock MoveEvaluator if provided (for testing)
     if (config.mockMoveEvaluator) {
       this.moveEvaluator = config.mockMoveEvaluator
-      this.stockfishReady = true
       return
     }
     
-    // Lazy load MoveEvaluator for Stockfish support
-    if (config.useStockfish) {
-      this.initializeMoveEvaluator()
+    if (SERVER_URL) {
+      console.log(`[ChessBot] Using server evaluator: ${SERVER_URL}`)
+      this.moveEvaluator = new ServerMoveEvaluator(SERVER_URL)
+    } else {
+      console.warn('[ChessBot] No server URL configured, bot will use fallback evaluation')
     }
   }
 
-  /**
-   * Initialize MoveEvaluator for Stockfish integration
-   * Non-blocking initialization
-   */
-  private initializeMoveEvaluator(): void {
-    if (typeof window !== 'undefined') {
-      import('./moveEvaluator').then(({ MoveEvaluator }) => {
-        const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
-        this.moveEvaluator = new MoveEvaluator(this.config.skillLevel)
-        // Check if Stockfish becomes ready
-        setTimeout(() => {
-          this.stockfishReady = this.moveEvaluator?.isUsingStockfish() || false
-        }, 100)
-      }).catch(() => {
-        console.warn('MoveEvaluator not available, using basic evaluation')
-      })
-    }
-  }
-
-  /**
-   * Check if Stockfish is ready for evaluation
-   */
   isStockfishReady(): boolean {
-    return this.stockfishReady || (this.moveEvaluator?.isUsingStockfish() || false)
+    return this.moveEvaluator?.isUsingStockfish() ?? false
   }
 
-  /**
-   * ASYNC: Select move using Stockfish only (no fallback)
-   * Throws error if Stockfish is unavailable
-   */
   async selectMoveAsync(fen: string): Promise<string | null> {
     try {
       const chess = new Chess(fen)
@@ -80,7 +55,6 @@ export class ChessBot {
         return this.moveToUci(moves[0])
       }
 
-      // Check opening book first
       const bookMove = getBookMove(fen, this.config.skillLevel)
       if (bookMove) {
         const matchedMove = moves.find(m => m.san === bookMove || m.lan === bookMove || (m.from + m.to) === bookMove)
@@ -90,63 +64,18 @@ export class ChessBot {
         }
       }
 
-      // ALWAYS use Stockfish - wait until ready
       if (!this.moveEvaluator) {
-        throw new Error('MoveEvaluator not initialized')
+        throw new Error('No evaluator configured')
       }
 
-      // Wait indefinitely for Stockfish to be ready
-      console.log('[ChessBot] Waiting for Stockfish...')
-      await this.waitForStockfish(30000) // Wait up to 30s
-      
-      if (!this.moveEvaluator.isUsingStockfish()) {
-        throw new Error('Stockfish failed to initialize after 30s')
-      }
-
-      console.log('[ChessBot] Stockfish ready, evaluating move...')
       const selectedMove = await this.pickSmartMoveAsync(moves, fen)
       return this.moveToUci(selectedMove)
     } catch (error) {
-      // Re-throw Stockfish-related errors
-      const errorMsg = error instanceof Error ? error.message : String(error)
-      if (errorMsg.includes('Stockfish') || errorMsg.includes('MoveEvaluator')) {
-        console.error('[ChessBot] Fatal error - Stockfish unavailable:', error)
-        throw error
-      }
-      // For other errors (like invalid FEN), return null
-      console.warn('[ChessBot] Move selection failed:', error)
+      console.error('[ChessBot] Move selection failed:', error)
       return null
     }
   }
 
-  private waitForStockfish(timeoutMs: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const startTime = Date.now()
-      
-      const checkReady = () => {
-        if (this.moveEvaluator && this.moveEvaluator.isUsingStockfish()) {
-          console.log('[ChessBot] Stockfish is ready!')
-          resolve(true)
-          return
-        }
-        
-        if (Date.now() - startTime >= timeoutMs) {
-          console.warn(`[ChessBot] Stockfish not ready after ${timeoutMs}ms`)
-          resolve(false)
-          return
-        }
-        
-        setTimeout(checkReady, 500)
-      }
-      
-      checkReady()
-    })
-  }
-
-  /**
-   * SYNC: Select move using basic evaluation
-   * Maintains backward compatibility
-   */
   selectMove(fen: string): string | null {
     try {
       const chess = new Chess(fen)
@@ -167,17 +96,11 @@ export class ChessBot {
     }
   }
 
-  /**
-   * ASYNC: Pick move using Stockfish evaluation
-   * For WHITE's turn: higher score = better
-   * For BLACK's turn: lower (more negative) score = better
-   */
   private async pickSmartMoveAsync(moves: Move[], fen: string): Promise<Move> {
-    const botLabel = this.config.useStockfish ? 'Stockfish Bot' : 'Basic Bot'
     const isBlackTurn = new Chess(fen).turn() === 'b'
     
     if (moves.length === 1) {
-      console.log(`[ChessBot:${botLabel}] Only one move available: ${moves[0].san}`)
+      console.log(`[ChessBot] Only one move available: ${moves[0].san}`)
       return moves[0]
     }
 
@@ -208,11 +131,11 @@ export class ChessBot {
     const topMovesDisplay = evaluatedMoves.slice(0, Math.min(5, evaluatedMoves.length))
       .map((m, i) => `${i + 1}. ${m.move.san}(${m.score})`)
       .join(' | ')
-    console.log(`\n[ChessBot:${botLabel}:L${this.config.skillLevel}] Evaluating ${moves.length} moves`)
+    console.log(`\n[ChessBot:L${this.config.skillLevel}] Evaluating ${moves.length} moves`)
     console.log(`[ChessBot] Top moves: ${topMovesDisplay}`)
 
     const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
-    console.log(`[ChessBot:${botLabel}:L${this.config.skillLevel}] Selected: ${selectedMove.san} (score: ${evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score})`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] Selected: ${selectedMove.san} (score: ${evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score})`)
     
     return selectedMove
   }
@@ -234,12 +157,6 @@ export class ChessBot {
     return this.applyEloBasedSelection(evaluatedMoves)
   }
 
-  /**
-   * Apply ELO-based selection logic
-   * Higher ELO = more likely to play best move
-   * Lower ELO = more randomness to simulate weakness
-   * When not picking best, picks from top N where N decreases with higher skill
-   */
   private applyEloBasedSelection(evaluatedMoves: { move: Move; score: number }[]): Move {
     const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
     const bestMoveChance = skillConfig.bestMoveChance
@@ -269,7 +186,7 @@ export class ChessBot {
         chess.move(move)
         const newFen = chess.fen()
         
-        let score = this.getScoreSync(newFen)
+        let score = this.fallbackEvaluate(newFen)
         
         if (turn === 'b') {
           score = -score
@@ -282,10 +199,6 @@ export class ChessBot {
     }
     
     return results
-  }
-
-  private getScoreSync(fen: string): number {
-    return this.fallbackEvaluate(fen)
   }
 
   private fallbackEvaluate(fen: string): number {
@@ -330,6 +243,5 @@ export class ChessBot {
 export function createBot(config?: Partial<BotConfig>): ChessBot {
   return new ChessBot({
     skillLevel: config?.skillLevel ?? 3,
-    useStockfish: config?.useStockfish ?? true // Default to using Stockfish
   })
 }

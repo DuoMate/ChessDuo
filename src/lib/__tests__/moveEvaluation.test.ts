@@ -1,20 +1,20 @@
 import { LocalGame, GameStatus } from '../localGame'
 import { Team } from '../gameState'
-import { MoveEvaluator, MoveEvaluation } from '../moveEvaluator'
 import { Chess } from 'chess.js'
 
-class MockMoveEvaluator extends MoveEvaluator {
-  private mockScores: Map<string, number> = new Map()
+interface MoveEvaluation {
+  move: string
+  score: number
+}
 
-  constructor() {
-    super(3)
-  }
+class MockMoveEvaluator {
+  private mockScores: Map<string, number> = new Map()
 
   setMockScore(fen: string, score: number): void {
     this.mockScores.set(fen, score)
   }
 
-  override async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
+  async evaluateMove(move: string, fen: string): Promise<MoveEvaluation> {
     const chess = new Chess(fen)
     chess.move(move)
     const newFen = chess.fen()
@@ -27,7 +27,7 @@ class MockMoveEvaluator extends MoveEvaluator {
     }
   }
 
-  override async getBestScore(fen: string): Promise<MoveEvaluation> {
+  async getBestScore(fen: string): Promise<MoveEvaluation> {
     const chess = new Chess(fen)
     const moves = chess.moves()
     
@@ -53,11 +53,23 @@ class MockMoveEvaluator extends MoveEvaluator {
     return { move: bestMove, score: bestScore }
   }
 
-  override isUsingStockfish(): boolean {
+  async compareMoves(move1: string, move2: string, fen: string): Promise<{ winner: string; score1: number; score2: number; centipawnLoss: number }> {
+    const eval1 = await this.evaluateMove(move1, fen)
+    const eval2 = await this.evaluateMove(move2, fen)
+    
+    return {
+      winner: eval1.score >= eval2.score ? move1 : move2,
+      score1: eval1.score,
+      score2: eval2.score,
+      centipawnLoss: Math.abs(eval1.score - eval2.score)
+    }
+  }
+
+  isUsingStockfish(): boolean {
     return false
   }
 
-  override isReady(): boolean {
+  isReady(): boolean {
     return true
   }
 }

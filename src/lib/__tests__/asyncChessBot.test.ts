@@ -48,7 +48,7 @@ class MockMoveEvaluator {
 
 function createMockBot(skillLevel: number = 4): ChessBot {
   const mockEvaluator = new MockMoveEvaluator(10)
-  return new ChessBot({ skillLevel, useStockfish: true, mockMoveEvaluator: mockEvaluator })
+  return new ChessBot({ skillLevel, mockMoveEvaluator: mockEvaluator })
 }
 
 describe('ChessBot Async Support', () => {
@@ -111,7 +111,7 @@ describe('ChessBot Async Support', () => {
 
   describe('Backward Compatibility', () => {
     test('sync selectMove still works', () => {
-      const bot = createBot({ skillLevel: 4, useStockfish: false })
+      const bot = createBot({ skillLevel: 4 })
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = bot.selectMove(fen)
@@ -121,7 +121,7 @@ describe('ChessBot Async Support', () => {
     })
 
     test('sync selectMove returns null when no moves', () => {
-      const bot = createBot({ skillLevel: 4, useStockfish: false })
+      const bot = createBot({ skillLevel: 4 })
       const fen = '6k1/8/8/8/8/8/8/7 w - - 0 1'
 
       const move = bot.selectMove(fen)
@@ -155,16 +155,10 @@ describe('ChessBot Async Support', () => {
       expect(bot.getConfig().skillLevel).toBe(5)
     })
 
-    test('createBot enables Stockfish by default', () => {
+    test('createBot initializes with server evaluator', () => {
       const bot = createBot()
-
-      expect(bot.getConfig().useStockfish).toBe(true)
-    })
-
-    test('createBot can disable Stockfish', () => {
-      const bot = createBot({ useStockfish: false })
-
-      expect(bot.getConfig().useStockfish).toBe(false)
+      const ready = bot.isStockfishReady()
+      expect(typeof ready).toBe('boolean')
     })
   })
 
@@ -175,14 +169,6 @@ describe('ChessBot Async Support', () => {
       const ready = bot.isStockfishReady()
 
       expect(ready).toBe(true)
-    })
-
-    test('bot without Stockfish returns false', () => {
-      const bot = createBot({ useStockfish: false })
-
-      const ready = bot.isStockfishReady()
-
-      expect(ready).toBe(false)
     })
   })
 
@@ -353,7 +339,6 @@ describe('ChessBot Async Support', () => {
       const config = bot.getConfig()
 
       expect(config.skillLevel).toBe(5)
-      expect(config.useStockfish).toBe(true)
     })
 
     test('default config is correct', () => {
@@ -362,7 +347,6 @@ describe('ChessBot Async Support', () => {
       const config = bot.getConfig()
 
       expect(config.skillLevel).toBe(3)
-      expect(config.useStockfish).toBe(true)
     })
   })
 
