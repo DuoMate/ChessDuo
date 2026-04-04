@@ -1,7 +1,5 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
-import { spawn, ChildProcess } from 'child_process'
-import path from 'path'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -15,228 +13,8 @@ interface EvaluateRequest {
   skillLevel?: number
 }
 
-interface StockfishInstance {
-  process: ChildProcess
-  ready: boolean
-  pendingResolve: ((score: number) => void) | null
-  pendingReject: ((error: Error) => void) | null
-  timeout: NodeJS.Timeout | null
-}
-
-const instances: Map<string, StockfishInstance> = new Map()
-const STOCKFISH_PATHS = [
-  '/usr/local/bin/stockfish/stockfish-ubuntu-x86-64',
-  '/usr/local/bin/stockfish/stockfish',
-  '/usr/local/bin/stockfish',
-  '/usr/games/stockfish',
-  '/usr/bin/stockfish',
-  '/usr/bin/games/stockfish',
-  'stockfish'
-]
-
-function findStockfishPath(): string {
-  const fs = require('fs')
-  for (const p of STOCKFISH_PATHS) {
-    try {
-      if (fs.existsSync(p)) {
-        console.log(`[STOCKFISH] Found at: ${p}`)
-        return p
-      }
-      if (fs.existsSync(p + '/stockfish-ubuntu-x86-64')) {
-        console.log(`[STOCKFISH] Found at: ${p}/stockfish-ubuntu-x86-64`)
-        return p + '/stockfish-ubuntu-x86-64'
-      }
-      if (fs.existsSync(p + '/stockfish')) {
-        console.log(`[STOCKFISH] Found at: ${p}/stockfish`)
-        return p + '/stockfish'
-      }
-    } catch {
-      continue
-    }
-  }
-  console.log('[STOCKFISH] Using default: stockfish')
-  return 'stockfish'
-}
-
-function createStockfishInstance(instanceId: string): StockfishInstance {
-  const stockfishPath = findStockfishPath()
-  console.log(`[STOCKFISH] Starting with path: ${stockfishPath}`)
-  
-  const proc = spawn(stockfishPath, [], {
-    stdio: ['pipe', 'pipe', 'pipe']
-  })
-
-  const instance: StockfishInstance = {
-    process: proc,
-    ready: false,
-    pendingResolve: null,
-    pendingReject: null,
-    timeout: null
-  }
-
-  proc.on('error', (err) => {
-    console.error(`[Stockfish:${instanceId}] Process error:`, err.message)
-    cleanupInstance(instanceId)
-  })
-
-  proc.on('exit', (code) => {
-    console.log(`[Stockfish:${instanceId}] Process exited with code ${code}`)
-    cleanupInstance(instanceId)
-  })
-
-  proc.stdout?.on('data', (data: Buffer) => {
-    const lines = data.toString().split('\n')
-    for (const line of lines) {
-      handleStockfishOutput(instanceId, line.trim())
-    }
-  })
-
-  proc.stderr?.on('data', (data: Buffer) => {
-    const output = data.toString()
-    if (output.trim()) {
-      console.log(`[Stockfish:${instanceId}] stderr:`, output)
-    }
-  })
-
-  sendUciCommand(instanceId, 'uci')
-  
-  return instance
-}
-
-function sendUciCommand(instanceId: string, command: string): void {
-  const instance = instances.get(instanceId)
-  if (!instance || !instance.process.stdin) {
-    console.log(`[Stockfish:${instanceId}] Cannot send command: stdin not available`)
-    return
-  }
-  
-  try {
-    instance.process.stdin.write(command + '\n')
-    console.log(`[Stockfish:${instanceId}] >>> ${command}`)
-  } catch (e) {
-    console.log(`[Stockfish:${instanceId}] Error sending command:`, e)
-  }
-}
-
-function handleStockfishOutput(instanceId: string, line: string): void {
-  const instance = instances.get(instanceId)
-  if (!instance) return
-
-  console.log(`[Stockfish:${instanceId}] <<< ${line}`)
-
-  if (line === 'uciok' && !instance.ready) {
-    sendUciCommand(instanceId, 'isready')
-  }
-
-  if (line === 'readyok' && !instance.ready) {
-    instance.ready = true
-    console.log(`[Stockfish:${instanceId}] Ready!`)
-  }
-
-  if (line.startsWith('info') && line.includes('score cp')) {
-    const match = line.match(/score cp (-?\d+)/)
-    if (match) {
-      const score = parseInt(match[1], 10)
-      if (instance.pendingResolve && !instance.timeout) {
-        clearTimeout(instance.timeout!)
-        instance.pendingResolve(score)
-        instance.pendingResolve = null
-        instance.pendingReject = null
-      }
-    }
-  }
-
-  if (line.startsWith('info') && line.includes('score mate')) {
-    const match = line.match(/score mate (-?\d+)/)
-    if (match) {
-      const mateIn = parseInt(match[1], 10)
-      const score = mateIn > 0 ? 10000 : -10000
-      if (instance.pendingResolve) {
-        clearTimeout(instance.timeout!)
-        instance.pendingResolve(score)
-        instance.pendingResolve = null
-        instance.pendingReject = null
-      }
-    }
-  }
-
-  if (line.startsWith('bestmove')) {
-    if (instance.pendingResolve) {
-      clearTimeout(instance.timeout!)
-      instance.pendingResolve(0)
-      instance.pendingResolve = null
-      instance.pendingReject = null
-    }
-  }
-}
-
-function cleanupInstance(instanceId: string): void {
-  const instance = instances.get(instanceId)
-  if (!instance) return
-
-  if (instance.timeout) {
-    clearTimeout(instance.timeout)
-  }
-
-  if (instance.process && !instance.process.killed) {
-    instance.process.kill()
-  }
-
-  instances.delete(instanceId)
-}
-
-async function evaluatePosition(fen: string, depth: number = 15): Promise<number> {
-  const instanceId = 'eval'
-  
-  let instance = instances.get(instanceId)
-  if (!instance || !instance.ready) {
-    if (instance) cleanupInstance(instanceId)
-    instance = createStockfishInstance(instanceId)
-    instances.set(instanceId, instance)
-    
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanupInstance(instanceId)
-        reject(new Error('Stockfish initialization timeout'))
-      }, 30000)
-      
-      const checkReady = setInterval(() => {
-        const inst = instances.get(instanceId)
-        if (inst?.ready) {
-          clearTimeout(timeout)
-          clearInterval(checkReady)
-          resolve()
-        }
-      }, 100)
-    })
-  }
-
-  return new Promise<number>((resolve, reject) => {
-    const inst = instances.get(instanceId)
-    if (!inst) {
-      reject(new Error('Stockfish instance not found'))
-      return
-    }
-
-    inst.pendingResolve = resolve
-    inst.pendingReject = reject
-
-    inst.timeout = setTimeout(() => {
-      if (inst.pendingResolve) {
-        console.log(`[Stockfish:${instanceId}] Timeout, resolving with 0`)
-        inst.pendingResolve(0)
-        inst.pendingResolve = null
-        inst.pendingReject = null
-      }
-    }, 10000)
-
-    sendUciCommand(instanceId, `position fen ${fen}`)
-    sendUciCommand(instanceId, `go depth ${depth}`)
-  })
-}
-
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', instances: instances.size })
+  res.json({ status: 'ok' })
 })
 
 app.post('/evaluate', async (req: Request, res: Response) => {
@@ -251,17 +29,26 @@ app.post('/evaluate', async (req: Request, res: Response) => {
     console.log(`\n[EVALUATE] FEN: ${fen}, Depth: ${depth}`)
 
     const startTime = Date.now()
-    const score = await evaluatePosition(fen, depth)
-    const elapsed = Date.now() - startTime
+    
+    try {
+      const score = await evaluateWithStockfish(fen, depth)
+      const elapsed = Date.now() - startTime
 
-    console.log(`[EVALUATE] Score: ${score}, Time: ${elapsed}ms`)
+      console.log(`[EVALUATE] Score: ${score}, Time: ${elapsed}ms`)
 
-    res.json({
-      fen,
-      score,
-      depth,
-      timeMs: elapsed
-    })
+      res.json({
+        fen,
+        score,
+        depth,
+        timeMs: elapsed
+      })
+    } catch (evalError) {
+      console.error('[EVALUATE] Evaluation error:', evalError)
+      res.status(500).json({ 
+        error: 'Evaluation failed',
+        message: evalError instanceof Error ? evalError.message : 'Unknown error'
+      })
+    }
   } catch (error) {
     console.error('[EVALUATE] Error:', error)
     res.status(500).json({ 
@@ -280,13 +67,11 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
       return
     }
 
-    console.log(`\n[EVALUATE-BATCH] ${positions.length} positions, Depth: ${depth}`)
-
     const results: { fen: string, score: number, timeMs: number }[] = []
 
     for (const fen of positions) {
       const startTime = Date.now()
-      const score = await evaluatePosition(fen, depth)
+      const score = await evaluateWithStockfish(fen, depth)
       const elapsed = Date.now() - startTime
       results.push({ fen, score, timeMs: elapsed })
     }
@@ -301,19 +86,80 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
   }
 })
 
+function evaluateWithStockfish(fen: string, depth: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const stockfish = require('stockfish')
+    
+    let timeout = setTimeout(() => {
+      worker.postMessage('quit')
+      reject(new Error('Stockfish evaluation timeout'))
+    }, 30000)
+
+    const worker = stockfish()
+
+    worker.onmessage = (event: string | { type: string; data: string }) => {
+      const data = typeof event === 'string' ? event : event.data
+      
+      if (typeof data !== 'string') return
+
+      // Look for evaluation score
+      const cpMatch = data.match(/score cp (-?\d+)/)
+      if (cpMatch) {
+        clearTimeout(timeout)
+        worker.postMessage('quit')
+        resolve(parseInt(cpMatch[1], 10))
+        return
+      }
+
+      // Look for mate score
+      const mateMatch = data.match(/score mate (-?\d+)/)
+      if (mateMatch) {
+        clearTimeout(timeout)
+        worker.postMessage('quit')
+        const mateIn = parseInt(mateMatch[1], 10)
+        resolve(mateIn > 0 ? 10000 : -10000)
+        return
+      }
+
+      // Check for bestmove (evaluation ended without score)
+      if (data.startsWith('bestmove')) {
+        clearTimeout(timeout)
+        worker.postMessage('quit')
+        resolve(0)
+      }
+    }
+
+    worker.onerror = (err: Error) => {
+      clearTimeout(timeout)
+      console.error('[STOCKFISH] Error:', err)
+      reject(err)
+    }
+
+    // Initialize UCI
+    worker.postMessage('uci')
+    
+    // Wait for uciok, then set up position
+    const checkUciOk = (event: string | { type: string; data: string }) => {
+      const data = typeof event === 'string' ? event : event.data
+      if (data === 'uciok') {
+        worker.postMessage('isready')
+        worker.removeListener('message', checkUciOk)
+        worker.postMessage(`position fen ${fen}`)
+        worker.postMessage(`go depth ${depth}`)
+      }
+    }
+    
+    worker.addEventListener('message', checkUciOk)
+  })
+}
+
 process.on('SIGTERM', () => {
-  console.log('[SERVER] SIGTERM received, cleaning up...')
-  for (const [id] of instances) {
-    cleanupInstance(id)
-  }
+  console.log('[SERVER] SIGTERM received, shutting down...')
   process.exit(0)
 })
 
 process.on('SIGINT', () => {
-  console.log('[SERVER] SIGINT received, cleaning up...')
-  for (const [id] of instances) {
-    cleanupInstance(id)
-  }
+  console.log('[SERVER] SIGINT received, shutting down...')
   process.exit(0)
 })
 
