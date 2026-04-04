@@ -25,9 +25,11 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
     -O /tmp/sf.tar \
-    && tar -xf /tmp/sf.tar -C /usr/local/bin --strip-components=1 \
-    && rm /tmp/sf.tar \
-    && chmod +x /usr/local/bin/stockfish
+    && mkdir -p /usr/local/bin/stockfish \
+    && tar -xf /tmp/sf.tar -C /usr/local/bin/stockfish \
+    && chmod +x /usr/local/bin/stockfish/stockfish-ubuntu-x86-64 \
+    && ln -sf /usr/local/bin/stockfish/stockfish-ubuntu-x86-64 /usr/local/bin/stockfish \
+    && rm /tmp/sf.tar
 
 # Copy built app from builder
 COPY --from=builder /app/dist ./dist
