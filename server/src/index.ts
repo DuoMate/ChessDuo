@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
+import { spawn, ChildProcess } from 'child_process'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -10,11 +11,132 @@ app.use(express.json())
 interface EvaluateRequest {
   fen: string
   depth?: number
-  skillLevel?: number
+}
+
+let stockfishProc: ChildProcess | null = null
+let stockfishReady = false
+let pendingResolve: ((score: number) => void) | null = null
+let pendingReject: ((error: Error) => void) | null = null
+let evalTimeout: NodeJS.Timeout | null = null
+
+function initStockfish(): void {
+  if (stockfishProc) {
+    return
+  }
+  
+  console.log('[STOCKFISH] Initializing...')
+  
+  stockfishProc = spawn('stockfish', [], {
+    stdio: ['pipe', 'pipe', 'pipe']
+  })
+  
+  stockfishProc.stdout?.on('data', (data: Buffer) => {
+    const lines = data.toString().split('\n')
+    for (const line of lines) {
+      if (line.trim()) {
+        console.log('[STOCKFISH] <<<', line.trim())
+      }
+      
+      if (line.trim() === 'uciok') {
+        stockfishReady = true
+        console.log('[STOCKFISH] UCI initialized')
+        stockfishProc?.stdin?.write('isready\n')
+      }
+      
+      if (line.trim() === 'readyok' && stockfishReady) {
+        console.log('[STOCKFISH] Ready!')
+      }
+      
+      // Parse score
+      const cpMatch = line.match(/score cp (-?\d+)/)
+      if (cpMatch && pendingResolve) {
+        const score = parseInt(cpMatch[1], 10)
+        console.log('[STOCKFISH] Got score:', score)
+        cleanup()
+        pendingResolve(score)
+      }
+      
+      // Parse mate score
+      const mateMatch = line.match(/score mate (-?\d+)/)
+      if (mateMatch && pendingResolve) {
+        const mateIn = parseInt(mateMatch[1], 10)
+        const score = mateIn > 0 ? 10000 : -10000
+        console.log('[STOCKFISH] Got mate score:', score)
+        cleanup()
+        pendingResolve(score)
+      }
+      
+      // Bestmove indicates evaluation is complete
+      if (line.startsWith('bestmove') && pendingResolve) {
+        console.log('[STOCKFISH] Bestmove received, resolving with 0')
+        cleanup()
+        pendingResolve(0)
+      }
+    }
+  })
+  
+  stockfishProc.stderr?.on('data', (data: Buffer) => {
+    const output = data.toString()
+    if (output.trim()) {
+      console.log('[STOCKFISH] stderr:', output.trim())
+    }
+  })
+  
+  stockfishProc.on('error', (err) => {
+    console.error('[STOCKFISH] Process error:', err)
+    cleanup()
+  })
+  
+  stockfishProc.on('exit', (code) => {
+    console.log('[STOCKFISH] Process exited with code:', code)
+    stockfishProc = null
+    stockfishReady = false
+  })
+  
+  // Initialize UCI
+  stockfishProc.stdin?.write('uci\n')
+}
+
+function cleanup(): void {
+  if (evalTimeout) {
+    clearTimeout(evalTimeout)
+    evalTimeout = null
+  }
+  pendingResolve = null
+  pendingReject = null
+}
+
+function evaluate(fen: string, depth: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    if (!stockfishProc || !stockfishReady) {
+      initStockfish()
+      // Wait for stockfish to be ready
+      const checkReady = setInterval(() => {
+        if (stockfishReady) {
+          clearInterval(checkReady)
+          evaluate(fen, depth).then(resolve).catch(reject)
+        }
+      }, 100)
+      return
+    }
+    
+    pendingResolve = resolve
+    pendingReject = reject
+    
+    evalTimeout = setTimeout(() => {
+      console.log('[STOCKFISH] Evaluation timeout')
+      cleanup()
+      reject(new Error('Evaluation timeout'))
+    }, 30000)
+    
+    console.log('[STOCKFISH] Position:', fen)
+    stockfishProc?.stdin?.write(`position fen ${fen}\n`)
+    stockfishProc?.stdin?.write(`go depth ${depth}\n`)
+  })
 }
 
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok' })
+  res.json({ status: 'ok', stockfishReady })
 })
 
 app.post('/evaluate', async (req: Request, res: Response) => {
@@ -30,25 +152,17 @@ app.post('/evaluate', async (req: Request, res: Response) => {
 
     const startTime = Date.now()
     
-    try {
-      const score = await evaluateWithStockfish(fen, depth)
-      const elapsed = Date.now() - startTime
+    const score = await evaluate(fen, depth)
+    const elapsed = Date.now() - startTime
 
-      console.log(`[EVALUATE] Score: ${score}, Time: ${elapsed}ms`)
+    console.log(`[EVALUATE] Score: ${score}, Time: ${elapsed}ms`)
 
-      res.json({
-        fen,
-        score,
-        depth,
-        timeMs: elapsed
-      })
-    } catch (evalError) {
-      console.error('[EVALUATE] Evaluation error:', evalError)
-      res.status(500).json({ 
-        error: 'Evaluation failed',
-        message: evalError instanceof Error ? evalError.message : 'Unknown error'
-      })
-    }
+    res.json({
+      fen,
+      score,
+      depth,
+      timeMs: elapsed
+    })
   } catch (error) {
     console.error('[EVALUATE] Error:', error)
     res.status(500).json({ 
@@ -71,7 +185,7 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
 
     for (const fen of positions) {
       const startTime = Date.now()
-      const score = await evaluateWithStockfish(fen, depth)
+      const score = await evaluate(fen, depth)
       const elapsed = Date.now() - startTime
       results.push({ fen, score, timeMs: elapsed })
     }
@@ -85,73 +199,6 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
     })
   }
 })
-
-function evaluateWithStockfish(fen: string, depth: number): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const stockfish = require('stockfish')
-    
-    let timeout = setTimeout(() => {
-      worker.postMessage('quit')
-      reject(new Error('Stockfish evaluation timeout'))
-    }, 30000)
-
-    const worker = stockfish()
-
-    worker.onmessage = (event: string | { type: string; data: string }) => {
-      const data = typeof event === 'string' ? event : event.data
-      
-      if (typeof data !== 'string') return
-
-      // Look for evaluation score
-      const cpMatch = data.match(/score cp (-?\d+)/)
-      if (cpMatch) {
-        clearTimeout(timeout)
-        worker.postMessage('quit')
-        resolve(parseInt(cpMatch[1], 10))
-        return
-      }
-
-      // Look for mate score
-      const mateMatch = data.match(/score mate (-?\d+)/)
-      if (mateMatch) {
-        clearTimeout(timeout)
-        worker.postMessage('quit')
-        const mateIn = parseInt(mateMatch[1], 10)
-        resolve(mateIn > 0 ? 10000 : -10000)
-        return
-      }
-
-      // Check for bestmove (evaluation ended without score)
-      if (data.startsWith('bestmove')) {
-        clearTimeout(timeout)
-        worker.postMessage('quit')
-        resolve(0)
-      }
-    }
-
-    worker.onerror = (err: Error) => {
-      clearTimeout(timeout)
-      console.error('[STOCKFISH] Error:', err)
-      reject(err)
-    }
-
-    // Initialize UCI
-    worker.postMessage('uci')
-    
-    // Wait for uciok, then set up position
-    const checkUciOk = (event: string | { type: string; data: string }) => {
-      const data = typeof event === 'string' ? event : event.data
-      if (data === 'uciok') {
-        worker.postMessage('isready')
-        worker.removeListener('message', checkUciOk)
-        worker.postMessage(`position fen ${fen}`)
-        worker.postMessage(`go depth ${depth}`)
-      }
-    }
-    
-    worker.addEventListener('message', checkUciOk)
-  })
-}
 
 process.on('SIGTERM', () => {
   console.log('[SERVER] SIGTERM received, shutting down...')
@@ -169,4 +216,7 @@ app.listen(PORT, () => {
   console.log(`[SERVER]   GET  /health - Health check`)
   console.log(`[SERVER]   POST /evaluate - Evaluate single position`)
   console.log(`[SERVER]   POST /evaluate-batch - Evaluate multiple positions`)
+  
+  // Initialize Stockfish on startup
+  initStockfish()
 })
