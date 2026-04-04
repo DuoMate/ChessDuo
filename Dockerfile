@@ -17,19 +17,15 @@ FROM ubuntu:22.04
 
 WORKDIR /app
 
-# Install Node.js 20 and download Stockfish
+# Install Node.js 20 and Stockfish via apt
 RUN apt-get update && apt-get install -y \
-    wget \
     curl \
     && curl -sL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_16.1/stockfish-ubuntu-x86-64.tar \
-    -O /tmp/sf.tar \
-    && mkdir -p /usr/local/bin/stockfish \
-    && tar -xf /tmp/sf.tar -C /usr/local/bin/stockfish \
-    && chmod +x /usr/local/bin/stockfish/stockfish-ubuntu-x86-64 \
-    && ln -sf /usr/local/bin/stockfish/stockfish-ubuntu-x86-64 /usr/local/bin/stockfish \
-    && rm /tmp/sf.tar
+    && apt-get install -y nodejs stockfish \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify stockfish installation
+RUN which stockfish || ls /usr/games/stockfish || ls /usr/bin/stockfish
 
 # Copy built app from builder
 COPY --from=builder /app/dist ./dist

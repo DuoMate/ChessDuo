@@ -25,9 +25,12 @@ interface StockfishInstance {
 
 const instances: Map<string, StockfishInstance> = new Map()
 const STOCKFISH_PATHS = [
+  '/usr/local/bin/stockfish/stockfish-ubuntu-x86-64',
+  '/usr/local/bin/stockfish/stockfish',
   '/usr/local/bin/stockfish',
-  '/usr/bin/stockfish',
   '/usr/games/stockfish',
+  '/usr/bin/stockfish',
+  '/usr/bin/games/stockfish',
   'stockfish'
 ]
 
@@ -38,6 +41,10 @@ function findStockfishPath(): string {
       if (fs.existsSync(p)) {
         console.log(`[STOCKFISH] Found at: ${p}`)
         return p
+      }
+      if (fs.existsSync(p + '/stockfish-ubuntu-x86-64')) {
+        console.log(`[STOCKFISH] Found at: ${p}/stockfish-ubuntu-x86-64`)
+        return p + '/stockfish-ubuntu-x86-64'
       }
       if (fs.existsSync(p + '/stockfish')) {
         console.log(`[STOCKFISH] Found at: ${p}/stockfish`)
