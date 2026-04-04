@@ -26,7 +26,29 @@ function initStockfish(): void {
   
   console.log('[STOCKFISH] Initializing...')
   
-  stockfishProc = spawn('stockfish', [], {
+  const fs = require('fs')
+  const paths = [
+    '/usr/games/stockfish',
+    '/usr/bin/stockfish',
+    '/usr/local/bin/stockfish',
+    '/usr/local/bin/stockfish/stockfish-ubuntu-x86-64',
+    'stockfish'
+  ]
+  
+  let stockfishPath = 'stockfish'
+  for (const p of paths) {
+    try {
+      if (fs.existsSync(p)) {
+        stockfishPath = p
+        console.log('[STOCKFISH] Found at:', stockfishPath)
+        break
+      }
+    } catch {}
+  }
+  
+  console.log('[STOCKFISH] Spawning:', stockfishPath)
+  
+  stockfishProc = spawn(stockfishPath, [], {
     stdio: ['pipe', 'pipe', 'pipe']
   })
   
