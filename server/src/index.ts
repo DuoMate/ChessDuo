@@ -32,7 +32,7 @@ function findStockfishPath(): string {
 
 const STOCKFISH_PATH = findStockfishPath()
 const NUM_WORKERS = parseInt(process.env.STOCKFISH_WORKERS || '4')
-const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '15')
+const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '8')
 
 console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 console.log(`[SERVER] Worker pool size: ${NUM_WORKERS}`)
@@ -45,14 +45,17 @@ interface WorkerMessage {
   reject: (err: Error) => void
 }
 
+interface Worker {
+  proc: ReturnType<typeof spawn>
+  busy: boolean
+  ready: boolean
+  buffer: string
+  currentResolve: ((score: number) => void) | null
+  currentReject: ((err: Error) => void) | null
+}
+
 class StockfishWorkerPool {
-  private workers: Array<{
-    proc: ReturnType<typeof spawn>
-    busy: boolean
-    ready: boolean
-    currentResolve: ((score: number) => void) | null
-    currentReject: ((err: Error) => void) | null
-  }> = []
+  private workers: Worker[] = []
   private pendingQueue: WorkerMessage[] = []
 
   constructor(size: number) {
@@ -66,47 +69,40 @@ class StockfishWorkerPool {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    let buffer = ''
-    let resolved = false
     let uciReady = false
 
     proc.stdout.on('data', (data: Buffer) => {
-      const str = data.toString()
-      buffer += str
+      const worker = this.workers[index]
+      if (!worker) return
 
-      if (!uciReady && buffer.includes('uciok')) {
+      const str = data.toString()
+      worker.buffer += str
+
+      if (!uciReady && worker.buffer.includes('uciok')) {
         uciReady = true
         proc.stdin?.write('isready\n')
-        const worker = this.workers[index]
-        if (worker) {
-          worker.ready = true
-        }
+        worker.ready = true
+        worker.buffer = ''
         this.processNext()
         return
       }
 
-      if (uciReady) {
-        const cpMatch = buffer.match(/score cp (-?\d+)/)
-        const mateMatch = buffer.match(/score mate (-?\d+)/)
-        
-        if (cpMatch && !resolved) {
-          resolved = true
-          const worker = this.workers[index]
-          if (worker?.currentResolve) {
-            worker.currentResolve(parseInt(cpMatch[1], 10))
-          }
+      if (uciReady && worker.busy) {
+        const cpMatch = worker.buffer.match(/score cp (-?\d+)/)
+        const mateMatch = worker.buffer.match(/score mate (-?\d+)/)
+
+        if (cpMatch && worker.currentResolve) {
+          worker.currentResolve(parseInt(cpMatch[1], 10))
+          worker.buffer = ''
           this.clearWorker(index)
           this.processNext()
           return
         }
-        
-        if (mateMatch && !resolved) {
-          resolved = true
-          const worker = this.workers[index]
-          if (worker?.currentResolve) {
-            const mateIn = parseInt(mateMatch[1], 10)
-            worker.currentResolve(mateIn > 0 ? 10000 : -10000)
-          }
+
+        if (mateMatch && worker.currentResolve) {
+          const mateIn = parseInt(mateMatch[1], 10)
+          worker.currentResolve(mateIn > 0 ? 10000 : -10000)
+          worker.buffer = ''
           this.clearWorker(index)
           this.processNext()
           return
@@ -115,7 +111,7 @@ class StockfishWorkerPool {
     })
 
     proc.stderr.on('data', () => {})
-    
+
     proc.on('error', (err) => {
       console.error(`[WORKER-${index}] Error:`, err)
       const worker = this.workers[index]
@@ -127,20 +123,19 @@ class StockfishWorkerPool {
     })
 
     proc.on('exit', () => {
-      if (!resolved) {
-        const worker = this.workers[index]
-        if (worker?.currentResolve) {
-          worker.currentResolve(0)
-        }
-        this.clearWorker(index)
-        this.processNext()
+      const worker = this.workers[index]
+      if (worker?.currentResolve) {
+        worker.currentResolve(0)
       }
+      this.clearWorker(index)
+      this.processNext()
     })
 
     this.workers[index] = {
       proc,
       busy: false,
       ready: false,
+      buffer: '',
       currentResolve: null,
       currentReject: null
     }
@@ -152,8 +147,10 @@ class StockfishWorkerPool {
     const worker = this.workers[index]
     if (worker) {
       worker.busy = false
+      worker.ready = false
       worker.currentResolve = null
       worker.currentReject = null
+      worker.buffer = ''
     }
   }
 
@@ -179,7 +176,7 @@ class StockfishWorkerPool {
         pending.reject(new Error('Evaluation timeout'))
         this.processNext()
       }
-    }, 20000)
+    }, 15000)
 
     worker.currentResolve = (score: number) => {
       if (resolved) return
@@ -195,6 +192,7 @@ class StockfishWorkerPool {
       pending.reject(err)
     }
 
+    worker.buffer = ''
     worker.proc.stdin?.write(`position fen ${pending.fen}\n`)
     worker.proc.stdin?.write(`go depth ${pending.depth}\n`)
   }
@@ -224,7 +222,7 @@ class StockfishWorkerPool {
 const workerPool = new StockfishWorkerPool(NUM_WORKERS)
 
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     ...workerPool.getStats()
   })
@@ -251,7 +249,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error('[EVALUATE] Error:', error)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Evaluation failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -268,13 +266,13 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-    
+
     const evaluations = positions.map(fen => workerPool.evaluate(fen, depth))
     const results = await Promise.all(evaluations)
-    
+
     const elapsed = Date.now() - startTime
 
-    res.json({ 
+    res.json({
       results: results.map((score, i) => ({
         fen: positions[i],
         score,
@@ -284,7 +282,7 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error('[EVALUATE-BATCH] Error:', error)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Batch evaluation failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     })
