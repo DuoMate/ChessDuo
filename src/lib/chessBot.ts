@@ -105,16 +105,19 @@ export class ChessBot {
     }
 
     const evaluatedMoves: { move: Move; score: number }[] = []
+    const uciMoves = moves.map(m => this.moveToUci(m))
 
-    for (const move of moves) {
-      try {
-        const uciMove = this.moveToUci(move)
-        const evaluation = await this.moveEvaluator.evaluateMove(uciMove, fen)
-        evaluatedMoves.push({
-          move,
-          score: evaluation.score
-        })
-      } catch {
+    try {
+      const results: { move: string; score: number }[] = await this.moveEvaluator.evaluateMoves(uciMoves, fen)
+      const scoreMap = new Map(results.map((r: { move: string; score: number }) => [r.move, r.score]))
+      
+      for (const move of moves) {
+        const uci = this.moveToUci(move)
+        const score = scoreMap.get(uci) ?? (isBlackTurn ? Infinity : -Infinity)
+        evaluatedMoves.push({ move, score })
+      }
+    } catch {
+      for (const move of moves) {
         evaluatedMoves.push({
           move,
           score: isBlackTurn ? Infinity : -Infinity

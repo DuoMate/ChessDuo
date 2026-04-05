@@ -28,6 +28,42 @@ export class ServerMoveEvaluator {
     }
   }
 
+  async evaluateMoves(moves: string[], fen: string, depth: number = 15): Promise<{ move: string; score: number }[]> {
+    if (!this.serverUrl) {
+      throw new Error('Stockfish server URL not configured')
+    }
+
+    const chess = await import('chess.js')
+    const c = new chess.Chess(fen)
+    const fromFens: string[] = []
+
+    for (const move of moves) {
+      c.reset()
+      c.load(fen)
+      c.move(move)
+      fromFens.push(c.fen())
+      c.undo()
+    }
+
+    const response = await fetch(`${this.serverUrl}/evaluate-batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ positions: fromFens, depth })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Batch evaluation failed: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return moves.map((move, i) => ({
+      move,
+      score: data.results[i].score
+    }))
+  }
+
   async evaluatePosition(fen: string, depth: number = 15): Promise<number> {
     if (!this.serverUrl) {
       throw new Error('Stockfish server URL not configured')
