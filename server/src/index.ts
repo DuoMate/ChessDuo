@@ -13,16 +13,19 @@ interface EvaluateRequest {
   depth?: number
 }
 
-const STOCKFISH_PATHS = [
-  '/usr/games/stockfish',
-  '/usr/bin/stockfish',
-  '/usr/local/bin/stockfish',
-  'stockfish'
-]
+const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '8')
+
+console.log(`[SERVER] Default depth: ${DEFAULT_DEPTH}`)
 
 function findStockfishPath(): string {
   const fs = require('fs')
-  for (const p of STOCKFISH_PATHS) {
+  const paths = [
+    '/usr/games/stockfish',
+    '/usr/bin/stockfish',
+    '/usr/local/bin/stockfish',
+    'stockfish'
+  ]
+  for (const p of paths) {
     if (fs.existsSync(p)) {
       return p
     }
@@ -31,81 +34,51 @@ function findStockfishPath(): string {
 }
 
 const STOCKFISH_PATH = findStockfishPath()
-const NUM_WORKERS = parseInt(process.env.STOCKFISH_WORKERS || '4')
-const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '8')
-
 console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
-console.log(`[SERVER] Worker pool size: ${NUM_WORKERS}`)
-console.log(`[SERVER] Default depth: ${DEFAULT_DEPTH}`)
 
-interface WorkerMessage {
-  fen: string
-  depth: number
-  resolve: (score: number) => void
-  reject: (err: Error) => void
-}
-
-interface Worker {
-  proc: ReturnType<typeof spawn>
-  busy: boolean
-  ready: boolean
-  buffer: string
-  currentResolve: ((score: number) => void) | null
-  currentReject: ((err: Error) => void) | null
-}
-
-class StockfishWorkerPool {
-  private workers: Worker[] = []
-  private pendingQueue: WorkerMessage[] = []
-
-  constructor(size: number) {
-    for (let i = 0; i < size; i++) {
-      this.createWorker(i)
-    }
-  }
-
-  private createWorker(index: number): void {
+function evaluate(fen: string, depth: number): Promise<number> {
+  return new Promise((resolve, reject) => {
     const proc = spawn(STOCKFISH_PATH, [], {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    let uciReady = false
+    let output = ''
+    let resolved = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        proc.kill()
+        reject(new Error('Evaluation timeout'))
+      }
+    }, 30000)
 
     proc.stdout.on('data', (data: Buffer) => {
-      const worker = this.workers[index]
-      if (!worker) return
+      const lines = data.toString().split('\n')
+      for (const line of lines) {
+        output += line + '\n'
 
-      const str = data.toString()
-      worker.buffer += str
-
-      if (!uciReady && worker.buffer.includes('uciok')) {
-        uciReady = true
-        proc.stdin?.write('isready\n')
-        worker.ready = true
-        worker.buffer = ''
-        this.processNext()
-        return
-      }
-
-      if (uciReady && worker.busy) {
-        const cpMatch = worker.buffer.match(/score cp (-?\d+)/)
-        const mateMatch = worker.buffer.match(/score mate (-?\d+)/)
-
-        if (cpMatch && worker.currentResolve) {
-          worker.currentResolve(parseInt(cpMatch[1], 10))
-          worker.buffer = ''
-          this.clearWorker(index)
-          this.processNext()
-          return
+        if (line.includes('score cp')) {
+          const match = line.match(/score cp (-?\d+)/)
+          if (match && !resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            proc.kill()
+            resolve(parseInt(match[1], 10))
+            return
+          }
         }
 
-        if (mateMatch && worker.currentResolve) {
-          const mateIn = parseInt(mateMatch[1], 10)
-          worker.currentResolve(mateIn > 0 ? 10000 : -10000)
-          worker.buffer = ''
-          this.clearWorker(index)
-          this.processNext()
-          return
+        if (line.includes('score mate')) {
+          const match = line.match(/score mate (-?\d+)/)
+          if (match && !resolved) {
+            resolved = true
+            clearTimeout(timeout)
+            proc.kill()
+            const mateIn = parseInt(match[1], 10)
+            resolve(mateIn > 0 ? 10000 : -10000)
+            return
+          }
         }
       }
     })
@@ -113,119 +86,39 @@ class StockfishWorkerPool {
     proc.stderr.on('data', () => {})
 
     proc.on('error', (err) => {
-      console.error(`[WORKER-${index}] Error:`, err)
-      const worker = this.workers[index]
-      if (worker?.currentReject) {
-        worker.currentReject(err)
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        reject(err)
       }
-      this.clearWorker(index)
-      this.processNext()
     })
 
     proc.on('exit', () => {
-      const worker = this.workers[index]
-      if (worker?.currentResolve) {
-        worker.currentResolve(0)
-      }
-      this.clearWorker(index)
-      this.processNext()
-    })
-
-    this.workers[index] = {
-      proc,
-      busy: false,
-      ready: false,
-      buffer: '',
-      currentResolve: null,
-      currentReject: null
-    }
-
-    proc.stdin?.write('uci\n')
-  }
-
-  private clearWorker(index: number): void {
-    const worker = this.workers[index]
-    if (worker) {
-      worker.busy = false
-      worker.ready = false
-      worker.currentResolve = null
-      worker.currentReject = null
-      worker.buffer = ''
-    }
-  }
-
-  private processNext(): void {
-    const availableWorker = this.workers.findIndex(w => !w.busy && w.ready)
-    if (availableWorker === -1) return
-
-    const pending = this.pendingQueue.shift()
-    if (!pending) return
-
-    const worker = this.workers[availableWorker]
-    worker.busy = true
-
-    let resolved = false
-    const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true
-        worker.currentResolve = null
-        worker.currentReject = null
-        worker.busy = false
-        worker.proc.kill()
-        this.createWorker(availableWorker)
-        pending.reject(new Error('Evaluation timeout'))
-        this.processNext()
+        clearTimeout(timeout)
+        resolve(0)
       }
-    }, 15000)
-
-    worker.currentResolve = (score: number) => {
-      if (resolved) return
-      resolved = true
-      clearTimeout(timeout)
-      pending.resolve(score)
-    }
-
-    worker.currentReject = (err: Error) => {
-      if (resolved) return
-      resolved = true
-      clearTimeout(timeout)
-      pending.reject(err)
-    }
-
-    worker.buffer = ''
-    worker.proc.stdin?.write(`position fen ${pending.fen}\n`)
-    worker.proc.stdin?.write(`go depth ${pending.depth}\n`)
-  }
-
-  async evaluate(fen: string, depth: number = DEFAULT_DEPTH): Promise<number> {
-    return new Promise((resolve, reject) => {
-      this.pendingQueue.push({
-        fen,
-        depth,
-        resolve,
-        reject
-      })
-
-      this.processNext()
     })
-  }
 
-  getStats() {
-    return {
-      workers: this.workers.length,
-      busyWorkers: this.workers.filter(w => w.busy).length,
-      pendingRequests: this.pendingQueue.length
+    proc.stdin.write('uci\n')
+
+    const checkUciOk = (data: Buffer) => {
+      const str = data.toString()
+      if (str.includes('uciok')) {
+        proc.stdout.removeListener('data', checkUciOk)
+        proc.stdin.write('isready\n')
+        proc.stdin.write(`position fen ${fen}\n`)
+        proc.stdin.write(`go depth ${depth}\n`)
+      }
     }
-  }
+
+    proc.stdout.on('data', checkUciOk)
+  })
 }
 
-const workerPool = new StockfishWorkerPool(NUM_WORKERS)
-
 app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    ...workerPool.getStats()
-  })
+  res.json({ status: 'ok' })
 })
 
 app.post('/evaluate', async (req: Request, res: Response) => {
@@ -238,7 +131,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-    const score = await workerPool.evaluate(fen, depth)
+    const score = await evaluate(fen, depth)
     const elapsed = Date.now() - startTime
 
     res.json({
@@ -267,7 +160,7 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
 
     const startTime = Date.now()
 
-    const evaluations = positions.map(fen => workerPool.evaluate(fen, depth))
+    const evaluations = positions.map(fen => evaluate(fen, depth))
     const results = await Promise.all(evaluations)
 
     const elapsed = Date.now() - startTime
@@ -289,10 +182,6 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
   }
 })
 
-app.get('/stats', (req: Request, res: Response) => {
-  res.json(workerPool.getStats())
-})
-
 process.on('SIGTERM', () => {
   console.log('[SERVER] SIGTERM received, shutting down...')
   process.exit(0)
@@ -301,8 +190,7 @@ process.on('SIGTERM', () => {
 app.listen(PORT, () => {
   console.log(`[SERVER] Stockfish server running on port ${PORT}`)
   console.log(`[SERVER] Endpoints:`)
-  console.log(`[SERVER]   GET  /health  - Health check with stats`)
-  console.log(`[SERVER]   GET  /stats   - Worker pool stats`)
+  console.log(`[SERVER]   GET  /health  - Health check`)
   console.log(`[SERVER]   POST /evaluate - Evaluate single position`)
   console.log(`[SERVER]   POST /evaluate-batch - Evaluate multiple positions`)
 })
