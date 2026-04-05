@@ -176,17 +176,18 @@ export class LocalGame {
     console.log(`[TURN] ${teamColor} team to move`)
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
     
-    const bestMoveResult = await this.evaluator.getBestScore(this.gameState.fen)
-    const bestMoveScore = bestMoveResult.score
+    const currentFen = this.gameState.fen
+    const bestMoveResult = await this.evaluator.getBestScore(currentFen)
+    const startingEvaluation = bestMoveResult.score
     
-    const player1Eval = await this.evaluator.evaluateMove(player1Move, this.gameState.fen)
-    const player2Eval = await this.evaluator.evaluateMove(player2Move, this.gameState.fen)
+    const player1Eval = await this.evaluator.evaluateMove(player1Move, currentFen)
+    const player2Eval = await this.evaluator.evaluateMove(player2Move, currentFen)
     
     const player1Score = player1Eval.score
     const player2Score = player2Eval.score
 
-    const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
-    const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
+    const player1Loss = isSync ? 0 : Math.abs(startingEvaluation - player1Score)
+    const player2Loss = isSync ? 0 : Math.abs(startingEvaluation - player2Score)
     
     if (isSync) {
       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
@@ -198,7 +199,7 @@ export class LocalGame {
     console.log(`\n[EVALUATION]`)
     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
     console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
-    console.log(`  [Engine Best] ${bestMoveResult.move}: score=${bestMoveScore}`)
+    console.log(`  [Engine Best] ${bestMoveResult.move}: score=${startingEvaluation}`)
     
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
     const winningScore = winningMove === player1Move ? player1Score : player2Score
@@ -227,7 +228,7 @@ export class LocalGame {
       winningScore,
       isSync,
       bestEngineMove: bestMoveResult.move,
-      bestEngineScore: bestMoveScore
+      bestEngineScore: startingEvaluation
     }
 
     if (!skipStatsUpdate) {
