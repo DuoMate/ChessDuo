@@ -17,4 +17,4 @@ services:
       - key: STOCKFISH_WORKERS
         value: 4
       - key: STOCKFISH_DEPTH
-        value: 8
+        value: 5
