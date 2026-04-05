@@ -349,12 +349,10 @@ export function Game({ level }: GameProps) {
           )}
         </div>
 
-        {gameState.moveComparison && gameState.currentTurn === Team.BLACK && (
+        {gameState.moveComparison && (
+
           <div className="mt-4 p-4 bg-gray-800 rounded border border-gray-600">
             <h3 className="font-bold mb-3 text-center text-lg">Last Move Analysis</h3>
-            <div className="text-center text-sm text-gray-400 mb-3">
-              {gameState.currentTurn === Team.BLACK ? "White Team's Move" : "Black Team's Move"}
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-blue-900/30 border border-blue-700'}`}>
                 <div className="text-sm mb-1">
