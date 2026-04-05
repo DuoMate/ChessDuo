@@ -199,8 +199,10 @@ export function Game({ level }: GameProps) {
     const currentTurn = game.currentTurn
     
     console.log(`\n[OPPONENT] Bot thinking... (current turn: ${currentTurn})`)
+    const startTime = Date.now()
     
     const botUciMove = await bot.selectMoveAsync(currentFen)
+    console.log(`[OPPONENT] Bot evaluation took: ${Date.now() - startTime}ms`)
     
     if (!botUciMove) {
       console.warn('[OPPONENT] Bot could not find a move')
@@ -213,13 +215,16 @@ export function Game({ level }: GameProps) {
     game.selectMove('player3', sanMove)
     game.selectMove('player4', sanMove)
     
+    const lockStart = Date.now()
     await game.lockAndResolve(true)
+    console.log(`[OPPONENT] lockAndResolve took: ${Date.now() - lockStart}ms`)
     updateStateRef.current()
     
     console.log(`[DEBUG] After opponent turn, currentTurn: ${game.currentTurn}`)
   }, [game, bot])
 
   const executeMove = useCallback(async (uciMove: string, promotion?: PromotionPiece) => {
+    const startTime = Date.now()
     const currentTurn = game.currentTurn
     
     console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
@@ -237,20 +242,25 @@ export function Game({ level }: GameProps) {
       console.log(`[HUMAN] Proposing move: ${sanMove}`)
       game.selectMove('player1', sanMove)
       
-      console.log(`[TEAMMATE] Bot is thinking...`)
+      const teammateStart = Date.now()
+      console.log(`[TEAMMATE] Bot thinking...`)
       const teammateMove = await teammateBot.selectMoveAsync(game.board.fen())
+      console.log(`[TEAMMATE] Bot evaluation took: ${Date.now() - teammateStart}ms`)
+      
       if (teammateMove) {
         const teammateSanMove = uciToSan(teammateMove, game.board.fen(), promotion)
         console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
         game.selectMove('player2', teammateSanMove)
       }
       
+      const lockStart = Date.now()
       console.log(`[LOCK] Resolving moves...`)
       await game.lockAndResolve()
+      console.log(`[LOCK] lockAndResolve took: ${Date.now() - lockStart}ms`)
       updateStateRef.current()
       
       const newTurn = game.currentTurn
-      console.log(`[DEBUG] After lockAndResolve, newTurn: ${newTurn}`)
+      console.log(`[DEBUG] After lockAndResolve, newTurn: ${newTurn}, total time: ${Date.now() - startTime}ms`)
       
       if (game.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK) {
         setGameState(prev => ({ ...prev, isBotThinking: true }))
@@ -258,6 +268,7 @@ export function Game({ level }: GameProps) {
         await executeBotMove()
         
         setGameState(prev => ({ ...prev, isBotThinking: false }))
+        console.log(`[HUMAN] Total turn time: ${Date.now() - startTime}ms`)
       }
     } catch (e) {
       console.warn('[HUMAN] Invalid move:', uciMove, e)

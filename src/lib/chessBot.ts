@@ -106,9 +106,11 @@ export class ChessBot {
 
     const evaluatedMoves: { move: Move; score: number }[] = []
     const uciMoves = moves.map(m => this.moveToUci(m))
+    const evalStart = Date.now()
 
     try {
       const results: { move: string; score: number }[] = await this.moveEvaluator.evaluateMoves(uciMoves, fen)
+      console.log(`[ChessBot] Server response took: ${Date.now() - evalStart}ms for ${moves.length} moves`)
       const scoreMap = new Map(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       for (const move of moves) {
