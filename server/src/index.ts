@@ -49,6 +49,7 @@ class StockfishWorkerPool {
   private workers: Array<{
     proc: ReturnType<typeof spawn>
     busy: boolean
+    ready: boolean
     currentResolve: ((score: number) => void) | null
     currentReject: ((err: Error) => void) | null
   }> = []
@@ -65,16 +66,26 @@ class StockfishWorkerPool {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    proc.stdin?.write('uci\n')
-
     let buffer = ''
     let resolved = false
+    let uciReady = false
 
     proc.stdout.on('data', (data: Buffer) => {
-      const lines = data.toString().split('\n')
-      for (const line of lines) {
-        buffer += line + '\n'
-        
+      const str = data.toString()
+      buffer += str
+
+      if (!uciReady && buffer.includes('uciok')) {
+        uciReady = true
+        proc.stdin?.write('isready\n')
+        const worker = this.workers[index]
+        if (worker) {
+          worker.ready = true
+        }
+        this.processNext()
+        return
+      }
+
+      if (uciReady) {
         const cpMatch = buffer.match(/score cp (-?\d+)/)
         const mateMatch = buffer.match(/score mate (-?\d+)/)
         
@@ -129,9 +140,12 @@ class StockfishWorkerPool {
     this.workers[index] = {
       proc,
       busy: false,
+      ready: false,
       currentResolve: null,
       currentReject: null
     }
+
+    proc.stdin?.write('uci\n')
   }
 
   private clearWorker(index: number): void {
@@ -144,7 +158,7 @@ class StockfishWorkerPool {
   }
 
   private processNext(): void {
-    const availableWorker = this.workers.findIndex(w => !w.busy)
+    const availableWorker = this.workers.findIndex(w => !w.busy && w.ready)
     if (availableWorker === -1) return
 
     const pending = this.pendingQueue.shift()
