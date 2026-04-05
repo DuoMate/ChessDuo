@@ -107,6 +107,7 @@ export class ChessBot {
     const evaluatedMoves: { move: Move; score: number }[] = []
     const uciMoves = moves.map(m => this.moveToUci(m))
     const evalStart = Date.now()
+    console.log(`[ChessBot] FEN: ${fen}`)
 
     try {
       const results: { move: string; score: number }[] = await this.moveEvaluator.evaluateMoves(uciMoves, fen)
@@ -137,6 +138,7 @@ export class ChessBot {
       .map((m, i) => `${i + 1}. ${m.move.san}(${m.score})`)
       .join(' | ')
     console.log(`\n[ChessBot:L${this.config.skillLevel}] Evaluating ${moves.length} moves`)
+    console.log(`[ChessBot] isBlackTurn: ${isBlackTurn}, sort: ${isBlackTurn ? 'ascending (lowest first)' : 'descending (highest first)'}`)
     console.log(`[ChessBot] Top moves: ${topMovesDisplay}`)
 
     const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
