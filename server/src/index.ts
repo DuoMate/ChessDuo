@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { spawn } from 'child_process'
-import { LRUCache } from 'lru-cache'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -13,11 +12,6 @@ interface EvaluateRequest {
   fen: string
   depth?: number
 }
-
-const evaluationCache = new LRUCache<string, number>({
-  max: 2000,
-  ttl: 1000 * 60 * 30,
-})
 
 const STOCKFISH_PATHS = [
   '/usr/games/stockfish',
@@ -38,22 +32,17 @@ function findStockfishPath(): string {
 
 const STOCKFISH_PATH = findStockfishPath()
 const NUM_WORKERS = parseInt(process.env.STOCKFISH_WORKERS || '4')
-const DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '15')
+const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '15')
 
 console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 console.log(`[SERVER] Worker pool size: ${NUM_WORKERS}`)
-console.log(`[SERVER] Default depth: ${DEPTH}`)
+console.log(`[SERVER] Default depth: ${DEFAULT_DEPTH}`)
 
 interface WorkerMessage {
-  id: string
   fen: string
   depth: number
-}
-
-interface WorkerResponse {
-  id: string
-  score: number
-  error?: string
+  resolve: (score: number) => void
+  reject: (err: Error) => void
 }
 
 class StockfishWorkerPool {
@@ -62,13 +51,8 @@ class StockfishWorkerPool {
     busy: boolean
     currentResolve: ((score: number) => void) | null
     currentReject: ((err: Error) => void) | null
-    currentId: string | null
   }> = []
-  private pendingQueue: Array<{
-    message: WorkerMessage
-    resolve: (score: number) => void
-    reject: (err: Error) => void
-  }> = []
+  private pendingQueue: WorkerMessage[] = []
 
   constructor(size: number) {
     for (let i = 0; i < size; i++) {
@@ -81,7 +65,7 @@ class StockfishWorkerPool {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    proc.stdin.write('uci\n')
+    proc.stdin?.write('uci\n')
 
     let buffer = ''
     let resolved = false
@@ -146,8 +130,7 @@ class StockfishWorkerPool {
       proc,
       busy: false,
       currentResolve: null,
-      currentReject: null,
-      currentId: null
+      currentReject: null
     }
   }
 
@@ -157,7 +140,6 @@ class StockfishWorkerPool {
       worker.busy = false
       worker.currentResolve = null
       worker.currentReject = null
-      worker.currentId = null
     }
   }
 
@@ -170,7 +152,6 @@ class StockfishWorkerPool {
 
     const worker = this.workers[availableWorker]
     worker.busy = true
-    worker.currentId = pending.message.id
 
     let resolved = false
     const timeout = setTimeout(() => {
@@ -200,30 +181,16 @@ class StockfishWorkerPool {
       pending.reject(err)
     }
 
-    worker.proc.stdin?.write(`position fen ${pending.message.fen}\n`)
-    worker.proc.stdin?.write(`go depth ${pending.message.depth}\n`)
+    worker.proc.stdin?.write(`position fen ${pending.fen}\n`)
+    worker.proc.stdin?.write(`go depth ${pending.depth}\n`)
   }
 
-  async evaluate(fen: string, depth: number = DEPTH): Promise<number> {
-    const cacheKey = `${fen}:${depth}`
-    const cached = evaluationCache.get(cacheKey)
-    if (cached !== undefined) {
-      return cached
-    }
-
+  async evaluate(fen: string, depth: number = DEFAULT_DEPTH): Promise<number> {
     return new Promise((resolve, reject) => {
-      const message: WorkerMessage = {
-        id: Math.random().toString(36),
-        fen,
-        depth
-      }
-
       this.pendingQueue.push({
-        message,
-        resolve: (score) => {
-          evaluationCache.set(cacheKey, score)
-          resolve(score)
-        },
+        fen,
+        depth,
+        resolve,
         reject
       })
 
@@ -235,8 +202,7 @@ class StockfishWorkerPool {
     return {
       workers: this.workers.length,
       busyWorkers: this.workers.filter(w => w.busy).length,
-      pendingRequests: this.pendingQueue.length,
-      cacheSize: evaluationCache.size
+      pendingRequests: this.pendingQueue.length
     }
   }
 }
@@ -252,7 +218,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 app.post('/evaluate', async (req: Request, res: Response) => {
   try {
-    const { fen, depth = DEPTH } = req.body as EvaluateRequest
+    const { fen, depth = DEFAULT_DEPTH } = req.body as EvaluateRequest
 
     if (!fen) {
       res.status(400).json({ error: 'FEN is required' })
@@ -280,7 +246,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
 
 app.post('/evaluate-batch', async (req: Request, res: Response) => {
   try {
-    const { positions, depth = DEPTH } = req.body as { positions: string[], depth?: number }
+    const { positions, depth = DEFAULT_DEPTH } = req.body as { positions: string[], depth?: number }
 
     if (!positions || !Array.isArray(positions)) {
       res.status(400).json({ error: 'positions array is required' })
@@ -311,11 +277,6 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
   }
 })
 
-app.delete('/cache', (req: Request, res: Response) => {
-  evaluationCache.clear()
-  res.json({ status: 'ok', message: 'Cache cleared' })
-})
-
 app.get('/stats', (req: Request, res: Response) => {
   res.json(workerPool.getStats())
 })
@@ -332,5 +293,4 @@ app.listen(PORT, () => {
   console.log(`[SERVER]   GET  /stats   - Worker pool stats`)
   console.log(`[SERVER]   POST /evaluate - Evaluate single position`)
   console.log(`[SERVER]   POST /evaluate-batch - Evaluate multiple positions`)
-  console.log(`[SERVER]   DELETE /cache - Clear evaluation cache`)
 })
