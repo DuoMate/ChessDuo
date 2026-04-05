@@ -15,6 +15,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: STOCKFISH_WORKERS
-        value: 4
+        value: 2
       - key: STOCKFISH_DEPTH
         value: 5
