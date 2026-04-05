@@ -255,8 +255,6 @@ export function Game({ level }: GameProps) {
       if (game.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK) {
         setGameState(prev => ({ ...prev, isBotThinking: true }))
         
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
         await executeBotMove()
         
         setGameState(prev => ({ ...prev, isBotThinking: false }))

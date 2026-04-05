@@ -53,6 +53,15 @@ class MockMoveEvaluator {
     return { move: bestMove, score: bestScore }
   }
 
+  async evaluateMoves(moves: string[], fen: string): Promise<MoveEvaluation[]> {
+    const results: MoveEvaluation[] = []
+    for (const move of moves) {
+      const evalResult = await this.evaluateMove(move, fen)
+      results.push(evalResult)
+    }
+    return results
+  }
+
   async compareMoves(move1: string, move2: string, fen: string): Promise<{ winner: string; score1: number; score2: number; centipawnLoss: number }> {
     const eval1 = await this.evaluateMove(move1, fen)
     const eval2 = await this.evaluateMove(move2, fen)
