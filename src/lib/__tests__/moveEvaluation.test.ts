@@ -81,6 +81,20 @@ class MockMoveEvaluator {
   isReady(): boolean {
     return true
   }
+
+  async evaluatePosition(fen: string): Promise<number> {
+    const chess = new Chess(fen)
+    const moves = chess.moves()
+    if (moves.length === 0) return 0
+    let bestScore = -Infinity
+    for (const move of moves) {
+      const evalResult = await this.evaluateMove(move, fen)
+      if (evalResult.score > bestScore) {
+        bestScore = evalResult.score
+      }
+    }
+    return bestScore
+  }
 }
 
 describe('LocalGame Move Evaluation', () => {

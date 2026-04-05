@@ -177,15 +177,18 @@ export class LocalGame {
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
     
     const currentFen = this.gameState.fen
-    const movesToEvaluate = [player1Move, player2Move]
     
+    const chess = new Chess(currentFen)
+    const allMoves = chess.moves()
+    const bestMoveScore = await this.evaluator.evaluatePosition(currentFen)
+    
+    const movesToEvaluate = [player1Move, player2Move]
     const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, currentFen)
     const player1Score = evalResults[0].score
     const player2Score = evalResults[1].score
 
-    const startingEvaluation = (player1Score + player2Score) / 2
-    const player1Loss = isSync ? 0 : Math.abs(startingEvaluation - player1Score)
-    const player2Loss = isSync ? 0 : Math.abs(startingEvaluation - player2Score)
+    const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
+    const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
     
     if (isSync) {
       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
@@ -197,7 +200,7 @@ export class LocalGame {
     console.log(`\n[EVALUATION]`)
     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
     console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
-    console.log(`  [Reference] avg score: ${startingEvaluation}`)
+    console.log(`  [Engine Best] position score: ${bestMoveScore}`)
     
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
     const winningScore = winningMove === player1Move ? player1Score : player2Score
@@ -226,7 +229,7 @@ export class LocalGame {
       winningScore,
       isSync,
       bestEngineMove: winningMove,
-      bestEngineScore: startingEvaluation
+      bestEngineScore: bestMoveScore
     }
 
     if (!skipStatsUpdate) {
