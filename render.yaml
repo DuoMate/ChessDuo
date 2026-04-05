@@ -14,3 +14,7 @@ services:
         value: 3001
       - key: NODE_ENV
         value: production
+      - key: STOCKFISH_WORKERS
+        value: 4
+      - key: STOCKFISH_DEPTH
+        value: 15
