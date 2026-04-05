@@ -19,6 +19,7 @@ interface EvaluateRequest {
 }
 
 const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '8')
+const JOB_TIMEOUT = 30000
 
 console.log(`[SERVER] Default depth: ${DEFAULT_DEPTH}`)
 
@@ -41,89 +42,183 @@ function findStockfishPath(): string {
 const STOCKFISH_PATH = findStockfishPath()
 console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 
-function evaluate(fen: string, depth: number): Promise<number> {
-  return new Promise((resolve, reject) => {
+interface Job {
+  id: string
+  fen: string
+  depth: number
+  resolve: (score: number) => void
+  reject: (err: Error) => void
+  startTime: number
+}
+
+class StockfishQueue {
+  private jobQueue: Job[] = []
+  private processing = false
+  private stockfish: ReturnType<typeof spawn> | null = null
+  private buffer = ''
+  private currentJob: Job | null = null
+  private uciReady = false
+
+  constructor() {
+    this.startStockfish()
+  }
+
+  private startStockfish(): void {
+    console.log('[STOCKFISH] Starting process...')
+    
     const proc = spawn(STOCKFISH_PATH, [], {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    let output = ''
-    let resolved = false
-
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true
-        proc.kill()
-        reject(new Error('Evaluation timeout'))
-      }
-    }, 30000)
+    this.stockfish = proc
+    this.buffer = ''
+    this.uciReady = false
+    this.processing = false
 
     proc.stdout.on('data', (data: Buffer) => {
-      const lines = data.toString().split('\n')
-      for (const line of lines) {
-        output += line + '\n'
-
-        if (line.includes('score cp')) {
-          const match = line.match(/score cp (-?\d+)/)
-          if (match && !resolved) {
-            resolved = true
-            clearTimeout(timeout)
-            proc.kill()
-            resolve(parseInt(match[1], 10))
-            return
-          }
-        }
-
-        if (line.includes('score mate')) {
-          const match = line.match(/score mate (-?\d+)/)
-          if (match && !resolved) {
-            resolved = true
-            clearTimeout(timeout)
-            proc.kill()
-            const mateIn = parseInt(match[1], 10)
-            resolve(mateIn > 0 ? 10000 : -10000)
-            return
-          }
-        }
-      }
+      const str = data.toString()
+      this.buffer += str
+      this.processBuffer()
     })
 
-    proc.stderr.on('data', () => {})
+    proc.stderr.on('data', (data: Buffer) => {
+      console.log('[STOCKFISH stderr]:', data.toString().trim())
+    })
 
     proc.on('error', (err) => {
-      if (!resolved) {
-        resolved = true
-        clearTimeout(timeout)
-        reject(err)
-      }
+      console.error('[STOCKFISH] Error:', err)
+      this.restart()
     })
 
-    proc.on('exit', () => {
-      if (!resolved) {
-        resolved = true
-        clearTimeout(timeout)
-        resolve(0)
-      }
+    proc.on('exit', (code) => {
+      console.log(`[STOCKFISH] Exited with code ${code}`)
+      this.restart()
     })
 
     proc.stdin.write('uci\n')
+  }
 
-    const checkUciOk = (data: Buffer) => {
-      const str = data.toString()
-      if (str.includes('uciok')) {
-        proc.stdout.removeListener('data', checkUciOk)
-        proc.stdin.write('isready\n')
-        proc.stdin.write(`position fen ${fen}\n`)
-        proc.stdin.write(`go depth ${depth}\n`)
+  private restart(): void {
+    if (this.stockfish) {
+      this.stockfish.removeAllListeners()
+      this.stockfish.kill()
+      this.stockfish = null
+    }
+    
+    setTimeout(() => {
+      this.startStockfish()
+    }, 1000)
+  }
+
+  private processBuffer(): void {
+    if (!this.uciReady) {
+      if (this.buffer.includes('uciok')) {
+        this.uciReady = true
+        this.buffer = ''
+        console.log('[STOCKFISH] Ready')
+        this.processQueue()
       }
+      return
     }
 
-    proc.stdout.on('data', checkUciOk)
-  })
+    if (!this.currentJob || !this.stockfish) return
+
+    const cpMatch = this.buffer.match(/score cp (-?\d+)/)
+    const mateMatch = this.buffer.match(/score mate (-?\d+)/)
+    const bestMoveMatch = this.buffer.match(/bestmove (\S+)/)
+
+    if (cpMatch) {
+      const score = parseInt(cpMatch[1], 10)
+      console.log(`[STOCKFISH] Score: ${score}`)
+      this.buffer = ''
+      const job = this.currentJob
+      this.currentJob = null
+      job.resolve(score)
+      this.processQueue()
+    } else if (mateMatch) {
+      const mateIn = parseInt(mateMatch[1], 10)
+      const score = mateIn > 0 ? 10000 : -10000
+      console.log(`[STOCKFISH] Mate: ${mateIn} -> score ${score}`)
+      this.buffer = ''
+      const job = this.currentJob
+      this.currentJob = null
+      job.resolve(score)
+      this.processQueue()
+    } else if (bestMoveMatch) {
+      this.buffer = ''
+    }
+  }
+
+  private processQueue(): void {
+    if (this.processing || !this.uciReady || !this.stockfish) return
+    if (this.jobQueue.length === 0) return
+
+    const job = this.jobQueue.shift()!
+    this.currentJob = job
+    this.processing = true
+
+    const elapsed = Date.now() - job.startTime
+    if (elapsed > JOB_TIMEOUT) {
+      console.log(`[STOCKFISH] Job timeout after ${elapsed}ms`)
+      job.reject(new Error('Job timeout'))
+      this.currentJob = null
+      this.processing = false
+      this.processQueue()
+      return
+    }
+
+    console.log(`[STOCKFISH] Processing job (${this.jobQueue.length + 1} in queue)`)
+    this.buffer = ''
+    if (this.stockfish?.stdin) {
+      this.stockfish.stdin.write(`position fen ${job.fen}\n`)
+      this.stockfish.stdin.write(`go depth ${job.depth}\n`)
+    }
+
+    setTimeout(() => {
+      if (this.currentJob === job) {
+        console.log('[STOCKFISH] Job timeout')
+        job.reject(new Error('Evaluation timeout'))
+        this.currentJob = null
+        this.processing = false
+        this.processQueue()
+      }
+    }, JOB_TIMEOUT)
+  }
+
+  enqueue(fen: string, depth: number): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const job: Job = {
+        id: Math.random().toString(36).substr(2, 9),
+        fen,
+        depth,
+        resolve,
+        reject,
+        startTime: Date.now()
+      }
+
+      this.jobQueue.push(job)
+      console.log(`[QUEUE] Job added (queue size: ${this.jobQueue.length})`)
+      
+      this.processQueue()
+    })
+  }
+
+  getStats() {
+    return {
+      queueLength: this.jobQueue.length,
+      processing: this.processing,
+      uciReady: this.uciReady
+    }
+  }
 }
 
+const stockfishQueue = new StockfishQueue()
+
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok' })
+  res.json({ 
+    status: 'ok',
+    ...stockfishQueue.getStats()
+  })
 })
 
 app.post('/evaluate', async (req: Request, res: Response) => {
@@ -136,7 +231,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-    const score = await evaluate(fen, depth)
+    const score = await stockfishQueue.enqueue(fen, depth)
     const elapsed = Date.now() - startTime
 
     res.json({
@@ -164,8 +259,8 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-
-    const evaluations = positions.map(fen => evaluate(fen, depth))
+    
+    const evaluations = positions.map(fen => stockfishQueue.enqueue(fen, depth))
     const results = await Promise.all(evaluations)
 
     const elapsed = Date.now() - startTime
@@ -194,8 +289,5 @@ process.on('SIGTERM', () => {
 
 app.listen(PORT, () => {
   console.log(`[SERVER] Stockfish server running on port ${PORT}`)
-  console.log(`[SERVER] Endpoints:`)
-  console.log(`[SERVER]   GET  /health  - Health check`)
-  console.log(`[SERVER]   POST /evaluate - Evaluate single position`)
-  console.log(`[SERVER]   POST /evaluate-batch - Evaluate multiple positions`)
+  console.log(`[SERVER] Using persistent Stockfish process with job queue`)
 })
