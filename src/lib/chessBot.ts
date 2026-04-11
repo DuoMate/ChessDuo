@@ -97,68 +97,74 @@ export class ChessBot {
   }
 
   private async pickSmartMoveAsync(moves: Move[], fen: string): Promise<Move> {
-    const isBlackTurn = new Chess(fen).turn() === 'b'
     const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
     
     if (moves.length === 1) {
       console.log(`[ChessBot:L${this.config.skillLevel}] Only one move available: ${moves[0].san}`)
       return moves[0]
     }
-
-    const evaluatedMoves: { move: Move; score: number }[] = []
-    const uciMoves = moves.map(m => this.moveToUci(m))
+    
     const evalStart = Date.now()
     
     console.log(`\n${'='.repeat(60)}`)
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description} (UCI_Elo: ${skillConfig.uciElo})`)
     console.log(`[ChessBot] FEN: ${fen}`)
-    console.log(`[ChessBot] isBlackTurn: ${isBlackTurn}, Evaluating ${moves.length} moves`)
+    console.log(`[ChessBot] Requesting Stockfish to play move at UCI_Elo ${skillConfig.uciElo}`)
 
     try {
-      const results: { move: string; score: number }[] = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, skillConfig.uciElo)
-      const serverTime = Date.now() - evalStart
-      console.log(`[ChessBot] Server response: ${serverTime}ms for ${moves.length} moves`)
+      const playedMove = await this.moveEvaluator.playMove(fen, skillConfig.uciElo, 2000)
+      const elapsed = Date.now() - evalStart
       
-      const scoreMap = new Map(results.map((r: { move: string; score: number }) => [r.move, r.score]))
+      console.log(`[ChessBot] Stockfish played: ${playedMove} (time: ${elapsed}ms)`)
       
-      for (const move of moves) {
-        const uci = this.moveToUci(move)
-        const score = scoreMap.get(uci) ?? (isBlackTurn ? Infinity : -Infinity)
-        evaluatedMoves.push({ move, score })
+      const matchedMove = moves.find(m => 
+        this.moveToUci(m) === playedMove || 
+        m.san === playedMove || 
+        m.lan === playedMove
+      )
+      
+      if (matchedMove) {
+        console.log(`[ChessBot] SELECTED: ${matchedMove.san} (UCI_Elo: ${skillConfig.uciElo})`)
+        console.log(`${'='.repeat(60)}\n`)
+        return matchedMove
       }
+      
+      console.log(`[ChessBot] WARNING: Stockfish played ${playedMove} but couldn't match it. Falling back to first move.`)
+      console.log(`${'='.repeat(60)}\n`)
+      return moves[0]
     } catch (error) {
       console.log(`[ChessBot] ERROR: ${error}`)
-      for (const move of moves) {
-        evaluatedMoves.push({
+      console.log(`[ChessBot] Falling back to best-scoring move`)
+      
+      const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen)
+      const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
+      console.log(`${'='.repeat(60)}\n`)
+      return selectedMove
+    }
+  }
+
+  private async evaluateMovesWithFallback(moves: Move[], fen: string): Promise<{ move: Move; score: number }[]> {
+    const isBlackTurn = new Chess(fen).turn() === 'b'
+    const uciMoves = moves.map(m => this.moveToUci(m))
+    
+    try {
+      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
+      const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
+      
+      return moves.map(move => {
+        const uci = this.moveToUci(move)
+        const score = scoreMap.get(uci)
+        return {
           move,
-          score: isBlackTurn ? Infinity : -Infinity
-        })
-      }
+          score: score !== undefined ? score : (isBlackTurn ? Infinity : -Infinity)
+        }
+      })
+    } catch {
+      return moves.map(move => ({
+        move,
+        score: isBlackTurn ? Infinity : -Infinity
+      }))
     }
-
-    if (isBlackTurn) {
-      evaluatedMoves.sort((a, b) => a.score - b.score)
-    } else {
-      evaluatedMoves.sort((a, b) => b.score - a.score)
-    }
-    
-    const totalEvalTime = Date.now() - evalStart
-    console.log(`[ChessBot] All ${evaluatedMoves.length} moves ranked:`)
-    evaluatedMoves.forEach((m, i) => {
-      console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
-    })
-
-    const topMovesDisplay = evaluatedMoves.slice(0, Math.min(5, evaluatedMoves.length))
-      .map((m, i) => `${i + 1}. ${m.move.san}(${m.score})`)
-      .join(' | ')
-    console.log(`[ChessBot] Top 5: ${topMovesDisplay}`)
-
-    const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
-    const selectedScore = evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score
-    console.log(`[ChessBot] SELECTED: ${selectedMove.san} (score=${selectedScore}, totalTime=${totalEvalTime}ms)`)
-    console.log(`${'='.repeat(60)}\n`)
-    
-    return selectedMove
   }
 
   private pickSmartMoveSync(moves: Move[], fen: string): Move {

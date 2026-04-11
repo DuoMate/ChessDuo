@@ -155,6 +155,46 @@ export class ServerMoveEvaluator {
     return { move: best.move, score: best.score }
   }
 
+  async playMove(fen: string, uciElo: number = 2600, movetime: number = 2000): Promise<string> {
+    if (!this.serverUrl) {
+      throw new Error('Stockfish server URL not configured')
+    }
+
+    console.log(`[EVALUATOR] Stockfish playing move from FEN: ${fen.substring(0, 60)}... (UCI_Elo: ${uciElo})`)
+
+    let lastError: Error | null = null
+    
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const attemptStart = Date.now()
+      try {
+        const response = await fetch(`${this.serverUrl}/play-move`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ fen, uciElo, movetime })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Play move failed: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        const elapsed = Date.now() - attemptStart
+        console.log(`[EVALUATOR] Stockfish played ${data.move} (time=${elapsed}ms, UCI_Elo=${data.uciElo})`)
+        return data.move
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        console.log(`[EVALUATOR] Play move attempt ${attempt + 1} failed: ${lastError.message}`)
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
+        }
+      }
+    }
+
+    throw lastError || new Error('Play move failed after retries')
+  }
+
   isUsingStockfish(): boolean {
     return !!this.serverUrl
   }

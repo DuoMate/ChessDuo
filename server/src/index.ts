@@ -260,6 +260,122 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
   }
 })
 
+app.post('/play-move', async (req: Request, res: Response) => {
+  try {
+    const { fen, uciElo = 2600, movetime = 1000 } = req.body as { fen: string, uciElo?: number, movetime?: number }
+
+    if (!fen) {
+      res.status(400).json({ error: 'FEN is required' })
+      return
+    }
+
+    const startTime = Date.now()
+    const move = await enqueuePlayMove(fen, uciElo, movetime)
+    const elapsed = Date.now() - startTime
+
+    res.json({
+      fen,
+      move,
+      uciElo,
+      timeMs: elapsed
+    })
+  } catch (error) {
+    console.error('[PLAY-MOVE] Error:', error)
+    res.status(500).json({
+      error: 'Play move failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
+function enqueuePlayMove(fen: string, uciElo: number, movetime: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now()
+    const jobId = Math.random().toString(36).substring(7)
+
+    console.log(`[STOCKFISH:${jobId}] Starting play-move`)
+    console.log(`[STOCKFISH:${jobId}] FEN: ${fen}`)
+    console.log(`[STOCKFISH:${jobId}] UCI_Elo: ${uciElo}, movetime: ${movetime}ms`)
+
+    const proc = spawn(STOCKFISH_PATH, [], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+
+    let output = ''
+    let resolved = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        proc.kill()
+        console.log(`[STOCKFISH:${jobId}] TIMEOUT after ${Date.now() - startTime}ms`)
+        reject(new Error('Play move timeout'))
+      }
+    }, EVAL_TIMEOUT)
+
+    proc.stdout.on('data', (data: Buffer) => {
+      const lines = data.toString().split('\n')
+      for (const line of lines) {
+        output += line + '\n'
+        console.log(`[STOCKFISH:${jobId}] ${line.trim()}`)
+
+        const bestMoveMatch = line.match(/bestmove\s+(\S+)/)
+        if (bestMoveMatch && !resolved) {
+          const move = bestMoveMatch[1]
+          const elapsed = Date.now() - startTime
+          console.log(`[STOCKFISH:${jobId}] RESULT: move=${move} (time: ${elapsed}ms)`)
+          resolved = true
+          clearTimeout(timeout)
+          proc.kill()
+          resolve(move)
+          return
+        }
+      }
+    })
+
+    proc.stderr.on('data', (data: Buffer) => {
+      console.log(`[STOCKFISH:${jobId}] STDERR: ${data.toString().trim()}`)
+    })
+
+    proc.on('error', (err) => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        reject(err)
+      }
+    })
+
+    proc.on('exit', () => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        resolve('resign')
+      }
+    })
+
+    proc.stdin.write('uci\n')
+    console.log(`[STOCKFISH:${jobId}] CMD: uci`)
+
+    const checkUciOk = (data: Buffer) => {
+      const str = data.toString()
+      if (str.includes('uciok')) {
+        proc.stdout.removeListener('data', checkUciOk)
+        proc.stdin.write('setoption name UCI_LimitStrength true\n')
+        console.log(`[STOCKFISH:${jobId}] CMD: setoption name UCI_LimitStrength true`)
+        proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
+        console.log(`[STOCKFISH:${jobId}] CMD: setoption name UCI_Elo ${uciElo}`)
+        proc.stdin.write('isready\n')
+        proc.stdin.write(`position fen ${fen}\n`)
+        console.log(`[STOCKFISH:${jobId}] CMD: position fen ${fen.substring(0, 50)}...`)
+        proc.stdin.write(`go movetime ${movetime}\n`)
+        console.log(`[STOCKFISH:${jobId}] CMD: go movetime ${movetime}`)
+      }
+    }
+
+    proc.stdout.on('data', checkUciOk)
+  })
+}
+
 process.on('SIGTERM', () => {
   console.log('[SERVER] SIGTERM received, shutting down...')
   process.exit(0)
