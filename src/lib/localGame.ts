@@ -260,8 +260,8 @@ export class LocalGame {
        console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
      }
 
-     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player1Score)
-     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player2Score)
+     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(player1Loss)
+     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(player2Loss)
      const player1Category = this.getAccuracyCategory(player1Loss, isSync)
      const player2Category = this.getAccuracyCategory(player2Loss, isSync)
 
@@ -279,7 +279,7 @@ export class LocalGame {
      const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
      
      console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(startScore, winningScore).toFixed(1)}%`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
      console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -378,8 +378,8 @@ export class LocalGame {
       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
     }
 
-    const player1Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player1Score)
-     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player2Score)
+     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(player1Loss)
+     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(player2Loss)
      const player1Category = this.getAccuracyCategory(player1Loss, isSync)
      const player2Category = this.getAccuracyCategory(player2Loss, isSync)
      
@@ -394,7 +394,7 @@ export class LocalGame {
     const winnerId = winningMove === player1Move ? player1Id : player2Id
     
     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-    console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(startScore, winningScore).toFixed(1)}%`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
     console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -440,12 +440,8 @@ export class LocalGame {
     return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1)
   }
 
-  private calculateAccuracy(
-    beforeCentipawns: number,
-    afterCentipawns: number,
-    isSacrifice: boolean = false
-  ): number {
-    if (beforeCentipawns === Infinity || afterCentipawns === Infinity || beforeCentipawns < 0 || afterCentipawns < 0) {
+  private calculateAccuracy(cpLoss: number, isSacrifice: boolean = false): number {
+    if (cpLoss < 0 || cpLoss === Infinity) {
       return 0
     }
 
@@ -453,16 +449,7 @@ export class LocalGame {
       return 100
     }
 
-    const winPercentBefore = this.centipawnsToWinPercent(beforeCentipawns)
-    const winPercentAfter = this.centipawnsToWinPercent(afterCentipawns)
-
-    if (winPercentAfter >= winPercentBefore) {
-      return 100
-    }
-
-    const winDiff = winPercentBefore - winPercentAfter
-    const raw = 103.1668100711649 * Math.exp(-0.04354415386753951 * winDiff) - 3.166924740191411 + 1
-    return Math.max(0, Math.min(100, raw))
+    return Math.max(0, Math.min(100, 100 * 200 / (cpLoss + 200)))
   }
 
   private isBrilliantMove(

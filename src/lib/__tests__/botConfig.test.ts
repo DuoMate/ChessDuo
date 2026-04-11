@@ -163,27 +163,27 @@ describe('Bot Configuration Module', () => {
 
   describe('getSkillLevelDescription', () => {
     test('returns correct description for skill level 1', () => {
-      expect(getSkillLevelDescription(1)).toBe('~1500 ELO')
+      expect(getSkillLevelDescription(1)).toBe('Beginner ~1000 ELO')
     })
 
     test('returns correct description for skill level 2', () => {
-      expect(getSkillLevelDescription(2)).toBe('~1600 ELO')
+      expect(getSkillLevelDescription(2)).toBe('Novice ~1500 ELO')
     })
 
     test('returns correct description for skill level 3', () => {
-      expect(getSkillLevelDescription(3)).toBe('~1700 ELO')
+      expect(getSkillLevelDescription(3)).toBe('Intermediate ~1800 ELO')
     })
 
     test('returns correct description for skill level 4 (default)', () => {
-      expect(getSkillLevelDescription(4)).toBe('~1800 ELO')
+      expect(getSkillLevelDescription(4)).toBe('Advanced ~2000 ELO')
     })
 
     test('returns correct description for skill level 5', () => {
-      expect(getSkillLevelDescription(5)).toBe('~1900 ELO')
+      expect(getSkillLevelDescription(5)).toBe('Expert ~2200 ELO')
     })
 
     test('returns correct description for skill level 6', () => {
-      expect(getSkillLevelDescription(6)).toBe('~2000+ ELO')
+      expect(getSkillLevelDescription(6)).toBe('Master ~2600 ELO')
     })
 
     test('returns "Unknown" for invalid skill level', () => {
@@ -231,12 +231,12 @@ describe('Bot Configuration Module', () => {
       const levels = getAvailableSkillLevels()
       const descriptions = levels.map((l) => l.description)
 
-      expect(descriptions).toContain('~1500 ELO')
-      expect(descriptions).toContain('~1600 ELO')
-      expect(descriptions).toContain('~1700 ELO')
-      expect(descriptions).toContain('~1800 ELO')
-      expect(descriptions).toContain('~1900 ELO')
-      expect(descriptions).toContain('~2000+ ELO')
+      expect(descriptions).toContain('Beginner ~1000 ELO')
+      expect(descriptions).toContain('Novice ~1500 ELO')
+      expect(descriptions).toContain('Intermediate ~1800 ELO')
+      expect(descriptions).toContain('Advanced ~2000 ELO')
+      expect(descriptions).toContain('Expert ~2200 ELO')
+      expect(descriptions).toContain('Master ~2600 ELO')
     })
 
     test('includes difficulty labels', () => {
@@ -256,7 +256,7 @@ describe('Bot Configuration Module', () => {
       const level4 = levels.find((l) => l.level === 4)
 
       expect(level4).toBeDefined()
-      expect(level4?.description).toBe('~1800 ELO')
+      expect(level4?.description).toBe('Advanced ~2000 ELO')
       expect(level4?.label).toBe('Advanced')
     })
 
@@ -282,7 +282,7 @@ describe('Bot Configuration Module', () => {
       const config = getBotConfig()
       const description = getSkillLevelDescription(config.opponentSkillLevel)
 
-      expect(description).toBe('~1800 ELO')
+      expect(description).toBe('Advanced ~2000 ELO')
     })
 
     test('can get description for configured skill level', () => {
@@ -291,7 +291,7 @@ describe('Bot Configuration Module', () => {
       const config = getBotConfig()
       const description = getSkillLevelDescription(config.opponentSkillLevel)
 
-      expect(description).toBe('~1900 ELO')
+      expect(description).toBe('Expert ~2200 ELO')
     })
 
     test('can get all available levels and use them for config', () => {
@@ -307,8 +307,8 @@ describe('Bot Configuration Module', () => {
     })
   })
 
-  describe('Use Case: Static 1800 ELO Configuration', () => {
-    test('both bots default to 1800 ELO without env vars', () => {
+  describe('Use Case: Static 2000 ELO Configuration', () => {
+    test('both bots default to 2000 ELO without env vars', () => {
       delete process.env.BOT_OPPONENT_SKILL_LEVEL
       delete process.env.BOT_TEAMMATE_SKILL_LEVEL
 
@@ -316,8 +316,8 @@ describe('Bot Configuration Module', () => {
 
       expect(config.opponentSkillLevel).toBe(4)
       expect(config.teammateSkillLevel).toBe(4)
-      expect(getSkillLevelDescription(config.opponentSkillLevel)).toBe('~1800 ELO')
-      expect(getSkillLevelDescription(config.teammateSkillLevel)).toBe('~1800 ELO')
+      expect(getSkillLevelDescription(config.opponentSkillLevel)).toBe('Advanced ~2000 ELO')
+      expect(getSkillLevelDescription(config.teammateSkillLevel)).toBe('Advanced ~2000 ELO')
     })
 
     test('can override both bots to 1800 ELO via env vars', () => {

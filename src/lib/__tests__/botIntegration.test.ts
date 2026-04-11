@@ -294,9 +294,9 @@ describe.skip('Bot Integration', () => {
       const bot4 = createBot({ skillLevel: 4 })
       const bot6 = createBot({ skillLevel: 6 })
 
-      expect(bot1.getSkillDescription()).toBe('~1500 ELO')
-      expect(bot4.getSkillDescription()).toBe('~1800 ELO')
-      expect(bot6.getSkillDescription()).toBe('~2000+ ELO')
+      expect(bot1.getSkillDescription()).toBe('Beginner ~1000 ELO')
+      expect(bot4.getSkillDescription()).toBe('Advanced ~2000 ELO')
+      expect(bot6.getSkillDescription()).toBe('Master ~2600 ELO')
     })
   })
 
@@ -308,20 +308,20 @@ describe.skip('Bot Integration', () => {
 
       expect(opponentBot.getConfig().skillLevel).toBe(4)
       expect(teammateBot.getConfig().skillLevel).toBe(4)
-      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
-      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(opponentBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
     })
 
     test('both bots can be configured to same static ELO', () => {
-      const staticEloLevel = 4 // 1800 ELO
+      const staticEloLevel = 4 // 2000 ELO
 
       const opponentBot = createBot({ skillLevel: staticEloLevel })
       const teammateBot = createBot({ skillLevel: staticEloLevel })
 
       expect(opponentBot.getConfig().skillLevel).toBe(staticEloLevel)
       expect(teammateBot.getConfig().skillLevel).toBe(staticEloLevel)
-      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
-      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(opponentBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
     })
 
     test('bots with same skill level make valid moves', () => {
@@ -379,8 +379,8 @@ describe.skip('Bot Integration', () => {
       await game.lockAndResolve()
 
       // Verify both bots maintain static ELO
-      expect(opponentBot.getSkillDescription()).toBe('~1800 ELO')
-      expect(teammateBot.getSkillDescription()).toBe('~1800 ELO')
+      expect(opponentBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
+      expect(teammateBot.getSkillDescription()).toBe('Advanced ~2000 ELO')
       expect(game.getStats().movesPlayed).toBeGreaterThan(0)
     })
   })

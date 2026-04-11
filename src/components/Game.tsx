@@ -503,6 +503,7 @@ export function Game({ level }: GameProps) {
       await executeBotMove()
       setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
       gameRef.current.startPendingTurn()
+      updateStateRef.current()
       startTimer()
     }
   }, [executeBotMove, startTimer])

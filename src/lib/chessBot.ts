@@ -9,13 +9,13 @@ export interface BotConfig {
   mockMoveEvaluator?: any
 }
 
-const ELO_MAPPING: Record<number, { maxCentipawnLoss: number; description: string; searchDepth: number; topMovesRandom?: number }> = {
-  1: { maxCentipawnLoss: 300, description: '~1500 ELO', searchDepth: 1, topMovesRandom: 5 },
-  2: { maxCentipawnLoss: 200, description: '~1600 ELO', searchDepth: 2, topMovesRandom: 3 },
-  3: { maxCentipawnLoss: 150, description: '~1700 ELO', searchDepth: 3, topMovesRandom: 0 },
-  4: { maxCentipawnLoss: 50, description: '~1800 ELO', searchDepth: 4 },
-  5: { maxCentipawnLoss: 30, description: '~1900 ELO', searchDepth: 5 },
-  6: { maxCentipawnLoss: 20, description: '~2000+ ELO', searchDepth: 10 },
+const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number; topMovesRandom?: number }> = {
+  1: { bestMoveChance: 0.55, description: 'Beginner ~1000 ELO', searchDepth: 1, topMovesRandom: 10 },
+  2: { bestMoveChance: 0.68, description: 'Novice ~1500 ELO', searchDepth: 2, topMovesRandom: 7 },
+  3: { bestMoveChance: 0.83, description: 'Intermediate ~1800 ELO', searchDepth: 3, topMovesRandom: 5 },
+  4: { bestMoveChance: 0.88, description: 'Advanced ~2000 ELO', searchDepth: 4, topMovesRandom: 3 },
+  5: { bestMoveChance: 0.93, description: 'Expert ~2200 ELO', searchDepth: 5, topMovesRandom: 2 },
+  6: { bestMoveChance: 0.99, description: 'Master ~2600 ELO', searchDepth: 10, topMovesRandom: 1 },
 }
 
 export class ChessBot {
@@ -56,7 +56,7 @@ export class ChessBot {
       }
 
       const bookMove = getBookMove(fen, this.config.skillLevel)
-      if (bookMove) {
+      if (bookMove && this.config.skillLevel <= 3) {
         const matchedMove = moves.find(m => m.san === bookMove || m.lan === bookMove || (m.from + m.to) === bookMove)
         if (matchedMove) {
           console.log(`[ChessBot:Opening Book] Move: ${bookMove}`)
@@ -98,20 +98,27 @@ export class ChessBot {
 
   private async pickSmartMoveAsync(moves: Move[], fen: string): Promise<Move> {
     const isBlackTurn = new Chess(fen).turn() === 'b'
+    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
     
     if (moves.length === 1) {
-      console.log(`[ChessBot] Only one move available: ${moves[0].san}`)
+      console.log(`[ChessBot:L${this.config.skillLevel}] Only one move available: ${moves[0].san}`)
       return moves[0]
     }
 
     const evaluatedMoves: { move: Move; score: number }[] = []
     const uciMoves = moves.map(m => this.moveToUci(m))
     const evalStart = Date.now()
+    
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
     console.log(`[ChessBot] FEN: ${fen}`)
+    console.log(`[ChessBot] isBlackTurn: ${isBlackTurn}, Evaluating ${moves.length} moves`)
 
     try {
       const results: { move: string; score: number }[] = await this.moveEvaluator.evaluateMoves(uciMoves, fen)
-      console.log(`[ChessBot] Server response took: ${Date.now() - evalStart}ms for ${moves.length} moves`)
+      const serverTime = Date.now() - evalStart
+      console.log(`[ChessBot] Server response: ${serverTime}ms for ${moves.length} moves`)
+      
       const scoreMap = new Map(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       for (const move of moves) {
@@ -119,7 +126,8 @@ export class ChessBot {
         const score = scoreMap.get(uci) ?? (isBlackTurn ? Infinity : -Infinity)
         evaluatedMoves.push({ move, score })
       }
-    } catch {
+    } catch (error) {
+      console.log(`[ChessBot] ERROR: ${error}`)
       for (const move of moves) {
         evaluatedMoves.push({
           move,
@@ -134,15 +142,21 @@ export class ChessBot {
       evaluatedMoves.sort((a, b) => b.score - a.score)
     }
     
+    const totalEvalTime = Date.now() - evalStart
+    console.log(`[ChessBot] All ${evaluatedMoves.length} moves ranked:`)
+    evaluatedMoves.forEach((m, i) => {
+      console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
+    })
+
     const topMovesDisplay = evaluatedMoves.slice(0, Math.min(5, evaluatedMoves.length))
       .map((m, i) => `${i + 1}. ${m.move.san}(${m.score})`)
       .join(' | ')
-    console.log(`\n[ChessBot:L${this.config.skillLevel}] Evaluating ${moves.length} moves`)
-    console.log(`[ChessBot] isBlackTurn: ${isBlackTurn}, sort: ${isBlackTurn ? 'ascending (lowest first)' : 'descending (highest first)'}`)
-    console.log(`[ChessBot] Top moves: ${topMovesDisplay}`)
+    console.log(`[ChessBot] Top 5: ${topMovesDisplay}`)
 
     const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
-    console.log(`[ChessBot:L${this.config.skillLevel}] Selected: ${selectedMove.san} (score: ${evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score})`)
+    const selectedScore = evaluatedMoves.find(m => m.move.san === selectedMove.san)?.score
+    console.log(`[ChessBot] SELECTED: ${selectedMove.san} (score=${selectedScore}, totalTime=${totalEvalTime}ms)`)
+    console.log(`${'='.repeat(60)}\n`)
     
     return selectedMove
   }
@@ -170,47 +184,52 @@ export class ChessBot {
     }
 
     const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
-    const maxLoss = skillConfig.maxCentipawnLoss
-    const topMovesRandom = skillConfig.topMovesRandom
-    const bestScore = evaluatedMoves[0].score
+    const bestMoveChance = skillConfig.bestMoveChance
+    const topMovesRandom = skillConfig.topMovesRandom || 3
+
+    console.log(`[ChessBot:L${this.config.skillLevel}] Selection logic: bestMoveChance=${(bestMoveChance * 100).toFixed(0)}%, topMovesRandom=${topMovesRandom}`)
 
     let filteredMoves = this.filterSuspiciousMoves(evaluatedMoves)
+    if (filteredMoves.length < evaluatedMoves.length) {
+      console.log(`[ChessBot:L${this.config.skillLevel}] Filtered ${evaluatedMoves.length - filteredMoves.length} suspicious moves`)
+    }
 
-    if (topMovesRandom && topMovesRandom > 0) {
-      const topCount = Math.min(topMovesRandom, filteredMoves.length)
-      const topMoves = filteredMoves.slice(0, topCount)
-      const randomIndex = Math.floor(Math.random() * topMoves.length)
-      const selected = topMoves[randomIndex]
-      const loss = Math.abs(bestScore - selected.score)
-      console.log(`[ChessBot:L${this.config.skillLevel}] Selected random from top ${topCount}: ${selected.move.san} (loss: ${loss}cp)`)
+    const roll = Math.random()
+    console.log(`[ChessBot:L${this.config.skillLevel}] Dice roll: ${(roll * 100).toFixed(1)}% (threshold: ${(bestMoveChance * 100).toFixed(0)}%)`)
+
+    if (roll < bestMoveChance) {
+      const best = filteredMoves[0]
+      const safetyCheck = this.validateMove(best.move)
+      if (safetyCheck.safe) {
+        console.log(`[ChessBot:L${this.config.skillLevel}] → Selected BEST move: ${best.move.san} (score=${best.score}) ✓`)
+        return best.move
+      }
+      console.log(`[ChessBot:L${this.config.skillLevel}] Best move UNSAFE: ${best.move.san} - ${safetyCheck.reason}`)
+    } else {
+      console.log(`[ChessBot:L${this.config.skillLevel}] → Rolling for random move from top ${topMovesRandom}`)
+    }
+
+    const topCount = Math.min(topMovesRandom, filteredMoves.length)
+    const topMoves = filteredMoves.slice(0, topCount)
+    const randomIndex = Math.floor(Math.random() * topMoves.length)
+    const selected = topMoves[randomIndex]
+
+    console.log(`[ChessBot:L${this.config.skillLevel}] Random pool: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] Random picked: index ${randomIndex} → ${selected.move.san}`)
+
+    const safetyCheck = this.validateMove(selected.move)
+    if (safetyCheck.safe) {
+      console.log(`[ChessBot:L${this.config.skillLevel}] → Selected RANDOM move: ${selected.move.san} (score=${selected.score}) ✓`)
       return selected.move
     }
 
-    const acceptable = filteredMoves.filter(m => {
-      const loss = Math.abs(bestScore - m.score)
-      return loss <= maxLoss
-    })
-
-    if (acceptable.length > 0) {
-      for (const candidate of acceptable) {
-        const safetyCheck = this.validateMove(candidate.move)
-        if (safetyCheck.safe) {
-          const loss = Math.abs(bestScore - candidate.score)
-          console.log(`[ChessBot:L${this.config.skillLevel}] Selected: ${candidate.move.san} (loss: ${loss}cp, floor: ${maxLoss}cp) ${safetyCheck.reason !== 'safe' ? '[' + safetyCheck.reason + ']' : ''}`)
-          return candidate.move
-        }
-        console.log(`[ChessBot:L${this.config.skillLevel}] Filtered: ${candidate.move.san} - ${safetyCheck.reason}`)
-      }
-      console.log(`[ChessBot:L${this.config.skillLevel}] All acceptable moves unsafe, picking best anyway: ${acceptable[0].move.san}`)
-      return acceptable[0].move
-    }
-
-    console.log(`[ChessBot:L${this.config.skillLevel}] No acceptable moves within ${maxLoss}cp, picking best: ${filteredMoves[0].move.san}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] Random pick UNSAFE: ${selected.move.san} - ${safetyCheck.reason}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] → Falling back to best: ${filteredMoves[0].move.san}`)
     return filteredMoves[0].move
   }
 
   private validateMove(move: Move): { safe: boolean; reason: string } {
-    if (move.flags.includes('e') || move.promotion) {
+    if (!move.flags || move.flags.includes('e') || move.promotion) {
       return { safe: true, reason: 'ep/promo' }
     }
 
@@ -391,7 +410,7 @@ export class ChessBot {
     if (evaluatedMoves.length === 0) return evaluatedMoves
 
     const isSuspiciousMove = (m: Move): boolean => {
-      if (m.captured || m.flags.includes('e') || m.promotion) {
+      if (m.captured || !m.flags || m.flags.includes('e') || m.promotion) {
         return false
       }
 

@@ -131,13 +131,13 @@ describe('ChessBot', () => {
     test('level 1 (beginner) has lowest bestMoveChance', () => {
       const bot = createBot({ skillLevel: 1 })
       const description = bot.getSkillDescription()
-      expect(description).toBe('~1500 ELO')
+      expect(description).toBe('Beginner ~1000 ELO')
     })
 
     test('level 6 (master) has highest bestMoveChance', () => {
       const bot = createBot({ skillLevel: 6 })
       const description = bot.getSkillDescription()
-      expect(description).toBe('~2000+ ELO')
+      expect(description).toBe('Master ~2600 ELO')
     })
 
     test('higher skill levels have higher bestMoveChance than lower levels', () => {
@@ -145,19 +145,19 @@ describe('ChessBot', () => {
       const bot4 = createBot({ skillLevel: 4 })
       const bot6 = createBot({ skillLevel: 6 })
 
-      expect(bot1.getSkillDescription()).toBe('~1500 ELO')
-      expect(bot4.getSkillDescription()).toBe('~1800 ELO')
-      expect(bot6.getSkillDescription()).toBe('~2000+ ELO')
+      expect(bot1.getSkillDescription()).toBe('Beginner ~1000 ELO')
+      expect(bot4.getSkillDescription()).toBe('Advanced ~2000 ELO')
+      expect(bot6.getSkillDescription()).toBe('Master ~2600 ELO')
     })
 
     test('all skill levels have correct descriptions', () => {
       const expectedDescriptions: Record<number, string> = {
-        1: '~1500 ELO',
-        2: '~1600 ELO',
-        3: '~1700 ELO',
-        4: '~1800 ELO',
-        5: '~1900 ELO',
-        6: '~2000+ ELO',
+        1: 'Beginner ~1000 ELO',
+        2: 'Novice ~1500 ELO',
+        3: 'Intermediate ~1800 ELO',
+        4: 'Advanced ~2000 ELO',
+        5: 'Expert ~2200 ELO',
+        6: 'Master ~2600 ELO',
       }
 
       for (let level = 1; level <= 6; level++) {

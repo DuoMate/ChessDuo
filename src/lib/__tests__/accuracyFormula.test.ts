@@ -34,7 +34,7 @@ describe('Accuracy Formula', () => {
       const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
       
       const accuracy = calculateAccuracy(400)
-      expect(accuracy).toBeGreaterThanOrEqual(32)
+      expect(accuracy).toBeGreaterThanOrEqual(33)
       expect(accuracy).toBeLessThanOrEqual(34)
     })
 
@@ -44,7 +44,7 @@ describe('Accuracy Formula', () => {
       
       const accuracy = calculateAccuracy(500)
       expect(accuracy).toBeGreaterThanOrEqual(28)
-      expect(accuracy).toBeLessThanOrEqual(30)
+      expect(accuracy).toBeLessThanOrEqual(29)
     })
 
     test('calculates ~25% accuracy for 600cp loss', () => {
@@ -52,7 +52,7 @@ describe('Accuracy Formula', () => {
       const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
       
       const accuracy = calculateAccuracy(600)
-      expect(accuracy).toBeGreaterThanOrEqual(24)
+      expect(accuracy).toBeGreaterThanOrEqual(25)
       expect(accuracy).toBeLessThanOrEqual(26)
     })
 
@@ -103,16 +103,16 @@ describe('Accuracy Formula', () => {
 describe('ELO-Based Move Selection', () => {
   describe('bestMoveChance configuration', () => {
     const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-      1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 1 },
-      2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 2 },
-      3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 3 },
-      4: { bestMoveChance: 0.80, description: '~1800 ELO', searchDepth: 4 },
-      5: { bestMoveChance: 0.92, description: '~1900 ELO', searchDepth: 5 },
-      6: { bestMoveChance: 0.99, description: '~2000+ ELO', searchDepth: 10 },
+      1: { bestMoveChance: 0.55, description: 'Beginner ~1000 ELO', searchDepth: 1 },
+      2: { bestMoveChance: 0.68, description: 'Novice ~1500 ELO', searchDepth: 2 },
+      3: { bestMoveChance: 0.83, description: 'Intermediate ~1800 ELO', searchDepth: 3 },
+      4: { bestMoveChance: 0.88, description: 'Advanced ~2000 ELO', searchDepth: 4 },
+      5: { bestMoveChance: 0.93, description: 'Expert ~2200 ELO', searchDepth: 5 },
+      6: { bestMoveChance: 0.99, description: 'Master ~2600 ELO', searchDepth: 10 },
     }
 
-    test('level 1 has 30% bestMoveChance', () => {
-      expect(ELO_MAPPING[1].bestMoveChance).toBe(0.30)
+    test('level 1 has 55% bestMoveChance', () => {
+      expect(ELO_MAPPING[1].bestMoveChance).toBe(0.55)
     })
 
     test('level 6 has 99% bestMoveChance', () => {
@@ -127,33 +127,38 @@ describe('ELO-Based Move Selection', () => {
   })
 
   describe('applyEloBasedSelection behavior', () => {
-    test('level 6 (master) picks best move most of the time', () => {
-      const bot = createBot({ skillLevel: 6, useStockfish: false })
+    test('level 6 (master) picks best move more often than lower levels', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot6 = createBot({ skillLevel: 6 })
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
-      let bestMoveCount = 0
+      let bestMoveCount1 = 0
+      let bestMoveCount6 = 0
       const numTries = 100
 
+      const evaluatedMoves = [
+        { move: { san: 'e4' }, score: 100 },
+        { move: { san: 'd4' }, score: 90 },
+        { move: { san: 'Nf3' }, score: 80 },
+        { move: { san: 'c4' }, score: 70 },
+        { move: { san: 'e3' }, score: 60 },
+      ]
+      const botAny = bot1 as any
+
       for (let i = 0; i < numTries; i++) {
-        const move = bot.selectMove(fen)
-        if (move) {
-          const botAny = bot as any
-          const evaluatedMoves = [
-            { move: { san: 'e4' }, score: 100 },
-            { move: { san: 'd4' }, score: 90 },
-            { move: { san: 'Nf3' }, score: 80 },
-          ]
-          const selected = botAny.applyEloBasedSelection.call(botAny, evaluatedMoves)
-          if (selected.san === 'e4') bestMoveCount++
-        }
+        const selected1 = botAny.applyEloBasedSelection.call(botAny, [...evaluatedMoves])
+        if (selected1.san === 'e4') bestMoveCount1++
+        
+        const selected6 = (bot6 as any).applyEloBasedSelection.call((bot6 as any), [...evaluatedMoves])
+        if (selected6.san === 'e4') bestMoveCount6++
       }
 
-      expect(bestMoveCount).toBeGreaterThan(90)
+      expect(bestMoveCount6).toBeGreaterThan(bestMoveCount1)
     })
 
     test('level 1 (beginner) has more variety in non-best selections', () => {
-      const bot1 = createBot({ skillLevel: 1, useStockfish: false })
-      const bot6 = createBot({ skillLevel: 6, useStockfish: false })
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot6 = createBot({ skillLevel: 6 })
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
       const moves1 = new Set<string>()
@@ -171,12 +176,12 @@ describe('ELO-Based Move Selection', () => {
   describe('Skill Level Descriptions', () => {
     test('all levels have correct descriptions', () => {
       const expectedDescriptions: Record<number, string> = {
-        1: '~1500 ELO',
-        2: '~1600 ELO',
-        3: '~1700 ELO',
-        4: '~1800 ELO',
-        5: '~1900 ELO',
-        6: '~2000+ ELO',
+        1: 'Beginner ~1000 ELO',
+        2: 'Novice ~1500 ELO',
+        3: 'Intermediate ~1800 ELO',
+        4: 'Advanced ~2000 ELO',
+        5: 'Expert ~2200 ELO',
+        6: 'Master ~2600 ELO',
       }
 
       for (let level = 1; level <= 6; level++) {

@@ -16,6 +16,7 @@ app.use(express.json())
 interface EvaluateRequest {
   fen: string
   depth?: number
+  skillLevel?: number
 }
 
 const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '20')
@@ -47,6 +48,7 @@ console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 interface Job {
   fen: string
   depth: number
+  skillLevel: number
   resolve: (score: number) => void
   reject: (err: Error) => void
 }
@@ -61,18 +63,27 @@ function processNext(): void {
   const job = jobQueue.shift()!
   activeProcesses++
 
+  const startTime = Date.now()
+  const jobId = Math.random().toString(36).substring(7)
+
+  console.log(`[STOCKFISH:${jobId}] Starting evaluation`)
+  console.log(`[STOCKFISH:${jobId}] FEN: ${job.fen}`)
+  console.log(`[STOCKFISH:${jobId}] Depth: ${job.depth}, Skill Level: ${job.skillLevel}`)
+
   const proc = spawn(STOCKFISH_PATH, [], {
     stdio: ['pipe', 'pipe', 'pipe']
   })
 
   let output = ''
   let resolved = false
+  let uciReady = false
 
   const timeout = setTimeout(() => {
     if (!resolved) {
       resolved = true
       proc.kill()
       activeProcesses--
+      console.log(`[STOCKFISH:${jobId}] TIMEOUT after ${Date.now() - startTime}ms`)
       job.reject(new Error('Evaluation timeout'))
       processNext()
     }
@@ -82,29 +93,42 @@ function processNext(): void {
     const lines = data.toString().split('\n')
     for (const line of lines) {
       output += line + '\n'
-      
-      if (line.includes('score cp') && !resolved) {
+
+      if (line.includes('uciok') && !uciReady) {
+        uciReady = true
+        console.log(`[STOCKFISH:${jobId}] UCI initialized, setting Skill Level: ${job.skillLevel}`)
+      }
+
+      if (line.includes('score cp') && !resolved && uciReady) {
         const match = line.match(/score cp (-?\d+)/)
         if (match) {
+          const score = parseInt(match[1], 10)
+          const elapsed = Date.now() - startTime
+          console.log(`[STOCKFISH:${jobId}] RESULT: cp=${score} (time: ${elapsed}ms)`)
+          console.log(`[STOCKFISH:${jobId}] Full line: ${line.trim()}`)
           resolved = true
           clearTimeout(timeout)
           proc.kill()
           activeProcesses--
-          job.resolve(parseInt(match[1], 10))
+          job.resolve(score)
           processNext()
           return
         }
       }
 
-      if (line.includes('score mate') && !resolved) {
+      if (line.includes('score mate') && !resolved && uciReady) {
         const match = line.match(/score mate (-?\d+)/)
         if (match) {
+          const mateIn = parseInt(match[1], 10)
+          const score = mateIn > 0 ? 10000 : -10000
+          const elapsed = Date.now() - startTime
+          console.log(`[STOCKFISH:${jobId}] RESULT: mate=${mateIn} (score=${score}) (time: ${elapsed}ms)`)
+          console.log(`[STOCKFISH:${jobId}] Full line: ${line.trim()}`)
           resolved = true
           clearTimeout(timeout)
           proc.kill()
           activeProcesses--
-          const mateIn = parseInt(match[1], 10)
-          job.resolve(mateIn > 0 ? 10000 : -10000)
+          job.resolve(score)
           processNext()
           return
         }
@@ -112,7 +136,9 @@ function processNext(): void {
     }
   })
 
-  proc.stderr.on('data', () => {})
+  proc.stderr.on('data', (data: Buffer) => {
+    console.log(`[STOCKFISH:${jobId}] STDERR: ${data.toString().trim()}`)
+  })
 
   proc.on('error', (err) => {
     if (!resolved) {
@@ -135,23 +161,29 @@ function processNext(): void {
   })
 
   proc.stdin.write('uci\n')
-  
+  console.log(`[STOCKFISH:${jobId}] CMD: uci`)
+
   const checkUciOk = (data: Buffer) => {
     const str = data.toString()
     if (str.includes('uciok')) {
       proc.stdout.removeListener('data', checkUciOk)
+      proc.stdin.write(`setoption name Skill Level value ${job.skillLevel}\n`)
+      console.log(`[STOCKFISH:${jobId}] CMD: setoption name Skill Level value ${job.skillLevel}`)
       proc.stdin.write('isready\n')
+      console.log(`[STOCKFISH:${jobId}] CMD: isready`)
       proc.stdin.write(`position fen ${job.fen}\n`)
+      console.log(`[STOCKFISH:${jobId}] CMD: position fen ${job.fen.substring(0, 50)}...`)
       proc.stdin.write(`go depth ${job.depth}\n`)
+      console.log(`[STOCKFISH:${jobId}] CMD: go depth ${job.depth}`)
     }
   }
 
   proc.stdout.on('data', checkUciOk)
 }
 
-function enqueueJob(fen: string, depth: number): Promise<number> {
+function enqueueJob(fen: string, depth: number, skillLevel: number = 20): Promise<number> {
   return new Promise((resolve, reject) => {
-    jobQueue.push({ fen, depth, resolve, reject })
+    jobQueue.push({ fen, depth, skillLevel, resolve, reject })
     processNext()
   })
 }
@@ -166,7 +198,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 app.post('/evaluate', async (req: Request, res: Response) => {
   try {
-    const { fen, depth = DEFAULT_DEPTH } = req.body as EvaluateRequest
+    const { fen, depth = DEFAULT_DEPTH, skillLevel = 20 } = req.body as EvaluateRequest
 
     if (!fen) {
       res.status(400).json({ error: 'FEN is required' })
@@ -174,13 +206,14 @@ app.post('/evaluate', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-    const score = await enqueueJob(fen, depth)
+    const score = await enqueueJob(fen, depth, skillLevel)
     const elapsed = Date.now() - startTime
 
     res.json({
       fen,
       score,
       depth,
+      skillLevel,
       timeMs: elapsed
     })
   } catch (error) {
@@ -194,7 +227,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
 
 app.post('/evaluate-batch', async (req: Request, res: Response) => {
   try {
-    const { positions, depth = DEFAULT_DEPTH } = req.body as { positions: string[], depth?: number }
+    const { positions, depth = DEFAULT_DEPTH, skillLevel = 20 } = req.body as { positions: string[], depth?: number, skillLevel?: number }
 
     if (!positions || !Array.isArray(positions)) {
       res.status(400).json({ error: 'positions array is required' })
@@ -203,7 +236,7 @@ app.post('/evaluate-batch', async (req: Request, res: Response) => {
 
     const startTime = Date.now()
     
-    const evaluations = positions.map(fen => enqueueJob(fen, depth))
+    const evaluations = positions.map(fen => enqueueJob(fen, depth, skillLevel))
     const results = await Promise.all(evaluations)
 
     const elapsed = Date.now() - startTime

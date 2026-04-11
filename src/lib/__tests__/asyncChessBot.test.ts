@@ -330,7 +330,7 @@ describe('ChessBot Async Support', () => {
 
       const description = bot.getSkillDescription()
 
-      expect(description).toBe('~1800 ELO')
+      expect(description).toBe('Advanced ~2000 ELO')
     })
 
     test('config accessible after creation', () => {

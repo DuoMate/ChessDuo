@@ -14,13 +14,13 @@ export class ServerMoveEvaluator {
     this.serverUrl = serverUrl || SERVER_URL
   }
 
-  async evaluateMove(move: string, fen: string): Promise<{ move: string; score: number }> {
+  async evaluateMove(move: string, fen: string, depth: number = 15, skillLevel: number = 20): Promise<{ move: string; score: number }> {
     const chess = new (await import('chess.js')).Chess(fen)
     chess.move(move)
     const newFen = chess.fen()
     chess.undo()
 
-    const score = await this.evaluatePosition(newFen)
+    const score = await this.evaluatePosition(newFen, depth, skillLevel)
 
     return {
       move,
@@ -28,7 +28,7 @@ export class ServerMoveEvaluator {
     }
   }
 
-  async evaluateMoves(moves: string[], fen: string, depth: number = 15, retries: number = 3): Promise<{ move: string; score: number }[]> {
+  async evaluateMoves(moves: string[], fen: string, depth: number = 15, skillLevel: number = 20, retries: number = 3): Promise<{ move: string; score: number }[]> {
     if (!this.serverUrl) {
       throw new Error('Stockfish server URL not configured')
     }
@@ -45,16 +45,22 @@ export class ServerMoveEvaluator {
       c.undo()
     }
 
+    console.log(`[EVALUATOR] Batch evaluating ${moves.length} moves from FEN: ${fen.substring(0, 60)}...`)
+    console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
+
     let lastError: Error | null = null
     
     for (let attempt = 0; attempt < retries; attempt++) {
+      const attemptStart = Date.now()
       try {
+        console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
+        
         const response = await fetch(`${this.serverUrl}/evaluate-batch`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ positions: fromFens, depth })
+          body: JSON.stringify({ positions: fromFens, depth, skillLevel })
         })
 
         if (!response.ok) {
@@ -62,12 +68,22 @@ export class ServerMoveEvaluator {
         }
 
         const data = await response.json()
-        return moves.map((move, i) => ({
-          move,
-          score: data.results[i].score
-        }))
+        const elapsed = Date.now() - attemptStart
+        
+        console.log(`[EVALUATOR] Batch response received in ${elapsed}ms`)
+        
+        const results = moves.map((move, i) => {
+          const score = data.results[i].score
+          console.log(`[EVALUATOR] ${move} → score=${score}`)
+          return { move, score }
+        })
+        
+        console.log(`[EVALUATOR] All scores: ${results.map(r => `${r.move}=${r.score}`).join(', ')}`)
+        
+        return results
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
+        console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
         if (attempt < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
         }
@@ -77,21 +93,24 @@ export class ServerMoveEvaluator {
     throw lastError || new Error('Batch evaluation failed after retries')
   }
 
-  async evaluatePosition(fen: string, depth: number = 15, retries: number = 3): Promise<number> {
+  async evaluatePosition(fen: string, depth: number = 15, skillLevel: number = 20, retries: number = 3): Promise<number> {
     if (!this.serverUrl) {
       throw new Error('Stockfish server URL not configured')
     }
 
+    console.log(`[EVALUATOR] Evaluating position: ${fen.substring(0, 60)}...`)
+
     let lastError: Error | null = null
     
     for (let attempt = 0; attempt < retries; attempt++) {
+      const attemptStart = Date.now()
       try {
         const response = await fetch(`${this.serverUrl}/evaluate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth })
+          body: JSON.stringify({ fen, depth, skillLevel })
         })
 
         if (!response.ok) {
@@ -99,9 +118,12 @@ export class ServerMoveEvaluator {
         }
 
         const data: EvaluateResponse = await response.json()
+        const elapsed = Date.now() - attemptStart
+        console.log(`[EVALUATOR] Position score=${data.score} (depth=${data.depth}, time=${elapsed}ms)`)
         return data.score
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
+        console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
         if (attempt < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
         }
@@ -111,7 +133,7 @@ export class ServerMoveEvaluator {
     throw lastError || new Error('Evaluation failed after retries')
   }
 
-  async getBestScore(fen: string, depth: number = 15): Promise<{ move: string; score: number }> {
+  async getBestScore(fen: string, depth: number = 15, skillLevel: number = 20): Promise<{ move: string; score: number }> {
     if (!this.serverUrl) {
       throw new Error('Stockfish server URL not configured')
     }
@@ -127,7 +149,7 @@ export class ServerMoveEvaluator {
       return { move: moves[0], score: 0 }
     }
 
-    const results = await this.evaluateMoves(moves, fen, depth)
+    const results = await this.evaluateMoves(moves, fen, depth, skillLevel)
     const best = results.reduce((a, b) => a.score > b.score ? a : b)
 
     return { move: best.move, score: best.score }

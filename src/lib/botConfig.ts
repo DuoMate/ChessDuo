@@ -28,22 +28,22 @@ export interface BotSkillConfig {
  * Falls back to default values if not set
  *
  * Environment variables:
- * - BOT_OPPONENT_SKILL_LEVEL: Opponent bot skill level (default: 4 = 1800 ELO)
- * - BOT_TEAMMATE_SKILL_LEVEL: Teammate bot skill level (default: 4 = 1800 ELO)
+ * - BOT_OPPONENT_SKILL_LEVEL: Opponent bot skill level (default: 4 = 2000 ELO)
+ * - BOT_TEAMMATE_SKILL_LEVEL: Teammate bot skill level (default: 4 = 2000 ELO)
  *
  * Skill levels correspond to:
- * 1: ~1500 ELO (bestMoveChance: 30%)
- * 2: ~1600 ELO (bestMoveChance: 45%)
- * 3: ~1700 ELO (bestMoveChance: 60%)
- * 4: ~1800 ELO (bestMoveChance: 75%)
- * 5: ~1900 ELO (bestMoveChance: 85%)
- * 6: ~2000+ ELO (bestMoveChance: 95%)
+ * 1: Beginner ~1000 ELO (bestMoveChance: 55%)
+ * 2: Novice ~1500 ELO (bestMoveChance: 68%)
+ * 3: Intermediate ~1800 ELO (bestMoveChance: 83%)
+ * 4: Advanced ~2000 ELO (bestMoveChance: 88%)
+ * 5: Expert ~2200 ELO (bestMoveChance: 93%)
+ * 6: Master ~2600 ELO (bestMoveChance: 99%)
  */
 export function getBotConfig(): BotSkillConfig {
-  // Parse from environment or use defaults (both bots default to 1800 ELO / level 4)
+  // Parse from environment or use defaults (both bots default to 2000 ELO / level 4)
   const opponentSkillLevel = parseBotSkillLevel(
     process.env.BOT_OPPONENT_SKILL_LEVEL,
-    4, // default: 1800 ELO
+    4, // default: 2000 ELO
     'BOT_OPPONENT_SKILL_LEVEL'
   )
 
@@ -123,12 +123,12 @@ function parseBotSkillLevel(
  */
 export function getSkillLevelDescription(skillLevel: number): string {
   const descriptions: Record<number, string> = {
-    1: '~1500 ELO',
-    2: '~1600 ELO',
-    3: '~1700 ELO',
-    4: '~1800 ELO',
-    5: '~1900 ELO',
-    6: '~2000+ ELO',
+    1: 'Beginner ~1000 ELO',
+    2: 'Novice ~1500 ELO',
+    3: 'Intermediate ~1800 ELO',
+    4: 'Advanced ~2000 ELO',
+    5: 'Expert ~2200 ELO',
+    6: 'Master ~2600 ELO',
   }
 
   return descriptions[skillLevel] || 'Unknown'
@@ -140,11 +140,11 @@ export function getSkillLevelDescription(skillLevel: number): string {
  */
 export function getAvailableSkillLevels(): SkillLevel[] {
   return [
-    { level: 1, description: '~1500 ELO', label: 'Beginner' },
-    { level: 2, description: '~1600 ELO', label: 'Novice' },
-    { level: 3, description: '~1700 ELO', label: 'Intermediate' },
-    { level: 4, description: '~1800 ELO', label: 'Advanced' },
-    { level: 5, description: '~1900 ELO', label: 'Expert' },
-    { level: 6, description: '~2000+ ELO', label: 'Master' },
+    { level: 1, description: 'Beginner ~1000 ELO', label: 'Beginner' },
+    { level: 2, description: 'Novice ~1500 ELO', label: 'Novice' },
+    { level: 3, description: 'Intermediate ~1800 ELO', label: 'Intermediate' },
+    { level: 4, description: 'Advanced ~2000 ELO', label: 'Advanced' },
+    { level: 5, description: 'Expert ~2200 ELO', label: 'Expert' },
+    { level: 6, description: 'Master ~2600 ELO', label: 'Master' },
   ]
 }
