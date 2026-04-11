@@ -269,13 +269,13 @@ function parseMultiPVLine(line: string): { multipv: number; move: string; score:
     return null
   }
 
-  const multipvMatch = line.match(/\bmultipv\s+(\d+)/)
+  const multipvMatch = line.match(/(^|\s)multipv\s+(\d+)/)
   const scoreMatch = line.match(/score cp\s+(-?\d+)/)
   const mateMatch = line.match(/score mate\s+(-?\d+)/)
 
   if (!multipvMatch) return null
 
-  const multipv = parseInt(multipvMatch[1], 10)
+  const multipv = parseInt(multipvMatch[2], 10)
   let score = 0
 
   if (mateMatch) {
