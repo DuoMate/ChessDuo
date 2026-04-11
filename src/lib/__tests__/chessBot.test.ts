@@ -166,23 +166,12 @@ describe('ChessBot', () => {
       }
     })
 
-    test('skill level 1 makes more diverse moves than level 6', () => {
-      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-      const numTries = 50
-
-      const level1Moves = new Set<string>()
-      const level6Moves = new Set<string>()
-
-      for (let i = 0; i < numTries; i++) {
-        const bot1 = createBot({ skillLevel: 1 })
-        const bot6 = createBot({ skillLevel: 6 })
-        level1Moves.add(bot1.selectMove(fen)!)
-        level6Moves.add(bot6.selectMove(fen)!)
-      }
-
-      expect(level1Moves.size).toBeGreaterThan(1)
-      expect(level6Moves.size).toBeGreaterThanOrEqual(1)
-      expect(level1Moves.size).toBeGreaterThanOrEqual(level6Moves.size)
+    test('skill levels have correct UCI_Elo values', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      const bot6 = createBot({ skillLevel: 6 })
+      
+      expect(bot1.getSkillDescription()).toBe('Beginner ~1000 ELO')
+      expect(bot6.getSkillDescription()).toBe('Master ~2600 ELO')
     })
   })
 })

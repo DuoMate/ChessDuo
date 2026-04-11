@@ -101,41 +101,41 @@ describe('Accuracy Formula', () => {
 })
 
 describe('ELO-Based Move Selection', () => {
-  describe('bestMoveChance configuration', () => {
-    const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-      1: { bestMoveChance: 0.55, description: 'Beginner ~1000 ELO', searchDepth: 1 },
-      2: { bestMoveChance: 0.68, description: 'Novice ~1500 ELO', searchDepth: 2 },
-      3: { bestMoveChance: 0.83, description: 'Intermediate ~1800 ELO', searchDepth: 3 },
-      4: { bestMoveChance: 0.88, description: 'Advanced ~2000 ELO', searchDepth: 4 },
-      5: { bestMoveChance: 0.93, description: 'Expert ~2200 ELO', searchDepth: 5 },
-      6: { bestMoveChance: 0.99, description: 'Master ~2600 ELO', searchDepth: 10 },
+  describe('UCI_Elo configuration', () => {
+    const ELO_MAPPING: Record<number, { uciElo: number; description: string }> = {
+      1: { uciElo: 1000, description: 'Beginner ~1000 ELO' },
+      2: { uciElo: 1500, description: 'Novice ~1500 ELO' },
+      3: { uciElo: 1800, description: 'Intermediate ~1800 ELO' },
+      4: { uciElo: 2000, description: 'Advanced ~2000 ELO' },
+      5: { uciElo: 2200, description: 'Expert ~2200 ELO' },
+      6: { uciElo: 2600, description: 'Master ~2600 ELO' },
     }
 
-    test('level 1 has 55% bestMoveChance', () => {
-      expect(ELO_MAPPING[1].bestMoveChance).toBe(0.55)
+    test('level 1 has 1000 UCI_Elo', () => {
+      expect(ELO_MAPPING[1].uciElo).toBe(1000)
     })
 
-    test('level 6 has 99% bestMoveChance', () => {
-      expect(ELO_MAPPING[6].bestMoveChance).toBe(0.99)
+    test('level 6 has 2600 UCI_Elo', () => {
+      expect(ELO_MAPPING[6].uciElo).toBe(2600)
     })
 
-    test('bestMoveChance increases with skill level', () => {
+    test('uciElo increases with skill level', () => {
       for (let level = 2; level <= 6; level++) {
-        expect(ELO_MAPPING[level].bestMoveChance).toBeGreaterThan(ELO_MAPPING[level - 1].bestMoveChance)
+        expect(ELO_MAPPING[level].uciElo).toBeGreaterThan(ELO_MAPPING[level - 1].uciElo)
       }
+    })
+
+    test('different levels have different uciElo values', () => {
+      expect(ELO_MAPPING[1].uciElo).toBe(1000)
+      expect(ELO_MAPPING[6].uciElo).toBe(2600)
     })
   })
 
   describe('applyEloBasedSelection behavior', () => {
-    test('level 6 (master) picks best move more often than lower levels', () => {
+    test('all levels always pick the best move', () => {
       const bot1 = createBot({ skillLevel: 1 })
       const bot6 = createBot({ skillLevel: 6 })
-      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
-      let bestMoveCount1 = 0
-      let bestMoveCount6 = 0
-      const numTries = 100
-
       const evaluatedMoves = [
         { move: { san: 'e4' }, score: 100 },
         { move: { san: 'd4' }, score: 90 },
@@ -143,33 +143,13 @@ describe('ELO-Based Move Selection', () => {
         { move: { san: 'c4' }, score: 70 },
         { move: { san: 'e3' }, score: 60 },
       ]
-      const botAny = bot1 as any
 
-      for (let i = 0; i < numTries; i++) {
-        const selected1 = botAny.applyEloBasedSelection.call(botAny, [...evaluatedMoves])
-        if (selected1.san === 'e4') bestMoveCount1++
-        
-        const selected6 = (bot6 as any).applyEloBasedSelection.call((bot6 as any), [...evaluatedMoves])
-        if (selected6.san === 'e4') bestMoveCount6++
+      for (let i = 0; i < 20; i++) {
+        const selected1 = (bot1 as any).applyEloBasedSelection([...evaluatedMoves])
+        const selected6 = (bot6 as any).applyEloBasedSelection([...evaluatedMoves])
+        expect(selected1.san).toBe('e4')
+        expect(selected6.san).toBe('e4')
       }
-
-      expect(bestMoveCount6).toBeGreaterThan(bestMoveCount1)
-    })
-
-    test('level 1 (beginner) has more variety in non-best selections', () => {
-      const bot1 = createBot({ skillLevel: 1 })
-      const bot6 = createBot({ skillLevel: 6 })
-      const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-      
-      const moves1 = new Set<string>()
-      const moves6 = new Set<string>()
-
-      for (let i = 0; i < 50; i++) {
-        moves1.add(bot1.selectMove(fen)!)
-        moves6.add(bot6.selectMove(fen)!)
-      }
-
-      expect(moves1.size).toBeGreaterThanOrEqual(moves6.size)
     })
   })
 
