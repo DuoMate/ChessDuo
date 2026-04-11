@@ -282,7 +282,6 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     const results: Record<number, { move: string; score: number }> = {}
     let resolved = false
     let uciReady = false
-    let cmdCount = 0
 
     const timeout = setTimeout(() => {
       if (!resolved) {
@@ -301,44 +300,55 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
 
         if (line.includes('uciok') && !uciReady) {
           uciReady = true
-          console.log(`[MULTIPV:${jobId}] >> UCI ready`)
+          console.log(`[MULTIPV:${jobId}] >> UCI ready, sending commands...`)
           proc.stdin.write('setoption name UCI_LimitStrength true\n')
           proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
           proc.stdin.write(`setoption name MultiPV value ${multiPv}\n`)
           proc.stdin.write('isready\n')
           proc.stdin.write(`position fen ${fen}\n`)
           proc.stdin.write(`go depth ${depth}\n`)
-          cmdCount += 6
-          console.log(`[MULTIPV:${jobId}] >> Sent ${cmdCount} commands (UCI init + MultiPV settings + position + go)`)
-          console.log(`[MULTIPV:${jobId}] >> Waiting for results...`)
+          console.log(`[MULTIPV:${jobId}] >> Commands sent, waiting for results...`)
         }
 
         if (line.includes('multipv') && line.includes('score')) {
+          console.log(`[MULTIPV:${jobId}] >> RAW: ${line}`)
+
           const multipvMatch = line.match(/multipv\s+(\d+)/)
           const cpMatch = line.match(/score cp\s+(-?\d+)/)
           const mateMatch = line.match(/score mate\s+(-?\d+)/)
-          const pvMatch = line.match(/pv\s+(\S+)/)
+
+          let moveStr = 'UNKNOWN'
+          const pvParts = line.split('pv')
+          if (pvParts.length > 1) {
+            const pvContent = pvParts[1].trim()
+            const firstMoveMatch = pvContent.match(/^([a-h][1-8][a-h][1-8])/)
+            if (firstMoveMatch) {
+              moveStr = firstMoveMatch[1]
+            } else {
+              const tokens = pvContent.split(/\s+/)
+              if (tokens.length > 0 && tokens[0].length >= 4) {
+                moveStr = tokens[0]
+              }
+            }
+            if (moveStr.length === 4 && !moveStr.includes('-')) {
+              moveStr = moveStr.substring(0, 2) + '-' + moveStr.substring(2)
+            }
+          }
 
           if (multipvMatch) {
             const index = parseInt(multipvMatch[1], 10)
             let score = 0
-            let scoreType = 'unknown'
-            let scoreVal = 0
 
             if (mateMatch) {
-              scoreVal = parseInt(mateMatch[1], 10)
-              score = scoreVal > 0 ? 100000 : -100000
-              scoreType = `mate${scoreVal}`
+              const mateVal = parseInt(mateMatch[1], 10)
+              score = mateVal > 0 ? 100000 : -100000
+              console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score} (mate ${mateVal})`)
             } else if (cpMatch) {
-              scoreVal = parseInt(cpMatch[1], 10)
-              score = scoreVal
-              scoreType = `cp${scoreVal}`
+              score = parseInt(cpMatch[1], 10)
+              console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score}`)
             }
 
-            const moveStr = pvMatch ? pvMatch[1] : 'UNKNOWN'
             results[index] = { move: moveStr, score }
-
-            console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score} (${scoreType})`)
           }
         }
 
@@ -353,14 +363,11 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
 
           const elapsed = Date.now() - startTime
           console.log(`[MULTIPV:${jobId}] ============================================`)
-          console.log(`[MULTIPV:${jobId}] COMPLETE: ${sorted.length} moves evaluated in ${elapsed}ms`)
-          console.log(`[MULTIPV:${jobId}] TOP MOVES:`)
+          console.log(`[MULTIPV:${jobId}] COMPLETE: ${sorted.length} moves in ${elapsed}ms`)
+          console.log(`[MULTIPV:${jobId}] RETURNING TO CLIENT:`)
           sorted.slice(0, 5).forEach((m, i) => {
-            console.log(`[MULTIPV:${jobId}]   ${i + 1}. ${m.move} → score=${m.score}`)
+            console.log(`[MULTIPV:${jobId}]   ${i + 1}. move=${m.move} score=${m.score}`)
           })
-          if (sorted.length > 5) {
-            console.log(`[MULTIPV:${jobId}]   ... and ${sorted.length - 5} more`)
-          }
           console.log(`[MULTIPV:${jobId}] ============================================`)
 
           resolve(sorted)
