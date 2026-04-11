@@ -1,12 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { ChessBoard, PromotionPiece } from './ChessBoard'
+import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/lib/localGame'
 import { Team } from '@/lib/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/lib/chessBot'
 import { createBotConfig, getBotConfig } from '@/lib/botConfig'
+import { TeamTimer } from './TeamTimer'
+import { MoveComparisonPanel } from './MoveComparison'
+import { AnalyzingIndicator } from './AnalyzingIndicator'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface GameProps {
   level?: number
@@ -29,6 +33,19 @@ function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): str
   throw new Error(`uciToSan: Move ${uciMove} not found in legal moves from position ${fen}`)
 }
 
+function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
+  const [from, to] = uciMove.split('-') as [string, string]
+  const chess = new Chess(fen)
+  const moves = chess.moves({ verbose: true })
+  const move = moves.find(m => m.from === from && m.to === to)
+  
+  if (move) {
+    const piece = move.piece || chess.get(from as any)?.type || ''
+    return { from, to, piece }
+  }
+  return null
+}
+
 interface GameState {
   status: GameStatus
   fen: string
@@ -45,6 +62,11 @@ interface GameState {
   moveAccuracyP2: number
   totalMoves: number
   moveComparison: MoveComparison | null
+  timerSeconds: number
+  timerActive: boolean
+  pendingOverlay: PendingOverlay | null
+  highlightSquares: HighlightSquares | null
+  showResolution: boolean
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -150,8 +172,55 @@ export function Game({ level }: GameProps) {
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    moveComparison: null
+    moveComparison: null,
+    timerSeconds: 10,
+    timerActive: false,
+    pendingOverlay: null,
+    highlightSquares: null,
+    showResolution: false
   })
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const gameRef = useRef(game)
+  const opponentInProgressRef = useRef(false)
+  const pendingOpponentTurnRef = useRef(false)
+  
+  useEffect(() => {
+    gameRef.current = game
+  }, [game])
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    
+    game.setTeamTimer(10)
+    
+    timerRef.current = setInterval(() => {
+      const currentTimer = gameRef.current.getTeamTimer()
+      if (currentTimer <= 0) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+          timerRef.current = null
+        }
+        gameRef.current.setTimerActive(false)
+        setGameState(prev => ({ ...prev, timerSeconds: 0, timerActive: false }))
+        return
+      }
+      
+      gameRef.current.setTeamTimer(currentTimer - 1)
+      setGameState(prev => ({ ...prev, timerSeconds: currentTimer - 1 }))
+    }, 1000)
+  }, [game])
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    game.setTimerActive(false)
+    setGameState(prev => ({ ...prev, timerActive: false }))
+  }, [game])
 
   const updateState = useCallback(() => {
     const captured = game.getCapturedPieces()
@@ -178,7 +247,9 @@ export function Game({ level }: GameProps) {
         moveAccuracy: stats.lastMoveAccuracy,
         moveAccuracyP2: stats.lastMoveAccuracyP2,
         totalMoves: stats.movesPlayed,
-        moveComparison: comparison
+        moveComparison: comparison,
+        timerSeconds: game.getTeamTimer(),
+        timerActive: game.isTimerActive()
       }
       return newState
     })
@@ -189,14 +260,81 @@ export function Game({ level }: GameProps) {
     updateStateRef.current = updateState
   }, [updateState])
 
+  const checkAndResolve = useCallback(async () => {
+    const g = gameRef.current
+    
+    if (!g.isBothPendingLocked()) {
+      return false
+    }
+    
+    stopTimer()
+    
+    const pending = g.getPendingMoves()
+    const humanMove = pending.human
+    const teammateMove = pending.teammate
+    
+    if (!humanMove || !teammateMove) {
+      return false
+    }
+
+    await g.resolvePendingMoves()
+    
+    const comparison = g.lastMoveComparison
+    
+    if (comparison) {
+      const winnerId = comparison.winnerId
+      const loserId = comparison.loserId
+      
+      let highlightSquares: HighlightSquares = {}
+      
+      if (winnerId === 'player1' && humanMove) {
+        highlightSquares.winnerFrom = humanMove.from
+        highlightSquares.winnerTo = humanMove.to
+        if (!comparison.isSync && loserId === 'player2' && teammateMove) {
+          highlightSquares.loserFrom = teammateMove.from
+          highlightSquares.loserTo = teammateMove.to
+        }
+      } else if (winnerId === 'player2' && teammateMove) {
+        highlightSquares.winnerFrom = teammateMove.from
+        highlightSquares.winnerTo = teammateMove.to
+        if (!comparison.isSync && loserId === 'player1' && humanMove) {
+          highlightSquares.loserFrom = humanMove.from
+          highlightSquares.loserTo = humanMove.to
+        }
+      }
+      
+      setGameState(prev => ({
+        ...prev,
+        highlightSquares,
+        showResolution: true
+      }))
+      
+      updateStateRef.current()
+      return true
+    }
+    
+    return false
+  }, [game, stopTimer])
+
   const executeBotMove = useCallback(async () => {
-    if (game.status === GameStatus.GAME_OVER) {
+    if (opponentInProgressRef.current) {
+      console.log(`[OPPONENT] Already in progress, skipping`)
+      return
+    }
+    
+    const g = gameRef.current
+    
+    if (g.status === GameStatus.GAME_OVER) {
       console.log(`[OPPONENT] Game is over, not making move`)
       return
     }
     
-    const currentFen = game.board.fen()
-    const currentTurn = game.currentTurn
+    opponentInProgressRef.current = true
+    
+    console.log(`[OPPONENT] Starting... currentPhase=${(g as any).gameState._phase}, currentTurn=${g.currentTurn}`)
+    
+    const currentFen = g.board.fen()
+    const currentTurn = g.currentTurn
     
     console.log(`\n[OPPONENT] Bot thinking... (current turn: ${currentTurn})`)
     const startTime = Date.now()
@@ -212,20 +350,27 @@ export function Game({ level }: GameProps) {
     const sanMove = uciToSan(botUciMove, currentFen)
     console.log(`[OPPONENT] Selected move: ${sanMove}`)
     
-    game.selectMove('player3', sanMove)
-    game.selectMove('player4', sanMove)
+    g.selectMove('player3', sanMove)
+    g.selectMove('player4', sanMove)
+    g.lockMove('player3')
+    g.lockMove('player4')
     
-    const lockStart = Date.now()
-    await game.lockAndResolve(true)
-    console.log(`[OPPONENT] lockAndResolve took: ${Date.now() - lockStart}ms`)
+    await g.resolveLegacy(true)
     updateStateRef.current()
     
-    console.log(`[DEBUG] After opponent turn, currentTurn: ${game.currentTurn}`)
-  }, [game, bot])
+    console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
+    opponentInProgressRef.current = false
+  }, [bot])
 
   const executeMove = useCallback(async (uciMove: string, promotion?: PromotionPiece) => {
+    if (opponentInProgressRef.current) {
+      console.log(`[HUMAN] BLOCKED - Opponent thinking, ignoring move`)
+      return
+    }
+    
+    const g = gameRef.current
     const startTime = Date.now()
-    const currentTurn = game.currentTurn
+    const currentTurn = g.currentTurn
     
     console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
     
@@ -235,45 +380,89 @@ export function Game({ level }: GameProps) {
     }
     
     console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
-    
-    try {
-      const sanMove = uciToSan(uciMove, game.board.fen(), promotion)
+     
+     try {
+       g.startPendingTurn()
+       startTimer()
+       
+       setGameState(prev => ({
+         ...prev,
+         showResolution: false,
+         highlightSquares: null
+       }))
       
-      console.log(`[HUMAN] Proposing move: ${sanMove}`)
-      game.selectMove('player1', sanMove)
+      const sanMove = uciToSan(uciMove, g.board.fen(), promotion)
+      const moveInfo = getMoveFromUci(uciMove, g.board.fen())
       
-      const teammateStart = Date.now()
-      console.log(`[TEAMMATE] Bot thinking...`)
-      const teammateMove = await teammateBot.selectMoveAsync(game.board.fen())
-      console.log(`[TEAMMATE] Bot evaluation took: ${Date.now() - teammateStart}ms`)
-      
-      if (teammateMove) {
-        const teammateSanMove = uciToSan(teammateMove, game.board.fen(), promotion)
-        console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
-        game.selectMove('player2', teammateSanMove)
+      if (moveInfo) {
+        g.setPendingMove('player1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+        setGameState(prev => ({
+          ...prev,
+          selectedMove: sanMove,
+          pendingOverlay: null
+        }))
       }
       
-      const lockStart = Date.now()
-      console.log(`[LOCK] Resolving moves...`)
-      await game.lockAndResolve()
-      console.log(`[LOCK] lockAndResolve took: ${Date.now() - lockStart}ms`)
-      updateStateRef.current()
+      console.log(`[HUMAN] Proposing move: ${sanMove}`)
+      console.log(`[TEAMMATE] Bot thinking...`)
       
-      const newTurn = game.currentTurn
-      console.log(`[DEBUG] After lockAndResolve, newTurn: ${newTurn}, total time: ${Date.now() - startTime}ms`)
+      setGameState(prev => ({ ...prev, isBotThinking: true }))
       
-      if (game.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK) {
-        setGameState(prev => ({ ...prev, isBotThinking: true }))
+      const teammateStart = Date.now()
+      let teammateUciMove: string | null = null
+      let teammateSanMove: string | null = null
+      let teammateMoveInfo: { from: string; to: string; piece: string } | null = null
+      
+      try {
+        teammateUciMove = await teammateBot.selectMoveAsync(g.board.fen())
+      } catch (error) {
+        console.warn('[TEAMMATE] Error selecting move:', error)
+      }
+      console.log(`[TEAMMATE] Bot evaluation took: ${Date.now() - teammateStart}ms`)
+      
+      if (teammateUciMove) {
+        const currentFen = g.board.fen()
+        teammateSanMove = uciToSan(teammateUciMove, currentFen, promotion)
+        teammateMoveInfo = getMoveFromUci(teammateUciMove, currentFen)
         
-        await executeBotMove()
+        if (teammateMoveInfo) {
+          const { from, to, piece } = teammateMoveInfo
+          g.setPendingMove('player2', teammateSanMove, from, to, piece)
+          g.lockPendingMove('player2')
+          
+          setGameState(prev => ({
+            ...prev,
+            pendingOverlay: { from, to, piece, color: 'white' }
+          }))
+        }
         
-        setGameState(prev => ({ ...prev, isBotThinking: false }))
-        console.log(`[HUMAN] Total turn time: ${Date.now() - startTime}ms`)
+        console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
+      } else {
+        console.warn('[TEAMMATE] No move selected, teammate will be locked without a move')
+      }
+      
+      g.lockPendingMove('player1')
+      
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
+      const resolved = await checkAndResolve()
+      
+      if (!resolved) {
+        return
+      }
+      
+      const newTurn = g.currentTurn
+      pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK)
+      
+      if (!pendingOpponentTurnRef.current) {
+        console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
+        g.startPendingTurn()
+        startTimer()
       }
     } catch (e) {
       console.warn('[HUMAN] Invalid move:', uciMove, e)
     }
-  }, [game, executeBotMove, teammateBot])
+  }, [executeBotMove, teammateBot, startTimer, checkAndResolve])
 
   useEffect(() => {
     if (game.status.valueOf() === GameStatus.WAITING.valueOf()) {
@@ -307,43 +496,87 @@ export function Game({ level }: GameProps) {
     }
   }, [gameState.pendingPromotion, executeMove])
 
+  const handleResolutionComplete = useCallback(async () => {
+    if (pendingOpponentTurnRef.current) {
+      pendingOpponentTurnRef.current = false
+      setGameState(prev => ({ ...prev, isBotThinking: true }))
+      await executeBotMove()
+      setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+      gameRef.current.startPendingTurn()
+      startTimer()
+    }
+  }, [executeBotMove, startTimer])
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
-      
+       
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-4">ClashMate</h1>
         
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-2">
           <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             White Team (You)
           </div>
-          <div className="text-xl font-mono">
-            {gameState.status === GameStatus.GAME_OVER ? 'Game Over!' : 
-             gameState.isBotThinking ? 'Bot thinking...' :
-             gameState.status === GameStatus.PLAYING ? 'Playing...' : 'Waiting...'}
+          
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-lg font-mono">
+              {gameState.status === GameStatus.GAME_OVER ? (
+                <span className="text-yellow-400 font-bold">Game Over!</span>
+              ) : gameState.isBotThinking ? (
+                <span className="text-blue-300">Your turn</span>
+              ) : (
+                <span className="text-gray-400">
+                  {gameState.status === GameStatus.PLAYING ? 'Waiting...' : 'Waiting...'}
+                </span>
+              )}
+            </div>
           </div>
+          
           <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             Black Team (Bot)
           </div>
         </div>
 
-        <div className="flex items-start justify-center gap-4 mb-4">
-          <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
+        <div className="flex items-start justify-center gap-6 mb-4">
+          <div className="w-48 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 flex items-center justify-center">
+              <TeamTimer 
+                seconds={gameState.timerSeconds}
+                isActive={gameState.timerActive}
+                currentTeam={gameState.currentTurn}
+              />
+            </div>
+            <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
+          </div>
           
-          <div className="w-[500px] h-[500px] flex-shrink-0">
+          <div className="w-[500px] h-[500px] flex-shrink-0 relative">
             <ChessBoard 
               fen={gameState.fen}
               onMove={handleMove}
               enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
               orientation="white"
               lastMove={gameState.lastMove}
+              pendingOverlay={gameState.pendingOverlay}
+              highlightSquares={gameState.highlightSquares}
+              onAnimationComplete={handleResolutionComplete}
             />
           </div>
           
-          <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
+          <div className="w-64 flex flex-col items-center gap-4">
+            <AnimatePresence>
+              {gameState.showResolution && gameState.moveComparison && (
+                <MoveComparisonPanel 
+                  comparison={gameState.moveComparison}
+                  isVisible={gameState.showResolution}
+                  onAnimationComplete={handleResolutionComplete}
+                />
+              )}
+            </AnimatePresence>
+            <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
+          </div>
         </div>
 
         <div className="mt-4 text-center">
@@ -357,60 +590,6 @@ export function Game({ level }: GameProps) {
             <p className="text-blue-400">Bot is making a move...</p>
           )}
         </div>
-
-        {gameState.moveComparison && (
-
-          <div className="mt-4 p-4 bg-gray-800 rounded border border-gray-600">
-            <h3 className="font-bold mb-3 text-center text-lg">Last Move Analysis</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-blue-900/30 border border-blue-700'}`}>
-                <div className="text-sm mb-1">
-                  <span className="text-blue-400 font-bold">● Player 1 (You)</span>
-                </div>
-                <div className="text-2xl font-bold text-blue-300">{gameState.moveComparison.player1Move}</div>
-                <div className="text-sm">
-                  Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player1Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player1Loss)}</span>
-                </div>
-                <div className="text-lg font-bold">
-                  Accuracy: {Math.round(gameState.moveComparison.player1Accuracy)}%
-                </div>
-                {!gameState.moveComparison.isSync && gameState.moveComparison.player1Accuracy >= gameState.moveComparison.player2Accuracy && (
-                  <div className="text-xs text-green-400 mt-1">✓ Winner</div>
-                )}
-              </div>
-              <div className={`p-3 rounded ${!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy ? 'bg-green-900/50 border border-green-500' : 'bg-green-900/30 border border-green-700'}`}>
-                <div className="text-sm mb-1">
-                  <span className="text-green-400 font-bold">● Player 2 (Teammate)</span>
-                </div>
-                <div className="text-2xl font-bold text-green-300">{gameState.moveComparison.player2Move}</div>
-                <div className="text-sm">
-                  Centipawn Loss: <span className="text-yellow-400 font-bold">{gameState.moveComparison.player2Loss === Infinity ? 'N/A' : Math.round(gameState.moveComparison.player2Loss)}</span>
-                </div>
-                <div className="text-lg font-bold">
-                  Accuracy: {Math.round(gameState.moveComparison.player2Accuracy)}%
-                </div>
-                {!gameState.moveComparison.isSync && gameState.moveComparison.player2Accuracy >= gameState.moveComparison.player1Accuracy && (
-                  <div className="text-xs text-green-400 mt-1">✓ Winner</div>
-                )}
-              </div>
-            </div>
-            <div className="mt-3 p-2 bg-blue-900/40 rounded text-center">
-              {gameState.moveComparison.isSync ? (
-                <span className="text-green-400 font-bold">Synchronized! Both chose the same move.</span>
-              ) : (
-                <span>
-                  <span className="text-white font-bold">{gameState.moveComparison.winningMove}</span>
-                  <span className="text-gray-400"> was chosen (lower centipawn loss = better)</span>
-                </span>
-              )}
-            </div>
-            {gameState.moveComparison.bestEngineMove && gameState.moveComparison.bestEngineMove !== gameState.moveComparison.winningMove && (
-              <div className="mt-2 text-center text-sm text-gray-500">
-                Engine&apos;s best: {gameState.moveComparison.bestEngineMove} (your centipawn loss vs engine: {Math.round(gameState.moveComparison.bestEngineScore - gameState.moveComparison.winningScore)})
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="mt-8 p-4 bg-gray-800 rounded">
           <h2 className="font-bold mb-2">Your Team Stats (White)</h2>

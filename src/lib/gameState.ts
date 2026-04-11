@@ -26,6 +26,15 @@ export interface CapturedPieces {
   black: string[]
 }
 
+export interface PendingMoveInfo {
+  move: string
+  isHuman: boolean
+  locked: boolean
+  from: string
+  to: string
+  piece: string
+}
+
 export class GameState {
   private chess: Chess
   private _phase: GamePhase
@@ -37,6 +46,11 @@ export class GameState {
   private _capturedByWhite: string[]
   private _capturedByBlack: string[]
 
+  private turnStartFen: string
+  private pendingMoves: Map<Player, PendingMoveInfo>
+  private teamTimer: number
+  private timerActive: boolean
+
   constructor() {
     this.chess = new Chess()
     this._phase = GamePhase.WAITING
@@ -47,6 +61,11 @@ export class GameState {
     this.locked = new Set()
     this._capturedByWhite = []
     this._capturedByBlack = []
+
+    this.turnStartFen = ''
+    this.pendingMoves = new Map()
+    this.teamTimer = 10
+    this.timerActive = false
   }
 
   get phase(): GamePhase {
@@ -91,6 +110,94 @@ export class GameState {
     this._phase = GamePhase.SELECTING
   }
 
+  startPendingTurn(fen: string): void {
+    this.turnStartFen = fen
+    this.pendingMoves.clear()
+    this.teamTimer = 10
+    this.timerActive = true
+  }
+
+  setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
+    if (this._phase !== GamePhase.SELECTING && this._phase !== GamePhase.LOCKED) {
+      return
+    }
+
+    const isHuman = player === 'player1' || player === 'player3'
+
+    this.pendingMoves.set(player, {
+      move,
+      isHuman,
+      locked: false,
+      from,
+      to,
+      piece
+    })
+
+    this.selections.set(player, move)
+  }
+
+  lockPendingMove(player: Player): void {
+    const pending = this.pendingMoves.get(player)
+    if (pending) {
+      pending.locked = true
+      this.locked.add(player)
+    }
+
+    if (this.areBothTeamPlayersLocked()) {
+      this._phase = GamePhase.LOCKED
+    }
+  }
+
+  isPendingMoveLocked(player: Player): boolean {
+    const pending = this.pendingMoves.get(player)
+    return pending ? pending.locked : false
+  }
+
+  isBothPendingLocked(): boolean {
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
+      : this.blackPlayers
+    return currentPlayers.every(p => {
+      const pending = this.pendingMoves.get(p)
+      return pending && pending.locked
+    })
+  }
+
+  getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {
+    let human: PendingMoveInfo | null = null
+    let teammate: PendingMoveInfo | null = null
+
+    for (const [player, pending] of this.pendingMoves) {
+      if (pending.isHuman) {
+        human = pending
+      } else {
+        teammate = pending
+      }
+    }
+
+    return { human, teammate }
+  }
+
+  getTurnStartFen(): string {
+    return this.turnStartFen
+  }
+
+  getTeamTimer(): number {
+    return this.teamTimer
+  }
+
+  setTeamTimer(seconds: number): void {
+    this.teamTimer = seconds
+  }
+
+  isTimerActive(): boolean {
+    return this.timerActive
+  }
+
+  setTimerActive(active: boolean): void {
+    this.timerActive = active
+  }
+
   selectMove(player: Player, move: string): void {
     if (this._phase !== GamePhase.SELECTING) {
       throw new Error('Not in selection phase')
@@ -106,14 +213,17 @@ export class GameState {
   }
 
   lockMove(player: Player): void {
-    if (this._phase !== GamePhase.SELECTING) {
-      throw new Error('Not in selection phase')
+    if (this._phase === GamePhase.GAME_OVER) {
+      return
+    }
+    if (this._phase !== GamePhase.SELECTING && this._phase !== GamePhase.LOCKED) {
+      return
     }
     if (!this.isPlayerOnCurrentTeam(player)) {
-      throw new Error('Player not on current team')
+      return
     }
     if (!this.selections.has(player)) {
-      throw new Error('Player has not selected a move')
+      return
     }
     this.locked.add(player)
 
@@ -127,10 +237,10 @@ export class GameState {
       return null
     }
 
-    const currentPlayers = this._currentTeam === Team.WHITE 
-      ? this.whitePlayers 
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
       : this.blackPlayers
-    
+
     const move1 = this.selections.get(currentPlayers[0])!
     const move2 = this.selections.get(currentPlayers[1])!
 
@@ -165,7 +275,7 @@ export class GameState {
     if (moveResult && moveResult.captured) {
       this.trackCapturedPiece(this._currentTeam, moveResult.captured)
     }
-    
+
     const result: MoveResult = {
       move: winningMove,
       player: winner,
@@ -174,8 +284,10 @@ export class GameState {
 
     this.selections.clear()
     this.locked.clear()
+    this.pendingMoves.clear()
     this._currentTeam = this._currentTeam === Team.WHITE ? Team.BLACK : Team.WHITE
     this._phase = GamePhase.SELECTING
+    this.timerActive = false
 
     return result
   }
@@ -200,15 +312,15 @@ export class GameState {
   }
 
   private isPlayerOnCurrentTeam(player: Player): boolean {
-    const currentPlayers = this._currentTeam === Team.WHITE 
-      ? this.whitePlayers 
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
       : this.blackPlayers
     return currentPlayers.includes(player)
   }
 
   private areBothTeamPlayersLocked(): boolean {
-    const currentPlayers = this._currentTeam === Team.WHITE 
-      ? this.whitePlayers 
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
       : this.blackPlayers
     return currentPlayers.every(p => this.locked.has(p))
   }

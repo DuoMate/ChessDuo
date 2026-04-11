@@ -1,5 +1,5 @@
-import { Chess } from 'chess.js'
-import { GameState, GamePhase, Team, Player, CapturedPieces } from './gameState'
+import { Chess, Move } from 'chess.js'
+import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from './gameState'
 import { ServerMoveEvaluator } from './serverMoveEvaluator'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
@@ -34,11 +34,18 @@ export interface MoveComparison {
   player2Accuracy: number
   player1Loss: number
   player2Loss: number
+  player1Category: { label: string; color: string; emoji: string }
+  player2Category: { label: string; color: string; emoji: string }
   winningMove: string
   winningScore: number
   isSync: boolean
   bestEngineMove: string
   bestEngineScore: number
+  turnStartFen: string
+  winnerId: 'player1' | 'player2'
+  loserId: 'player1' | 'player2' | null
+  loserFrom: string
+  loserTo: string
 }
 
 export class LocalGame {
@@ -129,6 +136,56 @@ export class LocalGame {
   start(): void {
     this.gameState.startMatch()
     this._status = GameStatus.PLAYING
+    this.startPendingTurn()
+  }
+
+  startPendingTurn(): void {
+    const fen = this.gameState.fen
+    this.gameState.startPendingTurn(fen)
+  }
+
+  setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
+    this.gameState.setPendingMove(player, move, from, to, piece)
+  }
+
+  lockPendingMove(player: Player): void {
+    this.gameState.lockPendingMove(player)
+  }
+
+  lockMove(player: Player): void {
+    this.gameState.lockMove(player)
+  }
+
+  isPendingMoveLocked(player: Player): boolean {
+    return this.gameState.isPendingMoveLocked(player)
+  }
+
+  isBothPendingLocked(): boolean {
+    return this.gameState.isBothPendingLocked()
+  }
+
+  getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {
+    return this.gameState.getPendingMoves()
+  }
+
+  getTurnStartFen(): string {
+    return this.gameState.getTurnStartFen()
+  }
+
+  getTeamTimer(): number {
+    return this.gameState.getTeamTimer()
+  }
+
+  setTeamTimer(seconds: number): void {
+    this.gameState.setTeamTimer(seconds)
+  }
+
+  isTimerActive(): boolean {
+    return this.gameState.isTimerActive()
+  }
+
+  setTimerActive(active: boolean): void {
+    this.gameState.setTimerActive(active)
   }
 
   selectMove(player: Player, move: string): void {
@@ -146,7 +203,7 @@ export class LocalGame {
     return this.gameState.getSelectedMove(player)
   }
 
-  async lockAndResolve(skipStatsUpdate: boolean = false): Promise<void> {
+  async resolvePendingMoves(skipStatsUpdate: boolean = false): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
     const players = this.gameState.getPlayers(currentTeam)
     const isBlackTurn = currentTeam === Team.BLACK
@@ -162,7 +219,131 @@ export class LocalGame {
       if (playerId === 'player4') return 'player4 (Opponent)'
       return playerId
     }
+
+    const pendingMoves = this.gameState.getPendingMoves()
+    const humanMove = pendingMoves.human
+    const teammateMove = pendingMoves.teammate
+
+    if (!humanMove || !teammateMove) {
+      throw new Error('Both pending moves must be set before resolving')
+    }
+
+    const player1Move = humanMove.move
+    const player2Move = teammateMove.move
+    const player1From = humanMove.from
+    const player1To = humanMove.to
+    const player2From = teammateMove.from
+    const player2To = teammateMove.to
+
+    const isSync = player1Move === player2Move
+
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`[TURN] ${teamColor} team to move`)
+    console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
+     
+    const turnStartFen = this.gameState.getTurnStartFen()
+      
+     const optimalMove = await this.evaluator.getBestScore(turnStartFen)
+     const bestMoveScore = optimalMove.score
+     
+     const startScore = await this.evaluator.evaluatePosition(turnStartFen)
+     
+     const movesToEvaluate = [player1Move, player2Move]
+     const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
+     const player1Score = evalResults[0].score
+     const player2Score = evalResults[1].score
+
+     const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
+     const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
+     
+     if (isSync) {
+       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
+     }
+
+     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player1Score)
+     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player2Score)
+     const player1Category = this.getAccuracyCategory(player1Loss, isSync)
+     const player2Category = this.getAccuracyCategory(player2Loss, isSync)
+
+    console.log(`\n[EVALUATION] (Blind from: ${turnStartFen})`)
+    console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
+    console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+    console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
     
+    const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
+     const winningScore = winningMove === player1Move ? player1Score : player2Score
+     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
+     const winnerId: 'player1' | 'player2' = isSync ? 'player1' : (winningMove === player1Move ? 'player1' : 'player2')
+     const loserId: 'player1' | 'player2' | null = isSync ? null : (winningMove === player1Move ? 'player2' : 'player1')
+     const loserFrom = isSync ? '' : (winningMove === player1Move ? player2From : player1From)
+     const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
+     
+     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(startScore, winningScore).toFixed(1)}%`)
+     console.log(`${'='.repeat(60)}\n`)
+
+    const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
+    if (moveParts) {
+      this._lastMove = moveParts
+    }
+
+    this._lastMoveComparison = {
+      player1Move,
+      player2Move,
+      player1Score,
+      player2Score,
+      player1Accuracy,
+      player2Accuracy,
+      player1Loss,
+      player2Loss,
+      player1Category,
+      player2Category,
+      winningMove,
+      winningScore,
+      isSync,
+      bestEngineMove: winningMove,
+      bestEngineScore: bestMoveScore,
+      turnStartFen,
+      winnerId: winnerId as 'player1' | 'player2',
+      loserId,
+      loserFrom,
+      loserTo
+    }
+
+    if (!skipStatsUpdate) {
+      this.updateStats(isSync, chosenLoss, player1Accuracy, player2Accuracy)
+    }
+    
+    this.gameState.resolve(winningMove)
+
+    if (this.gameState.board.isGameOver()) {
+      this._status = GameStatus.GAME_OVER
+    }
+
+    return { winnerId, winningMove }
+  }
+
+  async lockAndResolve(skipStatsUpdate: boolean = false): Promise<void> {
+    await this.resolveLegacy(skipStatsUpdate)
+  }
+
+  async resolveLegacy(skipStatsUpdate: boolean = false): Promise<void> {
+    const currentTeam = this.gameState.currentTeam
+    const players = this.gameState.getPlayers(currentTeam)
+    const isBlackTurn = currentTeam === Team.BLACK
+    
+    const teamColor = isBlackTurn ? '🔴 BLACK' : '🟢 WHITE'
+    const player1Id = players[0]
+    const player2Id = players[1]
+    
+    const getPlayerLabel = (playerId: string): string => {
+      if (playerId === 'player1') return 'player1 (Human)'
+      if (playerId === 'player2') return 'player2 (Teammate)'
+      if (playerId === 'player3') return 'player3 (Opponent)'
+      if (playerId === 'player4') return 'player4 (Opponent)'
+      return playerId
+    }
+
     for (const player of players) {
       this.gameState.lockMove(player)
     }
@@ -178,37 +359,42 @@ export class LocalGame {
     
     const currentFen = this.gameState.fen
     
-    const chess = new Chess(currentFen)
-    const allMoves = chess.moves()
-    const bestMoveScore = await this.evaluator.evaluatePosition(currentFen)
+    const turnStartFen = currentFen
+    
+    const optimalMove = await this.evaluator.getBestScore(turnStartFen)
+    const bestMoveScore = optimalMove.score
+    
+    const startScore = await this.evaluator.evaluatePosition(turnStartFen)
     
     const movesToEvaluate = [player1Move, player2Move]
-    const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, currentFen)
+    const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
     const player1Score = evalResults[0].score
     const player2Score = evalResults[1].score
 
     const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
     const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
-    
+     
     if (isSync) {
       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
     }
 
-    const player1Accuracy = this.calculateAccuracy(player1Loss)
-    const player2Accuracy = this.calculateAccuracy(player2Loss)
-
-    console.log(`\n[EVALUATION]`)
+    const player1Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player1Score)
+     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(startScore, player2Score)
+     const player1Category = this.getAccuracyCategory(player1Loss, isSync)
+     const player2Category = this.getAccuracyCategory(player2Loss, isSync)
+     
+    console.log(`\n[EVALUATION] (from: ${turnStartFen})`)
+    console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
     console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
-    console.log(`  [Engine Best] position score: ${bestMoveScore}`)
-    
+     
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
     const winningScore = winningMove === player1Move ? player1Score : player2Score
     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
     const winnerId = winningMove === player1Move ? player1Id : player2Id
     
-    console.log(`\n[RESULT] Winner: ${getPlayerLabel(winnerId)} with move ${winningMove}`)
-    console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+    console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
+    console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(startScore, winningScore).toFixed(1)}%`)
     console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -225,11 +411,18 @@ export class LocalGame {
       player2Accuracy,
       player1Loss,
       player2Loss,
+      player1Category,
+      player2Category,
       winningMove,
       winningScore,
       isSync,
-      bestEngineMove: winningMove,
-      bestEngineScore: bestMoveScore
+      bestEngineMove: optimalMove.move,
+      bestEngineScore: bestMoveScore,
+      turnStartFen,
+      winnerId: winnerId as 'player1' | 'player2',
+      loserId: winnerId === player1Id ? player2Id as 'player1' | 'player2' : player1Id as 'player1' | 'player2',
+      loserFrom: '',
+      loserTo: ''
     }
 
     if (!skipStatsUpdate) {
@@ -243,10 +436,107 @@ export class LocalGame {
     }
   }
 
-  private calculateAccuracy(centipawnLoss: number): number {
-    if (centipawnLoss === Infinity || centipawnLoss < 0) return 0
-    if (centipawnLoss === 0) return 100
-    return Math.max(0, Math.min(100, 100 * 200 / (centipawnLoss + 200)))
+  private centipawnsToWinPercent(cp: number): number {
+    return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1)
+  }
+
+  private calculateAccuracy(
+    beforeCentipawns: number,
+    afterCentipawns: number,
+    isSacrifice: boolean = false
+  ): number {
+    if (beforeCentipawns === Infinity || afterCentipawns === Infinity || beforeCentipawns < 0 || afterCentipawns < 0) {
+      return 0
+    }
+
+    if (isSacrifice) {
+      return 100
+    }
+
+    const winPercentBefore = this.centipawnsToWinPercent(beforeCentipawns)
+    const winPercentAfter = this.centipawnsToWinPercent(afterCentipawns)
+
+    if (winPercentAfter >= winPercentBefore) {
+      return 100
+    }
+
+    const winDiff = winPercentBefore - winPercentAfter
+    const raw = 103.1668100711649 * Math.exp(-0.04354415386753951 * winDiff) - 3.166924740191411 + 1
+    return Math.max(0, Math.min(100, raw))
+  }
+
+  private isBrilliantMove(
+    move: Move,
+    beforeFen: string,
+    afterFen: string,
+    beforeScore: number,
+    afterScore: number
+  ): boolean {
+    if (!move.captured && !move.flags.includes('e') && !move.promotion) {
+      return false
+    }
+
+    if (move.promotion) {
+      return false
+    }
+
+    if (move.captured) {
+      const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 }
+      const movedPieceValue = pieceValues[move.piece] || 0
+      const capturedPieceValue = pieceValues[move.captured.toLowerCase()] || 0
+
+      if (capturedPieceValue >= movedPieceValue) {
+        return false
+      }
+
+      const chess = new Chess(beforeFen)
+      const moves = chess.moves({ verbose: true })
+      const opponentMoves = moves.filter(m => m.color !== chess.turn())
+
+      for (const oppMove of opponentMoves) {
+        if (oppMove.to === move.to && (oppMove.flags.includes('c') || oppMove.flags.includes('e'))) {
+          return false
+        }
+      }
+
+      if (afterScore < beforeScore - 100) {
+        return false
+      }
+    }
+
+    if (move.flags.includes('e')) {
+      return true
+    }
+
+    return false
+  }
+
+  private getAccuracyCategory(
+    centipawnLoss: number,
+    isBrilliant: boolean = false
+  ): { label: string; color: string; emoji: string } {
+    if (isBrilliant) {
+      return { label: 'Brilliant', color: '#4ade80', emoji: '💎' }
+    }
+    if (centipawnLoss === Infinity || centipawnLoss < 0) {
+      return { label: 'Error', color: 'gray', emoji: '?' }
+    }
+    if (centipawnLoss === 0) {
+      return { label: 'Great', color: '#22c55e', emoji: '!' }
+    }
+    if (centipawnLoss < 30) {
+      return { label: 'Great', color: '#22c55e', emoji: '!' }
+    }
+    if (centipawnLoss < 80) {
+      return { label: 'Good', color: '#84cc16', emoji: '' }
+    }
+    if (centipawnLoss < 180) {
+      return { label: 'Inaccuracy', color: '#eab308', emoji: '?' }
+    }
+    if (centipawnLoss < 300) {
+      return { label: 'Mistake', color: '#f97316', emoji: '??' }
+    }
+    return { label: 'Blunder', color: '#ef4444', emoji: '???' }
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {

@@ -7,13 +7,13 @@ export interface BotConfig {
   skillLevel: number
 }
 
-const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-  1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 1 },
-  2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 2 },
-  3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 3 },
-  4: { bestMoveChance: 0.80, description: '~1800 ELO', searchDepth: 4 },
-  5: { bestMoveChance: 0.92, description: '~1900 ELO', searchDepth: 5 },
-  6: { bestMoveChance: 0.99, description: '~2000+ ELO', searchDepth: 10 },
+const ELO_MAPPING: Record<number, { maxCentipawnLoss: number; description: string; searchDepth: number }> = {
+  1: { maxCentipawnLoss: 300, description: '~1500 ELO', searchDepth: 1 },
+  2: { maxCentipawnLoss: 200, description: '~1600 ELO', searchDepth: 2 },
+  3: { maxCentipawnLoss: 150, description: '~1700 ELO', searchDepth: 3 },
+  4: { maxCentipawnLoss: 100, description: '~1800 ELO', searchDepth: 4 },
+  5: { maxCentipawnLoss: 50, description: '~1900 ELO', searchDepth: 5 },
+  6: { maxCentipawnLoss: 20, description: '~2000+ ELO', searchDepth: 10 },
 }
 
 export class EnhancedChessBot {
@@ -118,18 +118,28 @@ export class EnhancedChessBot {
   }
 
   private applyEloBasedSelection(evaluatedMoves: { move: Move; score: number }[]): Move {
-    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
-    const bestMoveChance = skillConfig.bestMoveChance
-
-    const roll = Math.random()
-    
-    if (roll < bestMoveChance || this.config.skillLevel >= 6) {
-      return evaluatedMoves[0].move
+    if (evaluatedMoves.length === 0) {
+      throw new Error('No moves to select from')
     }
 
-    const topMovesCount = Math.max(2, Math.floor(evaluatedMoves.length * 0.3))
-    const randomIndex = Math.floor(Math.random() * Math.min(topMovesCount, evaluatedMoves.length))
-    return evaluatedMoves[randomIndex].move
+    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
+    const maxLoss = skillConfig.maxCentipawnLoss
+    const bestScore = evaluatedMoves[0].score
+
+    const acceptable = evaluatedMoves.filter(m => {
+      const loss = Math.abs(bestScore - m.score)
+      return loss <= maxLoss
+    })
+
+    if (acceptable.length > 0) {
+      const selected = acceptable[0]
+      const loss = Math.abs(bestScore - selected.score)
+      console.log(`[EnhancedChessBot:L${this.config.skillLevel}] Selected: ${selected.move.san} (loss: ${loss}cp, floor: ${maxLoss}cp)`)
+      return selected.move
+    }
+
+    console.log(`[EnhancedChessBot:L${this.config.skillLevel}] No acceptable moves within ${maxLoss}cp, picking best: ${evaluatedMoves[0].move.san}`)
+    return evaluatedMoves[0].move
   }
 
   private evaluateMovesSync(moves: Move[], fen: string): { move: Move; score: number }[] {

@@ -9,13 +9,13 @@ export interface BotConfig {
   mockMoveEvaluator?: any
 }
 
-const ELO_MAPPING: Record<number, { bestMoveChance: number; description: string; searchDepth: number }> = {
-  1: { bestMoveChance: 0.30, description: '~1500 ELO', searchDepth: 1 },
-  2: { bestMoveChance: 0.45, description: '~1600 ELO', searchDepth: 2 },
-  3: { bestMoveChance: 0.60, description: '~1700 ELO', searchDepth: 3 },
-  4: { bestMoveChance: 0.80, description: '~1800 ELO', searchDepth: 4 },
-  5: { bestMoveChance: 0.92, description: '~1900 ELO', searchDepth: 5 },
-  6: { bestMoveChance: 0.99, description: '~2000+ ELO', searchDepth: 10 },
+const ELO_MAPPING: Record<number, { maxCentipawnLoss: number; description: string; searchDepth: number; topMovesRandom?: number }> = {
+  1: { maxCentipawnLoss: 300, description: '~1500 ELO', searchDepth: 1, topMovesRandom: 5 },
+  2: { maxCentipawnLoss: 200, description: '~1600 ELO', searchDepth: 2, topMovesRandom: 3 },
+  3: { maxCentipawnLoss: 150, description: '~1700 ELO', searchDepth: 3, topMovesRandom: 0 },
+  4: { maxCentipawnLoss: 50, description: '~1800 ELO', searchDepth: 4 },
+  5: { maxCentipawnLoss: 30, description: '~1900 ELO', searchDepth: 5 },
+  6: { maxCentipawnLoss: 20, description: '~2000+ ELO', searchDepth: 10 },
 }
 
 export class ChessBot {
@@ -165,21 +165,268 @@ export class ChessBot {
   }
 
   private applyEloBasedSelection(evaluatedMoves: { move: Move; score: number }[]): Move {
-    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[3]
-    const bestMoveChance = skillConfig.bestMoveChance
-    const skillLevel = this.config.skillLevel
-
-    const roll = Math.random()
-    if (roll < bestMoveChance) {
-      console.log(`[ChessBot:Selection] L${skillLevel}: Picked BEST (${(bestMoveChance * 100).toFixed(0)}% chance, rolled ${(roll * 100).toFixed(1)}%)`)
-      return evaluatedMoves[0].move
+    if (evaluatedMoves.length === 0) {
+      throw new Error('No moves to select from')
     }
 
-    const maxTopMoves = Math.max(1, Math.ceil((7 - skillLevel) / 1.5))
-    const topMovesCount = Math.min(maxTopMoves, evaluatedMoves.length)
-    const randomIndex = Math.floor(Math.random() * topMovesCount)
-    console.log(`[ChessBot:Selection] L${skillLevel}: Picked from top ${topMovesCount} (rolled ${(roll * 100).toFixed(1)}% < ${(bestMoveChance * 100).toFixed(0)}%), index ${randomIndex}`)
-    return evaluatedMoves[randomIndex].move
+    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
+    const maxLoss = skillConfig.maxCentipawnLoss
+    const topMovesRandom = skillConfig.topMovesRandom
+    const bestScore = evaluatedMoves[0].score
+
+    let filteredMoves = this.filterSuspiciousMoves(evaluatedMoves)
+
+    if (topMovesRandom && topMovesRandom > 0) {
+      const topCount = Math.min(topMovesRandom, filteredMoves.length)
+      const topMoves = filteredMoves.slice(0, topCount)
+      const randomIndex = Math.floor(Math.random() * topMoves.length)
+      const selected = topMoves[randomIndex]
+      const loss = Math.abs(bestScore - selected.score)
+      console.log(`[ChessBot:L${this.config.skillLevel}] Selected random from top ${topCount}: ${selected.move.san} (loss: ${loss}cp)`)
+      return selected.move
+    }
+
+    const acceptable = filteredMoves.filter(m => {
+      const loss = Math.abs(bestScore - m.score)
+      return loss <= maxLoss
+    })
+
+    if (acceptable.length > 0) {
+      for (const candidate of acceptable) {
+        const safetyCheck = this.validateMove(candidate.move)
+        if (safetyCheck.safe) {
+          const loss = Math.abs(bestScore - candidate.score)
+          console.log(`[ChessBot:L${this.config.skillLevel}] Selected: ${candidate.move.san} (loss: ${loss}cp, floor: ${maxLoss}cp) ${safetyCheck.reason !== 'safe' ? '[' + safetyCheck.reason + ']' : ''}`)
+          return candidate.move
+        }
+        console.log(`[ChessBot:L${this.config.skillLevel}] Filtered: ${candidate.move.san} - ${safetyCheck.reason}`)
+      }
+      console.log(`[ChessBot:L${this.config.skillLevel}] All acceptable moves unsafe, picking best anyway: ${acceptable[0].move.san}`)
+      return acceptable[0].move
+    }
+
+    console.log(`[ChessBot:L${this.config.skillLevel}] No acceptable moves within ${maxLoss}cp, picking best: ${filteredMoves[0].move.san}`)
+    return filteredMoves[0].move
+  }
+
+  private validateMove(move: Move): { safe: boolean; reason: string } {
+    if (move.flags.includes('e') || move.promotion) {
+      return { safe: true, reason: 'ep/promo' }
+    }
+
+    if (move.captured) {
+      return this.validateCapture(move)
+    }
+
+    const chess = new Chess()
+    try {
+      chess.load(move.before)
+      const isWhite = chess.turn() === 'b'
+      const myPieces = isWhite ? 'PNBRQK' : 'pnbrqk'
+      const oppPieces = isWhite ? 'pnbrqk' : 'PNBRQK'
+
+      const pieceValue: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
+      const movingPieceValue = pieceValue[move.piece.toLowerCase()]
+
+      for (const possibleCapture of chess.moves({ verbose: true })) {
+        if ((possibleCapture.flags.includes('c') || possibleCapture.flags.includes('e')) && possibleCapture.to === move.to) {
+          const capturingPiece = possibleCapture.piece
+          if (oppPieces.includes(capturingPiece)) {
+            const capturerValue = pieceValue[capturingPiece.toLowerCase()]
+            if (capturerValue >= movingPieceValue) {
+              if (!this.isProtected(chess, move.to, isWhite)) {
+                return { safe: false, reason: 'capture loses piece' }
+              }
+            }
+          }
+        }
+      }
+
+      if (this.createsPin(chess, move, isWhite)) {
+        return { safe: false, reason: 'creates pin' }
+      }
+
+      return { safe: true, reason: 'safe' }
+    } catch {
+      return { safe: true, reason: 'safe' }
+    }
+  }
+
+  private validateCapture(move: Move): { safe: boolean; reason: string } {
+    const chess = new Chess()
+    try {
+      chess.load(move.before)
+      const isWhite = chess.turn() === 'b'
+      
+      chess.move({ from: move.from, to: move.to, promotion: move.promotion })
+      
+      const captures = chess.moves({ verbose: true })
+        .filter(m => m.flags.includes('c') && m.to === move.to && m.piece.toLowerCase() !== 'p')
+      
+      if (captures.length > 0) {
+        const capturer = captures[0].piece
+        const pieceValue: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
+        const capturedValue = pieceValue[move.captured!.toLowerCase()]
+        const capturerValue = pieceValue[capturer.toLowerCase()]
+        
+        if (capturerValue > capturedValue) {
+          return { safe: true, reason: 'winning capture' }
+        }
+        
+        const recaptures = chess.moves({ verbose: true })
+          .filter(m => m.flags.includes('c') && m.to === move.to)
+        
+        if (recaptures.length > 0) {
+          const recapturer = recaptures[0].piece
+          const recapturerValue = pieceValue[recapturer.toLowerCase()]
+          if (recapturerValue >= capturerValue) {
+            return { safe: false, reason: 'capture loses material' }
+          }
+        }
+        
+        if (!this.isPositionSafe(chess, isWhite)) {
+          return { safe: false, reason: 'capture leads to tactics' }
+        }
+        
+        return { safe: true, reason: 'equal capture' }
+      }
+      
+      return { safe: true, reason: 'safe capture' }
+    } catch {
+      return { safe: true, reason: 'safe' }
+    }
+  }
+
+  private isProtected(chess: Chess, square: string, byWhite: boolean): boolean {
+    const moves = chess.moves({ verbose: true })
+    const protectors = byWhite ? 'PNBRQK' : 'pnbrqk'
+    
+    for (const move of moves) {
+      if (protectors.includes(move.piece) && move.to === square) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private isPositionSafe(chess: Chess, isWhite: boolean): boolean {
+    const moves = chess.moves({ verbose: true })
+    const ourKing = isWhite ? 'k' : 'K'
+    const kingSquare = chess.board().flat().find(p => p?.type === ourKing[0] && p?.color === (isWhite ? 'w' : 'b'))?.square
+    
+    if (!kingSquare) return true
+    
+    for (const move of moves) {
+      if ((move.flags.includes('c') || move.flags.includes('e'))) {
+        if (move.to === kingSquare) {
+          return false
+        }
+      }
+    }
+    
+    return true
+  }
+
+  private createsPin(chess: Chess, move: Move, isWhite: boolean): boolean {
+    const chessCopy = new Chess()
+    chessCopy.load(move.before)
+    chessCopy.move({ from: move.from, to: move.to, promotion: move.promotion })
+    
+    const ourKing = isWhite ? 'K' : 'k'
+    const ourKingSquare = chessCopy.board().flat().find(p => p?.type === ourKing && p?.color === (isWhite ? 'w' : 'b'))?.square
+    
+    if (!ourKingSquare) return false
+    
+    const enemyPieces = isWhite ? 'rnbqp' : 'RNBQP'
+    const enemyMoves = chessCopy.moves({ verbose: true }).filter(m => enemyPieces.includes(m.piece))
+    
+    for (const enemyMove of enemyMoves) {
+      if (enemyMove.flags.includes('c')) {
+        const pathToKing = this.getRayPath(enemyMove.from, ourKingSquare)
+        if (pathToKing.includes(move.to)) {
+          const betweenKing = pathToKing.slice(0, pathToKing.indexOf(move.to))
+          const hasBlocker = betweenKing.some(sq => 
+            chessCopy.board().flat().some(p => p?.square === sq && p?.type !== ourKing[0])
+          )
+          if (!hasBlocker) {
+            return true
+          }
+        }
+      }
+    }
+    
+    return false
+  }
+
+  private getRayPath(from: string, to: string): string[] {
+    const files = 'abcdefgh'
+    const fromFile = files.indexOf(from[0])
+    const fromRank = parseInt(from[1]) - 1
+    const toFile = files.indexOf(to[0])
+    const toRank = parseInt(to[1]) - 1
+    
+    const path: string[] = []
+    const dFile = Math.sign(toFile - fromFile)
+    const dRank = Math.sign(toRank - fromRank)
+    
+    if (dFile !== 0 && dRank !== 0 && Math.abs(toFile - fromFile) !== Math.abs(toRank - fromRank)) {
+      return path
+    }
+    
+    let f = fromFile + dFile
+    let r = fromRank + dRank
+    
+    while (f >= 0 && f <= 7 && r >= 0 && r <= 7 && !(f === toFile && r === toRank)) {
+      path.push(files[f] + (r + 1))
+      f += dFile
+      r += dRank
+    }
+    
+    return path
+  }
+
+  private filterSuspiciousMoves(
+    evaluatedMoves: { move: Move; score: number }[],
+  ): { move: Move; score: number }[] {
+    if (evaluatedMoves.length === 0) return evaluatedMoves
+
+    const isSuspiciousMove = (m: Move): boolean => {
+      if (m.captured || m.flags.includes('e') || m.promotion) {
+        return false
+      }
+
+      const piece = m.piece
+      const toFile = m.to[0]
+      const toRank = m.to[1]
+      const fromFile = m.from[0]
+
+      if (piece === 'n') {
+        if ((toFile === 'a' || toFile === 'h') && (toRank === '1' || toRank === '8')) {
+          return true
+        }
+        return false
+      }
+
+      if (piece === 'b') {
+        if ((fromFile === 'a' || fromFile === 'h') && (toFile === 'a' || toFile === 'h')) {
+          return true
+        }
+        if ((toFile === 'a' || toFile === 'h') && (toRank === '1' || toRank === '8')) {
+          return true
+        }
+        return false
+      }
+
+      return false
+    }
+
+    const filtered = evaluatedMoves.filter(m => !isSuspiciousMove(m.move))
+
+    if (filtered.length === 0) {
+      return evaluatedMoves
+    }
+
+    return filtered
   }
 
   private evaluateMovesSync(moves: Move[], fen: string): { move: Move; score: number }[] {

@@ -18,8 +18,8 @@ interface EvaluateRequest {
   depth?: number
 }
 
-const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '8')
-const EVAL_TIMEOUT = 15000
+const DEFAULT_DEPTH = parseInt(process.env.STOCKFISH_DEPTH || '20')
+const EVAL_TIMEOUT = 30000
 const MAX_CONCURRENT = 2
 
 console.log(`[SERVER] Default depth: ${DEFAULT_DEPTH}`)
