@@ -304,8 +304,10 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
         }
 
         if (line.includes('multipv') && line.includes('score')) {
+          console.log(`[MULTIPV:${jobId}] RAW LINE: ${line.trim()}`)
+          
           const multipvMatch = line.match(/multipv (\d+)/)
-          const moveMatch = line.match(/pv (\S+)/)
+          const moveMatch = line.match(/pv\s+(\S+)/)
           const cpMatch = line.match(/score cp (-?\d+)/)
           const mateMatch = line.match(/score mate (-?\d+)/)
 
@@ -322,7 +324,9 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
             }
 
             results[index] = { move, score }
-            console.log(`[MULTIPV:${jobId}] multipv ${index}: ${move} score=${score}`)
+            console.log(`[MULTIPV:${jobId}] multipv ${index}: move=${move} score=${score}`)
+          } else {
+            console.log(`[MULTIPV:${jobId}] PARSE FAILED: multipvMatch=${!!multipvMatch} moveMatch=${!!moveMatch}`)
           }
         }
 
