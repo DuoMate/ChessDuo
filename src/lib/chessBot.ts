@@ -9,13 +9,18 @@ export interface BotConfig {
   mockMoveEvaluator?: any
 }
 
-const ELO_MAPPING: Record<number, { uciElo: number; description: string }> = {
-  1: { uciElo: 1000, description: 'Beginner ~1000 ELO' },
-  2: { uciElo: 1500, description: 'Novice ~1500 ELO' },
-  3: { uciElo: 1800, description: 'Intermediate ~1800 ELO' },
-  4: { uciElo: 2000, description: 'Advanced ~2000 ELO' },
-  5: { uciElo: 2200, description: 'Expert ~2200 ELO' },
-  6: { uciElo: 2600, description: 'Master ~2600 ELO' },
+const ELO_MAPPING: Record<number, { 
+  uciElo: number
+  description: string
+  topMovesToConsider: number
+  bestMoveChance: number
+}> = {
+  1: { uciElo: 1000, description: 'Beginner ~1000 ELO', topMovesToConsider: 10, bestMoveChance: 0.55 },
+  2: { uciElo: 1500, description: 'Novice ~1500 ELO', topMovesToConsider: 7, bestMoveChance: 0.68 },
+  3: { uciElo: 1800, description: 'Intermediate ~1800 ELO', topMovesToConsider: 5, bestMoveChance: 0.83 },
+  4: { uciElo: 2000, description: 'Advanced ~2000 ELO', topMovesToConsider: 3, bestMoveChance: 0.90 },
+  5: { uciElo: 2200, description: 'Expert ~2200 ELO', topMovesToConsider: 2, bestMoveChance: 0.95 },
+  6: { uciElo: 2600, description: 'Master ~2600 ELO', topMovesToConsider: 1, bestMoveChance: 1.0 },
 }
 
 export class ChessBot {
@@ -107,48 +112,29 @@ export class ChessBot {
     const evalStart = Date.now()
     
     console.log(`\n${'='.repeat(60)}`)
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description} (UCI_Elo: ${skillConfig.uciElo})`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
     console.log(`[ChessBot] FEN: ${fen}`)
-    console.log(`[ChessBot] Requesting Stockfish to play move at UCI_Elo ${skillConfig.uciElo}`)
+    console.log(`[ChessBot] Evaluating ${moves.length} moves with full-strength Stockfish`)
 
     try {
-      const playedMove = await this.moveEvaluator.playMove(fen, skillConfig.uciElo, 2000)
-      const elapsed = Date.now() - evalStart
-      
-      console.log(`[ChessBot] Stockfish played: ${playedMove} (time: ${elapsed}ms)`)
-      
-      const matchedMove = moves.find(m => 
-        this.moveToUci(m) === playedMove || 
-        m.san === playedMove || 
-        m.lan === playedMove
-      )
-      
-      if (matchedMove) {
-        console.log(`[ChessBot] SELECTED: ${matchedMove.san} (UCI_Elo: ${skillConfig.uciElo})`)
-        console.log(`${'='.repeat(60)}\n`)
-        return matchedMove
-      }
-      
-      console.log(`[ChessBot] WARNING: Stockfish played ${playedMove} but couldn't match it. Falling back to first move.`)
-      console.log(`${'='.repeat(60)}\n`)
-      return moves[0]
-    } catch (error) {
-      console.log(`[ChessBot] ERROR: ${error}`)
-      console.log(`[ChessBot] Falling back to best-scoring move`)
-      
-      const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen)
+      const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen, 2600)
       const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
       console.log(`${'='.repeat(60)}\n`)
       return selectedMove
+    } catch (error) {
+      console.log(`[ChessBot] ERROR: ${error}`)
+      console.log(`[ChessBot] Falling back to first move`)
+      console.log(`${'='.repeat(60)}\n`)
+      return moves[0]
     }
   }
 
-  private async evaluateMovesWithFallback(moves: Move[], fen: string): Promise<{ move: Move; score: number }[]> {
+  private async evaluateMovesWithFallback(moves: Move[], fen: string, uciElo: number = 2600): Promise<{ move: Move; score: number }[]> {
     const isBlackTurn = new Chess(fen).turn() === 'b'
     const uciMoves = moves.map(m => this.moveToUci(m))
     
     try {
-      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
+      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, uciElo)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       return moves.map(move => {
@@ -190,11 +176,41 @@ export class ChessBot {
     }
 
     const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description} (UCI_Elo: ${skillConfig.uciElo})`)
+    const isBlackTurn = evaluatedMoves[0].move.color === 'b'
+    
+    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
+    console.log(`[ChessBot] Parameters: topMoves=${skillConfig.topMovesToConsider}, bestMoveChance=${(skillConfig.bestMoveChance * 100).toFixed(0)}%`)
 
-    const best = evaluatedMoves[0]
-    console.log(`[ChessBot:L${this.config.skillLevel}] → Selected BEST move: ${best.move.san} (score=${best.score})`)
-    return best.move
+    if (isBlackTurn) {
+      evaluatedMoves.sort((a, b) => a.score - b.score)
+    } else {
+      evaluatedMoves.sort((a, b) => b.score - a.score)
+    }
+    
+    console.log(`[ChessBot] All moves ranked:`)
+    evaluatedMoves.forEach((m, i) => {
+      console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
+    })
+
+    const topMovesToConsider = Math.min(skillConfig.topMovesToConsider, evaluatedMoves.length)
+    const topMoves = evaluatedMoves.slice(0, topMovesToConsider)
+    
+    const roll = Math.random()
+    console.log(`[ChessBot] Dice roll: ${(roll * 100).toFixed(1)}% (threshold: ${(skillConfig.bestMoveChance * 100).toFixed(0)}%)`)
+    
+    let selectedMoveEntry: { move: Move; score: number }
+    
+    if (roll < skillConfig.bestMoveChance) {
+      selectedMoveEntry = topMoves[0]
+      console.log(`[ChessBot] → Selected BEST move: ${selectedMoveEntry.move.san} (score=${selectedMoveEntry.score})`)
+    } else {
+      const randomIndex = Math.floor(Math.random() * topMoves.length)
+      selectedMoveEntry = topMoves[randomIndex]
+      console.log(`[ChessBot] → Random from top ${topMovesToConsider}: ${selectedMoveEntry.move.san} (score=${selectedMoveEntry.score})`)
+    }
+
+    console.log(`[ChessBot] SELECTED: ${selectedMoveEntry.move.san}`)
+    return selectedMoveEntry.move
   }
 
   private evaluateMovesSync(moves: Move[], fen: string): { move: Move; score: number }[] {

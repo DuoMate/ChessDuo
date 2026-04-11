@@ -132,8 +132,7 @@ describe('ELO-Based Move Selection', () => {
   })
 
   describe('applyEloBasedSelection behavior', () => {
-    test('all levels always pick the best move', () => {
-      const bot1 = createBot({ skillLevel: 1 })
+    test('level 6 (master) always picks the best move (100% chance)', () => {
       const bot6 = createBot({ skillLevel: 6 })
       
       const evaluatedMoves = [
@@ -145,11 +144,33 @@ describe('ELO-Based Move Selection', () => {
       ]
 
       for (let i = 0; i < 20; i++) {
-        const selected1 = (bot1 as any).applyEloBasedSelection([...evaluatedMoves])
         const selected6 = (bot6 as any).applyEloBasedSelection([...evaluatedMoves])
-        expect(selected1.san).toBe('e4')
         expect(selected6.san).toBe('e4')
       }
+    })
+
+    test('level 1 (beginner) picks from top moves based on probability', () => {
+      const bot1 = createBot({ skillLevel: 1 })
+      
+      const evaluatedMoves = [
+        { move: { san: 'e4' }, score: 100 },
+        { move: { san: 'd4' }, score: 90 },
+        { move: { san: 'Nf3' }, score: 80 },
+        { move: { san: 'c4' }, score: 70 },
+        { move: { san: 'e3' }, score: 60 },
+      ]
+
+      const validMoves = ['e4', 'd4', 'Nf3', 'c4', 'e3']
+      const selectedMoves: string[] = []
+      
+      for (let i = 0; i < 50; i++) {
+        const selected = (bot1 as any).applyEloBasedSelection([...evaluatedMoves])
+        selectedMoves.push(selected.san)
+      }
+
+      const bestMoveCount = selectedMoves.filter(m => m === 'e4').length
+      expect(bestMoveCount).toBeGreaterThan(0)
+      expect(bestMoveCount).toBeLessThan(50)
     })
   })
 
