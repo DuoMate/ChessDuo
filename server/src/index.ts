@@ -245,6 +245,8 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
     const moves = await evaluateWithMultiPV(fen, depth, uciElo, multiPv)
     const elapsed = Date.now() - startTime
 
+    console.log(`[EVALUATE-MULTIPV] Response: ${JSON.stringify({ fen, moveCount: moves.length, moves: moves.slice(0, 3) })}`)
+
     res.json({
       fen,
       moves,
@@ -267,9 +269,11 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     const startTime = Date.now()
     const jobId = Math.random().toString(36).substring(7)
 
-    console.log(`[MULTIPV:${jobId}] Starting MultiPV evaluation`)
+    console.log(`[MULTIPV:${jobId}] ============================================`)
+    console.log(`[MULTIPV:${jobId}] STARTING MultiPV evaluation`)
     console.log(`[MULTIPV:${jobId}] FEN: ${fen}`)
-    console.log(`[MULTIPV:${jobId}] Depth: ${depth}, UCI_Elo: ${uciElo}, MultiPV: ${multiPv}`)
+    console.log(`[MULTIPV:${jobId}] Config: depth=${depth}, UCI_Elo=${uciElo}, MultiPV=${multiPv}`)
+    console.log(`[MULTIPV:${jobId}] ============================================`)
 
     const proc = spawn(STOCKFISH_PATH, [], {
       stdio: ['pipe', 'pipe', 'pipe']
@@ -278,6 +282,7 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     const results: Record<number, { move: string; score: number }> = {}
     let resolved = false
     let uciReady = false
+    let cmdCount = 0
 
     const timeout = setTimeout(() => {
       if (!resolved) {
@@ -292,41 +297,48 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
       const lines = data.toString().split('\n')
 
       for (const line of lines) {
+        if (!line.trim()) continue
+
         if (line.includes('uciok') && !uciReady) {
           uciReady = true
+          console.log(`[MULTIPV:${jobId}] >> UCI ready`)
           proc.stdin.write('setoption name UCI_LimitStrength true\n')
           proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
           proc.stdin.write(`setoption name MultiPV value ${multiPv}\n`)
           proc.stdin.write('isready\n')
           proc.stdin.write(`position fen ${fen}\n`)
           proc.stdin.write(`go depth ${depth}\n`)
-          console.log(`[MULTIPV:${jobId}] Commands sent, waiting for results...`)
+          cmdCount += 6
+          console.log(`[MULTIPV:${jobId}] >> Sent ${cmdCount} commands (UCI init + MultiPV settings + position + go)`)
+          console.log(`[MULTIPV:${jobId}] >> Waiting for results...`)
         }
 
         if (line.includes('multipv') && line.includes('score')) {
-          console.log(`[MULTIPV:${jobId}] RAW LINE: ${line}`)
-          
-          const multipvMatch = line.match(/multipv (\d+)/)
+          const multipvMatch = line.match(/multipv\s+(\d+)/)
+          const cpMatch = line.match(/score cp\s+(-?\d+)/)
+          const mateMatch = line.match(/score mate\s+(-?\d+)/)
           const pvMatch = line.match(/pv\s+(\S+)/)
-          const cpMatch = line.match(/score cp (-?\d+)/)
-          const mateMatch = line.match(/score mate (-?\d+)/)
 
-          if (multipvMatch && pvMatch) {
+          if (multipvMatch) {
             const index = parseInt(multipvMatch[1], 10)
-            const move = pvMatch[1]
             let score = 0
+            let scoreType = 'unknown'
+            let scoreVal = 0
 
             if (mateMatch) {
-              const mate = parseInt(mateMatch[1], 10)
-              score = mate > 0 ? 100000 : -100000
+              scoreVal = parseInt(mateMatch[1], 10)
+              score = scoreVal > 0 ? 100000 : -100000
+              scoreType = `mate${scoreVal}`
             } else if (cpMatch) {
-              score = parseInt(cpMatch[1], 10)
+              scoreVal = parseInt(cpMatch[1], 10)
+              score = scoreVal
+              scoreType = `cp${scoreVal}`
             }
 
-            results[index] = { move, score }
-            console.log(`[MULTIPV:${jobId}] SUCCESS: multipv=${index} move=${move} score=${score}`)
-          } else {
-            console.log(`[MULTIPV:${jobId}] PARSE FAILED: multipvMatch=${!!multipvMatch} pvMatch=${!!pvMatch} pvMatch[1]=${pvMatch ? pvMatch[1] : 'null'}`)
+            const moveStr = pvMatch ? pvMatch[1] : 'UNKNOWN'
+            results[index] = { move: moveStr, score }
+
+            console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score} (${scoreType})`)
           }
         }
 
@@ -340,8 +352,16 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
             .map(([, v]) => v)
 
           const elapsed = Date.now() - startTime
-          console.log(`[MULTIPV:${jobId}] COMPLETE: ${sorted.length} moves in ${elapsed}ms`)
-          console.log(`[MULTIPV:${jobId}] Results: ${sorted.map(m => `${m.move}(${m.score})`).join(', ')}`)
+          console.log(`[MULTIPV:${jobId}] ============================================`)
+          console.log(`[MULTIPV:${jobId}] COMPLETE: ${sorted.length} moves evaluated in ${elapsed}ms`)
+          console.log(`[MULTIPV:${jobId}] TOP MOVES:`)
+          sorted.slice(0, 5).forEach((m, i) => {
+            console.log(`[MULTIPV:${jobId}]   ${i + 1}. ${m.move} → score=${m.score}`)
+          })
+          if (sorted.length > 5) {
+            console.log(`[MULTIPV:${jobId}]   ... and ${sorted.length - 5} more`)
+          }
+          console.log(`[MULTIPV:${jobId}] ============================================`)
 
           resolve(sorted)
         }
@@ -349,26 +369,32 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     })
 
     proc.stderr.on('data', (data: Buffer) => {
-      console.log(`[MULTIPV:${jobId}] STDERR: ${data.toString().trim()}`)
+      const str = data.toString().trim()
+      if (str) {
+        console.log(`[MULTIPV:${jobId}] STDERR: ${str}`)
+      }
     })
 
     proc.on('error', (err) => {
       if (!resolved) {
         resolved = true
         clearTimeout(timeout)
+        console.log(`[MULTIPV:${jobId}] ERROR: ${err.message}`)
         reject(err)
       }
     })
 
-    proc.on('exit', () => {
+    proc.on('exit', (code) => {
       if (!resolved) {
         resolved = true
         clearTimeout(timeout)
+        console.log(`[MULTIPV:${jobId}] EXITED with code ${code}`)
         resolve([])
       }
     })
 
     proc.stdin.write('uci\n')
+    console.log(`[MULTIPV:${jobId}] >> uci`)
   })
 }
 
