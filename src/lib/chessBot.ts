@@ -126,12 +126,17 @@ export class ChessBot {
       const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
+      const evaluatedScores = results.map((r: { move: string; score: number }) => r.score)
+      const worstScore = evaluatedScores.length > 0 
+        ? (isBlackTurn ? Math.min(...evaluatedScores) : Math.max(...evaluatedScores))
+        : 0
+      
       return moves.map(move => {
         const uci = this.moveToUci(move)
         const score = scoreMap.get(uci)
         return {
           move,
-          score: score !== undefined ? score : (isBlackTurn ? Infinity : -Infinity)
+          score: score !== undefined ? score : worstScore
         }
       })
     } catch {
