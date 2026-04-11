@@ -265,52 +265,38 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
 })
 
 function parseMultiPVLine(line: string): { multipv: number; move: string; score: number } | null {
-  if (!line.includes('multipv') || !line.includes('score') || !line.includes('pv')) {
+  if (!line.includes('multipv') || !line.includes('pv')) {
     return null
   }
 
-  const multipvMatch = line.match(/(^|\s)multipv\s+(\d+)/)
-  const scoreMatch = line.match(/score cp\s+(-?\d+)/)
-  const mateMatch = line.match(/score mate\s+(-?\d+)/)
-
+  const multipvMatch = line.match(/\bmultipv\s+(\d+)/)
   if (!multipvMatch) return null
+  const multipv = parseInt(multipvMatch[1], 10)
 
-  const multipv = parseInt(multipvMatch[2], 10)
   let score = 0
+  const cpMatch = line.match(/score\s+cp\s+(-?\d+)/)
+  const mateMatch = line.match(/score\s+mate\s+(-?\d+)/)
 
-  if (mateMatch) {
-    const mateVal = parseInt(mateMatch[1], 10)
-    score = mateVal > 0 ? 100000 : -100000
-  } else if (scoreMatch) {
-    score = parseInt(scoreMatch[1], 10)
+  if (cpMatch) {
+    score = parseInt(cpMatch[1], 10)
+  } else if (mateMatch) {
+    const mateIn = parseInt(mateMatch[1], 10)
+    score = mateIn > 0 ? 10000 - mateIn : -10000 - mateIn
   } else {
     return null
   }
 
-  const pvIndex = line.indexOf('pv')
-  if (pvIndex === -1) return null
+  const pvMatch = line.match(/\bpv\s+(.+)/)
+  if (!pvMatch) return null
 
-  const afterPv = line.substring(pvIndex + 2).trim()
-  const spaceIndex = afterPv.indexOf(' ')
-  let bestMove: string
-  
-  if (spaceIndex > 0) {
-    bestMove = afterPv.substring(0, spaceIndex)
-  } else {
-    bestMove = afterPv
-  }
+  const pvMoves = pvMatch[1].trim().split(/\s+/)
+  const move = pvMoves[0]
 
-  if (!bestMove || bestMove.length < 4) {
+  if (!move || move.length < 4) {
     return null
   }
 
-  if (bestMove.length === 4 && /^[a-h][1-8][a-h][1-8]$/.test(bestMove)) {
-    bestMove = bestMove.substring(0, 2) + '-' + bestMove.substring(2)
-  } else if (bestMove.length === 5 && /^[a-h][1-8][a-h][1-8][qrbn]$/.test(bestMove)) {
-    bestMove = bestMove.substring(0, 2) + '-' + bestMove.substring(2)
-  }
-
-  return { multipv, move: bestMove, score }
+  return { multipv, move, score }
 }
 
 function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number): Promise<{ move: string; score: number }[]> {
