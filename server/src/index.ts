@@ -265,25 +265,15 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
 })
 
 function parseMultiPVLine(line: string): { multipv: number; move: string; score: number } | null {
-  console.log(`[PARSE] Input line: ${line}`)
-
   if (!line.includes('multipv') || !line.includes('score') || !line.includes('pv')) {
-    console.log('[PARSE] Missing required fields')
     return null
   }
 
-  const multipvMatch = line.match(/multipv\s+(\d+)/)
+  const multipvMatch = line.match(/\bmultipv\s+(\d+)/)
   const scoreMatch = line.match(/score cp\s+(-?\d+)/)
   const mateMatch = line.match(/score mate\s+(-?\d+)/)
 
-  console.log(`[PARSE] multipvMatch: ${multipvMatch ? multipvMatch[1] : null}`)
-  console.log(`[PARSE] scoreMatch: ${scoreMatch ? scoreMatch[1] : null}`)
-  console.log(`[PARSE] mateMatch: ${mateMatch ? mateMatch[1] : null}`)
-
-  if (!multipvMatch) {
-    console.log('[PARSE] No multipv match')
-    return null
-  }
+  if (!multipvMatch) return null
 
   const multipv = parseInt(multipvMatch[1], 10)
   let score = 0
@@ -291,26 +281,16 @@ function parseMultiPVLine(line: string): { multipv: number; move: string; score:
   if (mateMatch) {
     const mateVal = parseInt(mateMatch[1], 10)
     score = mateVal > 0 ? 100000 : -100000
-    console.log(`[PARSE] Mate score: ${score}`)
   } else if (scoreMatch) {
     score = parseInt(scoreMatch[1], 10)
-    console.log(`[PARSE] CP score: ${score}`)
   } else {
-    console.log('[PARSE] No score match found')
     return null
   }
 
   const pvIndex = line.indexOf('pv')
-  console.log(`[PARSE] pvIndex: ${pvIndex}`)
-  
-  if (pvIndex === -1) {
-    console.log('[PARSE] No pv found')
-    return null
-  }
+  if (pvIndex === -1) return null
 
   const afterPv = line.substring(pvIndex + 2).trim()
-  console.log(`[PARSE] afterPv: "${afterPv}"`)
-  
   const spaceIndex = afterPv.indexOf(' ')
   let bestMove: string
   
@@ -319,18 +299,18 @@ function parseMultiPVLine(line: string): { multipv: number; move: string; score:
   } else {
     bestMove = afterPv
   }
-  
-  console.log(`[PARSE] bestMove before format: "${bestMove}"`)
+
+  if (!bestMove || bestMove.length < 4) {
+    return null
+  }
 
   if (bestMove.length === 4 && /^[a-h][1-8][a-h][1-8]$/.test(bestMove)) {
     bestMove = bestMove.substring(0, 2) + '-' + bestMove.substring(2)
-    console.log(`[PARSE] bestMove after format: "${bestMove}"`)
+  } else if (bestMove.length === 5 && /^[a-h][1-8][a-h][1-8][qrbn]$/.test(bestMove)) {
+    bestMove = bestMove.substring(0, 2) + '-' + bestMove.substring(2)
   }
 
-  const result = { multipv, move: bestMove, score }
-  console.log(`[PARSE] Returning: ${JSON.stringify(result)}`)
-  
-  return result
+  return { multipv, move: bestMove, score }
 }
 
 function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number): Promise<{ move: string; score: number }[]> {
