@@ -264,6 +264,43 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
   }
 })
 
+function parseMultiPVLine(line: string): { multipv: number; move: string; score: number } | null {
+  if (!line.includes('multipv') || !line.includes('score') || !line.includes('pv')) {
+    return null
+  }
+
+  const multipvMatch = line.match(/multipv\s+(\d+)/)
+  const scoreMatch = line.match(/score cp\s+(-?\d+)/)
+  const mateMatch = line.match(/score mate\s+(-?\d+)/)
+
+  if (!multipvMatch) return null
+
+  const multipv = parseInt(multipvMatch[1], 10)
+  let score = 0
+
+  if (mateMatch) {
+    const mateVal = parseInt(mateMatch[1], 10)
+    score = mateVal > 0 ? 100000 : -100000
+  } else if (scoreMatch) {
+    score = parseInt(scoreMatch[1], 10)
+  } else {
+    return null
+  }
+
+  const pvIndex = line.indexOf('pv')
+  if (pvIndex === -1) return null
+
+  const pvContent = line.substring(pvIndex + 2).trim()
+  const pvTokens = pvContent.split(/\s+/)
+  let bestMove = pvTokens[0] || 'UNKNOWN'
+
+  if (bestMove.length === 4 && !bestMove.includes('-')) {
+    bestMove = bestMove.substring(0, 2) + '-' + bestMove.substring(2)
+  }
+
+  return { multipv, move: bestMove, score }
+}
+
 function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number): Promise<{ move: string; score: number }[]> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
@@ -310,45 +347,15 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
           console.log(`[MULTIPV:${jobId}] >> Commands sent, waiting for results...`)
         }
 
-        if (line.includes('multipv') && line.includes('score')) {
+        if (line.includes('multipv') && line.includes('score') && line.includes('pv')) {
           console.log(`[MULTIPV:${jobId}] >> RAW: ${line}`)
 
-          const multipvMatch = line.match(/multipv\s+(\d+)/)
-          const cpMatch = line.match(/score cp\s+(-?\d+)/)
-          const mateMatch = line.match(/score mate\s+(-?\d+)/)
-
-          let moveStr = 'UNKNOWN'
-          const pvParts = line.split('pv')
-          if (pvParts.length > 1) {
-            const pvContent = pvParts[1].trim()
-            const firstMoveMatch = pvContent.match(/^([a-h][1-8][a-h][1-8])/)
-            if (firstMoveMatch) {
-              moveStr = firstMoveMatch[1]
-            } else {
-              const tokens = pvContent.split(/\s+/)
-              if (tokens.length > 0 && tokens[0].length >= 4) {
-                moveStr = tokens[0]
-              }
-            }
-            if (moveStr.length === 4 && !moveStr.includes('-')) {
-              moveStr = moveStr.substring(0, 2) + '-' + moveStr.substring(2)
-            }
-          }
-
-          if (multipvMatch) {
-            const index = parseInt(multipvMatch[1], 10)
-            let score = 0
-
-            if (mateMatch) {
-              const mateVal = parseInt(mateMatch[1], 10)
-              score = mateVal > 0 ? 100000 : -100000
-              console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score} (mate ${mateVal})`)
-            } else if (cpMatch) {
-              score = parseInt(cpMatch[1], 10)
-              console.log(`[MULTIPV:${jobId}] ## multipv ${index}: move=${moveStr} score=${score}`)
-            }
-
-            results[index] = { move: moveStr, score }
+          const parsed = parseMultiPVLine(line)
+          if (parsed) {
+            results[parsed.multipv] = { move: parsed.move, score: parsed.score }
+            console.log(`[MULTIPV:${jobId}] ## multipv ${parsed.multipv}: move=${parsed.move} score=${parsed.score}`)
+          } else {
+            console.log(`[MULTIPV:${jobId}] ## FAILED TO PARSE LINE`)
           }
         }
 
