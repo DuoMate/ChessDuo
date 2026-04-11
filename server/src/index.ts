@@ -304,16 +304,16 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
         }
 
         if (line.includes('multipv') && line.includes('score')) {
-          console.log(`[MULTIPV:${jobId}] RAW LINE: ${line.trim()}`)
+          console.log(`[MULTIPV:${jobId}] RAW LINE: ${line}`)
           
           const multipvMatch = line.match(/multipv (\d+)/)
-          const moveMatch = line.match(/pv\s+(\S+)/)
+          const pvMatch = line.match(/pv\s+(\S+)/)
           const cpMatch = line.match(/score cp (-?\d+)/)
           const mateMatch = line.match(/score mate (-?\d+)/)
 
-          if (multipvMatch && moveMatch) {
+          if (multipvMatch && pvMatch) {
             const index = parseInt(multipvMatch[1], 10)
-            const move = moveMatch[1]
+            const move = pvMatch[1]
             let score = 0
 
             if (mateMatch) {
@@ -324,9 +324,9 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
             }
 
             results[index] = { move, score }
-            console.log(`[MULTIPV:${jobId}] multipv ${index}: move=${move} score=${score}`)
+            console.log(`[MULTIPV:${jobId}] SUCCESS: multipv=${index} move=${move} score=${score}`)
           } else {
-            console.log(`[MULTIPV:${jobId}] PARSE FAILED: multipvMatch=${!!multipvMatch} moveMatch=${!!moveMatch}`)
+            console.log(`[MULTIPV:${jobId}] PARSE FAILED: multipvMatch=${!!multipvMatch} pvMatch=${!!pvMatch} pvMatch[1]=${pvMatch ? pvMatch[1] : 'null'}`)
           }
         }
 
