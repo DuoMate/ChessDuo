@@ -17,9 +17,11 @@ interface GameProps {
 }
 
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
-  const [from, to] = uciMove.split('-')
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
+  
+  const from = uciMove.substring(0, 2)
+  const to = uciMove.substring(2, 4)
   
   for (const move of moves) {
     if (move.from === from && move.to === to) {
@@ -34,7 +36,8 @@ function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): str
 }
 
 function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
-  const [from, to] = uciMove.split('-') as [string, string]
+  const from = uciMove.substring(0, 2)
+  const to = uciMove.substring(2, 4)
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
   const move = moves.find(m => m.from === from && m.to === to)
