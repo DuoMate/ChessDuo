@@ -33,19 +33,7 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    const chess = await import('chess.js')
-    const c = new chess.Chess(fen)
-    const fromFens: string[] = []
-
-    for (const move of moves) {
-      c.reset()
-      c.load(fen)
-      c.move(move)
-      fromFens.push(c.fen())
-      c.undo()
-    }
-
-    console.log(`[EVALUATOR] Batch evaluating ${moves.length} moves from FEN: ${fen.substring(0, 60)}...`)
+    console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
     console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
 
     let lastError: Error | null = null
@@ -55,30 +43,29 @@ export class ServerMoveEvaluator {
       try {
         console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
-        const response = await fetch(`${this.serverUrl}/evaluate-batch`, {
+        const response = await fetch(`${this.serverUrl}/evaluate-multipv`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ positions: fromFens, depth, uciElo })
+          body: JSON.stringify({ fen, depth, uciElo, multiPv: Math.min(moves.length, 10) })
         })
 
         if (!response.ok) {
-          throw new Error(`Batch evaluation failed: ${response.statusText}`)
+          throw new Error(`MultiPV evaluation failed: ${response.statusText}`)
         }
 
         const data = await response.json()
         const elapsed = Date.now() - attemptStart
         
-        console.log(`[EVALUATOR] Batch response received in ${elapsed}ms`)
+        console.log(`[EVALUATOR] MultiPV response received in ${elapsed}ms`)
         
-        const results = moves.map((move, i) => {
-          const score = data.results[i].score
-          console.log(`[EVALUATOR] ${move} → score=${score}`)
-          return { move, score }
+        const results = data.moves.map((m: { move: string; score: number }) => {
+          console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
+          return { move: m.move, score: m.score }
         })
         
-        console.log(`[EVALUATOR] All scores: ${results.map(r => `${r.move}=${r.score}`).join(', ')}`)
+        console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
         
         return results
       } catch (error) {
@@ -90,7 +77,7 @@ export class ServerMoveEvaluator {
       }
     }
 
-    throw lastError || new Error('Batch evaluation failed after retries')
+    throw lastError || new Error('MultiPV evaluation failed after retries')
   }
 
   async evaluatePosition(fen: string, depth: number = 15, uciElo: number = 2600, retries: number = 3): Promise<number> {

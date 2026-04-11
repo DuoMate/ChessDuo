@@ -1,26 +1,13 @@
 import { Chess, Move } from 'chess.js'
 import { getBookMove } from './openings'
 import { ServerMoveEvaluator } from './serverMoveEvaluator'
+import { DIFFICULTY, DESCRIPTIONS, DifficultyConfig } from './difficulty'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
 export interface BotConfig {
   skillLevel: number
   mockMoveEvaluator?: any
-}
-
-const ELO_MAPPING: Record<number, { 
-  uciElo: number
-  description: string
-  topMovesToConsider: number
-  bestMoveChance: number
-}> = {
-  1: { uciElo: 1000, description: 'Beginner ~1000 ELO', topMovesToConsider: 10, bestMoveChance: 0.55 },
-  2: { uciElo: 1500, description: 'Novice ~1500 ELO', topMovesToConsider: 7, bestMoveChance: 0.68 },
-  3: { uciElo: 1800, description: 'Intermediate ~1800 ELO', topMovesToConsider: 5, bestMoveChance: 0.83 },
-  4: { uciElo: 2000, description: 'Advanced ~2000 ELO', topMovesToConsider: 3, bestMoveChance: 0.90 },
-  5: { uciElo: 2200, description: 'Expert ~2200 ELO', topMovesToConsider: 2, bestMoveChance: 0.95 },
-  6: { uciElo: 2600, description: 'Master ~2600 ELO', topMovesToConsider: 1, bestMoveChance: 1.0 },
 }
 
 export class ChessBot {
@@ -102,7 +89,8 @@ export class ChessBot {
   }
 
   private async pickSmartMoveAsync(moves: Move[], fen: string): Promise<Move> {
-    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
+    const difficulty = DIFFICULTY[this.config.skillLevel] || DIFFICULTY[4]
+    const isBlackTurn = new Chess(fen).turn() === 'b'
     
     if (moves.length === 1) {
       console.log(`[ChessBot:L${this.config.skillLevel}] Only one move available: ${moves[0].san}`)
@@ -112,13 +100,14 @@ export class ChessBot {
     const evalStart = Date.now()
     
     console.log(`\n${'='.repeat(60)}`)
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
+    console.log(`[ChessBot:L${this.config.skillLevel}] ${DESCRIPTIONS[this.config.skillLevel]}`)
     console.log(`[ChessBot] FEN: ${fen}`)
     console.log(`[ChessBot] Evaluating ${moves.length} moves with full-strength Stockfish`)
+    console.log(`[ChessBot] Config: noise=${difficulty.noise}, topMoves=${difficulty.topMoves}, blunderChance=${difficulty.blunderChance}, weirdChance=${difficulty.weirdChance}`)
 
     try {
-      const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen, 2600)
-      const selectedMove = this.applyEloBasedSelection(evaluatedMoves)
+      const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen)
+      const selectedMove = this.applyHumanizedSelection(evaluatedMoves, fen, isBlackTurn)
       console.log(`${'='.repeat(60)}\n`)
       return selectedMove
     } catch (error) {
@@ -129,12 +118,12 @@ export class ChessBot {
     }
   }
 
-  private async evaluateMovesWithFallback(moves: Move[], fen: string, uciElo: number = 2600): Promise<{ move: Move; score: number }[]> {
+  private async evaluateMovesWithFallback(moves: Move[], fen: string): Promise<{ move: Move; score: number }[]> {
     const isBlackTurn = new Chess(fen).turn() === 'b'
     const uciMoves = moves.map(m => this.moveToUci(m))
     
     try {
-      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, uciElo)
+      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       return moves.map(move => {
@@ -167,50 +156,180 @@ export class ChessBot {
       evaluatedMoves.sort((a, b) => b.score - a.score)
     }
     
-    return this.applyEloBasedSelection(evaluatedMoves)
+    return this.applyHumanizedSelection(evaluatedMoves, fen, isBlackTurn)
   }
 
-  private applyEloBasedSelection(evaluatedMoves: { move: Move; score: number }[]): Move {
+  private applyHumanizedSelection(
+    evaluatedMoves: { move: Move; score: number }[],
+    fen: string,
+    isBlackTurn: boolean
+  ): Move {
     if (evaluatedMoves.length === 0) {
       throw new Error('No moves to select from')
     }
 
-    const skillConfig = ELO_MAPPING[this.config.skillLevel] || ELO_MAPPING[4]
-    const isBlackTurn = evaluatedMoves[0].move.color === 'b'
+    const difficulty = DIFFICULTY[this.config.skillLevel] || DIFFICULTY[4]
+    const moveNumber = this.getMoveNumber(fen)
     
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${skillConfig.description}`)
-    console.log(`[ChessBot] Parameters: topMoves=${skillConfig.topMovesToConsider}, bestMoveChance=${(skillConfig.bestMoveChance * 100).toFixed(0)}%`)
-
+    console.log(`[ChessBot:L${this.config.skillLevel}] Move number: ${moveNumber}`)
+    
+    const sortedMoves = [...evaluatedMoves]
     if (isBlackTurn) {
-      evaluatedMoves.sort((a, b) => a.score - b.score)
+      sortedMoves.sort((a, b) => a.score - b.score)
     } else {
-      evaluatedMoves.sort((a, b) => b.score - a.score)
+      sortedMoves.sort((a, b) => b.score - a.score)
     }
     
     console.log(`[ChessBot] All moves ranked:`)
-    evaluatedMoves.forEach((m, i) => {
+    sortedMoves.forEach((m, i) => {
       console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
     })
 
-    const topMovesToConsider = Math.min(skillConfig.topMovesToConsider, evaluatedMoves.length)
-    const topMoves = evaluatedMoves.slice(0, topMovesToConsider)
-    
-    const roll = Math.random()
-    console.log(`[ChessBot] Dice roll: ${(roll * 100).toFixed(1)}% (threshold: ${(skillConfig.bestMoveChance * 100).toFixed(0)}%)`)
-    
-    let selectedMoveEntry: { move: Move; score: number }
-    
-    if (roll < skillConfig.bestMoveChance) {
-      selectedMoveEntry = topMoves[0]
-      console.log(`[ChessBot] → Selected BEST move: ${selectedMoveEntry.move.san} (score=${selectedMoveEntry.score})`)
-    } else {
-      const randomIndex = Math.floor(Math.random() * topMoves.length)
-      selectedMoveEntry = topMoves[randomIndex]
-      console.log(`[ChessBot] → Random from top ${topMovesToConsider}: ${selectedMoveEntry.move.san} (score=${selectedMoveEntry.score})`)
+    const topMoves = sortedMoves.slice(0, Math.min(difficulty.topMoves, sortedMoves.length))
+    console.log(`[ChessBot] Top ${topMoves.length} candidates: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
+
+    const movesWithNoise = this.addNoise(topMoves, difficulty.noise)
+    movesWithNoise.sort((a, b) => isBlackTurn ? a.score - b.score : b.score - a.score)
+    console.log(`[ChessBot] After noise (sorted): ${movesWithNoise.map(m => `${m.move.san}(${m.score.toFixed(0)})`).join(', ')}`)
+
+    const guardrailMoves = this.applyScoreGuardrail(movesWithNoise, difficulty.maxDrop, isBlackTurn)
+    console.log(`[ChessBot] After guardrail (maxDrop=${difficulty.maxDrop}): ${guardrailMoves.map(m => m.move.san).join(', ')}`)
+
+    const filteredMoves = this.filterWeirdMoves(guardrailMoves, difficulty.weirdChance, moveNumber)
+    console.log(`[ChessBot] After weird filter: ${filteredMoves.map(m => m.move.san).join(', ')}`)
+
+    const blunderMoves = this.maybeInjectBlunder(filteredMoves, difficulty.blunderChance, isBlackTurn)
+    if (blunderMoves.length < filteredMoves.length) {
+      console.log(`[ChessBot] Blunder injected!`)
     }
 
-    console.log(`[ChessBot] SELECTED: ${selectedMoveEntry.move.san}`)
-    return selectedMoveEntry.move
+    const finalMove = this.weightedPick(blunderMoves, difficulty.weights)
+    console.log(`[ChessBot] SELECTED: ${finalMove.move.san}`)
+    return finalMove.move
+  }
+
+  private applyScoreGuardrail(
+    moves: { move: Move; score: number }[],
+    maxDrop: number,
+    isBlackTurn: boolean
+  ): { move: Move; score: number }[] {
+    if (moves.length === 0 || maxDrop >= 1000) {
+      return moves
+    }
+
+    const bestScore = moves[0].score
+    const filtered = moves.filter(m => {
+      const drop = isBlackTurn ? m.score - bestScore : bestScore - m.score
+      return drop <= maxDrop
+    })
+
+    if (filtered.length === 0) {
+      return [moves[0]]
+    }
+
+    console.log(`[ChessBot] Guardrail filtered ${moves.length - filtered.length} moves (best=${bestScore}, maxDrop=${maxDrop})`)
+    return filtered
+  }
+
+  private getMoveNumber(fen: string): number {
+    try {
+      const parts = fen.split(' ')
+      return parseInt(parts[5]) || 1
+    } catch {
+      return 1
+    }
+  }
+
+  private addNoise(moves: { move: Move; score: number }[], noiseRange: number): { move: Move; score: number }[] {
+    if (noiseRange === 0) return moves
+    
+    return moves.map(m => ({
+      ...m,
+      score: m.score + (Math.random() * 2 - 1) * noiseRange
+    }))
+  }
+
+  private filterWeirdMoves(
+    moves: { move: Move; score: number }[],
+    weirdChance: number,
+    moveNumber: number
+  ): { move: Move; score: number }[] {
+    if (moveNumber > 10) {
+      return moves
+    }
+
+    return moves.filter(m => {
+      if (this.isWeirdMove(m.move.san)) {
+        const roll = Math.random()
+        if (roll > weirdChance) {
+          console.log(`[ChessBot] Filtered weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%, threshold=${(weirdChance * 100).toFixed(1)}%)`)
+          return false
+        }
+        console.log(`[ChessBot] Allowed weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%)`)
+      }
+      return true
+    })
+  }
+
+  private isWeirdMove(san: string): boolean {
+    const weirdPatterns = [
+      'a3', 'h3', 'a4', 'h4',
+      'Na3', 'Nh3'
+    ]
+    
+    for (const pattern of weirdPatterns) {
+      if (san === pattern || san.startsWith(pattern)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  private maybeInjectBlunder(
+    moves: { move: Move; score: number }[],
+    blunderChance: number,
+    isBlackTurn: boolean
+  ): { move: Move; score: number }[] {
+    if (blunderChance <= 0 || moves.length <= 1) {
+      return moves
+    }
+
+    const roll = Math.random()
+    if (roll < blunderChance) {
+      const worstCount = Math.min(2, Math.ceil(moves.length / 2))
+      const bottomMoves = moves.slice(-worstCount)
+      const randomBlunder = bottomMoves[Math.floor(Math.random() * bottomMoves.length)]
+      console.log(`[ChessBot] Blunder triggered! Selecting from worst moves: ${bottomMoves.map(m => m.move.san).join(', ')}`)
+      return [randomBlunder]
+    }
+    return moves
+  }
+
+  private weightedPick(
+    moves: { move: Move; score: number }[],
+    weights: number[]
+  ): { move: Move; score: number } {
+    if (moves.length === 0) {
+      throw new Error('No moves to pick from')
+    }
+    if (moves.length === 1) {
+      return moves[0]
+    }
+
+    const usableWeights = weights.slice(0, moves.length)
+    const total = usableWeights.reduce((a, b) => a + b, 0)
+    
+    let r = Math.random() * total
+    for (let i = 0; i < moves.length; i++) {
+      r -= usableWeights[i]
+      if (r <= 0) {
+        console.log(`[ChessBot] Weighted pick: ${moves[i].move.san} (weight=${usableWeights[i]}, cum=${total - r})`)
+        return moves[i]
+      }
+    }
+    
+    console.log(`[ChessBot] Weighted pick fallback: ${moves[0].move.san}`)
+    return moves[0]
   }
 
   private evaluateMovesSync(moves: Move[], fen: string): { move: Move; score: number }[] {
@@ -273,8 +392,7 @@ export class ChessBot {
   }
 
   getSkillDescription(): string {
-    const skill = ELO_MAPPING[this.config.skillLevel]
-    return skill?.description || 'Unknown'
+    return DESCRIPTIONS[this.config.skillLevel] || 'Unknown'
   }
 }
 

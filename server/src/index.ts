@@ -227,38 +227,146 @@ app.post('/evaluate', async (req: Request, res: Response) => {
   }
 })
 
-app.post('/evaluate-batch', async (req: Request, res: Response) => {
+app.post('/evaluate-multipv', async (req: Request, res: Response) => {
   try {
-    const { positions, depth = DEFAULT_DEPTH, uciElo = 2600 } = req.body as { positions: string[], depth?: number, uciElo?: number }
+    const { fen, depth = DEFAULT_DEPTH, uciElo = 2600, multiPv = 10 } = req.body as {
+      fen: string
+      depth?: number
+      uciElo?: number
+      multiPv?: number
+    }
 
-    if (!positions || !Array.isArray(positions)) {
-      res.status(400).json({ error: 'positions array is required' })
+    if (!fen) {
+      res.status(400).json({ error: 'FEN is required' })
       return
     }
 
     const startTime = Date.now()
-    
-    const evaluations = positions.map(fen => enqueueJob(fen, depth, uciElo))
-    const results = await Promise.all(evaluations)
-
+    const moves = await evaluateWithMultiPV(fen, depth, uciElo, multiPv)
     const elapsed = Date.now() - startTime
 
     res.json({
-      results: results.map((score, i) => ({
-        fen: positions[i],
-        score,
-        timeMs: elapsed / positions.length
-      })),
-      totalTimeMs: elapsed
+      fen,
+      moves,
+      depth,
+      uciElo,
+      multiPv,
+      timeMs: elapsed
     })
   } catch (error) {
-    console.error('[EVALUATE-BATCH] Error:', error)
+    console.error('[EVALUATE-MULTIPV] Error:', error)
     res.status(500).json({
-      error: 'Batch evaluation failed',
+      error: 'MultiPV evaluation failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
 })
+
+function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number): Promise<{ move: string; score: number }[]> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now()
+    const jobId = Math.random().toString(36).substring(7)
+
+    console.log(`[MULTIPV:${jobId}] Starting MultiPV evaluation`)
+    console.log(`[MULTIPV:${jobId}] FEN: ${fen}`)
+    console.log(`[MULTIPV:${jobId}] Depth: ${depth}, UCI_Elo: ${uciElo}, MultiPV: ${multiPv}`)
+
+    const proc = spawn(STOCKFISH_PATH, [], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+
+    const results: Record<number, { move: string; score: number }> = {}
+    let resolved = false
+    let uciReady = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        proc.kill()
+        console.log(`[MULTIPV:${jobId}] TIMEOUT after ${Date.now() - startTime}ms`)
+        reject(new Error('MultiPV evaluation timeout'))
+      }
+    }, EVAL_TIMEOUT)
+
+    proc.stdout.on('data', (data: Buffer) => {
+      const lines = data.toString().split('\n')
+
+      for (const line of lines) {
+        if (line.includes('uciok') && !uciReady) {
+          uciReady = true
+          proc.stdin.write('setoption name UCI_LimitStrength true\n')
+          proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
+          proc.stdin.write(`setoption name MultiPV value ${multiPv}\n`)
+          proc.stdin.write('isready\n')
+          proc.stdin.write(`position fen ${fen}\n`)
+          proc.stdin.write(`go depth ${depth}\n`)
+          console.log(`[MULTIPV:${jobId}] Commands sent, waiting for results...`)
+        }
+
+        if (line.includes('multipv') && line.includes('score')) {
+          const multipvMatch = line.match(/multipv (\d+)/)
+          const moveMatch = line.match(/pv (\S+)/)
+          const cpMatch = line.match(/score cp (-?\d+)/)
+          const mateMatch = line.match(/score mate (-?\d+)/)
+
+          if (multipvMatch && moveMatch) {
+            const index = parseInt(multipvMatch[1], 10)
+            const move = moveMatch[1]
+            let score = 0
+
+            if (mateMatch) {
+              const mate = parseInt(mateMatch[1], 10)
+              score = mate > 0 ? 100000 : -100000
+            } else if (cpMatch) {
+              score = parseInt(cpMatch[1], 10)
+            }
+
+            results[index] = { move, score }
+            console.log(`[MULTIPV:${jobId}] multipv ${index}: ${move} score=${score}`)
+          }
+        }
+
+        if (line.includes('bestmove') && !resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          proc.kill()
+
+          const sorted = Object.entries(results)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([, v]) => v)
+
+          const elapsed = Date.now() - startTime
+          console.log(`[MULTIPV:${jobId}] COMPLETE: ${sorted.length} moves in ${elapsed}ms`)
+          console.log(`[MULTIPV:${jobId}] Results: ${sorted.map(m => `${m.move}(${m.score})`).join(', ')}`)
+
+          resolve(sorted)
+        }
+      }
+    })
+
+    proc.stderr.on('data', (data: Buffer) => {
+      console.log(`[MULTIPV:${jobId}] STDERR: ${data.toString().trim()}`)
+    })
+
+    proc.on('error', (err) => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        reject(err)
+      }
+    })
+
+    proc.on('exit', () => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        resolve([])
+      }
+    })
+
+    proc.stdin.write('uci\n')
+  })
+}
 
 app.post('/play-move', async (req: Request, res: Response) => {
   try {
