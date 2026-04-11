@@ -384,7 +384,11 @@ export class ChessBot {
   }
 
   private moveToUci(move: Move): string {
-    return `${move.from}-${move.to}`
+    let uci = `${move.from}${move.to}`
+    if (move.promotion) {
+      uci += move.promotion
+    }
+    return uci
   }
 
   getConfig(): BotConfig {
