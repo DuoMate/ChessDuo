@@ -241,29 +241,27 @@ export class LocalGame {
     console.log(`[TURN] ${teamColor} team to move`)
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
      
-    const turnStartFen = this.gameState.getTurnStartFen()
-      
+     const turnStartFen = this.gameState.getTurnStartFen()
+       
      const optimalMove = await this.evaluator.getBestScore(turnStartFen)
      const bestMoveScore = optimalMove.score
-     
-     const startScore = await this.evaluator.evaluatePosition(turnStartFen)
      
      const movesToEvaluate = [player1Move, player2Move]
      const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
      const player1Score = evalResults[0].score
      const player2Score = evalResults[1].score
 
-     const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
-     const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
+     const player1Loss = Math.abs(bestMoveScore - player1Score)
+     const player2Loss = Math.abs(bestMoveScore - player2Score)
      
      if (isSync) {
        console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
      }
 
-     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(player1Loss)
-     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(player2Loss)
-     const player1Category = this.getAccuracyCategory(player1Loss, isSync)
-     const player2Category = this.getAccuracyCategory(player2Loss, isSync)
+     const player1Accuracy = this.calculateAccuracy(player1Loss)
+     const player2Accuracy = this.calculateAccuracy(player2Loss)
+     const player1Category = this.getAccuracyCategory(player1Loss)
+     const player2Category = this.getAccuracyCategory(player2Loss)
 
     console.log(`\n[EVALUATION] (Blind from: ${turnStartFen})`)
     console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
@@ -278,8 +276,8 @@ export class LocalGame {
      const loserFrom = isSync ? '' : (winningMove === player1Move ? player2From : player1From)
      const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
      
-     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+    console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
      console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -301,7 +299,7 @@ export class LocalGame {
       winningMove,
       winningScore,
       isSync,
-      bestEngineMove: winningMove,
+      bestEngineMove: optimalMove.move,
       bestEngineScore: bestMoveScore,
       turnStartFen,
       winnerId: winnerId as 'player1' | 'player2',
@@ -361,40 +359,38 @@ export class LocalGame {
     
     const turnStartFen = currentFen
     
-    const optimalMove = await this.evaluator.getBestScore(turnStartFen)
-    const bestMoveScore = optimalMove.score
-    
-    const startScore = await this.evaluator.evaluatePosition(turnStartFen)
-    
-    const movesToEvaluate = [player1Move, player2Move]
-    const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
-    const player1Score = evalResults[0].score
-    const player2Score = evalResults[1].score
+     const optimalMove = await this.evaluator.getBestScore(turnStartFen)
+     const bestMoveScore = optimalMove.score
+     
+     const movesToEvaluate = [player1Move, player2Move]
+     const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
+     const player1Score = evalResults[0].score
+     const player2Score = evalResults[1].score
 
-    const player1Loss = isSync ? 0 : Math.abs(bestMoveScore - player1Score)
-    const player2Loss = isSync ? 0 : Math.abs(bestMoveScore - player2Score)
-     
-    if (isSync) {
-      console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
-    }
+     const player1Loss = Math.abs(bestMoveScore - player1Score)
+     const player2Loss = Math.abs(bestMoveScore - player2Score)
+      
+     if (isSync) {
+       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
+     }
 
-     const player1Accuracy = isSync ? 100 : this.calculateAccuracy(player1Loss)
-     const player2Accuracy = isSync ? 100 : this.calculateAccuracy(player2Loss)
-     const player1Category = this.getAccuracyCategory(player1Loss, isSync)
-     const player2Category = this.getAccuracyCategory(player2Loss, isSync)
+     const player1Accuracy = this.calculateAccuracy(player1Loss)
+     const player2Accuracy = this.calculateAccuracy(player2Loss)
+     const player1Category = this.getAccuracyCategory(player1Loss)
+     const player2Category = this.getAccuracyCategory(player2Loss)
+      
+     console.log(`\n[EVALUATION] (from: ${turnStartFen})`)
+     console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
+     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+     console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
+      
+     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
+     const winningScore = winningMove === player1Move ? player1Score : player2Score
+     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
+     const winnerId = winningMove === player1Move ? player1Id : player2Id
      
-    console.log(`\n[EVALUATION] (from: ${turnStartFen})`)
-    console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
-    console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
-    console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
-     
-    const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
-    const winningScore = winningMove === player1Move ? player1Score : player2Score
-    const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
-    const winnerId = winningMove === player1Move ? player1Id : player2Id
-    
-    console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${isSync ? '100.0' : this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
     console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -434,10 +430,6 @@ export class LocalGame {
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
-  }
-
-  private centipawnsToWinPercent(cp: number): number {
-    return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1)
   }
 
   private calculateAccuracy(cpLoss: number, isSacrifice: boolean = false): number {
