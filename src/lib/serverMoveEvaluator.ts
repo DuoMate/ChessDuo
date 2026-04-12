@@ -33,13 +33,12 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Evaluating ${moves.length} moves individually: ${fen.substring(0, 60)}...`)
+    console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}...`)
     console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
 
     let lastError: Error | null = null
-    
+
     for (let attempt = 0; attempt < retries; attempt++) {
-      const attemptStart = Date.now()
       try {
         console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
@@ -51,23 +50,21 @@ export class ServerMoveEvaluator {
           body: JSON.stringify({ fen, moves, uciElo, movetime: 800 })
         })
 
-        if (!response.ok) {
-          throw new Error(`Move evaluation failed: ${response.statusText}`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log(`[EVALUATOR] Response received`)
+
+          const results = data.moves.map((m: { move: string; score: number }) => {
+            console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
+            return { move: m.move, score: m.score }
+          })
+
+          console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
+          return results
         }
 
-        const data = await response.json()
-        const elapsed = Date.now() - attemptStart
-        
-        console.log(`[EVALUATOR] Response received in ${elapsed}ms`)
-        
-        const results = data.moves.map((m: { move: string; score: number }) => {
-          console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
-          return { move: m.move, score: m.score }
-        })
-        
-        console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
-        
-        return results
+        console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}, trying fallback...`)
+        throw new Error(`HTTP ${response.status}`)
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
         console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
@@ -76,6 +73,38 @@ export class ServerMoveEvaluator {
         }
       }
     }
+
+    console.log(`[EVALUATOR] Falling back to /evaluate-multipv...`)
+    return this.evaluateMovesMultiPV(moves, fen, depth, uciElo)
+  }
+
+  private async evaluateMovesMultiPV(moves: string[], fen: string, depth: number, uciElo: number): Promise<{ move: string; score: number }[]> {
+    try {
+      const response = await fetch(`${this.serverUrl}/evaluate-multipv`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: Math.min(moves.length, 10), movetime: 1500 })
+      })
+
+      if (!response.ok) {
+        throw new Error(`MultiPV evaluation failed: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const results = data.moves.map((m: { move: string; score: number }) => {
+        console.log(`[EVALUATOR] MultiPV ${m.move} → score=${m.score}`)
+        return { move: m.move, score: m.score }
+      })
+
+      console.log(`[EVALUATOR] MultiPV scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
+      return results
+    } catch (error) {
+      console.error(`[EVALUATOR] MultiPV fallback also failed: ${error}`)
+      throw error
+    }
+  }
 
     throw lastError || new Error('MultiPV evaluation failed after retries')
   }
