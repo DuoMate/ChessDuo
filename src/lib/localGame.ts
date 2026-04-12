@@ -246,7 +246,9 @@ export class LocalGame {
      const optimalMove = await this.evaluator.getBestScore(turnStartFen)
      const bestMoveScore = optimalMove.score
      
-     const movesToEvaluate = [player1Move, player2Move]
+     const player1Uci = player1From + player1To
+     const player2Uci = player2From + player2To
+     const movesToEvaluate = [player1Uci, player2Uci]
      const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
      
      const getScore = (results: { move: string; score: number }[], move: string): number => {
@@ -254,8 +256,8 @@ export class LocalGame {
        return found ? found.score : 0
      }
      
-     const player1Score = getScore(evalResults, player1Move)
-     const player2Score = getScore(evalResults, player2Move)
+     const player1Score = getScore(evalResults, player1Uci)
+     const player2Score = getScore(evalResults, player2Uci)
 
      const player1Loss = Math.abs(bestMoveScore - player1Score)
      const player2Loss = Math.abs(bestMoveScore - player2Score)
@@ -362,13 +364,25 @@ export class LocalGame {
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
     
     const currentFen = this.gameState.fen
-    
+     
      const turnStartFen = currentFen
      
      const optimalMove = await this.evaluator.getBestScore(turnStartFen)
      const bestMoveScore = optimalMove.score
      
-     const movesToEvaluate = [player1Move, player2Move]
+     const sanToUci = (san: string, fen: string): string => {
+       const chess = new Chess(fen)
+       const moves = chess.moves({ verbose: true })
+       const found = moves.find(m => m.san === san || m.lan === san)
+       if (found) {
+         return found.from + found.to + (found.promotion || '')
+       }
+       return san
+     }
+     
+     const player1Uci = sanToUci(player1Move, turnStartFen)
+     const player2Uci = sanToUci(player2Move, turnStartFen)
+     const movesToEvaluate = [player1Uci, player2Uci]
      const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
      
      const getScore = (results: { move: string; score: number }[], move: string): number => {
@@ -376,8 +390,8 @@ export class LocalGame {
        return found ? found.score : 0
      }
      
-     const player1Score = getScore(evalResults, player1Move)
-     const player2Score = getScore(evalResults, player2Move)
+     const player1Score = getScore(evalResults, player1Uci)
+     const player2Score = getScore(evalResults, player2Uci)
 
      const player1Loss = Math.abs(bestMoveScore - player1Score)
      const player2Loss = Math.abs(bestMoveScore - player2Score)
