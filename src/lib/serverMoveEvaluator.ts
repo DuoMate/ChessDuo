@@ -134,7 +134,13 @@ export class ServerMoveEvaluator {
     }
 
     const results = await this.evaluateMoves(moves, fen, depth, uciElo)
-    const best = results.reduce((a, b) => a.score > b.score ? a : b)
+    
+    if (results.length === 0) {
+      const randomMove = moves[Math.floor(Math.random() * moves.length)]
+      return { move: randomMove, score: 0 }
+    }
+    
+    const best = results.reduce((a, b) => a.score > b.score ? a : b, results[0])
 
     return { move: best.move, score: best.score }
   }
