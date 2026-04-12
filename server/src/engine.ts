@@ -14,12 +14,15 @@ export class StockfishEngine {
   private queue: PendingJob[] = []
   private busy = false
   private scores: Record<string, number> = {}
+  private currentFen: string = ''
   private currentMoves: string[] = []
   private currentResolve: ((result: { move: string; score: number }[]) => void) | null = null
   private currentReject: ((err: Error) => void) | null = null
   private restartCount = 0
   private readonly MAX_RESTARTS = 3
   private initializationComplete = false
+  private timeoutId: NodeJS.Timeout | null = null
+  private readonly EVAL_TIMEOUT_MS = 2500
 
   constructor() {
     this.spawn()
@@ -80,14 +83,16 @@ export class StockfishEngine {
       }
 
       if (line.includes('readyok') && this.busy) {
-        this.send(`position fen ${this.currentMoves[0]}`)
-        const moveNumber = this.getMoveNumber(this.currentMoves[0])
-        const movetime = moveNumber < 10 ? 300 : 500
-        this.send(`go movetime ${movetime}`)
+        this.startEvaluation()
         continue
       }
 
       if (line.includes(' pv ') && line.includes('score')) {
+        const depthMatch = line.match(/\bdepth\s+(\d+)/)
+        if (!depthMatch || parseInt(depthMatch[1]) < 8) {
+          continue
+        }
+
         const moveMatch = line.match(/\bpv\s+([a-h][1-8][a-h][1-8][qrbn]?)/)
         const cpMatch = line.match(/score cp (-?\d+)/)
         const mateMatch = line.match(/score mate (-?\d+)/)
@@ -103,15 +108,16 @@ export class StockfishEngine {
             score = mate > 0 ? 10000 - mate : -10000 - mate
           }
 
-          if (move.length >= 4) {
+          if (move.length >= 4 && this.currentMoves.includes(move)) {
             this.scores[move] = score
-            console.log(`[ENGINE] Captured: move=${move} score=${score}`)
+            console.log(`[ENGINE] Captured depth=${depthMatch[1]}: move=${move} score=${score}`)
           }
         }
         continue
       }
 
       if (line.startsWith('bestmove') && this.busy) {
+        this.clearTimeout()
         console.log('[ENGINE] Bestmove received, resolving job')
         
         const results = this.currentMoves
@@ -129,6 +135,7 @@ export class StockfishEngine {
 
         this.busy = false
         this.scores = {}
+        this.currentFen = ''
         this.currentMoves = []
         this.currentResolve = null
         this.currentReject = null
@@ -136,6 +143,57 @@ export class StockfishEngine {
         this.processNext()
         continue
       }
+    }
+  }
+
+  private startEvaluation(): void {
+    const moveNumber = this.getMoveNumber(this.currentFen)
+    const movetime = moveNumber < 10 ? 300 : 500
+    
+    if (this.currentMoves.length > 0) {
+      const searchmovesCmd = `go movetime ${movetime} searchmoves ${this.currentMoves.join(' ')}`
+      console.log(`[ENGINE] Starting evaluation: ${this.currentMoves.length} moves, movetime=${movetime}ms`)
+      this.send(searchmovesCmd)
+    } else {
+      this.send(`go movetime ${movetime}`)
+    }
+    
+    this.setTimeout()
+  }
+
+  private setTimeout(): void {
+    this.clearTimeout()
+    this.timeoutId = setTimeout(() => {
+      if (this.busy) {
+        console.warn(`[ENGINE] Evaluation timeout after ${this.EVAL_TIMEOUT_MS}ms, resolving with ${Object.keys(this.scores).length} captured moves`)
+        
+        const results = this.currentMoves
+          .filter(m => this.scores[m] !== undefined)
+          .map(m => ({
+            move: m,
+            score: this.scores[m]
+          }))
+
+        if (this.currentResolve) {
+          this.currentResolve(results)
+        }
+
+        this.busy = false
+        this.scores = {}
+        this.currentFen = ''
+        this.currentMoves = []
+        this.currentResolve = null
+        this.currentReject = null
+
+        this.processNext()
+      }
+    }, this.EVAL_TIMEOUT_MS)
+  }
+
+  private clearTimeout(): void {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId)
+      this.timeoutId = null
     }
   }
 
@@ -147,6 +205,7 @@ export class StockfishEngine {
 
   private handleCrash(): void {
     console.error('[ENGINE] Crash detected!')
+    this.clearTimeout()
     this.busy = false
 
     if (this.currentReject) {
@@ -154,6 +213,7 @@ export class StockfishEngine {
     }
 
     this.scores = {}
+    this.currentFen = ''
     this.currentMoves = []
     this.currentResolve = null
     this.currentReject = null
@@ -180,31 +240,24 @@ export class StockfishEngine {
 
     const job = this.queue.shift()!
     this.busy = true
+    this.currentFen = job.fen
     this.currentMoves = job.moves
     this.currentResolve = job.resolve
     this.currentReject = job.reject
 
     this.scores = {}
 
-    console.log(`[ENGINE] Processing job: ${job.moves.length} moves, fen: ${job.fen.substring(0, 50)}...`)
+    console.log(`[ENGINE] Queued job: ${job.moves.length} moves, queue length: ${this.queue.length}`)
 
     this.send(`position fen ${job.fen}`)
-    const moveNumber = this.getMoveNumber(job.fen)
-    const movetime = moveNumber < 10 ? 300 : 500
-    
-    if (job.moves.length > 0) {
-      const searchmovesCmd = `go movetime ${movetime} searchmoves ${job.moves.join(' ')}`
-      this.send(searchmovesCmd)
-    } else {
-      this.send(`go movetime ${movetime}`)
-    }
+    this.send('isready')
   }
 
   evaluateMoves(fen: string, moves: string[], movetime: number = 500): Promise<{ move: string; score: number }[]> {
     return new Promise((resolve, reject) => {
       const job: PendingJob = { fen, moves, movetime, resolve, reject }
       this.queue.push(job)
-      console.log(`[ENGINE] Queued job: ${moves.length} moves, queue length: ${this.queue.length}`)
+      console.log(`[ENGINE] Enqueuing job: ${moves.length} moves`)
       this.processNext()
     })
   }
@@ -233,6 +286,7 @@ export class StockfishEngine {
 
   destroy(): void {
     console.log('[ENGINE] Destroying...')
+    this.clearTimeout()
     if (this.proc) {
       this.proc.kill()
       this.proc = null
