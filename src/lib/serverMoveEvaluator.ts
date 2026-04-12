@@ -48,7 +48,7 @@ export class ServerMoveEvaluator {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth, uciElo, multiPv: Math.min(moves.length, 10) })
+          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500 })
         })
 
         if (!response.ok) {

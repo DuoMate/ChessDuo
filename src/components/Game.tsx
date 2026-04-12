@@ -16,12 +16,17 @@ interface GameProps {
   level?: number
 }
 
+function normalizeUci(uci: string): string {
+  return uci.replace(/-/g, '')
+}
+
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
   
-  const from = uciMove.substring(0, 2)
-  const to = uciMove.substring(2, 4)
+  const normalized = normalizeUci(uciMove)
+  const from = normalized.substring(0, 2)
+  const to = normalized.substring(2, 4)
   
   for (const move of moves) {
     if (move.from === from && move.to === to) {
@@ -36,8 +41,9 @@ function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): str
 }
 
 function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
-  const from = uciMove.substring(0, 2)
-  const to = uciMove.substring(2, 4)
+  const normalized = normalizeUci(uciMove)
+  const from = normalized.substring(0, 2)
+  const to = normalized.substring(2, 4)
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
   const move = moves.find(m => m.from === from && m.to === to)
@@ -394,11 +400,16 @@ export function Game({ level }: GameProps) {
          highlightSquares: null
        }))
       
-      const sanMove = uciToSan(uciMove, g.board.fen(), promotion)
-      const moveInfo = getMoveFromUci(uciMove, g.board.fen())
+      const fenBefore = g.board.fen()
+      console.log(`[HUMAN] UCI: ${uciMove}, FEN: ${fenBefore}`)
+      const sanMove = uciToSan(uciMove, fenBefore, promotion)
+      const moveInfo = getMoveFromUci(uciMove, fenBefore)
+      
+      console.log(`[HUMAN] SAN: ${sanMove}, moveInfo:`, moveInfo)
       
       if (moveInfo) {
         g.setPendingMove('player1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+        console.log(`[HUMAN] Pending move SET for player1`)
         setGameState(prev => ({
           ...prev,
           selectedMove: sanMove,
@@ -446,9 +457,15 @@ export function Game({ level }: GameProps) {
       
       g.lockPendingMove('player1')
       
+      console.log(`[RESOLVE] Both moves locked, waiting...`)
+      console.log(`[RESOLVE] isBothPendingLocked: ${g.isBothPendingLocked()}`)
+      console.log(`[RESOLVE] Pending moves:`, g.getPendingMoves())
+      
       await new Promise(resolve => setTimeout(resolve, 800))
       
       const resolved = await checkAndResolve()
+      
+      console.log(`[RESOLVE] checkAndResolve returned: ${resolved}`)
       
       if (!resolved) {
         return

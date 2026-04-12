@@ -120,29 +120,32 @@ export class ChessBot {
 
   private async evaluateMovesWithFallback(moves: Move[], fen: string): Promise<{ move: Move; score: number }[]> {
     const isBlackTurn = new Chess(fen).turn() === 'b'
+    const difficulty = DIFFICULTY[this.config.skillLevel] || DIFFICULTY[4]
+    const topMovesLimit = difficulty.topMoves
+    
     const uciMoves = moves.map(m => this.moveToUci(m))
+    const movesToEvaluate = uciMoves.slice(0, topMovesLimit)
     
     try {
-      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
+      const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, 12, 2600)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
-      
-      const evaluatedScores = results.map((r: { move: string; score: number }) => r.score)
-      const worstScore = evaluatedScores.length > 0 
-        ? (isBlackTurn ? Math.min(...evaluatedScores) : Math.max(...evaluatedScores))
-        : 0
       
       return moves.map(move => {
         const uci = this.moveToUci(move)
         const score = scoreMap.get(uci)
-        return {
-          move,
-          score: score !== undefined ? score : worstScore
+        if (score === undefined) {
+          return {
+            move,
+            score: isBlackTurn ? Infinity : -Infinity
+          }
         }
+        return { move, score }
       })
-    } catch {
+    } catch (error) {
+      console.warn('[ChessBot] Server evaluation failed, using random fallback:', error)
       return moves.map(move => ({
         move,
-        score: isBlackTurn ? Infinity : -Infinity
+        score: Math.random() * 10 * (isBlackTurn ? -1 : 1)
       }))
     }
   }

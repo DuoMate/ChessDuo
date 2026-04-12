@@ -229,11 +229,12 @@ app.post('/evaluate', async (req: Request, res: Response) => {
 
 app.post('/evaluate-multipv', async (req: Request, res: Response) => {
   try {
-    const { fen, depth = DEFAULT_DEPTH, uciElo = 2600, multiPv = 10 } = req.body as {
+    const { fen, depth = 12, uciElo = 2600, multiPv = 6, movetime = 1500 } = req.body as {
       fen: string
       depth?: number
       uciElo?: number
       multiPv?: number
+      movetime?: number
     }
 
     if (!fen) {
@@ -242,12 +243,13 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
     }
 
     const startTime = Date.now()
-    const moves = await evaluateWithMultiPV(fen, depth, uciElo, multiPv)
+    const moves = await evaluateWithMultiPV(fen, depth, uciElo, multiPv, movetime)
     const elapsed = Date.now() - startTime
 
     console.log(`[EVALUATE-MULTIPV] Response: ${JSON.stringify({ fen, moveCount: moves.length, moves: moves.slice(0, 3) })}`)
 
     res.json({
+      success: true,
       fen,
       moves,
       depth,
@@ -258,7 +260,8 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('[EVALUATE-MULTIPV] Error:', error)
     res.status(500).json({
-      error: 'MultiPV evaluation failed',
+      success: false,
+      error: 'engine_failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     })
   }
@@ -299,7 +302,7 @@ function parseMultiPVLine(line: string): { multipv: number; move: string; score:
   return { multipv, move, score }
 }
 
-function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number): Promise<{ move: string; score: number }[]> {
+function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv: number, movetime: number = 1500): Promise<{ move: string; score: number }[]> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
     const jobId = Math.random().toString(36).substring(7)
@@ -307,7 +310,7 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     console.log(`[MULTIPV:${jobId}] ============================================`)
     console.log(`[MULTIPV:${jobId}] STARTING MultiPV evaluation`)
     console.log(`[MULTIPV:${jobId}] FEN: ${fen}`)
-    console.log(`[MULTIPV:${jobId}] Config: depth=${depth}, UCI_Elo=${uciElo}, MultiPV=${multiPv}`)
+    console.log(`[MULTIPV:${jobId}] Config: depth=${depth}, movetime=${movetime}ms, UCI_Elo=${uciElo}, MultiPV=${multiPv}`)
     console.log(`[MULTIPV:${jobId}] ============================================`)
 
     const proc = spawn(STOCKFISH_PATH, [], {
@@ -341,7 +344,7 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
           proc.stdin.write(`setoption name MultiPV value ${multiPv}\n`)
           proc.stdin.write('isready\n')
           proc.stdin.write(`position fen ${fen}\n`)
-          proc.stdin.write(`go depth ${depth}\n`)
+          proc.stdin.write(`go depth ${depth} movetime ${movetime}\n`)
           console.log(`[MULTIPV:${jobId}] >> Commands sent, waiting for results...`)
         }
 
