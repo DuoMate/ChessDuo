@@ -22,7 +22,7 @@ export class StockfishEngine {
   private readonly MAX_RESTARTS = 3
   private initializationComplete = false
   private timeoutId: NodeJS.Timeout | null = null
-  private readonly EVAL_TIMEOUT_MS = 2500
+  private readonly EVAL_TIMEOUT_MS = 4000
 
   constructor() {
     this.spawn()
@@ -120,14 +120,12 @@ export class StockfishEngine {
         this.clearTimeout()
         console.log('[ENGINE] Bestmove received, resolving job')
         
-        const results = this.currentMoves
-          .filter(m => this.scores[m] !== undefined)
-          .map(m => ({
-            move: m,
-            score: this.scores[m]
-          }))
+        const results = this.currentMoves.map(m => ({
+          move: m,
+          score: this.scores[m] ?? 0
+        }))
 
-        console.log(`[ENGINE] Returning ${results.length} evaluated moves out of ${this.currentMoves.length} requested`)
+        console.log(`[ENGINE] Returning ${results.length} evaluated moves (all requested)`)
 
         if (this.currentResolve) {
           this.currentResolve(results)
@@ -150,13 +148,8 @@ export class StockfishEngine {
     const moveNumber = this.getMoveNumber(this.currentFen)
     const movetime = moveNumber < 10 ? 300 : 500
     
-    if (this.currentMoves.length > 0) {
-      const searchmovesCmd = `go movetime ${movetime} searchmoves ${this.currentMoves.join(' ')}`
-      console.log(`[ENGINE] Starting evaluation: ${this.currentMoves.length} moves, movetime=${movetime}ms`)
-      this.send(searchmovesCmd)
-    } else {
-      this.send(`go movetime ${movetime}`)
-    }
+    console.log(`[ENGINE] Starting evaluation: ${this.currentMoves.length} moves, movetime=${movetime}ms`)
+    this.send(`go movetime ${movetime}`)
     
     this.setTimeout()
   }
@@ -165,14 +158,12 @@ export class StockfishEngine {
     this.clearTimeout()
     this.timeoutId = setTimeout(() => {
       if (this.busy) {
-        console.warn(`[ENGINE] Evaluation timeout after ${this.EVAL_TIMEOUT_MS}ms, resolving with ${Object.keys(this.scores).length} captured moves`)
+        console.warn(`[ENGINE] Evaluation timeout after ${this.EVAL_TIMEOUT_MS}ms, resolving with captured moves`)
         
-        const results = this.currentMoves
-          .filter(m => this.scores[m] !== undefined)
-          .map(m => ({
-            move: m,
-            score: this.scores[m]
-          }))
+        const results = this.currentMoves.map(m => ({
+          move: m,
+          score: this.scores[m] ?? 0
+        }))
 
         if (this.currentResolve) {
           this.currentResolve(results)
