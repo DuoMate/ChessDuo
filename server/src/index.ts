@@ -276,6 +276,51 @@ app.post('/evaluate-multipv', async (req: Request, res: Response) => {
   }
 })
 
+app.post('/evaluate-moves', async (req: Request, res: Response) => {
+  try {
+    const { fen, moves, uciElo = 2600, movetime = 500 } = req.body as {
+      fen: string
+      moves: string[]
+      uciElo?: number
+      movetime?: number
+    }
+
+    if (!fen) {
+      res.status(400).json({ error: 'FEN is required' })
+      return
+    }
+
+    if (!moves || !Array.isArray(moves) || moves.length === 0) {
+      res.status(400).json({ error: 'Moves array is required' })
+      return
+    }
+
+    const startTime = Date.now()
+    
+    const results = await Promise.all(
+      moves.map(move => evaluateSingleMove(fen, move, uciElo, movetime))
+    )
+
+    const elapsed = Date.now() - startTime
+
+    console.log(`[EVALUATE-MOVES] Evaluated ${results.length} moves in ${elapsed}ms`)
+
+    res.json({
+      success: true,
+      fen,
+      moves: results,
+      timeMs: elapsed
+    })
+  } catch (error) {
+    console.error('[EVALUATE-MOVES] Error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'engine_failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+})
+
 function parseMultiPVLine(line: string): { multipv: number; move: string; score: number } | null {
   if (!line.includes('multipv') || !line.includes('pv')) {
     return null
@@ -440,6 +485,98 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
 
     proc.stdin.write('uci\n')
     console.log(`[MULTIPV:${jobId}] >> uci`)
+  })
+}
+
+function evaluateSingleMove(fen: string, move: string, uciElo: number, movetime: number): Promise<{ move: string; score: number }> {
+  return new Promise((resolve, reject) => {
+    const jobId = Math.random().toString(36).substring(7)
+
+    console.log(`[SINGLE:${jobId}] Evaluating move ${move} in position ${fen.substring(0, 40)}...`)
+
+    const proc = spawn(STOCKFISH_PATH, [], { stdio: ['pipe', 'pipe', 'pipe'] })
+
+    let resolved = false
+
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        proc.kill()
+        console.log(`[SINGLE:${jobId}] TIMEOUT for move ${move}`)
+        resolve({ move, score: -500 })
+      }
+    }, 10000)
+
+    proc.stdout.on('data', (data: Buffer) => {
+      const lines = data.toString().split('\n')
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+
+        if (line.includes('uciok')) {
+          proc.stdin.write('setoption name UCI_LimitStrength true\n')
+          proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
+          proc.stdin.write('ucinewgame\n')
+          proc.stdin.write('isready\n')
+        }
+
+        if (line.includes('readyok')) {
+          proc.stdin.write(`position fen ${fen} moves ${move}\n`)
+          proc.stdin.write(`go movetime ${movetime}\n`)
+        }
+
+        if (line.includes('score cp') && !resolved) {
+          const match = line.match(/score cp (-?\d+)/)
+          if (match) {
+            resolved = true
+            clearTimeout(timeout)
+            proc.kill()
+            const score = parseInt(match[1], 10)
+            console.log(`[SINGLE:${jobId}] Move ${move}: score=${score}`)
+            resolve({ move, score })
+          }
+        }
+
+        if (line.includes('score mate') && !resolved) {
+          const match = line.match(/score mate (-?\d+)/)
+          if (match) {
+            resolved = true
+            clearTimeout(timeout)
+            proc.kill()
+            const mate = parseInt(match[1], 10)
+            const score = mate > 0 ? 10000 - mate : -10000 - mate
+            console.log(`[SINGLE:${jobId}] Move ${move}: mate=${mate} score=${score}`)
+            resolve({ move, score })
+          }
+        }
+
+        if (line.startsWith('bestmove') && !resolved) {
+          resolved = true
+          clearTimeout(timeout)
+          proc.kill()
+          console.log(`[SINGLE:${jobId}] Move ${move}: no score (using -500)`)
+          resolve({ move, score: -500 })
+        }
+      }
+    })
+
+    proc.stderr.on('data', (data: Buffer) => {
+      const str = data.toString().trim()
+      if (str) {
+        console.log(`[SINGLE:${jobId}] STDERR: ${str}`)
+      }
+    })
+
+    proc.on('error', (err) => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        console.log(`[SINGLE:${jobId}] ERROR: ${err.message}`)
+        reject(err)
+      }
+    })
+
+    proc.stdin.write('uci\n')
   })
 }
 
