@@ -106,9 +106,6 @@ export class ServerMoveEvaluator {
     }
   }
 
-    throw lastError || new Error('MultiPV evaluation failed after retries')
-  }
-
   async evaluatePosition(fen: string, depth: number = 15, uciElo: number = 2600, retries: number = 3): Promise<number> {
     if (!this.serverUrl) {
       throw new Error('Stockfish server URL not configured')
