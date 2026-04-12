@@ -33,44 +33,8 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    const Chess = (await import('chess.js')).Chess
-    const chess = new Chess(fen)
-    const verboseMoves = chess.moves({ verbose: true })
-
-    const uciMoves = moves.map(move => {
-      const normalized = move.replace(/-/g, '')
-      const from = normalized.substring(0, 2)
-      const to = normalized.substring(2, 4)
-      const promotion = normalized.length > 4 ? normalized[4] : undefined
-      
-      const verbose = verboseMoves.find(vm => 
-        (vm.from + vm.to) === normalized ||
-        (vm.from + vm.to + (vm.promotion || '')) === normalized
-      )
-      
-      if (verbose) {
-        let uci = `${verbose.from}${verbose.to}`
-        if (verbose.promotion) uci += verbose.promotion
-        return uci
-      }
-      
-      if (/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(normalized)) {
-        return normalized
-      }
-      
-      const bySan = verboseMoves.find(vm => vm.san === move)
-      if (bySan) {
-        let uci = `${bySan.from}${bySan.to}`
-        if (bySan.promotion) uci += bySan.promotion
-        return uci
-      }
-      
-      return normalized
-    })
-
     console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
-    console.log(`[EVALUATOR] Input moves: ${moves.join(', ')}`)
-    console.log(`[EVALUATOR] UCI moves for Stockfish: ${uciMoves.join(', ')}`)
+    console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
 
     let lastError: Error | null = null
     
@@ -84,7 +48,7 @@ export class ServerMoveEvaluator {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500, searchMoves: uciMoves })
+          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500 })
         })
 
         if (!response.ok) {
@@ -97,17 +61,8 @@ export class ServerMoveEvaluator {
         console.log(`[EVALUATOR] MultiPV response received in ${elapsed}ms`)
         
         const results = data.moves.map((m: { move: string; score: number }) => {
-          console.log(`[EVALUATOR] UCI ${m.move} → score=${m.score}`)
-          const uci = m.move
-          const from = uci.substring(0, 2)
-          const to = uci.substring(2, 4)
-          const promotion = uci.length > 4 ? uci[4] : undefined
-          const verbose = verboseMoves.find(vm => 
-            vm.from === from && vm.to === to && (promotion ? vm.promotion === promotion : true)
-          )
-          const san = verbose ? verbose.san : uci
-          console.log(`[EVALUATOR] SAN ${san} (from ${from} to ${to})`)
-          return { move: san, score: m.score }
+          console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
+          return { move: m.move, score: m.score }
         })
         
         console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
@@ -170,9 +125,7 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    const Chess = (await import('chess.js')).Chess
-    const chess = new Chess(fen)
-    const verboseMoves = chess.moves({ verbose: true })
+    const chess = new (await import('chess.js')).Chess(fen)
     const moves = chess.moves()
 
     if (moves.length === 0) {
@@ -183,20 +136,7 @@ export class ServerMoveEvaluator {
       return { move: moves[0], score: 0 }
     }
 
-    const uciMoves = verboseMoves.map(m => {
-      let uci = `${m.from}${m.to}`
-      if (m.promotion) uci += m.promotion
-      return uci
-    })
-
-    const results = await this.evaluateMoves(uciMoves, fen, depth, uciElo)
-    
-    if (results.length === 0) {
-      console.warn('[EVALUATOR] getBestScore: no results, returning random move')
-      const randomMove = moves[Math.floor(Math.random() * moves.length)]
-      return { move: randomMove, score: 0 }
-    }
-    
+    const results = await this.evaluateMoves(moves, fen, depth, uciElo)
     const best = results.reduce((a, b) => a.score > b.score ? a : b)
 
     return { move: best.move, score: best.score }
