@@ -363,15 +363,21 @@ export class LocalGame {
     
     const currentFen = this.gameState.fen
     
-    const turnStartFen = currentFen
-    
+     const turnStartFen = currentFen
+     
      const optimalMove = await this.evaluator.getBestScore(turnStartFen)
      const bestMoveScore = optimalMove.score
      
      const movesToEvaluate = [player1Move, player2Move]
      const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
-     const player1Score = evalResults[0].score
-     const player2Score = evalResults[1].score
+     
+     const getScore = (results: { move: string; score: number }[], move: string): number => {
+       const found = results.find(r => r.move === move)
+       return found ? found.score : 0
+     }
+     
+     const player1Score = getScore(evalResults, player1Move)
+     const player2Score = getScore(evalResults, player2Move)
 
      const player1Loss = Math.abs(bestMoveScore - player1Score)
      const player2Loss = Math.abs(bestMoveScore - player2Score)
