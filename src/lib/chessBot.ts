@@ -193,7 +193,14 @@ export class ChessBot {
       console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
     })
 
-    const topMoves = sortedMoves.slice(0, Math.min(difficulty.topMoves, sortedMoves.length))
+    const validMoves = sortedMoves.filter(m => isFinite(m.score))
+    console.log(`[ChessBot] Filtered ${sortedMoves.length - validMoves.length} unevaluated moves (score=±Infinity)`)
+
+    if (validMoves.length === 0) {
+      throw new Error('No valid moves to select from')
+    }
+
+    const topMoves = validMoves.slice(0, Math.min(difficulty.topMoves, validMoves.length))
     console.log(`[ChessBot] Top ${topMoves.length} candidates: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
 
     const movesWithNoise = this.addNoise(topMoves, difficulty.noise)
