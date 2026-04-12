@@ -478,6 +478,9 @@ export function Game({ level }: GameProps) {
         console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
         g.startPendingTurn()
         startTimer()
+      } else {
+        console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
+        await handleResolutionComplete()
       }
     } catch (e) {
       console.warn('[HUMAN] Invalid move:', uciMove, e)
