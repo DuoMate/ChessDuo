@@ -123,20 +123,21 @@ export class ServerMoveEvaluator {
     }
 
     const chess = new (await import('chess.js')).Chess(fen)
-    const moves = chess.moves()
+    const allMoves = chess.moves()
 
-    if (moves.length === 0) {
+    if (allMoves.length === 0) {
       return { move: '', score: 0 }
     }
 
-    if (moves.length === 1) {
-      return { move: moves[0], score: 0 }
+    if (allMoves.length === 1) {
+      return { move: allMoves[0], score: 0 }
     }
 
-    const results = await this.evaluateMoves(moves, fen, depth, uciElo)
+    const topMoves = allMoves.slice(0, 6)
+    const results = await this.evaluateMoves(topMoves, fen, depth, uciElo)
     
     if (results.length === 0) {
-      const randomMove = moves[Math.floor(Math.random() * moves.length)]
+      const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)]
       return { move: randomMove, score: 0 }
     }
     
