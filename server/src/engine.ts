@@ -191,7 +191,13 @@ export class StockfishEngine {
     this.send(`position fen ${job.fen}`)
     const moveNumber = this.getMoveNumber(job.fen)
     const movetime = moveNumber < 10 ? 300 : 500
-    this.send(`go movetime ${movetime}`)
+    
+    if (job.moves.length > 0) {
+      const searchmovesCmd = `go movetime ${movetime} searchmoves ${job.moves.join(' ')}`
+      this.send(searchmovesCmd)
+    } else {
+      this.send(`go movetime ${movetime}`)
+    }
   }
 
   evaluateMoves(fen: string, moves: string[], movetime: number = 500): Promise<{ move: string; score: number }[]> {
