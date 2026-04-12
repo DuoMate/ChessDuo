@@ -33,7 +33,7 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
+    console.log(`[EVALUATOR] Evaluating ${moves.length} moves individually: ${fen.substring(0, 60)}...`)
     console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
 
     let lastError: Error | null = null
@@ -43,22 +43,22 @@ export class ServerMoveEvaluator {
       try {
         console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
-        const response = await fetch(`${this.serverUrl}/evaluate-multipv`, {
+        const response = await fetch(`${this.serverUrl}/evaluate-moves`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500 })
+          body: JSON.stringify({ fen, moves, uciElo, movetime: 800 })
         })
 
         if (!response.ok) {
-          throw new Error(`MultiPV evaluation failed: ${response.statusText}`)
+          throw new Error(`Move evaluation failed: ${response.statusText}`)
         }
 
         const data = await response.json()
         const elapsed = Date.now() - attemptStart
         
-        console.log(`[EVALUATOR] MultiPV response received in ${elapsed}ms`)
+        console.log(`[EVALUATOR] Response received in ${elapsed}ms`)
         
         const results = data.moves.map((m: { move: string; score: number }) => {
           console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
