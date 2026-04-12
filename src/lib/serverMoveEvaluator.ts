@@ -47,7 +47,7 @@ export class ServerMoveEvaluator {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, moves, uciElo, movetime: 800 })
+          body: JSON.stringify({ fen, moves, uciElo, movetime: 1500 })
         })
 
         if (response.ok) {

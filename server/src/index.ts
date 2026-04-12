@@ -572,8 +572,20 @@ function evaluateSingleMove(fen: string, move: string, uciElo: number, movetime:
         resolved = true
         clearTimeout(timeout)
         console.log(`[SINGLE:${jobId}] ERROR: ${err.message}`)
-        reject(err)
+        resolve({ move, score: -500 })
       }
+    })
+
+    proc.on('exit', (code) => {
+      if (!resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        console.log(`[SINGLE:${jobId}] EXITED with code ${code}`)
+      }
+    })
+
+    proc.stdin.on('error', () => {
+      console.log(`[SINGLE:${jobId}] stdin error (EPIPE likely)`)
     })
 
     proc.stdin.write('uci\n')
@@ -699,6 +711,15 @@ function enqueuePlayMove(fen: string, uciElo: number, movetime: number): Promise
 process.on('SIGTERM', () => {
   console.log('[SERVER] SIGTERM received, shutting down...')
   process.exit(0)
+})
+
+process.on('uncaughtException', (err) => {
+  console.error('[SERVER] Uncaught exception:', err.message)
+  console.error(err.stack)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[SERVER] Unhandled rejection:', reason)
 })
 
 app.listen(PORT, () => {
