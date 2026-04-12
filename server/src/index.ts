@@ -332,6 +332,7 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
     const results: Record<number, { move: string; score: number }> = {}
     let resolved = false
     let uciReady = false
+    let ready = false
 
     const timeout = setTimeout(() => {
       if (!resolved) {
@@ -350,13 +351,22 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
 
         if (line.includes('uciok') && !uciReady) {
           uciReady = true
-          console.log(`[MULTIPV:${jobId}] >> UCI ready, sending commands...`)
+          console.log(`[MULTIPV:${jobId}] >> UCI ready, setting options...`)
+          const effectiveMultiPv = searchMoves && searchMoves.length > 0 ? Math.min(searchMoves.length, multiPv) : multiPv
+          console.log(`[MULTIPV:${jobId}] >> Setting MultiPV to ${effectiveMultiPv}`)
           proc.stdin.write('setoption name UCI_LimitStrength true\n')
           proc.stdin.write(`setoption name UCI_Elo ${uciElo}\n`)
-          proc.stdin.write(`setoption name MultiPV value ${multiPv}\n`)
+          proc.stdin.write(`setoption name MultiPV value ${effectiveMultiPv}\n`)
+          proc.stdin.write('ucinewgame\n')
           proc.stdin.write('isready\n')
+          console.log(`[MULTIPV:${jobId}] >> Waiting for readyok...`)
+        }
+
+        if (line.includes('readyok') && !ready) {
+          ready = true
+          console.log(`[MULTIPV:${jobId}] >> Ready, sending position and go...`)
           proc.stdin.write(`position fen ${fen}\n`)
-          let goCmd = `go depth ${depth} movetime ${movetime}`
+          let goCmd = `go movetime ${movetime}`
           if (searchMoves && searchMoves.length > 0) {
             goCmd += ' searchmoves ' + searchMoves.join(' ')
           }
@@ -369,6 +379,10 @@ function evaluateWithMultiPV(fen: string, depth: number, uciElo: number, multiPv
 
           const parsed = parseMultiPVLine(line)
           if (parsed) {
+            if (searchMoves && searchMoves.length > 0 && !searchMoves.includes(parsed.move)) {
+              console.log(`[MULTIPV:${jobId}] ## FILTERED (not in searchmoves): ${parsed.move}`)
+              continue
+            }
             results[parsed.multipv] = { move: parsed.move, score: parsed.score }
             console.log(`[MULTIPV:${jobId}] ## multipv ${parsed.multipv}: move=${parsed.move} score=${parsed.score}`)
           } else {
