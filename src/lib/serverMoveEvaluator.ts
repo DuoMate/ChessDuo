@@ -36,20 +36,41 @@ export class ServerMoveEvaluator {
     const Chess = (await import('chess.js')).Chess
     const chess = new Chess(fen)
     const verboseMoves = chess.moves({ verbose: true })
-    
-    const uciMoves = moves.map(san => {
-      const verbose = verboseMoves.find(m => m.san === san || m.lan === san || (m.from + m.to) === san)
+
+    const uciMoves = moves.map(move => {
+      const normalized = move.replace(/-/g, '')
+      const from = normalized.substring(0, 2)
+      const to = normalized.substring(2, 4)
+      const promotion = normalized.length > 4 ? normalized[4] : undefined
+      
+      const verbose = verboseMoves.find(vm => 
+        (vm.from + vm.to) === normalized ||
+        (vm.from + vm.to + (vm.promotion || '')) === normalized
+      )
+      
       if (verbose) {
         let uci = `${verbose.from}${verbose.to}`
         if (verbose.promotion) uci += verbose.promotion
         return uci
       }
-      return san
+      
+      if (/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(normalized)) {
+        return normalized
+      }
+      
+      const bySan = verboseMoves.find(vm => vm.san === move)
+      if (bySan) {
+        let uci = `${bySan.from}${bySan.to}`
+        if (bySan.promotion) uci += bySan.promotion
+        return uci
+      }
+      
+      return normalized
     })
 
     console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
-    console.log(`[EVALUATOR] SAN moves: ${moves.join(', ')}`)
-    console.log(`[EVALUATOR] UCI moves: ${uciMoves.join(', ')}`)
+    console.log(`[EVALUATOR] Input moves: ${moves.join(', ')}`)
+    console.log(`[EVALUATOR] UCI moves for Stockfish: ${uciMoves.join(', ')}`)
 
     let lastError: Error | null = null
     
@@ -149,7 +170,9 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    const chess = new (await import('chess.js')).Chess(fen)
+    const Chess = (await import('chess.js')).Chess
+    const chess = new Chess(fen)
+    const verboseMoves = chess.moves({ verbose: true })
     const moves = chess.moves()
 
     if (moves.length === 0) {
@@ -160,7 +183,13 @@ export class ServerMoveEvaluator {
       return { move: moves[0], score: 0 }
     }
 
-    const results = await this.evaluateMoves(moves, fen, depth, uciElo)
+    const uciMoves = verboseMoves.map(m => {
+      let uci = `${m.from}${m.to}`
+      if (m.promotion) uci += m.promotion
+      return uci
+    })
+
+    const results = await this.evaluateMoves(uciMoves, fen, depth, uciElo)
     
     if (results.length === 0) {
       console.warn('[EVALUATOR] getBestScore: no results, returning random move')
