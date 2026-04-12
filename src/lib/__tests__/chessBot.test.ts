@@ -10,7 +10,7 @@ describe('ChessBot', () => {
       const move = bot.selectMove(fen)
       
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
     })
 
     test('returns UCI format move', () => {
@@ -19,8 +19,9 @@ describe('ChessBot', () => {
       
       const move = bot.selectMove(fen)
       
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
-      const [from, to] = move!.split('-')
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
+      const from = move!.substring(0, 2)
+      const to = move!.substring(2, 4)
       expect(from).toMatch(/^[a-h][1-8]$/)
       expect(to).toMatch(/^[a-h][1-8]$/)
     })
@@ -30,7 +31,8 @@ describe('ChessBot', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
       const move = bot.selectMove(fen)
-      const [from, to] = move!.split('-')
+      const from = move!.substring(0, 2)
+      const to = move!.substring(2, 4)
       
       const chess = new Chess(fen)
       const legalMoves = chess.moves({ verbose: true })
@@ -177,10 +179,12 @@ describe('ChessBot', () => {
 })
 
 function moveToSan(uciMove: string, fen: string): string {
-  const [from, to] = uciMove.split('-')
+  const from = uciMove.substring(0, 2)
+  const to = uciMove.substring(2, 4)
+  const promotion = uciMove.length === 5 ? uciMove.substring(4, 5) : undefined
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
   
-  const matchedMove = moves.find(m => m.from === from && m.to === to)
+  const matchedMove = moves.find(m => m.from === from && m.to === to && m.promotion === promotion)
   return matchedMove?.san || ''
 }

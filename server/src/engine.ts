@@ -114,10 +114,14 @@ export class StockfishEngine {
       if (line.startsWith('bestmove') && this.busy) {
         console.log('[ENGINE] Bestmove received, resolving job')
         
-        const results = this.currentMoves.map(m => ({
-          move: m,
-          score: this.scores[m] ?? -1000
-        }))
+        const results = this.currentMoves
+          .filter(m => this.scores[m] !== undefined)
+          .map(m => ({
+            move: m,
+            score: this.scores[m]
+          }))
+
+        console.log(`[ENGINE] Returning ${results.length} evaluated moves out of ${this.currentMoves.length} requested`)
 
         if (this.currentResolve) {
           this.currentResolve(results)

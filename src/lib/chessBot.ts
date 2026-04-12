@@ -130,17 +130,30 @@ export class ChessBot {
       const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, 12, 2600)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
-      return moves.map(move => {
+      const evaluatedMoves: { move: Move; score: number }[] = []
+      const unevaluatedMoves: Move[] = []
+      
+      for (const move of moves) {
         const uci = this.moveToUci(move)
         const score = scoreMap.get(uci)
-        if (score === undefined) {
-          return {
-            move,
-            score: -Infinity
-          }
+        if (score !== undefined) {
+          evaluatedMoves.push({ move, score })
+        } else {
+          unevaluatedMoves.push(move)
         }
-        return { move, score }
+      }
+      
+      const fallbackForUnevaluated = unevaluatedMoves.map(move => {
+        const chess = new Chess(fen)
+        try {
+          chess.move(move)
+          return { move, score: this.fallbackEvaluate(chess.fen()) }
+        } catch {
+          return { move, score: isBlackTurn ? 1000 : -1000 }
+        }
       })
+      
+      return [...evaluatedMoves, ...fallbackForUnevaluated]
     } catch (error) {
       console.warn('[ChessBot] Server evaluation failed, using random fallback:', error)
       return moves.map(move => ({
