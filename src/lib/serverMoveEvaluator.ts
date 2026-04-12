@@ -47,7 +47,7 @@ export class ServerMoveEvaluator {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, moves, uciElo, movetime: 1500 })
+          body: JSON.stringify({ fen, moves, movetime: 500 })
         })
 
         if (response.ok) {
@@ -63,7 +63,7 @@ export class ServerMoveEvaluator {
           return results
         }
 
-        console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}, trying fallback...`)
+        console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}`)
         throw new Error(`HTTP ${response.status}`)
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
@@ -74,36 +74,7 @@ export class ServerMoveEvaluator {
       }
     }
 
-    console.log(`[EVALUATOR] Falling back to /evaluate-multipv...`)
-    return this.evaluateMovesMultiPV(moves, fen, depth, uciElo)
-  }
-
-  private async evaluateMovesMultiPV(moves: string[], fen: string, depth: number, uciElo: number): Promise<{ move: string; score: number }[]> {
-    try {
-      const response = await fetch(`${this.serverUrl}/evaluate-multipv`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: Math.min(moves.length, 10), movetime: 1500 })
-      })
-
-      if (!response.ok) {
-        throw new Error(`MultiPV evaluation failed: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      const results = data.moves.map((m: { move: string; score: number }) => {
-        console.log(`[EVALUATOR] MultiPV ${m.move} → score=${m.score}`)
-        return { move: m.move, score: m.score }
-      })
-
-      console.log(`[EVALUATOR] MultiPV scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
-      return results
-    } catch (error) {
-      console.error(`[EVALUATOR] MultiPV fallback also failed: ${error}`)
-      throw error
-    }
+    throw lastError || new Error('Move evaluation failed after retries')
   }
 
   async evaluatePosition(fen: string, depth: number = 15, uciElo: number = 2600, retries: number = 3): Promise<number> {
