@@ -33,8 +33,23 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
+    const Chess = (await import('chess.js')).Chess
+    const chess = new Chess(fen)
+    const verboseMoves = chess.moves({ verbose: true })
+    
+    const uciMoves = moves.map(san => {
+      const verbose = verboseMoves.find(m => m.san === san || m.lan === san || (m.from + m.to) === san)
+      if (verbose) {
+        let uci = `${verbose.from}${verbose.to}`
+        if (verbose.promotion) uci += verbose.promotion
+        return uci
+      }
+      return san
+    })
+
     console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
-    console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
+    console.log(`[EVALUATOR] SAN moves: ${moves.join(', ')}`)
+    console.log(`[EVALUATOR] UCI moves: ${uciMoves.join(', ')}`)
 
     let lastError: Error | null = null
     
@@ -48,7 +63,7 @@ export class ServerMoveEvaluator {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500, searchMoves: moves })
+          body: JSON.stringify({ fen, depth: 12, uciElo, multiPv: 6, movetime: 1500, searchMoves: uciMoves })
         })
 
         if (!response.ok) {
@@ -61,8 +76,17 @@ export class ServerMoveEvaluator {
         console.log(`[EVALUATOR] MultiPV response received in ${elapsed}ms`)
         
         const results = data.moves.map((m: { move: string; score: number }) => {
-          console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
-          return { move: m.move, score: m.score }
+          console.log(`[EVALUATOR] UCI ${m.move} → score=${m.score}`)
+          const uci = m.move
+          const from = uci.substring(0, 2)
+          const to = uci.substring(2, 4)
+          const promotion = uci.length > 4 ? uci[4] : undefined
+          const verbose = verboseMoves.find(vm => 
+            vm.from === from && vm.to === to && (promotion ? vm.promotion === promotion : true)
+          )
+          const san = verbose ? verbose.san : uci
+          console.log(`[EVALUATOR] SAN ${san} (from ${from} to ${to})`)
+          return { move: san, score: m.score }
         })
         
         console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
@@ -137,6 +161,13 @@ export class ServerMoveEvaluator {
     }
 
     const results = await this.evaluateMoves(moves, fen, depth, uciElo)
+    
+    if (results.length === 0) {
+      console.warn('[EVALUATOR] getBestScore: no results, returning random move')
+      const randomMove = moves[Math.floor(Math.random() * moves.length)]
+      return { move: randomMove, score: 0 }
+    }
+    
     const best = results.reduce((a, b) => a.score > b.score ? a : b)
 
     return { move: best.move, score: best.score }
