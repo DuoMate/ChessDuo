@@ -56,6 +56,7 @@ export class StockfishEngine {
 
     this.send('uci')
     this.send('setoption name UCI_LimitStrength true')
+    this.send('setoption name MultiPV value 6')
     this.send('isready')
   }
 
@@ -87,7 +88,7 @@ export class StockfishEngine {
       }
 
       if (line.includes(' pv ') && line.includes('score')) {
-        const moveMatch = line.match(/\bpv\s+(\S+)/)
+        const moveMatch = line.match(/\bpv\s+([a-h][1-8][a-h][1-8][qrbn]?)/)
         const cpMatch = line.match(/score cp (-?\d+)/)
         const mateMatch = line.match(/score mate (-?\d+)/)
 
@@ -104,6 +105,7 @@ export class StockfishEngine {
 
           if (move.length >= 4) {
             this.scores[move] = score
+            console.log(`[ENGINE] Captured: move=${move} score=${score}`)
           }
         }
         continue
