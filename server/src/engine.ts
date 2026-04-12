@@ -59,6 +59,7 @@ export class StockfishEngine {
 
     this.send('uci')
     this.send('setoption name UCI_LimitStrength true')
+    this.send('setoption name UCI_Elo 2600')
     this.send('setoption name MultiPV value 6')
     this.send('isready')
   }
@@ -89,7 +90,7 @@ export class StockfishEngine {
 
       if (line.includes(' pv ') && line.includes('score')) {
         const depthMatch = line.match(/\bdepth\s+(\d+)/)
-        if (!depthMatch || parseInt(depthMatch[1]) < 8) {
+        if (!depthMatch) {
           continue
         }
 
@@ -146,7 +147,7 @@ export class StockfishEngine {
 
   private startEvaluation(): void {
     const moveNumber = this.getMoveNumber(this.currentFen)
-    const movetime = moveNumber < 10 ? 300 : 500
+    const movetime = moveNumber < 10 ? 800 : 1200
     
     console.log(`[ENGINE] Starting evaluation: ${this.currentMoves.length} moves, movetime=${movetime}ms`)
     this.send(`go movetime ${movetime}`)
