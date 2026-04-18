@@ -4,15 +4,15 @@
 services:
   - type: web
     name: chessduo-frontend
-    region: oregon
+    region: ohio
     plan: free
     rootDirectory: /
     buildCommand: npm run build
-    startCommand: npm start
+    startCommand: npm run start
     healthCheckPath: /healthz
     envVars:
       - key: PORT
-        value: 3000
+        value: "3000"
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_SUPABASE_URL
