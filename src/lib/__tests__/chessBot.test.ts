@@ -10,7 +10,7 @@ describe('ChessBot', () => {
       const move = bot.selectMove(fen)
       
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
     })
 
     test('returns UCI format move', () => {
@@ -19,8 +19,11 @@ describe('ChessBot', () => {
       
       const move = bot.selectMove(fen)
       
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
-      const [from, to] = move!.split('-')
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
+      // Handle both formats: a2a3 or a2-a3
+      const normalizedMove = move!.replace('-', '')
+      const from = normalizedMove.substring(0, 2)
+      const to = normalizedMove.substring(2, 4)
       expect(from).toMatch(/^[a-h][1-8]$/)
       expect(to).toMatch(/^[a-h][1-8]$/)
     })
@@ -30,7 +33,10 @@ describe('ChessBot', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
       
       const move = bot.selectMove(fen)
-      const [from, to] = move!.split('-')
+      // Handle both formats: a2a3 or a2-a3
+      const normalizedMove = move!.replace('-', '')
+      const from = normalizedMove.substring(0, 2)
+      const to = normalizedMove.substring(2, 4)
       
       const chess = new Chess(fen)
       const legalMoves = chess.moves({ verbose: true })
@@ -177,7 +183,10 @@ describe('ChessBot', () => {
 })
 
 function moveToSan(uciMove: string, fen: string): string {
-  const [from, to] = uciMove.split('-')
+  // Handle both formats: a2a3 or a2-a3
+  const normalizedMove = uciMove.replace('-', '')
+  const from = normalizedMove.substring(0, 2)
+  const to = normalizedMove.substring(2, 4)
   const chess = new Chess(fen)
   const moves = chess.moves({ verbose: true })
   

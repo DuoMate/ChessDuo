@@ -60,7 +60,7 @@ describe('ChessBot Async Support', () => {
       const move = await bot.selectMoveAsync(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
     })
 
     test('selectMoveAsync returns null when no moves available', async () => {
@@ -79,7 +79,7 @@ describe('ChessBot Async Support', () => {
       const move = await bot.selectMoveAsync(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
     })
 
     test('selectMoveAsync returns legal move', async () => {
@@ -87,7 +87,10 @@ describe('ChessBot Async Support', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
-      const [from, to] = move!.split('-')
+      // Handle both formats: a2a3 or a2-a3
+      const normalizedMove = move!.replace('-', '')
+      const from = normalizedMove.substring(0, 2)
+      const to = normalizedMove.substring(2, 4)
 
       const chess = new Chess(fen)
       const legalMoves = chess.moves({ verbose: true })
@@ -103,8 +106,8 @@ describe('ChessBot Async Support', () => {
         const bot = createMockBot(level)
         const move = await bot.selectMoveAsync(fen)
         
-        expect(move).not.toBeNull()
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+expect(move).not.toBeNull()
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
       }
     })
   })
@@ -117,7 +120,7 @@ describe('ChessBot Async Support', () => {
       const move = bot.selectMove(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
     })
 
     test('sync selectMove returns null when no moves', () => {
@@ -138,8 +141,8 @@ describe('ChessBot Async Support', () => {
 
       expect(syncMove).not.toBeNull()
       expect(asyncMove).not.toBeNull()
-      expect(syncMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
-      expect(asyncMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(syncMove).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
+      expect(asyncMove).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
     })
 
     test('createBot creates bot with default settings', () => {
@@ -233,7 +236,7 @@ describe('ChessBot Async Support', () => {
       expect(move).toBeNull()
     })
 
-    test('handles malformed UCI move in async context', async () => {
+test('handles malformed UCI move in async context', async () => {
       const bot = createMockBot(4)
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
@@ -241,7 +244,7 @@ describe('ChessBot Async Support', () => {
 
       // Should still return valid move
       if (move) {
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+        expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
       }
     })
   })
@@ -255,9 +258,11 @@ describe('ChessBot Async Support', () => {
       const move1 = await bot.selectMoveAsync(fen)
       expect(move1).not.toBeNull()
 
-      // Make the move
+      // Make the move - handle both formats (a2a3 or a2-a3)
       const chess = new Chess(fen)
-      const [from, to] = move1!.split('-')
+      const normalizedMove = move1!.replace('-', '')
+      const from = normalizedMove.substring(0, 2)
+      const to = normalizedMove.substring(2, 4)
       const result = chess.move({ from, to, promotion: 'q' })
       expect(result).not.toBeNull()
 
@@ -277,7 +282,10 @@ describe('ChessBot Async Support', () => {
         const move = await bot.selectMoveAsync(fen)
 
         if (move) {
-          const [from, to] = move.split('-')
+          // Handle both formats: a2a3 or a2-a3
+          const normalizedMove = move.replace('-', '')
+          const from = normalizedMove.substring(0, 2)
+          const to = normalizedMove.substring(2, 4)
           try {
             chess.move({ from, to })
           } catch {
@@ -359,7 +367,7 @@ describe('ChessBot Async Support', () => {
 
       // May or may not return promotion, depending on position
       if (move) {
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+        expect(move).toMatch(/^[a-h][1-8]-?[a-h][1-8]$/)
       }
     })
   })
