@@ -68,7 +68,7 @@ export const DIFFICULTY: Record<number, DifficultyConfig> = {
     weights: [0.30, 0.25, 0.20, 0.15, 0.08, 0.02],
     blunderChance: 0.0,
     weirdChance: 0.02,
-    maxDrop: 200
+    maxDrop: 60
   }
 }
 

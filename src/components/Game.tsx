@@ -16,8 +16,8 @@ interface GameProps {
   level?: number
 }
 
-function normalizeUci(uciMove: string): string {
-  return uciMove.replace(/-/g, '')
+function normalizeUci(uci: string): string {
+  return uci.replace(/-/g, '')
 }
 
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
@@ -400,11 +400,16 @@ export function Game({ level }: GameProps) {
          highlightSquares: null
        }))
       
-      const sanMove = uciToSan(uciMove, g.board.fen(), promotion)
-      const moveInfo = getMoveFromUci(uciMove, g.board.fen())
+      const fenBefore = g.board.fen()
+      console.log(`[HUMAN] UCI: ${uciMove}, FEN: ${fenBefore}`)
+      const sanMove = uciToSan(uciMove, fenBefore, promotion)
+      const moveInfo = getMoveFromUci(uciMove, fenBefore)
+      
+      console.log(`[HUMAN] SAN: ${sanMove}, moveInfo:`, moveInfo)
       
       if (moveInfo) {
         g.setPendingMove('player1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+        console.log(`[HUMAN] Pending move SET for player1`)
         setGameState(prev => ({
           ...prev,
           selectedMove: sanMove,
@@ -452,9 +457,15 @@ export function Game({ level }: GameProps) {
       
       g.lockPendingMove('player1')
       
+      console.log(`[RESOLVE] Both moves locked, waiting...`)
+      console.log(`[RESOLVE] isBothPendingLocked: ${g.isBothPendingLocked()}`)
+      console.log(`[RESOLVE] Pending moves:`, g.getPendingMoves())
+      
       await new Promise(resolve => setTimeout(resolve, 800))
       
       const resolved = await checkAndResolve()
+      
+      console.log(`[RESOLVE] checkAndResolve returned: ${resolved}`)
       
       if (!resolved) {
         return
@@ -467,6 +478,9 @@ export function Game({ level }: GameProps) {
         console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
         g.startPendingTurn()
         startTimer()
+      } else {
+        console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
+        await handleResolutionComplete()
       }
     } catch (e) {
       console.warn('[HUMAN] Invalid move:', uciMove, e)
@@ -589,47 +603,12 @@ export function Game({ level }: GameProps) {
           </div>
         </div>
 
-        <AnimatePresence>
-        {gameState.status === GameStatus.GAME_OVER && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-4 p-6 bg-gray-800/90 backdrop-blur rounded-xl border-2 border-yellow-500 text-center"
-          >
-            <motion.h2 
-              className="text-2xl font-bold text-yellow-400 mb-2"
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
-              Game Over!
-            </motion.h2>
-            <p className="text-lg font-medium text-white mb-4">{game.getResult()}</p>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <div className="text-gray-400 text-xs">Total Moves</div>
-                <div className="text-xl font-bold text-white">{game.getStats().movesPlayed}</div>
-              </div>
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <div className="text-gray-400 text-xs">Sync Rate</div>
-                <div className="text-xl font-bold text-green-400">{Math.round(game.getStats().syncRate * 100)}%</div>
-              </div>
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <div className="text-gray-400 text-xs">Your Accuracy</div>
-                <div className="text-xl font-bold text-blue-400">{Math.round(game.getStats().player1Accuracy)}%</div>
-              </div>
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <div className="text-gray-400 text-xs">Conflicts</div>
-                <div className="text-xl font-bold text-red-400">{game.getStats().conflicts}</div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
         <div className="mt-4 text-center">
           {gameState.selectedMove && (
             <p className="text-green-400">Selected: {gameState.selectedMove}</p>
+          )}
+          {gameState.status === GameStatus.GAME_OVER && (
+            <p className="text-xl font-bold text-yellow-400">{game.getResult()}</p>
           )}
           {gameState.isBotThinking && (
             <p className="text-blue-400">Bot is making a move...</p>
