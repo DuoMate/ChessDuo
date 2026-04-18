@@ -565,17 +565,19 @@ export function Game({ level }: GameProps) {
         </div>
 
         <div className="flex items-start justify-center gap-6 mb-4">
-          <div className="w-48 flex flex-col items-center gap-4">
+          {/* Left side - WHITE team (Timer + Captured) */}
+          <div className="w-40 flex flex-col items-center gap-4">
             <div className="w-16 h-16 flex items-center justify-center">
               <TeamTimer 
                 seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive}
-                currentTeam={gameState.currentTurn}
+                isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
+                currentTeam={Team.WHITE}
               />
             </div>
             <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
           </div>
           
+          {/* Chess Board */}
           <div className="w-[500px] h-[500px] flex-shrink-0 relative">
             <ChessBoard 
               fen={gameState.fen}
@@ -589,7 +591,15 @@ export function Game({ level }: GameProps) {
             />
           </div>
           
-          <div className="w-64 flex flex-col items-center gap-4">
+          {/* Right side - BLACK team (Timer + Resolution + Captured) */}
+          <div className="w-40 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 flex items-center justify-center">
+              <TeamTimer 
+                seconds={gameState.timerSeconds}
+                isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
+                currentTeam={Team.BLACK}
+              />
+            </div>
             <AnimatePresence>
               {gameState.showResolution && gameState.moveComparison && (
                 <MoveComparisonPanel 

@@ -30,18 +30,18 @@
 - [x] 1.2 Integrate chess.js for move validation
 - [x] 1.3 Integrate cm-chessboard for board UI
 - [x] 1.4 Integrate Stockfish (server-side) for move evaluation
-- [ ] 1.5 **Implement Parallel Model (CURRENT)**:
-  - [ ] 10-second team timer
-  - [ ] Human move applied immediately (prominent)
-  - [ ] Bot move as greyed shadow
-  - [ ] Both moves visible before resolution
-  - [ ] Green/red highlight after accuracy check
-  - [ ] Loser retracts to origin
-- [ ] 1.6 Basic win/lose/draw detection
+- [x] 1.5 **Implement Parallel Model**:
+  - [x] 10-second team timer (split timers on each side)
+  - [x] Human move applied immediately (prominent)
+  - [x] Bot move as greyed shadow
+  - [x] Both moves visible before resolution
+  - [x] Green/red highlight after accuracy check
+  - [x] Loser retracts to origin (animated)
+- [x] 1.6 Basic win/lose/draw detection
 
 **Key Feature**: Human vs Bot teammate (bot plays blind, greyed shadow display)
 
-**Deliverable**: Playable 2v2 local game with bot teammate
+**Deliverable**: ✅ Playable 2v2 local game with bot teammate (COMPLETE)
 
 ---
 
@@ -265,14 +265,14 @@ interface TurnResolution {
 
 ## Milestones
 
-| Milestone | Target | Criteria |
-|-----------|--------|----------|
-| M1 | Week 2 | Local 2v2 playable with parallel model |
-| M2 | Week 4 | Supabase infrastructure ready |
-| M3 | Week 6 | True 2v2 human multiplayer |
-| M4 | Week 8 | Full game with animations polished |
-| M5 | Week 10 | MVP ready for launch |
-| M6 | Week 14 | Mobile apps live |
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| M1 | Week 2 | ✅ Complete - Local 2v2 playable |
+| M2 | Week 4 | 🔄 In Progress - Supabase infra |
+| M3 | Week 6 | ⏳ Pending - Human multiplayer |
+| M4 | Week 8 | ⏳ Pending - Animations polished |
+| M5 | Week 10 | ⏳ Pending - MVP launch ready |
+| M6 | Week 14 | ⏳ Pending - Mobile apps |
 
 ---
 
