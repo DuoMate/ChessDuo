@@ -2,20 +2,20 @@
 # Stage 1: Build the TypeScript app
 FROM node:20 AS builder
 
-WORKDIR /app
+WORKDIR /app/server
 
-COPY server/package*.json server/package-lock.json ./
+COPY package*.json ./
 RUN npm ci
 
-COPY server/tsconfig.json ./
-COPY server/src ./src
+COPY tsconfig.json ./
+COPY src ./src
 
-RUN npm run build --prefix server
+RUN npm run build
 
 # Stage 2: Production runtime
 FROM ubuntu:22.04
 
-WORKDIR /app
+WORKDIR /app/server
 
 # Install Node.js 20 and Stockfish via apt
 RUN apt-get update && apt-get install -y \
