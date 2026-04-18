@@ -1,23 +1,24 @@
-# Frontend Dockerfile - Next.js Build
-FROM node:20-alpine AS builder
+# Frontend Dockerfile - Simple Next.js Build
+FROM node:20
 
 WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm ci
 
+# Copy source
 COPY . .
+
+# Build
 RUN npm run build
 
-# Production
-FROM node:20-alpine
-WORKDIR /app
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+# Expose and run
+EXPOSE 3000
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+CMD ["npm", "start"]
