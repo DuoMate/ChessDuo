@@ -17,7 +17,7 @@ interface GameProps {
 }
 
 function normalizeUci(uciMove: string): string {
-  return uciMove.replace('-', '')
+  return uciMove.replace(/-/g, '')
 }
 
 function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
