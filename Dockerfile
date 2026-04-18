@@ -4,13 +4,13 @@ FROM node:20 AS builder
 
 WORKDIR /app
 
-COPY server/package*.json ./
+COPY server/package*.json server/package-lock.json ./
 RUN npm ci
 
 COPY server/tsconfig.json ./
 COPY server/src ./src
 
-RUN npm run build
+RUN npm run build --prefix server
 
 # Stage 2: Production runtime
 FROM ubuntu:22.04
@@ -28,8 +28,8 @@ RUN apt-get update && apt-get install -y \
 RUN which stockfish || ls /usr/games/stockfish || ls /usr/bin/stockfish
 
 # Copy built app from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/server/dist ./dist
+COPY --from=builder /app/server/package*.json ./
 
 RUN npm ci --only=production
 
