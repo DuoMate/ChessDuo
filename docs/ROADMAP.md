@@ -10,14 +10,48 @@
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 14+ (App Router) + TypeScript |
+| Framework | Next.js 16 + TypeScript |
 | UI | Tailwind CSS + React |
 | Chess Board | cm-chessboard (web) |
 | Chess Logic | chess.js |
-| Engine | Stockfish WASM (server-side) |
+| Engine | Stockfish (server-side) |
 | Real-time | Supabase (Broadcast + Presence) |
 | Auth | Supabase Auth |
 | Mobile Bridge | Capacitor (future) |
+
+---
+
+## Deployment Architecture
+
+This project uses **two separate Render services**:
+
+| Service | URL | Build Config | Directory |
+|---------|-----|------------|-----------|
+| **Frontend** | https://chessduo-frontend.onrender.com | `render.yaml` | `/` (root) |
+| **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
+
+### Frontend Deployment (render.yaml)
+
+```yaml
+rootDirectory: /
+buildCommand: npm run build
+startCommand: npm start
+healthCheckPath: /healthz
+```
+
+### Backend Deployment (Dockerfile)
+
+Uses Docker to build Stockfish from `/server` directory.
+
+### Environment Variables
+
+**Frontend:**
+- `NEXT_PUBLIC_SUPABASE_URL` → Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Supabase anon key
+- `NEXT_PUBLIC_STOCKFISH_SERVER_URL` → `https://chessduo-bllo.onrender.com`
+
+**Backend:**
+- `PORT` → `3001`
 
 ---
 
