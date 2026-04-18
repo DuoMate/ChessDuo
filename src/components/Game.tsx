@@ -583,12 +583,47 @@ export function Game({ level }: GameProps) {
           </div>
         </div>
 
+        <AnimatePresence>
+        {gameState.status === GameStatus.GAME_OVER && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-4 p-6 bg-gray-800/90 backdrop-blur rounded-xl border-2 border-yellow-500 text-center"
+          >
+            <motion.h2 
+              className="text-2xl font-bold text-yellow-400 mb-2"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              Game Over!
+            </motion.h2>
+            <p className="text-lg font-medium text-white mb-4">{game.getResult()}</p>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-gray-400 text-xs">Total Moves</div>
+                <div className="text-xl font-bold text-white">{game.getStats().movesPlayed}</div>
+              </div>
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-gray-400 text-xs">Sync Rate</div>
+                <div className="text-xl font-bold text-green-400">{Math.round(game.getStats().syncRate * 100)}%</div>
+              </div>
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-gray-400 text-xs">Your Accuracy</div>
+                <div className="text-xl font-bold text-blue-400">{Math.round(game.getStats().player1Accuracy)}%</div>
+              </div>
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <div className="text-gray-400 text-xs">Conflicts</div>
+                <div className="text-xl font-bold text-red-400">{game.getStats().conflicts}</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
         <div className="mt-4 text-center">
           {gameState.selectedMove && (
             <p className="text-green-400">Selected: {gameState.selectedMove}</p>
-          )}
-          {gameState.status === GameStatus.GAME_OVER && (
-            <p className="text-xl font-bold text-yellow-400">{game.getResult()}</p>
           )}
           {gameState.isBotThinking && (
             <p className="text-blue-400">Bot is making a move...</p>
