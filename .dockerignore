@@ -1,5 +1,5 @@
-# Skip server (BE only)
-server/
+# Skip server (BE only) - commented out for now
+# server/
 node_modules/
 .next/
 .git/
