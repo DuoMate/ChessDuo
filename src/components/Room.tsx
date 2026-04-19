@@ -138,6 +138,20 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       console.log('[Join] Joining as team:', team, 'slot:', slot)
 
+      // Check if player already in room
+      const { data: existingPlayer } = await supabase
+        .from('room_players')
+        .select('*')
+        .eq('room_id', rooms.id)
+        .eq('player_id', playerId)
+        .single()
+      
+      if (existingPlayer) {
+        console.log('[Join] Already in room, joining existing')
+        onRoomJoined(rooms as Room, existingPlayer.team)
+        return
+      }
+
       const { error: playerError } = await supabase
         .from('room_players')
         .insert({
@@ -150,6 +164,11 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       if (playerError) {
         console.error('[Join] Insert player error:', playerError)
+        // Handle 409 conflict - already joined
+        if (playerError.code === '409' || playerError.message.includes('duplicate')) {
+          onRoomJoined(rooms as Room, team)
+          return
+        }
         throw new Error(`Failed to join: ${playerError.message}`)
       }
 
