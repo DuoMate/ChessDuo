@@ -25,7 +25,7 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
@@ -36,9 +36,9 @@ COPY --from=builder /app/.next/static ./.next/static
 
 USER nextjs
 
-ENV PORT 3000
-ENV HOSTNAME 0.0.0.0
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["npx", "next", "start", "-p", "3000"]
