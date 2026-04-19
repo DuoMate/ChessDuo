@@ -8,6 +8,8 @@ import { Auth } from '@/components/Auth'
 import { RoomManager } from '@/components/Room'
 import { Room } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 type GameMode = 'offline' | 'online' | null
 
 export default function SetupPage() {
