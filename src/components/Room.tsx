@@ -85,18 +85,25 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     setLoading(true)
     setError(null)
     try {
+      console.log('[Join] Looking for room:', joinCode.toUpperCase())
+      
       const { data: rooms, error: roomError } = await supabase
         .from('rooms')
         .select('*')
         .eq('code', joinCode.toUpperCase())
         .single()
 
+      console.log('[Join] Room query result:', { rooms, roomError })
+
       if (roomError || !rooms) {
-        throw new Error('Room not found')
+        console.error('[Join] Room not found:', roomError)
+        throw new Error('Room not found - check if code is correct')
       }
 
+      console.log('[Join] Room found:', rooms)
+
       if (rooms.status !== 'waiting') {
-        throw new Error('Room is no longer available')
+        throw new Error('Room is no longer available (status: ' + rooms.status + ')')
       }
 
       const { data: existingPlayers, error: playersError } = await supabase
@@ -104,10 +111,17 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         .select('*')
         .eq('room_id', rooms.id)
 
-      if (playersError) throw playersError
+      console.log('[Join] Existing players:', { existingPlayers, playersError })
+
+      if (playersError) {
+        console.error('[Join] Players query error:', playersError)
+        throw new Error('Failed to check room players')
+      }
 
       const whiteSlots = existingPlayers?.filter(p => p.team === 'WHITE') || []
       const blackSlots = existingPlayers?.filter(p => p.team === 'BLACK') || []
+
+      console.log('[Join] Slots - White:', whiteSlots.length, 'Black:', blackSlots.length)
 
       let team: 'WHITE' | 'BLACK' = 'WHITE'
       let slot = 0
@@ -122,6 +136,8 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         throw new Error('Room is full')
       }
 
+      console.log('[Join] Joining as team:', team, 'slot:', slot)
+
       const { error: playerError } = await supabase
         .from('room_players')
         .insert({
@@ -132,10 +148,14 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           status: 'waiting'
         })
 
-      if (playerError) throw playerError
+      if (playerError) {
+        console.error('[Join] Insert player error:', playerError)
+        throw new Error(`Failed to join: ${playerError.message}`)
+      }
 
       onRoomJoined(rooms as Room, team)
     } catch (err) {
+      console.error('[Join] Full error:', err)
       setError(err instanceof Error ? err.message : 'Failed to join room')
     } finally {
       setLoading(false)
