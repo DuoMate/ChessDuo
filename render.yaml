@@ -1,0 +1,9 @@
+# Render configuration for ChessDuo Frontend (Next.js)
+services:
+  - type: web
+    name: chessduo-frontend
+    env: node
+    rootDirectory: /
+    buildCommand: npm run build
+    startCommand: npx next start -p $PORT
+    # Environment variables are set in the Render dashboard
