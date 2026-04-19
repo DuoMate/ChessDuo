@@ -29,7 +29,22 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     setLoading(true)
     setError(null)
     try {
+      console.log('[Room] Creating room...')
       const code = generateRoomCode()
+      
+      // First, let's try to check if table exists by selecting
+      const { data: testData, error: testError } = await supabase
+        .from('rooms')
+        .select('id')
+        .limit(1)
+      
+      console.log('[Room] Table test:', { testData, testError })
+      
+      if (testError) {
+        console.error('[Room] Table check failed:', testError)
+        throw new Error(`Database table 'rooms' not accessible: ${testError.message}. Please create tables in Supabase.`)
+      }
+
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
@@ -40,7 +55,10 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         .select()
         .single()
 
-      if (roomError) throw roomError
+      if (roomError) {
+        console.error('[Room] Create room error:', roomError)
+        throw new Error(`Insert error: ${roomError.message}`)
+      }
 
       const { error: playerError } = await supabase
         .from('room_players')
