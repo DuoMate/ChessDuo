@@ -1,0 +1,6 @@
+# Skip server (BE only)
+server/
+node_modules/
+.next/
+.git/
+*.log
