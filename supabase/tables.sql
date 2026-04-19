@@ -4,22 +4,22 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create profiles table (links to auth.users)
+-- Create profiles table (standalone - no auth dependency for now)
 CREATE TABLE IF NOT EXISTS profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username TEXT NOT NULL,
-      avatar_url TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-        -- Create rooms table
-        CREATE TABLE IF NOT EXISTS rooms (
-          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            code TEXT UNIQUE NOT NULL,
-              status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
-                created_by UUID REFERENCES profiles(id),
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                  );
+-- Create rooms table
+CREATE TABLE IF NOT EXISTS rooms (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT UNIQUE NOT NULL,
+  status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
+  created_by TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
                   -- Create room_players table
                   CREATE TABLE IF NOT EXISTS room_players (
