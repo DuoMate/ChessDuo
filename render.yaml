@@ -4,7 +4,7 @@ services:
     name: chessduo-frontend
     env: node
     rootDirectory: /
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     startCommand: npx next start -p $PORT
     healthCheckPath: /api/healthz
     envVars:
