@@ -6,4 +6,11 @@ services:
     rootDirectory: /
     buildCommand: npm run build
     startCommand: npx next start -p $PORT
-    # Environment variables are set in the Render dashboard
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://kyojsrllyczlpjvqnlpa.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5b2pzcmxseWN6bHBqdnFubHBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTc1ODIsImV4cCI6MjA5MDE5MzU4Mn0.RT7lA7WBRsUcObKCECA-JwTuxtJUAFxnjNdLsfmsAzQ
+      - key: NEXT_PUBLIC_STOCKFISH_SERVER_URL
+        value: https://chessduo-bllo.onrender.com
