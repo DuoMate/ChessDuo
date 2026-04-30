@@ -9,7 +9,7 @@ interface RoomProps {
   onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK') => void
 }
 
-function generateRoomCode(): string {
+export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < 6; i++) {

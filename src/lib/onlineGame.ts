@@ -38,6 +38,7 @@ export class OnlineGame {
   private _players: Map<string, RoomPlayer> = new Map()
   private _channel: RealtimeChannel | null = null
   private initialized = false
+  private onStateChangeCallback: (() => void) | null = null
   private stats = {
     movesPlayed: 0,
     syncRate: 0,
@@ -85,6 +86,31 @@ export class OnlineGame {
     this._playerId = playerId
     this._team = team
 
+    // Query room_players to find all players in the room
+    const { data: players } = await supabase
+      .from('room_players')
+      .select('*')
+      .eq('room_id', room.id)
+
+    // Add human players to gameState
+    const humanPlayers = players?.filter(p => p.team === team) || []
+    const opponentPlayers = players?.filter(p => p.team !== team) || []
+
+    // Add current player
+    const playerNum = team === 'WHITE' ? Team.WHITE : Team.BLACK
+    this.gameState.addPlayer(playerId as Player, playerNum)
+
+    // Add teammate (other human on same team)
+    const teammate = humanPlayers.find(p => p.player_id !== playerId)
+    if (teammate) {
+      this.gameState.addPlayer(teammate.player_id as Player, playerNum)
+    }
+
+    // Add bot opponents (2 bots for the other team)
+    const opponentTeam = team === 'WHITE' ? Team.BLACK : Team.WHITE
+    this.gameState.addPlayer('bot_opponent_1' as Player, opponentTeam)
+    this.gameState.addPlayer('bot_opponent_2' as Player, opponentTeam)
+
     this._channel = supabase.channel(`room:${room.id}`, {
       config: {
         presence: { key: playerId }
@@ -116,21 +142,31 @@ export class OnlineGame {
       })
 
     this._status = GameStatus.READY
-    this.gameState.addPlayer(playerId as Player, team === 'WHITE' ? Team.WHITE : Team.BLACK)
-    this.gameState.addPlayer('bot_opponent_1', team === 'WHITE' ? Team.BLACK : Team.WHITE)
-    this.gameState.addPlayer('bot_opponent_2', team === 'WHITE' ? Team.BLACK : Team.WHITE)
   }
 
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
     console.log('[ONLINE] Teammate moved:', payload)
+    if (payload.playerId !== this._playerId) {
+      this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
+      this.notifyStateChange()
+    }
   }
 
   private handleTeammateLocked(payload: { playerId: string }) {
     console.log('[ONLINE] Teammate locked:', payload)
+    if (payload.playerId !== this._playerId) {
+      this.gameState.lockPendingMove(payload.playerId as Player)
+      this.notifyStateChange()
+    }
   }
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string }) {
     console.log('[ONLINE] Turn resolved:', payload)
+    this.gameState.resolve(payload.winningMove)
+    if (this.gameState.board.isGameOver()) {
+      this._status = GameStatus.GAME_OVER
+    }
+    this.notifyStateChange()
   }
 
   async broadcastMove(move: string, from: string, to: string): Promise<void> {
@@ -261,6 +297,14 @@ export class OnlineGame {
     this._room = null
   }
 
+  setOnStateChange(callback: () => void): void {
+    this.onStateChangeCallback = callback
+  }
+
+  private notifyStateChange(): void {
+    this.onStateChangeCallback?.()
+  }
+
   get fen(): string {
     return this.gameState.fen
   }
@@ -296,5 +340,13 @@ export class OnlineGame {
   get capturedByBlack(): CapturedPieces {
     const captured = this.gameState.capturedPieces
     return { white: captured.black, black: captured.white }
+  }
+
+  getCapturedPieces(): { white: string[]; black: string[] } {
+    const captured = this.gameState.capturedPieces
+    return {
+      white: captured.white || [],
+      black: captured.black || []
+    }
   }
 }
