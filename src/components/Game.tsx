@@ -156,21 +156,26 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
   const [onlineGame] = useState(() => mode === 'online' ? new OnlineGame() : null)
   const isOnline = mode === 'online'
 
+  // Only create bot config for offline mode
   const botConfig = useMemo(() => {
+    if (isOnline) return null // No bots needed in online mode
+    
     if (level && level >= 1 && level <= 6) {
       console.log(`[Game] Using selected level: ${level} for opponent`)
       return createBotConfig(level, level)
     }
     console.log('[Game] No level selected, using default config')
     return getBotConfig()
-  }, [level])
+  }, [isOnline, level])
 
   const [bot] = useState(() => {
+    if (isOnline || !botConfig) return null // No bots in online mode
     const botInstance = createBot({ skillLevel: botConfig.opponentSkillLevel })
     console.log(`[Game] Opponent bot created with level: ${botConfig.opponentSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
   })
   const [teammateBot] = useState(() => {
+    if (isOnline || !botConfig) return null // No bots in online mode
     const botInstance = createBot({ skillLevel: botConfig.teammateSkillLevel })
     console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
@@ -392,7 +397,7 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
   }, [isOnline, game])
 
   const executeBotMove = useCallback(async () => {
-    if (isOnline) return // Only run in offline mode
+    if (isOnline || !bot) return // Only run in offline mode with bot
     
     if (opponentInProgressRef.current) {
       console.log(`[OPPONENT] Already in progress, skipping`)
@@ -497,7 +502,7 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
       } catch (e) {
         console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
-    } else if (!isOnline && gameRef.current) {
+    } else if (!isOnline && gameRef.current && teammateBot) {
       // Offline mode - existing logic with bots as teammates and opponents
       const g = gameRef.current
       const startTime = Date.now()
