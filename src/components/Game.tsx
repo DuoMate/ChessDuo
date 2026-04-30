@@ -209,48 +209,47 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
     }
   }, [mode])
 
-  // Initialize online game
+  // Set up state change callback for online mode - MUST be before joinRoom
+  const onlineGameRef = useRef(onlineGame)
+  useEffect(() => {
+    if (!onlineGame) return
+    
+    onlineGameRef.current = onlineGame
+    onlineGame.setOnStateChange(() => {
+      if (onlineGameRef.current) {
+        const g = onlineGameRef.current
+        const captured = g.getCapturedPieces()
+        setGameState(prev => ({
+          ...prev,
+          status: g.status,
+          fen: g.fen,
+          currentTurn: g.currentTurn,
+          isMyTurn: g.currentTurn === Team.WHITE,
+          capturedByWhite: captured.white,
+          capturedByBlack: captured.black,
+          lastMove: g.lastMove,
+          timerSeconds: g.getTeamTimer(),
+          timerActive: g.isTimerActive()
+        }))
+      }
+    })
+  }, [onlineGame])
+
+  // Initialize online game - runs AFTER setOnStateChange is set up
   useEffect(() => {
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
       onlineGame.joinRoom({ id: roomId } as any, playerId, team)
-      // Game will start automatically when both players are detected via presence
     }
   }, [mode, onlineGame, playerId, roomId, team])
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const gameRef = useRef(game)
-  const onlineGameRef = useRef(onlineGame)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
-  
+
   useEffect(() => {
     gameRef.current = game
   }, [game])
-
-  useEffect(() => {
-    onlineGameRef.current = onlineGame
-  
-    // Set up state change callback for online mode
-    if (onlineGame) {
-      onlineGame.setOnStateChange(() => {
-        if (onlineGame) {
-          const captured = onlineGame.getCapturedPieces()
-          setGameState(prev => ({
-            ...prev,
-            status: onlineGame.status,
-            fen: onlineGame.fen,
-            currentTurn: onlineGame.currentTurn,
-            isMyTurn: onlineGame.currentTurn === Team.WHITE,
-            capturedByWhite: captured.white,
-            capturedByBlack: captured.black,
-            lastMove: onlineGame.lastMove,
-            timerSeconds: onlineGame.getTeamTimer(),
-            timerActive: onlineGame.isTimerActive()
-          }))
-        }
-      })
-    }
-  }, [onlineGame])
 
   const startTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
