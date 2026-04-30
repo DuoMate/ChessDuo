@@ -83,6 +83,8 @@ export class OnlineGame {
   }
 
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
+    console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
+    
     this._room = room
     this._playerId = playerId
     this._team = team
@@ -108,6 +110,9 @@ export class OnlineGame {
           this.startGameWhenReady()
         }
       })
+      .on('presence', { event: 'join' }, ({ newPresences }) => {
+        console.log('[ONLINE] Player joined:', newPresences)
+      })
       .on('broadcast', { event: 'player_move' }, ({ payload }) => {
         this.handleTeammateMove(payload as MovePayload)
       })
@@ -118,16 +123,19 @@ export class OnlineGame {
         this.handleTurnResolved(payload as ResolvedPayload)
       })
       .subscribe(async (status: string) => {
+        console.log('[ONLINE] Channel subscription status:', status)
         if (status === 'SUBSCRIBED') {
           await this._channel?.track({
             player_id: playerId,
             team: team,
             status: 'connected'
           })
+          console.log('[ONLINE] Player tracked:', playerId)
         }
       })
 
     this._status = GameStatus.READY
+    console.log('[ONLINE] joinRoom completed, status:', this._status)
   }
 
   async startGameWhenReady(): Promise<void> {
