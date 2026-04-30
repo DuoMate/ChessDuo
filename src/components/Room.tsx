@@ -92,7 +92,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       const { data: rooms, error: roomError } = await supabase
         .from('rooms')
         .select('*')
-        .eq('code', joinCode.toUpperCase())
+        .or(`code.eq.${joinCode.toUpperCase()},id.eq.${joinCode}`)
         .single()
 
       console.log('[Join] Room query result:', { rooms, roomError })
@@ -209,14 +209,14 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           </div>
 
           <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter room code"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              maxLength={6}
-              className="flex-1 p-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-xl tracking-widest font-mono"
-            />
+             <input
+               type="text"
+               placeholder="Enter room code or URL"
+               value={joinCode}
+               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+               maxLength={36}
+               className="flex-1 p-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-xl tracking-widest font-mono"
+             />
             <button
               onClick={joinRoom}
               disabled={loading || joinCode.length < 6}

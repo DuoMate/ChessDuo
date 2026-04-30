@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 interface GameProps {
   level?: number
+  roomCode?: string
 }
 
 function normalizeUci(uci: string): string {
@@ -144,7 +145,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level }: GameProps) {
+export function Game({ level, roomCode }: GameProps) {
   const [game] = useState(() => new LocalGame())
 
   const botConfig = useMemo(() => {
@@ -536,9 +537,18 @@ export function Game({ level }: GameProps) {
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
-       
+        
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-4">ClashMate</h1>
+
+        {roomCode && (
+          <div className="mb-4 p-3 bg-gray-700 rounded text-center">
+            <p className="text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
+            <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
+              {roomCode}
+            </p>
+          </div>
+        )}
         
         <div className="flex justify-between items-center mb-2">
           <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>

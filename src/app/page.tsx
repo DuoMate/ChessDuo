@@ -36,7 +36,7 @@ export default function SetupPage() {
   }
 
   const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK') => {
-    router.push(`/game?mode=online&room=${room.id}&team=${team}`)
+    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}`)
   }
 
   const handleStartOffline = () => {
