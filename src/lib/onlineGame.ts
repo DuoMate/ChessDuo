@@ -97,12 +97,6 @@ export class OnlineGame {
       }
     })
 
-    this._channel = supabase.channel(`room:${room.id}`, {
-      config: {
-        presence: { key: playerId }
-      }
-    })
-
     this._channel
       .on('presence', { event: 'sync' }, () => {
         const state = this._channel?.presenceState() || {}
