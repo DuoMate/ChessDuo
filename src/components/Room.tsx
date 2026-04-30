@@ -89,11 +89,33 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     try {
       console.log('[Join] Looking for room:', joinCode.toUpperCase())
       
-      const { data: rooms, error: roomError } = await supabase
+      // Try to find by code first (6-char code), then by ID (UUID)
+      let rooms = null
+      let roomError = null
+      
+      // First try as room code
+      const { data: byCode, error: codeError } = await supabase
         .from('rooms')
         .select('*')
-        .or(`code.eq.${joinCode.toUpperCase()},id.eq.${joinCode}`)
+        .eq('code', joinCode.toUpperCase())
         .single()
+      
+      if (byCode) {
+        rooms = byCode
+      } else {
+        // If not found by code, try as UUID
+        const { data: byId, error: idError } = await supabase
+          .from('rooms')
+          .select('*')
+          .eq('id', joinCode)
+          .single()
+        
+        if (byId) {
+          rooms = byId
+        } else {
+          roomError = codeError || idError
+        }
+      }
 
       console.log('[Join] Room query result:', { rooms, roomError })
 
