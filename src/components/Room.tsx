@@ -163,12 +163,16 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       console.log('[Join] Joining as team:', team, 'slot:', slot)
 
       // Check if player already in room
-      const { data: existingPlayer } = await supabase
+      const { data: existingPlayer, error: checkError } = await supabase
         .from('room_players')
         .select('*')
         .eq('room_id', rooms.id)
         .eq('player_id', playerId)
-        .single()
+        .maybeSingle()
+      
+      if (checkError) {
+        console.warn('[Join] Error checking existing player:', checkError)
+      }
       
       if (existingPlayer) {
         console.log('[Join] Already in room, joining existing')
