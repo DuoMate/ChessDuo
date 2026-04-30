@@ -72,8 +72,10 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       if (playerError) throw playerError
 
-      setMyRoomCode(code)
-    } catch (err) {
+       setMyRoomCode(code)
+       // Automatically join the creator to the match
+       onRoomJoined(room as Room, 'WHITE')
+     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room')
     } finally {
       setLoading(false)
