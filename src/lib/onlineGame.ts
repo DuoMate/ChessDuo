@@ -38,6 +38,7 @@ export class OnlineGame {
   private _players: Map<string, RoomPlayer> = new Map()
   private _channel: RealtimeChannel | null = null
   private initialized = false
+  private starting = false
   private onStateChangeCallback: (() => void) | null = null
   private stats = {
     movesPlayed: 0,
@@ -86,30 +87,15 @@ export class OnlineGame {
     this._playerId = playerId
     this._team = team
 
-    // Query room_players to find all players in the room
-    const { data: players } = await supabase
-      .from('room_players')
-      .select('*')
-      .eq('room_id', room.id)
-
-    // Add human players to gameState
-    const humanPlayers = players?.filter(p => p.team === team) || []
-    const opponentPlayers = players?.filter(p => p.team !== team) || []
-
     // Add current player
     const playerNum = team === 'WHITE' ? Team.WHITE : Team.BLACK
     this.gameState.addPlayer(playerId as Player, playerNum)
 
-    // Add teammate (other human on same team)
-    const teammate = humanPlayers.find(p => p.player_id !== playerId)
-    if (teammate) {
-      this.gameState.addPlayer(teammate.player_id as Player, playerNum)
-    }
-
-    // Add bot opponents (2 bots for the other team)
-    const opponentTeam = team === 'WHITE' ? Team.BLACK : Team.WHITE
-    this.gameState.addPlayer('bot_opponent_1' as Player, opponentTeam)
-    this.gameState.addPlayer('bot_opponent_2' as Player, opponentTeam)
+    this._channel = supabase.channel(`room:${room.id}`, {
+      config: {
+        presence: { key: playerId }
+      }
+    })
 
     this._channel = supabase.channel(`room:${room.id}`, {
       config: {
@@ -120,7 +106,13 @@ export class OnlineGame {
     this._channel
       .on('presence', { event: 'sync' }, () => {
         const state = this._channel?.presenceState() || {}
-        console.log('[ONLINE] Presence sync:', Object.keys(state))
+        const playersOnline = Object.keys(state)
+        console.log('[ONLINE] Presence sync:', playersOnline)
+        
+        // If both players are online and game hasn't started, start the game
+        if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
+          this.startGameWhenReady()
+        }
       })
       .on('broadcast', { event: 'player_move' }, ({ payload }) => {
         this.handleTeammateMove(payload as MovePayload)
@@ -142,6 +134,54 @@ export class OnlineGame {
       })
 
     this._status = GameStatus.READY
+  }
+
+  async startGameWhenReady(): Promise<void> {
+    // Prevent double-start and race conditions
+    if (this._status === GameStatus.PLAYING) {
+      console.log('[ONLINE] Game already started, skipping...')
+      return
+    }
+    
+    if (this.starting) {
+      console.log('[ONLINE] Game start already in progress, skipping...')
+      return
+    }
+    
+    this.starting = true
+    
+    try {
+      // Query room_players to get all human players in the room
+      const { data: players } = await supabase
+        .from('room_players')
+        .select('*')
+        .eq('room_id', this._room!.id)
+        .order('player_id', { ascending: true })
+
+      const humanPlayers = (players || []).filter(p => p.team === this._team)
+
+      // Add human players in sorted order (by player_id) to ensure consistent state
+      const playerNum = this._team === 'WHITE' ? Team.WHITE : Team.BLACK
+      for (const p of humanPlayers) {
+        this.gameState.addPlayer(p.player_id as Player, playerNum)
+      }
+
+      // Add bot opponents
+      const opponentTeam = this._team === 'WHITE' ? Team.BLACK : Team.WHITE
+      this.gameState.addPlayer('bot_opponent_1' as Player, opponentTeam)
+      this.gameState.addPlayer('bot_opponent_2' as Player, opponentTeam)
+
+      // Start the game
+      this.gameState.startMatch()
+      this._status = GameStatus.PLAYING
+      this.startPendingTurn()
+      this.notifyStateChange()
+      console.log('[ONLINE] Game started successfully')
+    } catch (e) {
+      console.error('[ONLINE] Failed to start game:', e)
+    } finally {
+      this.starting = false
+    }
   }
 
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {

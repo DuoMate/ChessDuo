@@ -212,16 +212,8 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
   // Initialize online game
   useEffect(() => {
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
-      onlineGame.joinRoom({ id: roomId } as any, playerId, team).then(() => {
-        onlineGame.start()
-        setGameState(prev => ({
-          ...prev,
-          status: onlineGame.status,
-          fen: onlineGame.fen,
-          currentTurn: onlineGame.currentTurn,
-          isMyTurn: onlineGame.currentTurn === Team.WHITE
-        }))
-      })
+      onlineGame.joinRoom({ id: roomId } as any, playerId, team)
+      // Game will start automatically when both players are detected via presence
     }
   }, [mode, onlineGame, playerId, roomId, team])
 
