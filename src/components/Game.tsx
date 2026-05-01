@@ -321,10 +321,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const captured = g.getCapturedPieces()
     const currentTurn = g.currentTurn
     
+    // Get comparison data for both WHITE and BLACK turns (not just BLACK)
     let comparison: MoveComparison | null = null
     if (currentTurn === Team.BLACK) {
       comparison = g.lastMoveComparison
+    } else if (currentTurn === Team.WHITE && isOnline) {
+      // For WHITE turn in online mode, also check for comparison from previous resolution
+      comparison = g.lastMoveComparison
     }
+    
+    // Determine showResolution: show when there's comparison data
+    // Only show when turn is BLACK or when comparison exists from previous resolution
+    const showResolution = comparison !== null
     
     // Get pendingOverlay for online mode - show teammate's pending move
     const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
@@ -345,6 +353,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracyP2: 100,
         totalMoves: 0,
         moveComparison: comparison,
+        showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
         pendingOverlay: pendingOverlay || prev.pendingOverlay
