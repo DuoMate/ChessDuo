@@ -162,26 +162,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const isOnline = mode === 'online'
   console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
 
-  // Only create bot config for offline mode
+  // Create bot config (used for opponent bots in online mode, and both bots in offline)
   const botConfig = useMemo(() => {
-    if (isOnline) return null // No bots needed in online mode
-    
     if (level && level >= 1 && level <= 6) {
       console.log(`[Game] Using selected level: ${level} for opponent`)
       return createBotConfig(level, level)
     }
     console.log('[Game] No level selected, using default config')
     return getBotConfig()
-  }, [isOnline, level])
+  }, [level])
 
   const [bot] = useState(() => {
-    if (isOnline || !botConfig) return null // No bots in online mode
+    if (!botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.opponentSkillLevel })
     console.log(`[Game] Opponent bot created with level: ${botConfig.opponentSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
   })
   const [teammateBot] = useState(() => {
-    if (isOnline || !botConfig) return null // No bots in online mode
+    if (!botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.teammateSkillLevel })
     console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
@@ -524,7 +522,52 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           console.log(`[RESOLVE] Both locked, resolving...`)
           await g.resolvePendingMoves()
           updateStateRef.current()
-          console.log(`[RESOLVE] Resolution complete, new turn: ${g.currentTurn}`)
+          const newTurn = g.currentTurn
+          console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
+          
+          // In online mode, after WHITE resolves, BLACK (bots) need to move
+          if (newTurn === Team.BLACK && bot) {
+            console.log(`[RESOLVE] Triggering opponent (BLACK) bot moves...`)
+            setGameState(prev => ({ ...prev, isBotThinking: true }))
+            
+            const currentFen = g.board.fen()
+            const botUciMove = await bot.selectMoveAsync(currentFen)
+            
+            if (botUciMove) {
+              const sanMove = uciToSan(botUciMove, currentFen)
+              const moveInfo = getMoveFromUci(botUciMove, currentFen)
+              
+              if (moveInfo) {
+                g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                g.lockPendingMove('bot_opponent_1' as any)
+                g.lockPendingMove('bot_opponent_2' as any)
+                
+                setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
+              }
+            }
+            
+            // Wait for both bots to be locked and resolve
+            let attempts = 0
+            while (!g.isBothPendingLocked() && attempts < 20) {
+              await new Promise(resolve => setTimeout(resolve, 500))
+              attempts++
+            }
+            
+            if (g.isBothPendingLocked()) {
+              console.log(`[RESOLVE] BLACK bots locked, resolving...`)
+              await g.resolvePendingMoves()
+              updateStateRef.current()
+              console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
+            }
+            
+            setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+            
+            // Start next WHITE turn
+            g.startPendingTurn()
+            updateStateRef.current()
+            startTimer()
+          }
         } else {
           console.log(`[RESOLVE] Timeout waiting for teammate, moves:`, g.getPendingMoves())
         }
