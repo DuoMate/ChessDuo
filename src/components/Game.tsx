@@ -20,6 +20,7 @@ interface GameProps {
   mode?: string
   roomId?: string
   team?: 'WHITE' | 'BLACK'
+  playerId?: string
 }
 
 function normalizeUci(uci: string): string {
@@ -150,10 +151,9 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
-  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team })
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps }: GameProps) {
+  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
   
-  const [playerId, setPlayerId] = useState<string | null>(null)
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
   const [onlineGame] = useState(() => {
     console.log('[Game] Creating OnlineGame, mode:', mode)
@@ -209,18 +209,10 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
     showResolution: false
   })
 
-  // Get player ID for online mode
-  useEffect(() => {
-    console.log('[Game] Player ID useEffect, mode:', mode)
-    if (mode === 'online') {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        console.log('[Game] Session:', session?.user?.id)
-        if (session?.user) {
-          setPlayerId(session.user.id)
-        }
-      })
-    }
-  }, [mode])
+  // Player ID from URL props (passed from Room component)
+  // No need to get session - use the playerId directly from URL
+  const playerId = playerIdFromProps || null
+  console.log('[Game] Using playerId from props:', playerId)
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)

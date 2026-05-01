@@ -6,7 +6,7 @@ import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
 interface RoomProps {
   playerId: string
   username: string
-  onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK') => void
+  onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => void
 }
 
 export function generateRoomCode(): string {
@@ -74,7 +74,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
        setMyRoomCode(code)
        // Automatically join the creator to the match
-       onRoomJoined(room as Room, 'WHITE')
+       onRoomJoined(room as Room, 'WHITE', playerId)
      } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room')
     } finally {
@@ -176,7 +176,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       
       if (existingPlayer) {
         console.log('[Join] Already in room, joining existing')
-        onRoomJoined(rooms as Room, existingPlayer.team)
+        onRoomJoined(rooms as Room, existingPlayer.team, playerId)
         return
       }
 
@@ -194,13 +194,13 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         console.error('[Join] Insert player error:', playerError)
         // Handle 409 conflict - already joined
         if (playerError.code === '409' || playerError.message.includes('duplicate')) {
-          onRoomJoined(rooms as Room, team)
+          onRoomJoined(rooms as Room, team, playerId)
           return
         }
         throw new Error(`Failed to join: ${playerError.message}`)
       }
 
-      onRoomJoined(rooms as Room, team)
+      onRoomJoined(rooms as Room, team, playerId)
     } catch (err) {
       console.error('[Join] Full error:', err)
       setError(err instanceof Error ? err.message : 'Failed to join room')
