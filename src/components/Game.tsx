@@ -583,8 +583,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           if (newTurn === Team.BLACK && bot && playerId) {
             // Get both players from game state to determine coordinator
             const players = g.getPlayers(Team.WHITE)
+            console.log(`[RESOLVE] BLACK handling check - players:`, players, 'playerId:', playerId, 'bot:', !!bot)
             const sortedPlayers = [...players].sort()
             const isCoordinator = playerId === sortedPlayers[0]
+            console.log(`[RESOLVE] isCoordinator:`, isCoordinator, 'sortedPlayers:', sortedPlayers)
             
             if (isCoordinator) {
               console.log(`[RESOLVE] Handling BLACK bot moves (coordinator)...`)
@@ -607,23 +609,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 }
               }
               
-              // Wait for both bots to be locked and resolve
+              // Wait for both bots to be locked (or try resolving anyway after timeout)
               let attempts = 0
               while (!g.isBothPendingLocked() && attempts < 20) {
                 await new Promise(resolve => setTimeout(resolve, 500))
                 attempts++
+                console.log(`[RESOLVE] Waiting for bots... ${attempts}/20, locked: ${g.isBothPendingLocked()}`)
               }
               
-              if (g.isBothPendingLocked()) {
-                console.log(`[RESOLVE] BLACK bots locked, resolving...`)
-                try {
-                  await g.resolvePendingMoves()
-                  updateStateRef.current()
-                } catch (e) {
-                  console.log(`[RESOLVE] BLACK resolve failed (may already done):`, e)
-                }
-                console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
+              // Always try to resolve - even if timed out, try resolving
+              console.log(`[RESOLVE] BLACK bots locked: ${g.isBothPendingLocked()}, attempting resolve...`)
+              try {
+                await g.resolvePendingMoves()
+                console.log(`[RESOLVE] BLACK resolve succeeded`)
+                updateStateRef.current()
+              } catch (e) {
+                console.log(`[RESOLVE] BLACK resolve failed (may already done):`, e)
               }
+              console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
               
               setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
               
