@@ -510,14 +510,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         g.lockPendingMove(playerId as any)
         g.broadcastLocked()
 
-        console.log(`[RESOLVE] Waiting for teammate...`)
-
-        // Wait for teammate to lock their move
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log(`[RESOLVE] Waiting for teammate to lock move...`)
+        
+        // Poll until both moves are locked (max 10 seconds)
+        let attempts = 0
+        while (!g.isBothPendingLocked() && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          attempts++
+          console.log(`[RESOLVE] Waiting... ${attempts}/20, both locked: ${g.isBothPendingLocked()}`)
+        }
 
         if (g.isBothPendingLocked()) {
+          console.log(`[RESOLVE] Both locked, resolving...`)
           await g.resolvePendingMoves()
           updateStateRef.current()
+          console.log(`[RESOLVE] Resolution complete, new turn: ${g.currentTurn}`)
+        } else {
+          console.log(`[RESOLVE] Timeout waiting for teammate, moves:`, g.getPendingMoves())
         }
 
       } catch (e) {
