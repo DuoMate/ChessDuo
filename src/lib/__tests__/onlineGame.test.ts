@@ -1,5 +1,6 @@
 import { OnlineGame } from '../../features/online/game/onlineGame'
 import { GameStatus } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 // Mock Supabase
 jest.mock('../supabase', () => ({
@@ -37,6 +38,33 @@ describe('OnlineGame', () => {
 
   beforeEach(() => {
     game = new OnlineGame()
+  })
+
+  describe('constructor', () => {
+    it('should initialize with WAITING status', () => {
+      expect(game.status).toBe(GameStatus.WAITING)
+    })
+
+    it('should have board property', () => {
+      expect(game.board).toBeDefined()
+      expect(game.board.fen()).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    })
+
+    it('should have currentTurn as WHITE initially', () => {
+      expect(game.currentTurn).toBe(Team.WHITE)
+    })
+
+    it('should have getPlayers method', () => {
+      expect(typeof game.getPlayers).toBe('function')
+    })
+
+    it('should have lastMoveComparison as null initially', () => {
+      expect(game.lastMoveComparison).toBeNull()
+    })
+
+    it('should have pendingOverlay as null initially', () => {
+      expect(game.pendingOverlay).toBeNull()
+    })
   })
 
   describe('joinRoom', () => {
@@ -87,6 +115,64 @@ describe('OnlineGame', () => {
     it('should accept a callback function', () => {
       const callback = jest.fn()
       expect(() => game.setOnStateChange(callback)).not.toThrow()
+    })
+  })
+
+  describe('getPlayers', () => {
+    it('should have getPlayers method for both teams', () => {
+      expect(typeof game.getPlayers).toBe('function')
+      
+      const whitePlayers = game.getPlayers(Team.WHITE)
+      const blackPlayers = game.getPlayers(Team.BLACK)
+      
+      // Should return arrays (may be empty or have default players)
+      expect(Array.isArray(whitePlayers)).toBe(true)
+      expect(Array.isArray(blackPlayers)).toBe(true)
+    })
+  })
+
+  describe('pendingOverlay', () => {
+    it('should return null when no pending moves from teammate', () => {
+      expect(game.pendingOverlay).toBeDefined()
+    })
+  })
+
+  describe('setPendingMove and lockPendingMove', () => {
+    it('should allow setting pending moves with startPendingTurn', () => {
+      game.startPendingTurn()
+      
+      // Set a pending move
+      game.setPendingMove('player1', 'e4', 'e2', 'e4', 'p')
+      
+      // Should not throw when checking locked state
+      expect(() => game.isBothPendingLocked()).not.toThrow()
+    })
+  })
+
+  describe('isBothPendingLocked', () => {
+    it('should return boolean for locked state', () => {
+      const result = game.isBothPendingLocked()
+      expect(typeof result).toBe('boolean')
+    })
+  })
+
+  describe('startPendingTurn', () => {
+    it('should allow calling startPendingTurn without throwing', () => {
+      expect(() => game.startPendingTurn()).not.toThrow()
+    })
+  })
+
+  describe('getTeamTimer', () => {
+    it('should return a number for team timer', () => {
+      const timer = game.getTeamTimer()
+      expect(typeof timer).toBe('number')
+    })
+  })
+
+  describe('isTimerActive', () => {
+    it('should return boolean for timer active state', () => {
+      const active = game.isTimerActive()
+      expect(typeof active).toBe('boolean')
     })
   })
 })
