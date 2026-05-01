@@ -339,16 +339,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     // Get comparison data for both WHITE and BLACK turns (not just BLACK)
     let comparison: MoveComparison | null = null
+    const prevTurn = gameState.currentTurn
+    
+    // Clear whiteTeamComparison when new WHITE turn starts (turn changed from BLACK to WHITE)
+    const isNewWhiteTurn = prevTurn === Team.BLACK && currentTurn === Team.WHITE
+    
     if (currentTurn === Team.BLACK) {
       comparison = g.lastMoveComparison
-    } else if (currentTurn === Team.WHITE && isOnline) {
+    } else if (currentTurn === Team.WHITE && isOnline && !isNewWhiteTurn) {
       // For WHITE turn in online mode, also check for comparison from previous resolution
+      // BUT don't show at start of new WHITE turn (it's from previous WHITE turn - stale)
       comparison = g.lastMoveComparison
     }
     
     // Determine showResolution: show when there's comparison data
-    // Only show when turn is BLACK or when comparison exists from previous resolution
-    const showResolution = comparison !== null
+    // Only show when turn is BLACK or when comparison exists from previous resolution (not at new WHITE start)
+    const showResolution = comparison !== null && !isNewWhiteTurn
     
     // Get pendingOverlay for online mode - show teammate's pending move
     const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
@@ -369,8 +375,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracyP2: 100,
         totalMoves: 0,
         moveComparison: comparison,
-        // Store WHITE team comparison separately - only update when WHITE has resolved (turn is WHITE)
-        whiteTeamComparison: currentTurn === Team.WHITE && comparison ? comparison : prev.whiteTeamComparison,
+        // Store WHITE team comparison separately
+        // Show when: turn is WHITE (during WHITE turn) OR turn is BLACK (right after WHITE resolved)
+        // Clear when: new WHITE turn starts (isNewWhiteTurn)
+        whiteTeamComparison: isNewWhiteTurn 
+          ? null 
+          : (comparison && (currentTurn === Team.WHITE || currentTurn === Team.BLACK) 
+            ? comparison 
+            : prev.whiteTeamComparison),
         showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),

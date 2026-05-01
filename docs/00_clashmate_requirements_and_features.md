@@ -137,6 +137,23 @@ ClashMate sits at the intersection of:
 
 ---
 
+### 12. 📈 Accuracy Display System
+- Shows **after WHITE turn resolves** (when winner is decided)
+- Displays **WHITE team's move comparison** (both players on WHITE team)
+- **Remains visible** through entire BLACK turn
+- **Clears** when next WHITE turn starts (before moves are locked)
+- **NEVER shows** BLACK team accuracy (only WHITE team)
+
+#### Display Timing Table
+| Game State | Accuracy Shown? | Which Team |
+|-----------|-----------------|-------------|
+| WHITE turn playing | ❌ No | - |
+| WHITE turn resolved | ✅ Yes | WHITE |
+| BLACK turn playing | ✅ Yes | WHITE |
+| Next WHITE starts | ❌ No (cleared) | - |
+
+---
+
 ## 💡 Unique Value Proposition
 
 > "ClashMate transforms chess from a solo strategy game into a real-time battle of ideas between teammates."

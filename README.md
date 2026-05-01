@@ -88,6 +88,13 @@ cd server && npm run dev
 
 ## Game Modes
 
+### Accuracy Display
+- Shows **after WHITE turn resolves** (winner decided)
+- Displays **WHITE team** accuracy only (both players on WHITE)
+- Persists through entire BLACK turn
+- Clears when next WHITE turn starts
+- NEVER shows BLACK team accuracy
+
 ### Offline Mode
 - Play vs Bot teammate (AI)
 - Opponent: Bot (AI)

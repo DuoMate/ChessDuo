@@ -119,6 +119,10 @@ Uses Docker to build Stockfish from `/server` directory.
 - [ ] 4.1 Move conflict visualization (green/red arrows)
 - [ ] 4.2 Losing move retraction animation
 - [ ] 4.3 Accuracy display (centipawn loss, percentage)
+    - Shows immediately after WHITE turn resolves
+    - Only displays WHITE team accuracy (never BLACK)
+    - Persists through BLACK turn until next WHITE starts
+    - Clears when new WHITE turn begins
 - [ ] 4.4 Timer system improvements (visual warnings)
 - [ ] 4.5 Turn indicator and game status UI
 - [ ] 4.6 Team dynamics tracking (sync rate, conflicts)
