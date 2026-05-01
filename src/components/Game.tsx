@@ -78,6 +78,7 @@ interface GameState {
   moveAccuracyP2: number
   totalMoves: number
   moveComparison: MoveComparison | null
+  whiteTeamComparison: MoveComparison | null
   timerSeconds: number
   timerActive: boolean
   pendingOverlay: PendingOverlay | null
@@ -200,6 +201,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracyP2: 100,
     totalMoves: 0,
     moveComparison: null,
+    whiteTeamComparison: null,
     timerSeconds: 10,
     timerActive: false,
     pendingOverlay: null,
@@ -353,6 +355,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracyP2: 100,
         totalMoves: 0,
         moveComparison: comparison,
+        // Store WHITE team comparison separately - only update when WHITE has resolved (turn is WHITE)
+        whiteTeamComparison: currentTurn === Team.WHITE && comparison ? comparison : prev.whiteTeamComparison,
         showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
@@ -908,9 +912,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               />
             </div>
             <AnimatePresence>
-              {gameState.showResolution && gameState.moveComparison && (
+              {gameState.showResolution && gameState.whiteTeamComparison && (
                 <MoveComparisonPanel 
-                  comparison={gameState.moveComparison}
+                  comparison={gameState.whiteTeamComparison}
                   isVisible={gameState.showResolution}
                   onAnimationComplete={handleResolutionComplete}
                 />
