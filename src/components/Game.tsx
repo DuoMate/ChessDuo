@@ -15,6 +15,7 @@ import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameInfo } from './GameInfo'
 import { PendingMoveOverlay } from './PendingMoveOverlay'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface GameProps {
@@ -213,6 +214,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     showResolution: false,
     isLoading: true
   })
+
+  const [soundEnabled, setSoundEnabled] = useState(true)
+
+  // Update sound engine when setting changes
+  useEffect(() => {
+    setSoundEnabled(soundEnabled)
+  }, [soundEnabled])
 
   // Player ID from URL props (passed from Room component)
   // No need to get session - use the playerId directly from URL
@@ -535,6 +543,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         g.lockPendingMove(playerId as any)
         g.broadcastLocked()
+        playLockSound()
 
         console.log(`[RESOLVE] Waiting for teammate to lock move...`)
         
@@ -604,6 +613,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           
           const newTurn = g.currentTurn
           console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
+          playResolutionSound()
           
           // In online mode, after WHITE resolves, BLACK (bots) need to move
           // Only one client should handle bot moves - use playerId to coordinate
@@ -858,7 +868,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       )}
         
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-4">ClashMate</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">ClashMate</h1>
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+            title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+          >
+            {soundEnabled ? '🔊' : '🔇'}
+          </button>
+        </div>
 
         {roomCode && (
           <div className="mb-4 p-3 bg-gray-700 rounded text-center">
@@ -893,10 +912,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        <div className="flex items-start justify-center gap-6 mb-4">
+        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
           {/* Left side - WHITE team (Timer + Captured) */}
-          <div className="w-40 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 flex items-center justify-center">
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
                 seconds={gameState.timerSeconds}
                 isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
@@ -907,7 +926,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Chess Board */}
-          <div className="w-[500px] h-[500px] flex-shrink-0 relative">
+          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
             <ChessBoard 
               fen={gameState.fen}
               onMove={handleMove}
@@ -921,8 +940,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Right side - BLACK team (Timer + Resolution + Captured) */}
-          <div className="w-40 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 flex items-center justify-center">
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
                 seconds={gameState.timerSeconds}
                 isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
