@@ -510,12 +510,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         console.log(`[RESOLVE] Waiting for teammate to lock move...`)
         
-        // Poll until both moves are locked (max 10 seconds)
+        // Poll until both moves are locked (max 10 seconds) or turn changes
+        const startTurn = g.currentTurn
         let attempts = 0
-        while (!g.isBothPendingLocked() && attempts < 20) {
+        while (g.currentTurn === startTurn && !g.isBothPendingLocked() && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 500))
           attempts++
-          console.log(`[RESOLVE] Waiting... ${attempts}/20, both locked: ${g.isBothPendingLocked()}`)
+          console.log(`[RESOLVE] Waiting... ${attempts}/20, turn: ${g.currentTurn}, both locked: ${g.isBothPendingLocked()}`)
+        }
+        
+        // If turn already changed (another client resolved), exit
+        if (g.currentTurn !== startTurn) {
+          console.log(`[RESOLVE] Turn changed during polling, another client resolved`)
+          return
         }
 
         if (g.isBothPendingLocked()) {

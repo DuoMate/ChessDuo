@@ -303,30 +303,41 @@ export class OnlineGame {
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
     const allPendingMoves = this.gameState.getAllPendingMoves()
+    const pendingMovesArray = Array.from(allPendingMoves.values())
     
-    let myMove: PendingMoveInfo | null = null
-    let teammateMove: PendingMoveInfo | null = null
-
-    for (const [player, pending] of allPendingMoves) {
-      if (player === this._playerId) {
-        myMove = pending
-      } else {
-        teammateMove = pending
+    // For WHITE team: use player ID to identify my move vs teammate
+    // For BLACK team (opponent bots): just get any two moves
+    let move1: PendingMoveInfo | null = null
+    let move2: PendingMoveInfo | null = null
+    
+    if (currentTeam === Team.WHITE) {
+      // My move is for this player ID, teammate is the other
+      for (const [player, pending] of allPendingMoves) {
+        if (player === this._playerId) {
+          move1 = pending
+        } else {
+          move2 = pending
+        }
       }
+    } else {
+      // BLACK turn - just get any two pending moves (both are bot moves)
+      move1 = pendingMovesArray[0] || null
+      move2 = pendingMovesArray[1] || null
     }
 
-    if (!myMove || !teammateMove) {
+    if (!move1 || !move2) {
       console.log('[RESOLVE] Pending moves debug:', {
         allPlayers: Array.from(allPendingMoves.keys()),
+        currentTeam,
         myPlayerId: this._playerId,
-        myMove,
-        teammateMove
+        move1,
+        move2
       })
       throw new Error('Both pending moves must be set')
     }
 
-    const player1Move = myMove.move
-    const player2Move = teammateMove.move
+    const player1Move = move1.move
+    const player2Move = move2.move
     const isSync = player1Move === player2Move
 
     const winningMove = player1Move
