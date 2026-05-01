@@ -196,6 +196,10 @@ export class GameState {
     this.teamTimer = seconds
   }
 
+  setCurrentTeam(team: Team): void {
+    this._currentTeam = team
+  }
+
   isTimerActive(): boolean {
     return this.timerActive
   }

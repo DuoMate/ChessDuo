@@ -226,15 +226,24 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string }) {
     console.log('[ONLINE] Turn resolved:', payload)
-    // Apply the winning move if not already resolved (phase check prevents double resolve)
+    console.log('[ONLINE] Current phase:', this.gameState.phase, 'currentTurn:', this.gameState.currentTeam)
+    
+    // Try to apply the move - if it fails (already resolved), we still need to advance to next turn
     const result = this.gameState.resolve(payload.winningMove)
     if (result) {
-      console.log('[ONLINE] Applied resolved move locally:', payload.winningMove)
+      console.log('[ONLINE] Applied resolved move locally:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
     } else {
-      console.log('[ONLINE] Move already resolved, ensuring turn is set correctly')
-      // If already resolved, ensure we're in the correct phase for next turn
-      this.startPendingTurn()
+      console.log('[ONLINE] Move already resolved (phase:', this.gameState.phase, '), forcing turn advancement')
+      // Always advance to the next turn after receiving a turn_resolved broadcast
+      const nextTeam = this.gameState.currentTeam === Team.WHITE ? Team.BLACK : Team.WHITE
+      this.gameState.setCurrentTeam(nextTeam)
+      console.log('[ONLINE] Force switched to:', nextTeam)
     }
+    
+    // Start pending turn for the new phase
+    this.startPendingTurn()
+    
+    console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
