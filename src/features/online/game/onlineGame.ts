@@ -215,8 +215,11 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string }) {
     console.log('[ONLINE] Turn resolved:', payload)
-    // Don't call resolve again - we already resolved locally when our own code resolved
-    // Just ensure status is updated if game is over
+    // Apply the winning move if not already resolved (phase check prevents double resolve)
+    const result = this.gameState.resolve(payload.winningMove)
+    if (result) {
+      console.log('[ONLINE] Applied resolved move locally:', payload.winningMove)
+    }
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
