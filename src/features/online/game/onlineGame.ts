@@ -228,19 +228,29 @@ export class OnlineGame {
     console.log('[ONLINE] Turn resolved:', payload)
     console.log('[ONLINE] Current phase:', this.gameState.phase, 'currentTurn:', this.gameState.currentTeam)
     
-    // Try to apply the move - if it fails (already resolved), we still need to advance to next turn
+    // Try to apply the move through normal resolve flow
     const result = this.gameState.resolve(payload.winningMove)
+    
     if (result) {
-      console.log('[ONLINE] Applied resolved move locally:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
+      console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
     } else {
-      console.log('[ONLINE] Move already resolved (phase:', this.gameState.phase, '), forcing turn advancement')
-      // Always advance to the next turn after receiving a turn_resolved broadcast
+      console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, '), applying move directly to board')
+      
+      // Phase is not LOCKED (already resolved by coordinator) - apply move directly to board
+      try {
+        this.gameState.board.move(payload.winningMove)
+        console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
+      } catch (e) {
+        console.log('[ONLINE] Could not apply move directly:', e)
+      }
+      
+      // Force advance to next turn
       const nextTeam = this.gameState.currentTeam === Team.WHITE ? Team.BLACK : Team.WHITE
       this.gameState.setCurrentTeam(nextTeam)
       console.log('[ONLINE] Force switched to:', nextTeam)
     }
     
-    // Start pending turn for the new phase
+    // Ensure we're in correct phase for next turn
     this.startPendingTurn()
     
     console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
