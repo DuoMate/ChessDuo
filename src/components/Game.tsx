@@ -242,7 +242,9 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
 
   // Initialize online game - runs AFTER setOnStateChange is set up
   useEffect(() => {
+    console.log('[Game] useEffect conditions:', { mode, isOnline, hasOnlineGame: !!onlineGame, playerId, roomId, team })
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
+      console.log('[Game] Calling joinRoom with:', { roomId, playerId, team })
       onlineGame.joinRoom({ id: roomId } as any, playerId, team)
     }
   }, [mode, onlineGame, playerId, roomId, team])
