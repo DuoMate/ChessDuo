@@ -151,10 +151,16 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 }
 
 export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
+  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team })
+  
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
-  const [onlineGame] = useState(() => mode === 'online' ? new OnlineGame() : null)
+  const [onlineGame] = useState(() => {
+    console.log('[Game] Creating OnlineGame, mode:', mode)
+    return mode === 'online' ? new OnlineGame() : null
+  })
   const isOnline = mode === 'online'
+  console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
 
   // Only create bot config for offline mode
   const botConfig = useMemo(() => {
@@ -205,8 +211,10 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
 
   // Get player ID for online mode
   useEffect(() => {
+    console.log('[Game] Player ID useEffect, mode:', mode)
     if (mode === 'online') {
       supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log('[Game] Session:', session?.user?.id)
         if (session?.user) {
           setPlayerId(session.user.id)
         }
@@ -217,13 +225,20 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
   useEffect(() => {
-    if (!onlineGame) return
+    console.log('[Game] setOnStateChange useEffect, onlineGame:', !!onlineGame)
+    if (!onlineGame) {
+      console.log('[Game] No onlineGame, skipping setOnStateChange')
+      return
+    }
     
     onlineGameRef.current = onlineGame
+    console.log('[Game] Setting up setOnStateChange callback')
     onlineGame.setOnStateChange(() => {
+      console.log('[Game] 🔥 State change callback triggered!')
       if (onlineGameRef.current) {
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
+        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -238,14 +253,26 @@ export function Game({ level, roomCode, mode, roomId, team }: GameProps) {
         }))
       }
     })
+    console.log('[Game] setOnStateChange callback set up complete')
   }, [onlineGame])
 
   // Initialize online game - runs AFTER setOnStateChange is set up
   useEffect(() => {
-    console.log('[Game] useEffect conditions:', { mode, isOnline, hasOnlineGame: !!onlineGame, playerId, roomId, team })
+    console.log('[Game] JoinRoom useEffect:', {
+      mode,
+      isOnline,
+      hasOnlineGame: !!onlineGame,
+      playerId,
+      roomId,
+      team,
+      conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!team
+    })
+    
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
-      console.log('[Game] Calling joinRoom with:', { roomId, playerId, team })
+      console.log('[Game] ✅ Calling joinRoom with:', { roomId, playerId, team })
       onlineGame.joinRoom({ id: roomId } as any, playerId, team)
+    } else {
+      console.log('[Game] ❌ joinRoom NOT called - conditions not met')
     }
   }, [mode, onlineGame, playerId, roomId, team])
 
