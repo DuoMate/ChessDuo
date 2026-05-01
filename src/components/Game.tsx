@@ -606,27 +606,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   g.lockPendingMove('bot_opponent_1' as any)
                   g.lockPendingMove('bot_opponent_2' as any)
                   
-                  console.log(`[RESOLVE] Bot moves set and locked`)
+                  console.log(`[RESOLVE] Bot moves set and locked, pending moves:`, g.getAllPendingMoves())
                   setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
                 }
               }
               
-              // Give a small delay to ensure state is consistent
-              await new Promise(resolve => setTimeout(resolve, 200))
-              
-              // Try to resolve
-              console.log(`[RESOLVE] Attempting BLACK resolve, isBothPendingLocked:`, g.isBothPendingLocked())
+              // Skip the isBothPendingLocked check - we just set and locked the moves, just resolve
+              console.log(`[RESOLVE] Attempting BLACK resolve directly...`)
               try {
                 await g.resolvePendingMoves()
                 console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
                 updateStateRef.current()
               } catch (e) {
                 console.log(`[RESOLVE] BLACK resolve failed:`, e)
-                // Try to force advance anyway
-                const nextTurn = g.currentTurn === Team.WHITE ? Team.BLACK : Team.WHITE
-                if (nextTurn === Team.WHITE) {
-                  g.startPendingTurn()
-                }
+                // Force advance to WHITE if resolve fails
+                g.startPendingTurn()
               }
               
               setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))

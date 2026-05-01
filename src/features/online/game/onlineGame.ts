@@ -307,6 +307,10 @@ export class OnlineGame {
     return this.gameState.isBothPendingLocked()
   }
 
+  getAllPendingMoves(): Map<Player, PendingMoveInfo> {
+    return this.gameState.getAllPendingMoves()
+  }
+
   getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {
     return this.gameState.getPendingMoves()
   }
