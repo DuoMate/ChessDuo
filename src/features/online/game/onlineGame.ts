@@ -2,7 +2,10 @@ import { Chess } from 'chess.js'
 import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { GameStatus, MoveComparison } from '../../offline/game/localGame'
+import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+
+const SERVER_URL = process.env.NEXT_PUBLIC_EVALUATOR_URL || ''
 
 interface MovePayload {
   playerId: string
@@ -48,17 +51,35 @@ export class OnlineGame {
     player1Accuracy: 0,
     player2Accuracy: 0
   }
+  private evaluator: ServerMoveEvaluator
+
+  constructor() {
+    this.gameState = new GameState()
+    this._status = GameStatus.WAITING
+    console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
+    this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
+  }
+
+  private calculateAccuracy(lossInCentipawns: number): number {
+    if (lossInCentipawns <= 10) return 100
+    if (lossInCentipawns >= 300) return 0
+    return Math.round(100 * (1 - (lossInCentipawns - 10) / 290))
+  }
+
+  private getAccuracyCategory(lossInCentipawns: number): { label: string; color: string; emoji: string } {
+    if (lossInCentipawns <= 10) return { label: 'Perfect', color: '#22c55e', emoji: '✓' }
+    if (lossInCentipawns <= 30) return { label: 'Great', color: '#22c55e', emoji: '!' }
+    if (lossInCentipawns <= 70) return { label: 'Good', color: '#84cc16', emoji: '?' }
+    if (lossInCentipawns <= 150) return { label: 'Inaccuracy', color: '#eab308', emoji: '??' }
+    return { label: 'Mistake', color: '#ef4444', emoji: '!!!' }
+  }
+
+  get highlightSquares() {
+    return null
+  }
 
   get status(): GameStatus {
     return this._status
-  }
-
-  get currentTurn(): Team {
-    return this.gameState.currentTeam
-  }
-
-  get board(): Chess {
-    return this.gameState.board
   }
 
   get lastMove(): { from: string; to: string } | null {
@@ -67,19 +88,6 @@ export class OnlineGame {
 
   get lastMoveComparison(): MoveComparison | null {
     return this._lastMoveComparison
-  }
-
-  get pendingOverlay(): PendingMoveInfo | null {
-    return null
-  }
-
-  get highlightSquares() {
-    return null
-  }
-
-  constructor() {
-    this.gameState = new GameState()
-    this._status = GameStatus.WAITING
   }
 
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
@@ -308,26 +316,34 @@ export class OnlineGame {
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
     const allPendingMoves = this.gameState.getAllPendingMoves()
-    const pendingMovesArray = Array.from(allPendingMoves.values())
+    const pendingMovesArray = Array.from(allPendingMoves.entries())
     
     // For WHITE team: use player ID to identify my move vs teammate
     // For BLACK team (opponent bots): just get any two moves
     let move1: PendingMoveInfo | null = null
     let move2: PendingMoveInfo | null = null
+    let player1Id = ''
+    let player2Id = ''
     
     if (currentTeam === Team.WHITE) {
       // My move is for this player ID, teammate is the other
       for (const [player, pending] of allPendingMoves) {
         if (player === this._playerId) {
           move1 = pending
+          player1Id = player
         } else {
           move2 = pending
+          player2Id = player
         }
       }
     } else {
       // BLACK turn - just get any two pending moves (both are bot moves)
-      move1 = pendingMovesArray[0] || null
-      move2 = pendingMovesArray[1] || null
+      if (pendingMovesArray.length >= 2) {
+        move1 = pendingMovesArray[0][1]
+        player1Id = pendingMovesArray[0][0]
+        move2 = pendingMovesArray[1][1]
+        player2Id = pendingMovesArray[1][0]
+      }
     }
 
     if (!move1 || !move2) {
@@ -343,10 +359,85 @@ export class OnlineGame {
 
     const player1Move = move1.move
     const player2Move = move2.move
+    const player1From = move1.from
+    const player1To = move1.to
+    const player2From = move2.from
+    const player2To = move2.to
     const isSync = player1Move === player2Move
 
-    const winningMove = player1Move
-    const winnerId = 'player1'
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`[ONLINE RESOLVE] ${currentTeam} team to move`)
+    console.log(`[MOVES] ${player1Id}: ${player1Move} (${player1From}${player1To}) | ${player2Id}: ${player2Move} (${player2From}${player2To})`)
+    
+    const turnStartFen = this.gameState.getTurnStartFen()
+    
+    const player1Uci = player1From + player1To
+    const player2Uci = player2From + player2To
+    
+    const chess = new Chess(turnStartFen)
+    const verboseMoves = chess.moves({ verbose: true })
+    const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
+    const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+    
+    const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
+    
+    const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0])
+    const bestMoveScore = bestResult?.score ?? 0
+    const bestMoveUci = bestResult?.move ?? ''
+    
+    const player1Score = scoreMap.get(player1Uci) ?? 0
+    const player2Score = scoreMap.get(player2Uci) ?? 0
+
+    const player1Loss = Math.abs(bestMoveScore - player1Score)
+    const player2Loss = Math.abs(bestMoveScore - player2Score)
+    
+    if (isSync) {
+      console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
+    }
+
+    const player1Accuracy = this.calculateAccuracy(player1Loss)
+    const player2Accuracy = this.calculateAccuracy(player2Loss)
+    const player1Category = this.getAccuracyCategory(player1Loss)
+    const player2Category = this.getAccuracyCategory(player2Loss)
+
+    console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
+    console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
+    console.log(`  [${player1Id}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+    console.log(`  [${player2Id}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
+
+    const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
+    const winningScore = winningMove === player1Move ? player1Score : player2Score
+    const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
+    const winnerId: 'player1' | 'player2' = isSync ? 'player1' : (winningMove === player1Move ? 'player1' : 'player2')
+    const loserId: 'player1' | 'player2' | null = isSync ? null : (winningMove === player1Move ? 'player2' : 'player1')
+    const loserFrom = loserId === 'player2' ? player2From : (loserId === 'player1' ? player1From : '')
+    const loserTo = loserId === 'player2' ? player2To : (loserId === 'player1' ? player1To : '')
+
+    console.log(`[RESULT] Winner: ${winnerId} with move: ${winningMove} (accuracy: ${winnerId === 'player1' ? player1Accuracy : player2Accuracy}%)`)
+    
+    // Store the comparison for UI
+    this._lastMoveComparison = {
+      player1Move,
+      player2Move,
+      player1Score,
+      player2Score,
+      player1Accuracy,
+      player2Accuracy,
+      player1Loss,
+      player2Loss,
+      player1Category,
+      player2Category,
+      winningMove,
+      winningScore,
+      isSync,
+      bestEngineMove: bestMoveUci,
+      bestEngineScore: bestMoveScore,
+      turnStartFen,
+      winnerId,
+      loserId,
+      loserFrom,
+      loserTo
+    }
 
     this.gameState.resolve(winningMove)
 
@@ -395,6 +486,14 @@ export class OnlineGame {
 
   get currentTurnInfo(): Team {
     return this.gameState.currentTeam
+  }
+
+  get currentTurn(): Team {
+    return this.gameState.currentTeam
+  }
+
+  get board(): Chess {
+    return this.gameState.board
   }
 
   get selectedMove(): string | null {
