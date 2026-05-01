@@ -12,6 +12,9 @@ import { supabase } from '@/lib/supabase'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
+import { GameLoading } from './GameLoading'
+import { GameInfo } from './GameInfo'
+import { PendingMoveOverlay } from './PendingMoveOverlay'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface GameProps {
@@ -84,6 +87,7 @@ interface GameState {
   pendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
   showResolution: boolean
+  isLoading: boolean
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -206,7 +210,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     timerActive: false,
     pendingOverlay: null,
     highlightSquares: null,
-    showResolution: false
+    showResolution: false,
+    isLoading: true
   })
 
   // Player ID from URL props (passed from Room component)
@@ -360,7 +365,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
-        pendingOverlay: pendingOverlay || prev.pendingOverlay
+        pendingOverlay: pendingOverlay || prev.pendingOverlay,
+        // Clear loading when game is ready
+        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
       }
       return newState
     })
@@ -832,6 +839,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     }
   }, [executeBotMove, startTimer])
+
+  // Show loading state while game initializes
+  if (gameState.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <GameLoading 
+          message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">

@@ -1,4 +1,5 @@
 import { Game } from '@/components/Game'
+import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
 
 export default async function GamePage({
   searchParams,
@@ -13,5 +14,9 @@ export default async function GamePage({
   const team = resolved.team as 'WHITE' | 'BLACK' | undefined
   const playerId = resolved.playerId
 
-  return <Game level={level} mode={mode} roomId={roomId} roomCode={roomCode} team={team} playerId={playerId} />
+  return (
+    <ErrorBoundary fallback={<GameErrorFallback />}>
+      <Game level={level} mode={mode} roomId={roomId} roomCode={roomCode} team={team} playerId={playerId} />
+    </ErrorBoundary>
+  )
 }
