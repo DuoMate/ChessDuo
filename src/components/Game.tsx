@@ -393,25 +393,29 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     const comparison = g.lastMoveComparison
 
+    // Validate chess square format (e.g., "e2", "d4")
+    const isValidSquare = (sq: string | undefined): sq is string => 
+      !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
+
     if (comparison) {
       const winnerId = comparison.winnerId
       const loserId = comparison.loserId
 
-      let highlightSquares: HighlightSquares = {}
+      const highlightSquares: HighlightSquares = {}
 
       if (winnerId === 'player1' && humanMove) {
-        highlightSquares.winnerFrom = humanMove.from
-        highlightSquares.winnerTo = humanMove.to
+        if (isValidSquare(humanMove.from)) highlightSquares.winnerFrom = humanMove.from
+        if (isValidSquare(humanMove.to)) highlightSquares.winnerTo = humanMove.to
         if (!comparison.isSync && loserId === 'player2' && teammateMove) {
-          highlightSquares.loserFrom = teammateMove.from
-          highlightSquares.loserTo = teammateMove.to
+          if (isValidSquare(teammateMove.from)) highlightSquares.loserFrom = teammateMove.from
+          if (isValidSquare(teammateMove.to)) highlightSquares.loserTo = teammateMove.to
         }
       } else if (winnerId === 'player2' && teammateMove) {
-        highlightSquares.winnerFrom = teammateMove.from
-        highlightSquares.winnerTo = teammateMove.to
+        if (isValidSquare(teammateMove.from)) highlightSquares.winnerFrom = teammateMove.from
+        if (isValidSquare(teammateMove.to)) highlightSquares.winnerTo = teammateMove.to
         if (!comparison.isSync && loserId === 'player1' && humanMove) {
-          highlightSquares.loserFrom = humanMove.from
-          highlightSquares.loserTo = humanMove.to
+          if (isValidSquare(humanMove.from)) highlightSquares.loserFrom = humanMove.from
+          if (isValidSquare(humanMove.to)) highlightSquares.loserTo = humanMove.to
         }
       }
 
@@ -543,24 +547,36 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           console.log(`[RESOLVE] Both locked, attempting resolve...`)
           const comparison = g.lastMoveComparison
           
+          // Validate chess square format (e.g., "e2", "d4")
+          const isValidSquare = (sq: string | undefined): sq is string => 
+            !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
+
           // Set highlight squares for winner/loser moves
           if (comparison) {
             const highlightSquares: HighlightSquares = {}
             const winnerId = comparison.winnerId
             
             if (winnerId === 'player1' && comparison.player1Move) {
-              highlightSquares.winnerFrom = comparison.winningMove.substring(0, 2)
-              highlightSquares.winnerTo = comparison.winningMove.substring(2, 4)
+              const wf = comparison.winningMove.substring(0, 2)
+              const wt = comparison.winningMove.substring(2, 4)
+              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
               if (!comparison.isSync && comparison.loserId === 'player2') {
-                highlightSquares.loserFrom = comparison.player2Move.substring(0, 2)
-                highlightSquares.loserTo = comparison.player2Move.substring(2, 4)
+                const lf = comparison.player2Move?.substring(0, 2)
+                const lt = comparison.player2Move?.substring(2, 4)
+                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
+                if (isValidSquare(lt)) highlightSquares.loserTo = lt
               }
             } else if (winnerId === 'player2' && comparison.player2Move) {
-              highlightSquares.winnerFrom = comparison.winningMove.substring(0, 2)
-              highlightSquares.winnerTo = comparison.winningMove.substring(2, 4)
+              const wf = comparison.winningMove.substring(0, 2)
+              const wt = comparison.winningMove.substring(2, 4)
+              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
               if (!comparison.isSync && comparison.loserId === 'player1') {
-                highlightSquares.loserFrom = comparison.player1Move.substring(0, 2)
-                highlightSquares.loserTo = comparison.player1Move.substring(2, 4)
+                const lf = comparison.player1Move?.substring(0, 2)
+                const lt = comparison.player1Move?.substring(2, 4)
+                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
+                if (isValidSquare(lt)) highlightSquares.loserTo = lt
               }
             }
             
