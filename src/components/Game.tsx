@@ -254,7 +254,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
           timerSeconds: g.getTeamTimer(),
-          timerActive: g.isTimerActive()
+          timerActive: g.isTimerActive(),
+          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
         }))
       }
     })
