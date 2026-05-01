@@ -89,9 +89,7 @@ export class OnlineGame {
     this._playerId = playerId
     this._team = team
 
-    // Add current player
-    const playerNum = team === 'WHITE' ? Team.WHITE : Team.BLACK
-    this.gameState.addPlayer(playerId as Player, playerNum)
+    // Don't add player here - wait for startGameWhenReady to add all players from room_players
 
     this._channel = supabase.channel(`room:${room.id}`, {
       config: {
@@ -165,7 +163,12 @@ export class OnlineGame {
       // Add human players in sorted order (by player_id) to ensure consistent state
       const playerNum = this._team === 'WHITE' ? Team.WHITE : Team.BLACK
       for (const p of humanPlayers) {
-        this.gameState.addPlayer(p.player_id as Player, playerNum)
+        try {
+          this.gameState.addPlayer(p.player_id as Player, playerNum)
+        } catch (e) {
+          // Player might already exist, skip
+          console.log('[ONLINE] Player already exists or error:', e)
+        }
       }
 
       // Add bot opponents
