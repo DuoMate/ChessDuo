@@ -90,6 +90,17 @@ export class OnlineGame {
     return this._lastMoveComparison
   }
 
+  get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
+    const allMoves = this.gameState.getAllPendingMoves()
+    for (const [player, pending] of allMoves) {
+      if (player !== this._playerId) {
+        // Teammate's pending move - show as overlay
+        return { from: pending.from, to: pending.to, piece: pending.piece, color: 'white' }
+      }
+    }
+    return null
+  }
+
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
     console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
     

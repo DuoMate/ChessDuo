@@ -326,6 +326,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       comparison = g.lastMoveComparison
     }
     
+    // Get pendingOverlay for online mode - show teammate's pending move
+    const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
+    
     setGameState(prev => {
       const newState = {
         ...prev,
@@ -343,7 +346,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         totalMoves: 0,
         moveComparison: comparison,
         timerSeconds: g.getTeamTimer(),
-        timerActive: g.isTimerActive()
+        timerActive: g.isTimerActive(),
+        pendingOverlay: pendingOverlay || prev.pendingOverlay
       }
       return newState
     })
@@ -528,6 +532,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (g.isBothPendingLocked()) {
           // Try to resolve - will fail gracefully if already resolved by other client
           console.log(`[RESOLVE] Both locked, attempting resolve...`)
+          const comparison = g.lastMoveComparison
+          
+          // Set highlight squares for winner/loser moves
+          if (comparison) {
+            const highlightSquares: HighlightSquares = {}
+            const winnerId = comparison.winnerId
+            
+            if (winnerId === 'player1' && comparison.player1Move) {
+              highlightSquares.winnerFrom = comparison.winningMove.substring(0, 2)
+              highlightSquares.winnerTo = comparison.winningMove.substring(2, 4)
+              if (!comparison.isSync && comparison.loserId === 'player2') {
+                highlightSquares.loserFrom = comparison.player2Move.substring(0, 2)
+                highlightSquares.loserTo = comparison.player2Move.substring(2, 4)
+              }
+            } else if (winnerId === 'player2' && comparison.player2Move) {
+              highlightSquares.winnerFrom = comparison.winningMove.substring(0, 2)
+              highlightSquares.winnerTo = comparison.winningMove.substring(2, 4)
+              if (!comparison.isSync && comparison.loserId === 'player1') {
+                highlightSquares.loserFrom = comparison.player1Move.substring(0, 2)
+                highlightSquares.loserTo = comparison.player1Move.substring(2, 4)
+              }
+            }
+            
+            setGameState(prev => ({ ...prev, highlightSquares, showResolution: true }))
+          }
+          
           try {
             await g.resolvePendingMoves()
             updateStateRef.current()
