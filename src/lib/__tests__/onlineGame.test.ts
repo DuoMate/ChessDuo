@@ -175,4 +175,88 @@ describe('OnlineGame', () => {
       expect(typeof active).toBe('boolean')
     })
   })
+
+  describe('handleTurnResolved - turn sync fix', () => {
+    let gameWithState: OnlineGame
+
+    beforeEach(() => {
+      gameWithState = new OnlineGame()
+      // Initialize game state with players (simulates game started)
+      gameWithState.gameState.addPlayer('player1' as any, Team.WHITE)
+      gameWithState.gameState.addPlayer('player2' as any, Team.WHITE)
+      gameWithState.gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+      gameWithState.gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+      gameWithState.gameState.startMatch()
+    })
+
+    it('should NOT force-switch turn when resolve() returns null (second client receiving broadcast)', () => {
+      // Simulate: WHITE was resolved, turn is now BLACK (phase is SELECTING)
+      // Set phase to LOCKED so we can properly resolve, then manually set to SELECTING
+      gameWithState.startPendingTurn()
+      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player1' as any)
+      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player2' as any)
+      
+      // Resolve WHITE - this advances turn to BLACK
+      gameWithState.gameState.resolve('e2e4')
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+      
+      const phaseBefore = gameWithState.gameState.phase
+      
+      // Now simulate second client receiving broadcast - resolve returns null because phase is SELECTING
+      const result = gameWithState.gameState.resolve('e2e4')
+      
+      // Turn should stay on BLACK because resolve() returned null (no force-switch should happen)
+      expect(result).toBeNull() // Already resolved
+      expect(gameWithState.currentTurn).toBe(Team.BLACK) // Should NOT be WHITE
+    })
+
+    it('should maintain correct turn when receiving broadcast for already-resolved turn', () => {
+      // Simulate full WHITE resolve -> BLACK flow
+      gameWithState.startPendingTurn()
+      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player1' as any)
+      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player2' as any)
+      
+      // WHITE resolves, turn should be BLACK
+      gameWithState.gameState.resolve('e2e4')
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+      expect(gameWithState.gameState.phase).toBe('SELECTING')
+      
+      // Second client receives broadcast for WHITE resolution
+      // resolve() should return null because phase is SELECTING (not LOCKED)
+      const result = gameWithState.gameState.resolve('e2e4')
+      expect(result).toBeNull()
+      
+      // Turn should stay BLACK (not force-switched to WHITE)
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+    })
+
+    it('should allow BLACK resolve when properly set up', () => {
+      // First resolve WHITE properly
+      gameWithState.startPendingTurn()
+      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player1' as any)
+      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player2' as any)
+      
+      gameWithState.gameState.resolve('e2e4')
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+      
+      // Now set up BLACK pending moves
+      gameWithState.startPendingTurn()
+      gameWithState.gameState.setPendingMove('bot_opponent_1' as any, 'b8c6', 'b8', 'c6', 'n')
+      gameWithState.gameState.lockPendingMove('bot_opponent_1' as any)
+      gameWithState.gameState.setPendingMove('bot_opponent_2' as any, 'b8c6', 'b8', 'c6', 'n')
+      gameWithState.gameState.lockPendingMove('bot_opponent_2' as any)
+      
+      // Now resolve BLACK - should work because phase is LOCKED and turn is BLACK
+      const blackResult = gameWithState.gameState.resolve('b8c6')
+      
+      expect(blackResult).not.toBeNull()
+      expect(gameWithState.currentTurn).toBe(Team.WHITE)
+    })
+  })
 })

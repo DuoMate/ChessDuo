@@ -122,9 +122,15 @@ export class OnlineGame {
         const playersOnline = Object.keys(state)
         console.log('[ONLINE] Presence sync:', playersOnline)
         
-        // If both players are online and game hasn't started, start the game
-        if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
-          this.startGameWhenReady()
+        // If both players are online, ensure game is ready
+        // If game hasn't started, start it. If already started, just ensure state is synced.
+        if (playersOnline.length >= 2) {
+          if (this._status !== GameStatus.PLAYING) {
+            this.startGameWhenReady()
+          } else {
+            // Game already started (we joined late) - sync state from database
+            this.syncGameState()
+          }
         }
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
@@ -208,6 +214,50 @@ export class OnlineGame {
     }
   }
 
+  private async syncGameState(): Promise<void> {
+    console.log('[ONLINE] Syncing game state (late joiner)...')
+    try {
+      // Query room_players to get all human players
+      const { data: players } = await supabase
+        .from('room_players')
+        .select('*')
+        .eq('room_id', this._room!.id)
+        .order('player_id', { ascending: true })
+
+      // Add players to both teams if not already present
+      const whitePlayers = (players || []).filter(p => p.team === 'WHITE')
+      const blackPlayers = (players || []).filter(p => p.team === 'BLACK')
+
+      for (const p of whitePlayers) {
+        try {
+          this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
+        } catch (e) {
+          // Already exists
+        }
+      }
+
+      for (const p of blackPlayers) {
+        try {
+          this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
+        } catch (e) {
+          // Already exists
+        }
+      }
+
+      // Add bots if not present
+      try {
+        this.gameState.addPlayer('bot_opponent_1' as Player, Team.BLACK)
+      } catch (e) {}
+      try {
+        this.gameState.addPlayer('bot_opponent_2' as Player, Team.BLACK)
+      } catch (e) {}
+
+      console.log('[ONLINE] Game state synced successfully')
+    } catch (e) {
+      console.error('[ONLINE] Failed to sync game state:', e)
+    }
+  }
+
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
@@ -234,9 +284,9 @@ export class OnlineGame {
     if (result) {
       console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
     } else {
-      console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, '), applying move directly to board')
+      console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
       
-      // Phase is not LOCKED (already resolved by coordinator) - apply move directly to board
+      // Phase is not LOCKED (already resolved by coordinator) - try to apply move directly to board
       try {
         this.gameState.board.move(payload.winningMove)
         console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
@@ -244,10 +294,8 @@ export class OnlineGame {
         console.log('[ONLINE] Could not apply move directly:', e)
       }
       
-      // Force advance to next turn
-      const nextTeam = this.gameState.currentTeam === Team.WHITE ? Team.BLACK : Team.WHITE
-      this.gameState.setCurrentTeam(nextTeam)
-      console.log('[ONLINE] Force switched to:', nextTeam)
+      // DO NOT force-switch turn here - if resolve() returned null, it means the turn
+      // was already advanced by the coordinator. Force-switching breaks BLACK resolution.
     }
     
     // Ensure we're in correct phase for next turn
