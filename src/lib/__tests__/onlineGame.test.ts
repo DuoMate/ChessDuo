@@ -258,5 +258,30 @@ describe('OnlineGame', () => {
       expect(blackResult).not.toBeNull()
       expect(gameWithState.currentTurn).toBe(Team.WHITE)
     })
+
+    it('should sync turn with FEN when resolve returns null (second client broadcast handling)', () => {
+      // Simulate: WHITE just resolved, board now shows BLACK turn
+      gameWithState.startPendingTurn()
+      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player1' as any)
+      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      gameWithState.gameState.lockPendingMove('player2' as any)
+      
+      // Resolve WHITE - turn advances to BLACK
+      gameWithState.gameState.resolve('e2e4')
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+      expect(gameWithState.gameState.fen.split(' ')[1]).toBe('b') // FEN shows BLACK
+
+      // Now simulate receiving broadcast again (second client scenario)
+      // resolve() returns null because phase is already SELECTING
+      // After applying move, turn should still be BLACK (matching FEN)
+      const result = gameWithState.gameState.resolve('e2e4')
+      expect(result).toBeNull()
+      
+      // FEN should show BLACK (board advanced)
+      expect(gameWithState.gameState.fen.split(' ')[1]).toBe('b')
+      // currentTurn should also be BLACK (synced with board)
+      expect(gameWithState.currentTurn).toBe(Team.BLACK)
+    })
   })
 })

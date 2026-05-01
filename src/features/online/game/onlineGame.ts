@@ -294,8 +294,13 @@ export class OnlineGame {
         console.log('[ONLINE] Could not apply move directly:', e)
       }
       
-      // DO NOT force-switch turn here - if resolve() returned null, it means the turn
-      // was already advanced by the coordinator. Force-switching breaks BLACK resolution.
+      // Sync turn with board - FEN position 7 indicates 'w' or 'b'
+      const fenParts = this.gameState.fen.split(' ')
+      const boardTurn = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
+      if (this.gameState.currentTeam !== boardTurn) {
+        this.gameState.setCurrentTeam(boardTurn)
+        console.log('[ONLINE] Synced turn to match board:', boardTurn)
+      }
     }
     
     // Ensure we're in correct phase for next turn
