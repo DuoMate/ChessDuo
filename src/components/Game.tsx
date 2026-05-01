@@ -594,6 +594,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               
               const currentFen = g.board.fen()
               const botUciMove = await bot.selectMoveAsync(currentFen)
+              console.log(`[RESOLVE] Bot selected move:`, botUciMove)
               
               if (botUciMove) {
                 const sanMove = uciToSan(botUciMove, currentFen)
@@ -605,28 +606,28 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   g.lockPendingMove('bot_opponent_1' as any)
                   g.lockPendingMove('bot_opponent_2' as any)
                   
+                  console.log(`[RESOLVE] Bot moves set and locked`)
                   setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
                 }
               }
               
-              // Wait for both bots to be locked (or try resolving anyway after timeout)
-              let attempts = 0
-              while (!g.isBothPendingLocked() && attempts < 20) {
-                await new Promise(resolve => setTimeout(resolve, 500))
-                attempts++
-                console.log(`[RESOLVE] Waiting for bots... ${attempts}/20, locked: ${g.isBothPendingLocked()}`)
-              }
+              // Give a small delay to ensure state is consistent
+              await new Promise(resolve => setTimeout(resolve, 200))
               
-              // Always try to resolve - even if timed out, try resolving
-              console.log(`[RESOLVE] BLACK bots locked: ${g.isBothPendingLocked()}, attempting resolve...`)
+              // Try to resolve
+              console.log(`[RESOLVE] Attempting BLACK resolve, isBothPendingLocked:`, g.isBothPendingLocked())
               try {
                 await g.resolvePendingMoves()
-                console.log(`[RESOLVE] BLACK resolve succeeded`)
+                console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
                 updateStateRef.current()
               } catch (e) {
-                console.log(`[RESOLVE] BLACK resolve failed (may already done):`, e)
+                console.log(`[RESOLVE] BLACK resolve failed:`, e)
+                // Try to force advance anyway
+                const nextTurn = g.currentTurn === Team.WHITE ? Team.BLACK : Team.WHITE
+                if (nextTurn === Team.WHITE) {
+                  g.startPendingTurn()
+                }
               }
-              console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
               
               setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
               
@@ -635,18 +636,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               updateStateRef.current()
               startTimer()
             } else {
-              console.log(`[RESOLVE] Waiting for other client to handle BLACK bots...`)
-              // Wait for turn to change to WHITE (not stay at BLACK)
+              console.log(`[RESOLVE] Non-coordinator waiting for BLACK to complete...`)
+              // Wait for turn to change to WHITE
               let attempts = 0
-              while (g.currentTurn !== Team.WHITE && attempts < 20) {
+              while (g.currentTurn !== Team.WHITE && attempts < 30) {
                 await new Promise(resolve => setTimeout(resolve, 500))
                 attempts++
-                console.log(`[RESOLVE] Waiting... ${attempts}/20, turn: ${g.currentTurn}`)
+                console.log(`[RESOLVE] Waiting for WHITE... ${attempts}/30, turn: ${g.currentTurn}`)
               }
-              console.log(`[RESOLVE] BLACK turn done, new turn: ${g.currentTurn}`)
+              console.log(`[RESOLVE] Turn changed to: ${g.currentTurn}`)
               
               // Clear the resolution UI
-              setGameState(prev => ({ ...prev, highlightSquares: null, showResolution: false }))
+              setGameState(prev => ({ ...prev, highlightSquares: null }))
               
               // Start timer for next WHITE turn
               startTimer()
