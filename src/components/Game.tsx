@@ -378,9 +378,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // Store WHITE team comparison separately
         // Show when: turn is WHITE (during WHITE turn) OR turn is BLACK (right after WHITE resolved)
         // Clear when: new WHITE turn starts (isNewWhiteTurn)
+        // Filter by turn in FEN - only show if comparison is from WHITE turn (not BLACK)
         whiteTeamComparison: isNewWhiteTurn 
           ? null 
-          : (comparison && (currentTurn === Team.WHITE || currentTurn === Team.BLACK) 
+          : (comparison && comparison.turnStartFen && comparison.turnStartFen.endsWith(' w ')
             ? comparison 
             : prev.whiteTeamComparison),
         showResolution: showResolution,
@@ -548,7 +549,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
-            pendingOverlay: null,
             showResolution: false,
             highlightSquares: null
           }))
@@ -952,6 +952,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             />
           </div>
           
+          {/* Accuracy Panel - below board with more space */}
+          <AnimatePresence>
+            {gameState.showResolution && gameState.whiteTeamComparison && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="w-[280px] md:w-[360px] lg:w-[500px]"
+              >
+                <MoveComparisonPanel 
+                  comparison={gameState.whiteTeamComparison}
+                  isVisible={gameState.showResolution}
+                  onAnimationComplete={handleResolutionComplete}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           {/* Right side - BLACK team (Timer + Resolution + Captured) */}
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
             <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
@@ -961,15 +979,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 currentTeam={Team.BLACK}
               />
             </div>
-            <AnimatePresence>
-              {gameState.showResolution && gameState.whiteTeamComparison && (
-                <MoveComparisonPanel 
-                  comparison={gameState.whiteTeamComparison}
-                  isVisible={gameState.showResolution}
-                  onAnimationComplete={handleResolutionComplete}
-                />
-              )}
-            </AnimatePresence>
             <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
           </div>
         </div>
