@@ -180,6 +180,10 @@ export class GameState {
     return { human, teammate }
   }
 
+  getAllPendingMoves(): Map<Player, PendingMoveInfo> {
+    return this.pendingMoves
+  }
+
   getTurnStartFen(): string {
     return this.turnStartFen
   }

@@ -302,15 +302,30 @@ export class OnlineGame {
 
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
-    const pendingMoves = this.gameState.getPendingMoves()
-    const humanMove = pendingMoves.human
-    const teammateMove = pendingMoves.teammate
+    const allPendingMoves = this.gameState.getAllPendingMoves()
+    
+    let myMove: PendingMoveInfo | null = null
+    let teammateMove: PendingMoveInfo | null = null
 
-    if (!humanMove || !teammateMove) {
+    for (const [player, pending] of allPendingMoves) {
+      if (player === this._playerId) {
+        myMove = pending
+      } else {
+        teammateMove = pending
+      }
+    }
+
+    if (!myMove || !teammateMove) {
+      console.log('[RESOLVE] Pending moves debug:', {
+        allPlayers: Array.from(allPendingMoves.keys()),
+        myPlayerId: this._playerId,
+        myMove,
+        teammateMove
+      })
       throw new Error('Both pending moves must be set')
     }
 
-    const player1Move = humanMove.move
+    const player1Move = myMove.move
     const player2Move = teammateMove.move
     const isSync = player1Move === player2Move
 
