@@ -207,7 +207,8 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string }) {
     console.log('[ONLINE] Turn resolved:', payload)
-    this.gameState.resolve(payload.winningMove)
+    // Don't call resolve again - we already resolved locally when our own code resolved
+    // Just ensure status is updated if game is over
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
@@ -287,6 +288,10 @@ export class OnlineGame {
 
   selectMove(player: Player, move: string): void {
     this.gameState.selectMove(player, move)
+  }
+
+  getPlayers(team: Team): Player[] {
+    return this.gameState.getPlayers(team)
   }
 
   getSelectedMove(player: Player): string | null {

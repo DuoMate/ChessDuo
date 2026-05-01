@@ -526,54 +526,84 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
         if (g.isBothPendingLocked()) {
-          console.log(`[RESOLVE] Both locked, resolving...`)
-          await g.resolvePendingMoves()
-          updateStateRef.current()
+          // Try to resolve - will fail gracefully if already resolved by other client
+          console.log(`[RESOLVE] Both locked, attempting resolve...`)
+          try {
+            await g.resolvePendingMoves()
+            updateStateRef.current()
+            console.log(`[RESOLVE] Resolve succeeded`)
+          } catch (e) {
+            console.log(`[RESOLVE] Resolve failed (already resolved by other client):`, e)
+          }
+          
           const newTurn = g.currentTurn
           console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
           
           // In online mode, after WHITE resolves, BLACK (bots) need to move
-          if (newTurn === Team.BLACK && bot) {
-            console.log(`[RESOLVE] Triggering opponent (BLACK) bot moves...`)
-            setGameState(prev => ({ ...prev, isBotThinking: true }))
+          // Only one client should handle bot moves - use playerId to coordinate
+          if (newTurn === Team.BLACK && bot && playerId) {
+            // Get both players from game state to determine coordinator
+            const players = g.getPlayers(Team.WHITE)
+            const sortedPlayers = [...players].sort()
+            const isCoordinator = playerId === sortedPlayers[0]
             
-            const currentFen = g.board.fen()
-            const botUciMove = await bot.selectMoveAsync(currentFen)
-            
-            if (botUciMove) {
-              const sanMove = uciToSan(botUciMove, currentFen)
-              const moveInfo = getMoveFromUci(botUciMove, currentFen)
+            if (isCoordinator) {
+              console.log(`[RESOLVE] Handling BLACK bot moves (coordinator)...`)
+              setGameState(prev => ({ ...prev, isBotThinking: true }))
               
-              if (moveInfo) {
-                g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                g.lockPendingMove('bot_opponent_1' as any)
-                g.lockPendingMove('bot_opponent_2' as any)
+              const currentFen = g.board.fen()
+              const botUciMove = await bot.selectMoveAsync(currentFen)
+              
+              if (botUciMove) {
+                const sanMove = uciToSan(botUciMove, currentFen)
+                const moveInfo = getMoveFromUci(botUciMove, currentFen)
                 
-                setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
+                if (moveInfo) {
+                  g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                  g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                  g.lockPendingMove('bot_opponent_1' as any)
+                  g.lockPendingMove('bot_opponent_2' as any)
+                  
+                  setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
+                }
               }
-            }
-            
-            // Wait for both bots to be locked and resolve
-            let attempts = 0
-            while (!g.isBothPendingLocked() && attempts < 20) {
-              await new Promise(resolve => setTimeout(resolve, 500))
-              attempts++
-            }
-            
-            if (g.isBothPendingLocked()) {
-              console.log(`[RESOLVE] BLACK bots locked, resolving...`)
-              await g.resolvePendingMoves()
+              
+              // Wait for both bots to be locked and resolve
+              let attempts = 0
+              while (!g.isBothPendingLocked() && attempts < 20) {
+                await new Promise(resolve => setTimeout(resolve, 500))
+                attempts++
+              }
+              
+              if (g.isBothPendingLocked()) {
+                console.log(`[RESOLVE] BLACK bots locked, resolving...`)
+                try {
+                  await g.resolvePendingMoves()
+                  updateStateRef.current()
+                } catch (e) {
+                  console.log(`[RESOLVE] BLACK resolve failed (may already done):`, e)
+                }
+                console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
+              }
+              
+              setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+              
+              // Start next WHITE turn
+              g.startPendingTurn()
               updateStateRef.current()
-              console.log(`[RESOLVE] BLACK turn resolved, new turn: ${g.currentTurn}`)
+              startTimer()
+            } else {
+              console.log(`[RESOLVE] Waiting for other client to handle BLACK bots...`)
+              // Wait for turn to change back to WHITE
+              let attempts = 0
+              while (g.currentTurn === Team.BLACK && attempts < 20) {
+                await new Promise(resolve => setTimeout(resolve, 500))
+                attempts++
+              }
+              console.log(`[RESOLVE] BLACK turn done, new turn: ${g.currentTurn}`)
+              // Start timer for next WHITE turn
+              startTimer()
             }
-            
-            setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
-            
-            // Start next WHITE turn
-            g.startPendingTurn()
-            updateStateRef.current()
-            startTimer()
           }
         } else {
           console.log(`[RESOLVE] Timeout waiting for teammate, moves:`, g.getPendingMoves())
