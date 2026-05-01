@@ -230,6 +230,10 @@ export class OnlineGame {
     const result = this.gameState.resolve(payload.winningMove)
     if (result) {
       console.log('[ONLINE] Applied resolved move locally:', payload.winningMove)
+    } else {
+      console.log('[ONLINE] Move already resolved, ensuring turn is set correctly')
+      // If already resolved, ensure we're in the correct phase for next turn
+      this.startPendingTurn()
     }
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER

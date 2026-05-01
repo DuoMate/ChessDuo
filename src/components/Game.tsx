@@ -624,13 +624,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               startTimer()
             } else {
               console.log(`[RESOLVE] Waiting for other client to handle BLACK bots...`)
-              // Wait for turn to change back to WHITE
+              // Wait for turn to change to WHITE (not stay at BLACK)
               let attempts = 0
-              while (g.currentTurn === Team.BLACK && attempts < 20) {
+              while (g.currentTurn !== Team.WHITE && attempts < 20) {
                 await new Promise(resolve => setTimeout(resolve, 500))
                 attempts++
+                console.log(`[RESOLVE] Waiting... ${attempts}/20, turn: ${g.currentTurn}`)
               }
               console.log(`[RESOLVE] BLACK turn done, new turn: ${g.currentTurn}`)
+              
+              // Clear the resolution UI
+              setGameState(prev => ({ ...prev, highlightSquares: null, showResolution: false }))
+              
               // Start timer for next WHITE turn
               startTimer()
             }
