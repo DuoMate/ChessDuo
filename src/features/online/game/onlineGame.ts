@@ -43,6 +43,9 @@ export class OnlineGame {
   private initialized = false
   private starting = false
   private onStateChangeCallback: (() => void) | null = null
+  private turnState: 'selecting' | 'waiting_for_teammate' | 'locked' | 'resolving' = 'selecting'
+  private resolveTeammateLocked: (() => void) | null = null
+  private resolveTurnChange: (() => void) | null = null
   private stats = {
     movesPlayed: 0,
     syncRate: 0,
@@ -91,6 +94,12 @@ export class OnlineGame {
   }
 
   get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
+    // Only show teammate's pending move during selecting/waiting state
+    // Don't show during locked/resolving - prevents shadow conflict with resolved position
+    if (this.turnState !== 'selecting' && this.turnState !== 'waiting_for_teammate') {
+      return null
+    }
+    
     const allMoves = this.gameState.getAllPendingMoves()
     for (const [player, pending] of allMoves) {
       if (player !== this._playerId) {
@@ -99,6 +108,50 @@ export class OnlineGame {
       }
     }
     return null
+  }
+
+  // Event-based waiting - no timeouts
+  waitForTeammateLock(): Promise<void> {
+    console.log('[STATE] waitForTeammateLock called, current state:', this.turnState)
+    return new Promise((resolve) => {
+      // If already in locked state (teammate locked before we started waiting), resolve immediately
+      if (this.turnState === 'locked') {
+        console.log('[STATE] Already locked, resolving immediately')
+        resolve()
+        return
+      }
+      // If teammate already locked, transition to locked and resolve
+      if (this.gameState.isPendingMoveLocked(this.getOtherPlayerId() as Player)) {
+        console.log('[STATE] Teammate already locked, transitioning to locked')
+        this.turnState = 'locked'
+        resolve()
+        return
+      }
+      // Otherwise, wait for the event
+      this.resolveTeammateLocked = resolve
+    })
+  }
+
+  // Wait for turn to change (used by non-coordinator)
+  waitForTurnChange(): Promise<void> {
+    console.log('[STATE] waitForTurnChange called')
+    return new Promise((resolve) => {
+      this.resolveTurnChange = resolve
+    })
+  }
+
+  setTurnState(state: 'selecting' | 'waiting_for_teammate' | 'locked' | 'resolving') {
+    console.log('[STATE] setTurnState:', this.turnState, '->', state)
+    this.turnState = state
+  }
+
+  getTurnState(): string {
+    return this.turnState
+  }
+
+  getOtherPlayerId(): string {
+    const allPlayers = Array.from(this.gameState.getAllPendingMoves().keys())
+    return allPlayers.find(p => p !== this._playerId) || ''
   }
 
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
@@ -270,6 +323,15 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.lockPendingMove(payload.playerId as Player)
+      
+      // Resolve the waitForTeammateLock Promise
+      if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
+        console.log('[STATE] Teammate locked, transitioning to locked state')
+        this.turnState = 'locked'
+        this.resolveTeammateLocked()
+        this.resolveTeammateLocked = null
+      }
+      
       this.notifyStateChange()
     }
   }
@@ -305,6 +367,16 @@ export class OnlineGame {
     
     // Ensure we're in correct phase for next turn
     this.startPendingTurn()
+    
+    // Reset turn state to selecting for next turn
+    this.turnState = 'selecting'
+    console.log('[STATE] Turn resolved, reset to selecting')
+    
+    // Resolve any turn change waiters
+    if (this.resolveTurnChange) {
+      this.resolveTurnChange()
+      this.resolveTurnChange = null
+    }
     
     console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
     if (this.gameState.board.isGameOver()) {
@@ -408,6 +480,9 @@ export class OnlineGame {
   }
 
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
+    this.turnState = 'resolving'
+    console.log('[STATE] Resolving, set turnState to resolving')
+    
     const currentTeam = this.gameState.currentTeam
     const allPendingMoves = this.gameState.getAllPendingMoves()
     const pendingMovesArray = Array.from(allPendingMoves.entries())

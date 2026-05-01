@@ -558,20 +558,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         g.broadcastLocked()
         playLockSound()
 
-        console.log(`[RESOLVE] Waiting for teammate to lock move...`)
+        console.log(`[STATE] Setting turn state to waiting_for_teammate`)
+        g.setTurnState('waiting_for_teammate' as any)
         
-        // Poll until both moves are locked (max 10 seconds) or turn changes
-        const startTurn = g.currentTurn
-        let attempts = 0
-        while (g.currentTurn === startTurn && !g.isBothPendingLocked() && attempts < 20) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          attempts++
-          console.log(`[RESOLVE] Waiting... ${attempts}/20, turn: ${g.currentTurn}, both locked: ${g.isBothPendingLocked()}`)
-        }
+        // Event-based waiting - no polling, no timeouts
+        // Wait for teammate lock event (or if already locked, resolve immediately)
+        console.log(`[STATE] Waiting for teammate to lock move...`)
+        await g.waitForTeammateLock()
         
-        // If turn already changed (another client resolved), exit
-        if (g.currentTurn !== startTurn) {
-          console.log(`[RESOLVE] Turn changed during polling, another client resolved`)
+        console.log(`[STATE] Teammate locked or already locked, checking state...`)
+
+        // Check if turn already changed (another client resolved)
+        if (g.currentTurn !== Team.WHITE) {
+          console.log(`[STATE] Turn changed, another client resolved`)
+          g.setTurnState('selecting' as any)
           return
         }
 
@@ -624,7 +624,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             console.log(`[RESOLVE] Resolve failed (already resolved by other client):`, e)
           }
           
-          const newTurn = g.currentTurn
+          const newTurn = g.currentTurn as Team
           console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
           playResolutionSound()
           
