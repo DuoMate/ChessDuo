@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js'
-import { GameState, Team } from '../gameState'
-import { LocalGame, GameStatus } from '../localGame'
+import { GameState, Team } from '../../features/game-engine/gameState'
+import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
 
 function createTestGame(): LocalGame {
   const game = new LocalGame()

@@ -1,4 +1,4 @@
-import { createBot, ChessBot } from '../chessBot'
+import { createBot, ChessBot } from '../../features/bots/chessBot'
 import { Chess, Move } from 'chess.js'
 
 class MockEvaluator {

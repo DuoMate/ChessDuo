@@ -1,6 +1,6 @@
 import { Chess, Move } from 'chess.js'
-import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from './gameState'
-import { ServerMoveEvaluator } from './serverMoveEvaluator'
+import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
+import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 

@@ -1,5 +1,5 @@
-import { LocalGame, GameStatus } from '../localGame'
-import { Team } from '../gameState'
+import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 // These tests require Stockfish which is only available in browser environment
 // They are skipped in test environment but work in browser

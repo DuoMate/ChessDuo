@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Team } from '@/lib/gameState'
+import { Team } from '@/features/game-engine/gameState'
 
 interface TeamTimerProps {
   seconds: number

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAvailableSkillLevels, SkillLevel } from '@/lib/botConfig'
+import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
 import { RoomManager } from '@/components/Room'

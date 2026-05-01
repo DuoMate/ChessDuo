@@ -1,5 +1,5 @@
-import { OnlineGame } from '../onlineGame'
-import { GameStatus } from '../localGame'
+import { OnlineGame } from '../../features/online/game/onlineGame'
+import { GameStatus } from '../../features/offline/game/localGame'
 
 // Mock Supabase
 jest.mock('../supabase', () => ({

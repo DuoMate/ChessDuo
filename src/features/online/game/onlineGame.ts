@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js'
-import { supabase, Room, RoomPlayer } from './supabase'
-import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from './gameState'
-import { GameStatus, MoveComparison } from './localGame'
+import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
+import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
+import { GameStatus, MoveComparison } from '../../offline/game/localGame'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface MovePayload {

@@ -1,5 +1,5 @@
-import { LocalGame } from '../localGame'
-import { Team } from '../gameState'
+import { LocalGame } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 describe('End-to-End Move Evaluation', () => {
   let game: LocalGame

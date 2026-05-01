@@ -1,5 +1,5 @@
-import { GameState, GamePhase, Team } from '../gameState'
-import { LocalGame, GameStatus } from '../localGame'
+import { GameState, GamePhase, Team } from '../../features/game-engine/gameState'
+import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
 
 function uciToSan(uciMove: string, fen: string): string | null {
   try {

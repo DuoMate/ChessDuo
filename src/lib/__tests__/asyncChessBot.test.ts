@@ -1,4 +1,4 @@
-import { ChessBot, createBot } from '../chessBot'
+import { ChessBot, createBot } from '../../features/bots/chessBot'
 import { Chess } from 'chess.js'
 
 // Mock MoveEvaluator for testing - simulates Stockfish behavior

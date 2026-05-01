@@ -1,4 +1,4 @@
-import { createBot } from '../chessBot'
+import { createBot } from '../../features/bots/chessBot'
 import { Chess } from 'chess.js'
 
 describe('ChessBot', () => {
