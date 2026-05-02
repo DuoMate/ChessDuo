@@ -12,7 +12,25 @@ export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomShe
   const humanAccuracy = comparison?.player1Accuracy ?? 0
   const teammateAccuracy = comparison?.player2Accuracy ?? 0
   const humanWon = comparison?.winnerId === 'player1'
-  const isSync = comparison?.isSync ?? false
+  
+  // ROBUST FIX: Compute sync from actual moves, don't trust stored isSync
+  // This prevents stale isSync from previous turns being shown incorrectly
+  const storedIsSync = comparison?.isSync ?? false
+  const computedIsSync = comparison ? (comparison.player1Move === comparison.player2Move) : false
+  
+  // Use computed sync if there's a mismatch (defensive)
+  const isSync = storedIsSync !== computedIsSync ? computedIsSync : storedIsSync
+  
+  // Debug log
+  if (comparison) {
+    console.log('[ACCURACY-SHEET] Comparing:', {
+      storedIsSync,
+      computedIsSync,
+      isSync: isSync,
+      player1Move: comparison.player1Move,
+      player2Move: comparison.player2Move
+    })
+  }
 
   const humanCategory = comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' }
   const teammateCategory = comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' }
