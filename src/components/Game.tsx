@@ -220,6 +220,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [showOptions, setShowOptions] = useState(false)
   
   // Replay state
   const [isReplayMode, setIsReplayMode] = useState(false)
@@ -1026,8 +1027,14 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
     )
   }
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="fixed inset-0 bg-gray-900 text-white flex flex-col overflow-hidden">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1039,197 +1046,176 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
         />
       )}
         
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.location.href = '/'}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
-              title="Back to menu"
-            >
-              ←
-            </button>
-            <h1 className="text-3xl font-bold">ClashMate</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {roomCode && (
-              <div className="px-3 py-1 bg-gray-700 rounded text-sm">
-                <span className="text-gray-400">Room:</span>{' '}
-                <span className="text-yellow-400 font-bold font-mono">{roomCode}</span>
-              </div>
-            )}
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
-              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-            >
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-          </div>
-        </div>
-
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-800/80 backdrop-blur-sm">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600 transition-colors"
+          title="Back to menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
         {roomCode && (
-          <div className="mb-4 p-3 bg-gray-700 rounded text-center">
-            <p className="text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
-            <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
-              {roomCode}
-            </p>
+          <div className="px-3 py-1 bg-gray-700/50 rounded-full text-sm">
+            <span className="text-gray-400">Room:</span>{' '}
+            <span className="text-yellow-400 font-bold font-mono">{roomCode}</span>
           </div>
         )}
         
-        {/* Replay Controls */}
+        <div className="relative">
+          <button
+            onClick={() => setShowOptions(!showOptions)}
+            className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600 transition-colors"
+            title="Options"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+            </svg>
+          </button>
+          
+          {showOptions && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1 z-50">
+              <button
+                onClick={() => { setSoundEnabled(!soundEnabled); setShowOptions(false) }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2"
+              >
+                {soundEnabled ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                    Sound On
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                    Sound Off
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => { alert('Resign functionality coming soon'); setShowOptions(false) }}
+                className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 text-red-400"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Resign
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content - Non-scrolling */}
+      {/* Mobile: vertical layout with full-width board | Desktop: centered square board */}
+      <div className="flex-1 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-2 lg:px-8 py-3 gap-2 lg:gap-4">
+        
+        {/* Mobile: Above board | Desktop: Left side */}
+        <div className="flex flex-col items-center lg:items-start lg:justify-center gap-2 order-1 lg:order-1">
+          <div className={`px-4 py-1.5 rounded-full text-sm ${gameState.currentTurn === Team.BLACK ? 'bg-white/20 text-white' : 'bg-gray-800/60 text-gray-400'}`}>
+            <span className="font-medium">Black</span>
+            <span className="mx-2">·</span>
+            <span className="hidden sm:inline">Opponent</span>
+          </div>
+          
+          {/* Timers - Desktop: left of board */}
+          <div className={`hidden lg:flex items-center gap-1.5 px-2 py-1 rounded bg-gray-800/60 ${gameState.timerSeconds < 10 && gameState.timerActive ? 'text-red-400' : 'text-gray-400'}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs font-mono">{formatTime(gameState.timerSeconds)}</span>
+            <span className="text-xs text-gray-500">White</span>
+          </div>
+        </div>
+        
+        {/* Chess Board - Centered */}
+        {/* Mobile: full width, square aspect | Desktop: fixed max size */}
+        <div className="w-full max-w-[calc(100vw-16px)] aspect-square sm:w-[340px] sm:aspect-square md:w-[400px] lg:w-[500px] lg:h-[500px] lg:aspect-square flex-shrink-0 relative order-2 lg:order-2">
+          <ChessBoard 
+            fen={gameState.fen}
+            onMove={handleMove}
+            enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
+            orientation="white"
+            lastMove={gameState.lastMove}
+            pendingOverlay={gameState.pendingOverlay}
+            myPendingOverlay={gameState.myPendingOverlay}
+            highlightSquares={gameState.highlightSquares}
+            onAnimationComplete={handleResolutionComplete}
+          />
+          
+          {/* Game Status Overlay */}
+          {gameState.status === GameStatus.PLAYING && !gameState.isBotThinking && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-gray-900/80 px-3 py-1 rounded-full text-xs text-gray-400">
+              {gameState.currentTurn === Team.WHITE ? 'Your turn' : 'Opponent thinking...'}
+            </div>
+          )}
+        </div>
+        
+        {/* Replay Controls - Always Visible Below Board */}
         {isOnline && (
-          <div className="mb-4 flex items-center justify-center gap-3 p-2 bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-3 mt-2">
             <button
-              onClick={toggleReplayMode}
-              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                isReplayMode ? 'bg-yellow-500 text-gray-900' : 'bg-gray-600 hover:bg-gray-500'
-              }`}
+              onClick={goToPreviousTurn}
+              disabled={replayTurn <= 0}
+              className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Previous"
             >
-              {isReplayMode ? 'Exit Replay' : '📼 Replay'}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
             </button>
             
-            {isReplayMode && (
-              <>
-                <button
-                  onClick={goToPreviousTurn}
-                  disabled={replayTurn <= 0}
-                  className="p-2 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Previous turn"
-                >
-                  ◀
-                </button>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">Turn:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max={Math.max(...gameLog.map((e: any) => e.t), 0)}
-                    value={replayTurn}
-                    onChange={(e) => setReplayTurn(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-16 px-2 py-1 bg-gray-700 rounded text-center text-white"
-                  />
-                  <span className="text-gray-400">/ {Math.max(...gameLog.map((e: any) => e.t), 0)}</span>
-                </div>
-                
-                <button
-                  onClick={goToNextTurn}
-                  disabled={replayTurn >= Math.max(...gameLog.map((e: any) => e.t), 0)}
-                  className="p-2 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Next turn"
-                >
-                  ▶
-                </button>
-              </>
-            )}
+            <button
+              onClick={toggleReplayMode}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                isReplayMode ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700/50 hover:bg-gray-600'
+              }`}
+            >
+              {isReplayMode ? 'Exit Replay' : 'Replay'}
+            </button>
+            
+            <button
+              onClick={goToNextTurn}
+              disabled={replayTurn >= Math.max(...gameLog.map((e: any) => e.t), 0)}
+              className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Next"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
         )}
         
-        <div className="flex justify-between items-center mb-2">
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
-            White Team (You)
+        {/* White Team (You + Teammate) - Below Board */}
+        <div className="mt-3 flex items-center gap-2">
+          <div className={`px-3 py-1.5 rounded-full text-sm ${gameState.currentTurn === Team.WHITE ? 'bg-white/20 text-white' : 'bg-gray-800/60 text-gray-400'}`}>
+            <span className="font-medium">White</span>
+            <span className="mx-2">·</span>
+            <span>You</span>
           </div>
-          
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-lg font-mono">
-              {gameState.status === GameStatus.GAME_OVER ? (
-                <span className="text-yellow-400 font-bold">Game Over!</span>
-              ) : gameState.isBotThinking ? (
-                <span className="text-blue-300">Your turn</span>
-              ) : (
-                <span className="text-gray-400">
-                  {gameState.status === GameStatus.PLAYING ? 'Waiting...' : 'Waiting...'}
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
-            Black Team (Bot)
+          <div className="px-3 py-1.5 rounded-full text-sm bg-gray-800/40 text-gray-500">
+            <span className="font-medium">White</span>
+            <span className="mx-2">·</span>
+            <span>Bot</span>
           </div>
         </div>
-
-        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
-          {/* Left side - WHITE team (Timer + Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
-                currentTeam={Team.WHITE}
-              />
-            </div>
-            <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
+        
+        {/* Timers - Bottom Corners */}
+        <div className="flex justify-between w-full max-w-[500px] mt-2">
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded bg-gray-800/60 ${gameState.timerSeconds < 10 && gameState.timerActive ? 'text-red-400' : 'text-gray-400'}`}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs font-mono">{formatTime(gameState.timerSeconds)}</span>
+            <span className="text-xs text-gray-500">White</span>
           </div>
           
-          {/* Chess Board */}
-          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
-            <ChessBoard 
-              fen={gameState.fen}
-              onMove={handleMove}
-              enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
-              orientation="white"
-              lastMove={gameState.lastMove}
-              pendingOverlay={gameState.pendingOverlay}
-              myPendingOverlay={gameState.myPendingOverlay}
-              highlightSquares={gameState.highlightSquares}
-              onAnimationComplete={handleResolutionComplete}
-            />
-          </div>
-          
-          {/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
-            <AccuracyBottomSheet 
-              comparison={gameState.whiteTeamComparison}
-              isVisible={gameState.showResolution && !!gameState.whiteTeamComparison}
-            />
-          </div>
-          
-          {/* Right side - BLACK team (Timer + Resolution + Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
-                currentTeam={Team.BLACK}
-              />
-            </div>
-            <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
-          </div>
-        </div>
-
-        <div className="mt-4 text-center">
-          {gameState.selectedMove && (
-            <p className="text-green-400">Selected: {gameState.selectedMove}</p>
-          )}
-          {gameState.status === GameStatus.GAME_OVER && (
-            <p className="text-xl font-bold text-yellow-400">
-              {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
-            </p>
-          )}
-          {gameState.isBotThinking && (
-            <p className="text-blue-400">Bot is making a move...</p>
-          )}
-        </div>
-
-        <div className="mt-8 p-4 bg-gray-800 rounded">
-          <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {!isOnline && game ? (
-              <>
-                <div>White Moves: {game.getStats().whiteMovesPlayed}</div>
-                <div>Sync Rate: {Math.round(game.getStats().whiteSyncRate * 100)}%</div>
-                <div>Conflicts: {game.getStats().whiteConflicts}</div>
-                <div>Player 1 Avg Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
-                <div>Player 2 Avg Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
-              </>
-            ) : (
-              <>
-                <div>Game Mode: Online (Human vs Human)</div>
-                <div>Stats not available in online mode</div>
-              </>
-            )}
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded bg-gray-800/60 text-gray-500`}>
+            <span className="text-xs">Black</span>
+            <span className="text-xs text-gray-600">--:--</span>
           </div>
         </div>
       </div>
