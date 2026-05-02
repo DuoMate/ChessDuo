@@ -101,7 +101,19 @@ export class OnlineGame {
     for (const [player, pending] of allMoves) {
       if (player !== this._playerId) {
         console.log('[PENDING] Found teammate move:', player, pending)
-        return { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: 'white' }
+        
+        // Determine piece from board position if not known
+        let piece = pending.piece
+        if (!piece || piece === 'unknown') {
+          try {
+            const boardPiece = this.gameState.board.get(pending.from as any)
+            piece = boardPiece?.type || 'p'
+          } catch {
+            piece = 'p'
+          }
+        }
+        
+        return { from: pending.from, to: pending.to, piece, color: 'white' }
       }
     }
     return null

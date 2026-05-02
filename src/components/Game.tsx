@@ -258,7 +258,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           const allMoves = (g as any).getAllPendingMoves()
           for (const [player, pending] of allMoves) {
             if (player === playerId && pending.from && pending.to) {
-              myPendingOverlay = { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+              // Determine piece from board position if not known
+              let piece = pending.piece
+              if (!piece || piece === 'unknown') {
+                try {
+                  const boardPiece = (g as any).board.get(pending.from)
+                  piece = boardPiece?.type || 'p'
+                } catch {
+                  piece = 'p'
+                }
+              }
+              myPendingOverlay = { from: pending.from, to: pending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
               break
             }
           }
@@ -387,7 +397,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       const allMoves = (g as any).getAllPendingMoves()
       for (const [player, pending] of allMoves) {
         if (player === playerId && pending.from && pending.to) {
-          myPendingOverlay = { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+          // Determine piece from board position if not known
+          let piece = pending.piece
+          if (!piece || piece === 'unknown') {
+            try {
+              const boardPiece = (g as any).board.get(pending.from)
+              piece = boardPiece?.type || 'p'
+            } catch {
+              piece = 'p'
+            }
+          }
+          myPendingOverlay = { from: pending.from, to: pending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
           break
         }
       }
