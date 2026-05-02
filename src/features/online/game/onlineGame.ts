@@ -94,6 +94,21 @@ export class OnlineGame {
     return this._lastMoveComparison
   }
 
+  private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
+    try {
+      const { Chess } = require('chess.js')
+      const chess = new Chess(fen)
+      const moves = chess.moves({ verbose: true }) as Array<{ san: string; from: string; to: string }>
+      const matchedMove = moves.find(m => m.san === move || m.san.replace(/[+#]/g, '') === move)
+      if (matchedMove) {
+        return { from: matchedMove.from, to: matchedMove.to }
+      }
+    } catch {
+      return null
+    }
+    return null
+  }
+
   get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
     // Always show teammate's pending move if it exists
     const allMoves = this.gameState.getAllPendingMoves()
@@ -630,6 +645,12 @@ export class OnlineGame {
       loserId,
       loserFrom,
       loserTo
+    }
+
+    // Set lastMove for board animation
+    const moveParts = this.getMoveParts(winningMove, this.gameState.board.fen())
+    if (moveParts) {
+      this._lastMove = moveParts
     }
 
     this.gameState.resolve(winningMove)
