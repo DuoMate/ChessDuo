@@ -250,7 +250,30 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
         
         // Get pendingOverlay for online mode - show teammate's pending move
-        const pendingOverlay = (g as any).pendingOverlay
+        // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+        let pendingOverlay: PendingOverlay | null = null
+        if (playerId) {
+          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const entries = Array.from(allMoves.entries()) as [string, any][]
+          const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+          
+          // Only show pendingOverlay if there's a teammate move (not my own)
+          if (otherPlayerMoves.length > 0) {
+            const [, teammatePending] = otherPlayerMoves[0]
+            if (teammatePending.from && teammatePending.to) {
+              let piece = teammatePending.piece
+              if (!piece || piece === 'unknown') {
+                try {
+                  const boardPiece = (g as any).board.get(teammatePending.from)
+                  piece = boardPiece?.type || 'p'
+                } catch {
+                  piece = 'p'
+                }
+              }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+            }
+          }
+        }
         
         // Get my pending overlay - show my own pending move as secondary animation
         let myPendingOverlay: PendingOverlay | null = null
@@ -389,7 +412,30 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const showResolution = comparison !== null && !isNewWhiteTurn
     
     // Get pendingOverlay for online mode - show teammate's pending move
-    const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
+    // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+    let pendingOverlay: PendingOverlay | null = null
+    if (isOnline && playerId) {
+      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const entries = Array.from(allMoves.entries()) as [string, any][]
+      const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+      
+      // Only show pendingOverlay if there's a teammate move (not my own)
+      if (otherPlayerMoves.length > 0) {
+        const [, teammatePending] = otherPlayerMoves[0]
+        if (teammatePending.from && teammatePending.to) {
+          let piece = teammatePending.piece
+          if (!piece || piece === 'unknown') {
+            try {
+              const boardPiece = (g as any).board.get(teammatePending.from)
+              piece = boardPiece?.type || 'p'
+            } catch {
+              piece = 'p'
+            }
+          }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black' }
+        }
+      }
+    }
     
     // Get my pending overlay - show my own pending move as secondary animation
     let myPendingOverlay: PendingOverlay | null = null
