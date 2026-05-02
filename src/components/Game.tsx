@@ -11,6 +11,7 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
+import { GameOverModal } from './GameOverModal'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameInfo } from './GameInfo'
@@ -378,10 +379,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // Store WHITE team comparison separately
         // Show when: turn is WHITE (during WHITE turn) OR turn is BLACK (right after WHITE resolved)
         // Clear when: new WHITE turn starts (isNewWhiteTurn)
-        // Filter by turn in FEN - only show if comparison is from WHITE turn (not BLACK)
         whiteTeamComparison: isNewWhiteTurn 
           ? null 
-          : (comparison && comparison.turnStartFen && comparison.turnStartFen.endsWith(' w ')
+          : (comparison 
             ? comparison 
             : prev.whiteTeamComparison),
         showResolution: showResolution,
@@ -878,6 +878,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     <div className="min-h-screen bg-gray-900 text-white p-4">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
+      )}
+      
+      {gameState.status === GameStatus.GAME_OVER && (
+        <GameOverModal 
+          winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
+          onPlayAgain={() => window.location.reload()}
+        />
       )}
         
       <div className="max-w-4xl mx-auto">

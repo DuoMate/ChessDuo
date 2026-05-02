@@ -315,6 +315,14 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
+      
+      // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
+      // This ensures pendingOverlay shows the teammate's move
+      if (this.turnState === 'selecting') {
+        console.log('[STATE] Teammate moved first, transitioning to waiting_for_teammate')
+        this.turnState = 'waiting_for_teammate'
+      }
+      
       this.notifyStateChange()
     }
   }
