@@ -21,6 +21,7 @@ interface LockedPayload {
 interface ResolvedPayload {
   winningTeam: string
   winningMove: string
+  comparison?: MoveComparison | null
 }
 
 export interface OnlineGameState {
@@ -344,9 +345,16 @@ export class OnlineGame {
     }
   }
 
-  private handleTurnResolved(payload: { winningTeam: string; winningMove: string }) {
+  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null }) {
     console.log('[ONLINE] Turn resolved:', payload)
     console.log('[ONLINE] Current phase:', this.gameState.phase, 'currentTurn:', this.gameState.currentTeam)
+    
+    // If comparison data is provided (from coordinator), use it
+    // This ensures both players see the same accuracy stats
+    if (payload.comparison) {
+      console.log('[SYNC] Setting comparison from coordinator broadcast')
+      this._lastMoveComparison = payload.comparison
+    }
     
     // Try to apply the move through normal resolve flow
     const result = this.gameState.resolve(payload.winningMove)
@@ -622,7 +630,12 @@ export class OnlineGame {
       await this._channel.send({
         type: 'broadcast',
         event: 'turn_resolved',
-        payload: { winningTeam: currentTeam, winningMove }
+        payload: { 
+          winningTeam: currentTeam, 
+          winningMove,
+          // Send comparison data so both players see the same stats
+          comparison: this._lastMoveComparison
+        }
       })
     }
 
