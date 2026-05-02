@@ -1054,6 +1054,19 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               const comparison: MoveComparison | null = rawComparison ?? null
               const isVisible = currentTurn === Team.WHITE && isCorrectTurn && !!comparison
               
+              // FIX: Determine if human is player1 or player2 for accurate display
+              let isPlayer1 = true // Default to player1 for offline mode
+              if (isOnline && playerId && g) {
+                try {
+                  const players = (g as any).getPlayers(Team.WHITE) as string[]
+                  const sortedPlayers = [...players].sort()
+                  isPlayer1 = playerId === sortedPlayers[0]
+                  console.log('[ACCURACY-DEBUG] Player determination:', { playerId, players, sortedPlayers, isPlayer1 })
+                } catch (e) {
+                  console.log('[ACCURACY-DEBUG] Could not get players:', e)
+                }
+              }
+              
               // DEBUG: Log for troubleshooting
               console.log('[ACCURACY-DEBUG] Render check:', {
                 currentTurn,
@@ -1088,6 +1101,7 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
                 <AccuracyBottomSheet 
                   comparison={comparison}
                   isVisible={isVisible}
+                  isPlayer1={isPlayer1}
                 />
               )
             })()}

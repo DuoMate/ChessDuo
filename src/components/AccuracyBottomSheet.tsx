@@ -6,12 +6,32 @@ import { MoveComparison } from '@/features/offline/game/localGame'
 interface AccuracyBottomSheetProps {
   comparison: MoveComparison | null
   isVisible: boolean
+  isPlayer1: boolean // Is the human player1 or player2?
 }
 
-export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomSheetProps) {
-  const humanAccuracy = comparison?.player1Accuracy ?? 0
-  const teammateAccuracy = comparison?.player2Accuracy ?? 0
-  const humanWon = comparison?.winnerId === 'player1'
+export function AccuracyBottomSheet({ comparison, isVisible, isPlayer1 }: AccuracyBottomSheetProps) {
+  // FIX: Determine which player is "you" based on isPlayer1 prop
+  const humanAccuracy = isPlayer1 
+    ? (comparison?.player1Accuracy ?? 0) 
+    : (comparison?.player2Accuracy ?? 0)
+  const teammateAccuracy = isPlayer1 
+    ? (comparison?.player2Accuracy ?? 0) 
+    : (comparison?.player1Accuracy ?? 0)
+  
+  // Winner depends on which player ID won
+  const humanWon = isPlayer1 
+    ? (comparison?.winnerId === 'player1') 
+    : (comparison?.winnerId === 'player2')
+  
+  // Your move
+  const yourMove = isPlayer1 
+    ? comparison?.player1Move 
+    : comparison?.player2Move
+  
+  // Teammate's move  
+  const teammateMove = isPlayer1 
+    ? comparison?.player2Move 
+    : comparison?.player1Move
   
   // ROBUST FIX: Compute sync from actual moves, don't trust stored isSync
   // This prevents stale isSync from previous turns being shown incorrectly
@@ -32,8 +52,13 @@ export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomShe
     })
   }
 
-  const humanCategory = comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' }
-  const teammateCategory = comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' }
+  // FIX: Use correct category based on which player is "you"
+  const humanCategory = isPlayer1 
+    ? (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
+    : (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
+  const teammateCategory = isPlayer1 
+    ? (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
+    : (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
 
   if (!isVisible || !comparison) return null
 
@@ -108,7 +133,7 @@ export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomShe
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-gray-300 text-sm font-mono">{comparison.player1Move}</span>
+                <span className="text-gray-300 text-sm font-mono">{yourMove}</span>
                 <span 
                   className="text-xs px-2 py-0.5 rounded font-medium"
                   style={{ backgroundColor: `${humanCategory.color}30`, color: humanCategory.color }}
@@ -178,7 +203,7 @@ export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomShe
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-gray-300 text-sm font-mono">{comparison.player2Move}</span>
+                <span className="text-gray-300 text-sm font-mono">{teammateMove}</span>
                 <span 
                   className="text-xs px-2 py-0.5 rounded font-medium"
                   style={{ backgroundColor: `${teammateCategory.color}30`, color: teammateCategory.color }}
