@@ -276,24 +276,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
         
         // Get my pending overlay - show my own pending move as secondary animation
+        // FIX: Only show if I have a pending move that is NOT locked (still selecting)
+        // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
         let myPendingOverlay: PendingOverlay | null = null
         if (playerId) {
-          const allMoves = (g as any).getAllPendingMoves()
-          for (const [player, pending] of allMoves) {
-            if (player === playerId && pending.from && pending.to) {
-              // Determine piece from board position if not known
-              let piece = pending.piece
-              if (!piece || piece === 'unknown') {
-                try {
-                  const boardPiece = (g as any).board.get(pending.from)
-                  piece = boardPiece?.type || 'p'
-                } catch {
-                  piece = 'p'
-                }
+          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const myPending = allMoves.get(playerId)
+          // Only show myPendingOverlay if I have a move AND it's not locked yet
+          if (myPending && !myPending.locked && myPending.from && myPending.to) {
+            let piece = myPending.piece
+            if (!piece || piece === 'unknown') {
+              try {
+                const boardPiece = (g as any).board.get(myPending.from)
+                piece = boardPiece?.type || 'p'
+              } catch {
+                piece = 'p'
               }
-              myPendingOverlay = { from: pending.from, to: pending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
-              break
             }
+            myPendingOverlay = { from: myPending.from, to: myPending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
           }
         }
         
@@ -438,24 +438,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     
     // Get my pending overlay - show my own pending move as secondary animation
+    // FIX: Only show if I have a pending move that is NOT locked (still selecting)
+    // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
     let myPendingOverlay: PendingOverlay | null = null
     if (isOnline && playerId) {
-      const allMoves = (g as any).getAllPendingMoves()
-      for (const [player, pending] of allMoves) {
-        if (player === playerId && pending.from && pending.to) {
-          // Determine piece from board position if not known
-          let piece = pending.piece
-          if (!piece || piece === 'unknown') {
-            try {
-              const boardPiece = (g as any).board.get(pending.from)
-              piece = boardPiece?.type || 'p'
-            } catch {
-              piece = 'p'
-            }
+      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const myPending = allMoves.get(playerId)
+      // Only show myPendingOverlay if I have a move AND it's not locked yet
+      if (myPending && !myPending.locked && myPending.from && myPending.to) {
+        let piece = myPending.piece
+        if (!piece || piece === 'unknown') {
+          try {
+            const boardPiece = (g as any).board.get(myPending.from)
+            piece = boardPiece?.type || 'p'
+          } catch {
+            piece = 'p'
           }
-          myPendingOverlay = { from: pending.from, to: pending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
-          break
         }
+        myPendingOverlay = { from: myPending.from, to: myPending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
       }
     }
     
