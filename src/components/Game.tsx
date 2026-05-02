@@ -866,8 +866,14 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               }
               console.log(`[RESOLVE] Turn changed to: ${g.currentTurn}`)
               
-              // Clear the resolution UI
-              setGameState(prev => ({ ...prev, highlightSquares: null }))
+              // Clear the resolution UI (non-coordinator path)
+              console.log('[RESOLVE-CLEANUP] Non-coordinator clearing resolution state for new WHITE turn')
+              setGameState(prev => ({ 
+                ...prev, 
+                highlightSquares: null,
+                showResolution: false,
+                whiteTeamComparison: null
+              }))
               
               // Start timer for next WHITE turn
               startTimer()
@@ -1031,7 +1037,17 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
       pendingOpponentTurnRef.current = false
       setGameState(prev => ({ ...prev, isBotThinking: true }))
       await executeBotMove()
-      setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
+// FIX: Reset resolution state when BLACK completes and WHITE turn starts
+              console.log('[RESOLVE-CLEANUP] Clearing resolution state for new WHITE turn')
+              setGameState(prev => ({ 
+                ...prev, 
+                isBotThinking: false, 
+                highlightSquares: null, 
+                pendingOverlay: null, 
+                myPendingOverlay: null,
+                showResolution: false,
+                whiteTeamComparison: null
+              }))
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
@@ -1143,7 +1159,20 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               comparison={gameState.whiteTeamComparison}
               isVisible={(() => {
                 const visible = gameState.showResolution && !!gameState.whiteTeamComparison
-                console.log('[ACCURACY-RENDER] isVisible:', visible, 'showResolution:', gameState.showResolution, 'hasComparison:', !!gameState.whiteTeamComparison)
+                // Additional debug for troubleshooting
+                if (visible) {
+                  console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
+                    showResolution: gameState.showResolution,
+                    hasComparison: !!gameState.whiteTeamComparison,
+                    comparisonDetails: gameState.whiteTeamComparison ? {
+                      player1Move: gameState.whiteTeamComparison.player1Move,
+                      player2Move: gameState.whiteTeamComparison.player2Move,
+                      winnerId: gameState.whiteTeamComparison.winnerId,
+                      isSync: gameState.whiteTeamComparison.isSync
+                    } : null,
+                    currentTurn: gameState.currentTurn
+                  })
+                }
                 return visible
               })()}
             />
