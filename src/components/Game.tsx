@@ -379,11 +379,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         totalMoves: 0,
         moveComparison: comparison,
         // Store WHITE team comparison separately
-        // Show when: turn is WHITE (during WHITE turn) OR turn is BLACK (right after WHITE resolved)
-        // Clear when: new WHITE turn starts (isNewWhiteTurn)
+        // Only update during WHITE turn - keep same during BLACK turn
+        // Clear when new WHITE turn starts (isNewWhiteTurn)
         whiteTeamComparison: isNewWhiteTurn 
           ? null 
-          : (comparison 
+          : (currentTurn === Team.WHITE && comparison 
             ? comparison 
             : prev.whiteTeamComparison),
         showResolution: showResolution,

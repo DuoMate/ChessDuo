@@ -1,7 +1,6 @@
 'use client'
 
-import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { MoveComparison } from '@/features/offline/game/localGame'
 
 interface AccuracyBottomSheetProps {
@@ -10,10 +9,6 @@ interface AccuracyBottomSheetProps {
 }
 
 export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomSheetProps) {
-  const [isDragging, setIsDragging] = useState(false)
-  const y = useMotionValue(0)
-  const opacity = useTransform(y, [0, 100], [1, 0])
-
   const humanAccuracy = comparison?.player1Accuracy ?? 0
   const teammateAccuracy = comparison?.player2Accuracy ?? 0
   const humanWon = comparison?.winnerId === 'player1'
@@ -35,18 +30,7 @@ export function AccuracyBottomSheet({ comparison, isVisible }: AccuracyBottomShe
         damping: 25,
         mass: 0.8
       }}
-      drag="y"
-      dragConstraints={{ top: 0, bottom: 300 }}
-      dragElastic={0.3}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={(_, info) => {
-        setIsDragging(false)
-        if (info.offset.y > 100) {
-          // User dragged down - would hide (handled by parent state)
-        }
-      }}
-      style={{ y, opacity }}
-      className="w-full max-w-[500px] mx-auto cursor-grab active:cursor-grabbing"
+      className="w-full max-w-[500px] mx-auto"
     >
       {/* Drag Handle */}
       <div className="flex justify-center mb-2">

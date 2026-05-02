@@ -95,16 +95,11 @@ export class OnlineGame {
   }
 
   get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
-    // Only show teammate's pending move during selecting/waiting state
-    // Don't show during locked/resolving - prevents shadow conflict with resolved position
-    if (this.turnState !== 'selecting' && this.turnState !== 'waiting_for_teammate') {
-      return null
-    }
-    
+    // Always show teammate's pending move if it exists - don't check turnState
     const allMoves = this.gameState.getAllPendingMoves()
     for (const [player, pending] of allMoves) {
-      if (player !== this._playerId) {
-        // Teammate's pending move - show as overlay
+      if (player !== this._playerId && pending.move) {
+        // Teammate's pending move - show as shadow overlay
         return { from: pending.from, to: pending.to, piece: pending.piece, color: 'white' }
       }
     }
