@@ -1042,14 +1042,19 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               // Compute accuracy display directly from game object (no stored state)
               const g = isOnline ? onlineGameRef.current : gameRef.current
               const currentTurn = g?.currentTurn
-              // Only show comparison during WHITE turn - BLACK comparison is ignored
-              const rawComparison = (currentTurn === Team.WHITE) ? g?.lastMoveComparison : null
+              const gamePhase = isOnline ? (g as any)?.gamePhase : null
+              
+              // Only show during WHITE turn AFTER resolution complete (phase = RESOLVED)
+              // This prevents stale BLACK comparison from showing during new WHITE turn
+              const isResolvedPhase = gamePhase === 'RESOLVED'
+              const rawComparison = (currentTurn === Team.WHITE && isResolvedPhase) ? g?.lastMoveComparison : null
               const comparison: MoveComparison | null = rawComparison ?? null
-              const isVisible = currentTurn === Team.WHITE && !!comparison
+              const isVisible = currentTurn === Team.WHITE && isResolvedPhase && !!comparison
               
               if (isVisible) {
                 console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
                   currentTurn,
+                  gamePhase,
                   comparisonDetails: comparison ? {
                     player1Move: comparison.player1Move,
                     player2Move: comparison.player2Move,
