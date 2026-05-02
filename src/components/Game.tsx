@@ -30,15 +30,16 @@ function computeAccuracyDisplayState(
   isNewWhiteTurn: boolean,
   prevWhiteComparison: MoveComparison | null
 ): { showBanner: boolean; whiteTeamComparison: MoveComparison | null } {
-  // Only show accuracy banner during WHITE turn (after WHITE resolves)
-  // NEVER show during BLACK turn
+// ROBUST FIX: NEVER show accuracy banner during BLACK turn
+  // This completely isolates WHITE vs BLACK and prevents cross-turn data leakage
+  
+  // Show banner ONLY during WHITE turn after resolution
   const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
   
   // DEBUG: Enhanced logging with full details
   const computedIsSync = comparison ? (comparison.player1Move === comparison.player2Move) : null
   console.log('[ACCURACY-DEBUG] computeAccuracyDisplayState:', {
     currentTurn: currentTurn === Team.WHITE ? 'WHITE' : 'BLACK',
-    // Full comparison details
     comparison: comparison ? {
       player1Move: comparison.player1Move,
       player2Move: comparison.player2Move,
@@ -46,21 +47,18 @@ function computeAccuracyDisplayState(
       winnerId: comparison.winnerId,
     } : null,
     isNewWhiteTurn,
-    // Previous WHITE comparison
     prevWhiteComparison: prevWhiteComparison ? {
       player1Move: prevWhiteComparison.player1Move,
       player2Move: prevWhiteComparison.player2Move,
       isSync: prevWhiteComparison.isSync,
     } : null,
-    // Validate: computed sync vs stored isSync
     computedIsSync,
     isSyncMismatch: comparison && computedIsSync !== null ? (comparison.isSync !== computedIsSync) : null,
-    // Output info
     output: {
       shouldShowBanner,
-      whiteTeamComparison_source: currentTurn === Team.BLACK ? 'prevWhiteComparison' : 
+      whiteTeamComparison_source: currentTurn === Team.BLACK ? 'null (never show during BLACK)' : 
                                     (currentTurn === Team.WHITE && isNewWhiteTurn) ? 'null (new white)' : 
-                                    (currentTurn === Team.WHITE && comparison) ? 'current comparison' : 'prevWhiteComparison fallback'
+                                    (currentTurn === Team.WHITE && comparison) ? 'current comparison' : 'null'
     }
   })
   
@@ -74,23 +72,24 @@ function computeAccuracyDisplayState(
     })
   }
   
-  // Store WHITE team comparison - EXPLICIT handling for each turn:
+  // ROBUST FIX: NEVER carry over any data during BLACK turn
+  // ONLY store/update comparison during WHITE turn
   let whiteTeamComparison: MoveComparison | null = null
   
   if (currentTurn === Team.BLACK) {
-    // During BLACK turn: ALWAYS keep previous WHITE stats (never show BLACK stats)
-    whiteTeamComparison = prevWhiteComparison
+    // FIXED: Never show any comparison during BLACK turn
+    // This prevents stale data or BLACK stats from being shown during WHITE's turn
+    whiteTeamComparison = null
   } else if (currentTurn === Team.WHITE) {
     if (isNewWhiteTurn) {
       // New WHITE turn starting: clear (no comparison yet until WHITE resolves)
       whiteTeamComparison = null
     } else {
-      // WHITE turn in progress (after first move): use current comparison if available
-      // comparison here is from g.lastMoveComparison which was set during WHITE resolve
-      whiteTeamComparison = comparison || prevWhiteComparison
+      // WHITE turn: use current comparison from resolved WHITE turn
+      whiteTeamComparison = comparison
     }
   }
-  
+
   return {
     showBanner: shouldShowBanner,
     whiteTeamComparison
