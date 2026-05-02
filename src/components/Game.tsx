@@ -248,6 +248,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
         console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
+        
+        // Get pendingOverlay for online mode - show teammate's pending move
+        const pendingOverlay = (g as any).pendingOverlay
+        
+        // Get my pending overlay - show my own pending move as secondary animation
+        let myPendingOverlay: PendingOverlay | null = null
+        if (playerId) {
+          const allMoves = (g as any).getAllPendingMoves()
+          for (const [player, pending] of allMoves) {
+            if (player === playerId && pending.from && pending.to) {
+              myPendingOverlay = { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+              break
+            }
+          }
+        }
+        
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -259,12 +275,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           lastMove: g.lastMove,
           timerSeconds: g.getTeamTimer(),
           timerActive: g.isTimerActive(),
-          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
+          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+          pendingOverlay: pendingOverlay || prev.pendingOverlay,
+          myPendingOverlay: myPendingOverlay || prev.myPendingOverlay
         }))
       }
     })
     console.log('[Game] setOnStateChange callback set up complete')
-  }, [onlineGame])
+  }, [onlineGame, playerId])
 
   // Initialize online game - runs AFTER setOnStateChange is set up
   useEffect(() => {
