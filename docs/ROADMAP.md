@@ -172,14 +172,15 @@ Uses Docker to build Stockfish from `/server` directory.
 
 2. White Team's Turn
    ├── 10-second team timer starts
-   ├── Player A1 selects move → Applied to board (prominent)
-   ├── Player A2 (teammate) commits → Greyed shadow appears
-   ├── BOTH moves visible on board
+   ├── Player A1 selects move → SOLID shadow (opacity 1.0)
+   ├── Player A2 (teammate) commits → SHADOW (opacity 0.4)
+   ├── BOTH moves visible on board (perspective-based)
    ├── Both lock in OR timer expires
    ├── Engine evaluates BOTH moves (blind from turn start)
    ├── Accuracy calculated
-   ├── Winner: Green highlight, move stays
-   ├── Loser: Red highlight, retracts to origin
+   ├── Winner: Move stays as lastMove (solid)
+   ├── Loser: Retraction animation (fades to origin)
+   ├── Shadows cleared (pendingOverlay & myPendingOverlay = null)
    └── Turn passes to Black Team
 
 3. Black Team's Turn
@@ -196,12 +197,23 @@ Uses Docker to build Stockfish from `/server` directory.
 ### UI States During Turn
 
 **During Selection:**
-- Your move: Prominent piece on destination square
-- Teammate's move: Greyed shadow on destination square
+- My move: Solid piece (opacity 1.0) via `myPendingOverlay`
+- Teammate's move: Shadow piece (opacity 0.4) via `pendingOverlay`
+- **Trigger**: When player broadcasts move via Supabase real-time event
+- **Perspective**: Based on logged-in player ID - your move is always SOLID
 
 **After Resolution:**
-- Winner: Green highlight/stay
-- Loser: Red highlight → Animate back to origin
+- Winning move: Solid on board via `lastMove`
+- Losing move: Retraction animation (fades back to origin)
+- **Trigger**: When `resolvePendingMoves()` completes
+- Shadows cleared: Both overlays set to `null` (no fallback to previous state)
+
+**Animation System Details:**
+- `myPendingOverlay`: Your pending move (solid, opacity 1.0)
+- `pendingOverlay`: Teammate's pending move (shadow, opacity 0.4)
+- `lastMove`: Resolved winning move (solid)
+- State change callback updates overlays when teammate broadcasts move
+- After resolution, overlays are properly cleared (not retained)
 
 ---
 
@@ -325,6 +337,21 @@ interface TurnResolution {
 - 10 seconds per team per turn
 - Timer starts when turn begins
 - If timer expires, current moves locked as-is
+
+### Shadow Move Animation (Implemented)
+The shadow animation system shows both players' moves during a team's turn:
+
+- **myPendingOverlay**: Shows your own pending move (opacity 1.0 = SOLID)
+- **pendingOverlay**: Shows teammate's pending move (opacity 0.4 = SHADOW)
+- **Trigger**: State change callback when teammate broadcasts move via Supabase
+- **After resolution**: Both overlays cleared (no fallback to previous state)
+- **lastMove**: The resolved winning move shown as solid on board
+- **Perspective-based**: Your player ID determines which move is SOLID vs SHADOW
+
+Key files:
+- `src/components/Game.tsx` - State management for overlays
+- `src/components/ChessBoard.tsx` - Animation rendering
+- `src/features/online/game/onlineGame.ts` - Real-time move handling
 - Creates urgency and prevents stalling
 
 ### Bot vs Human Teammate
