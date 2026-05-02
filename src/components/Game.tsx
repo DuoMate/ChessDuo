@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabase'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
+import { MobileStatusBar } from './MobileStatusBar'
+import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameInfo } from './GameInfo'
@@ -886,8 +888,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onPlayAgain={() => window.location.reload()}
         />
       )}
+      
+      {/* Mobile Status Bar - always visible */}
+      <MobileStatusBar 
+        currentTurn={gameState.currentTurn}
+        timerSeconds={gameState.timerSeconds}
+        timerActive={gameState.timerActive}
+        whiteCaptured={gameState.capturedByWhite}
+        blackCaptured={gameState.capturedByBlack}
+      />
         
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pt-16 md:pt-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">ClashMate</h1>
           <button
@@ -959,23 +970,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             />
           </div>
           
-          {/* Accuracy Panel - below board with more space */}
-          <AnimatePresence>
-            {gameState.showResolution && gameState.whiteTeamComparison && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="w-[280px] md:w-[360px] lg:w-[500px]"
-              >
-                <MoveComparisonPanel 
-                  comparison={gameState.whiteTeamComparison}
-                  isVisible={gameState.showResolution}
-                  onAnimationComplete={handleResolutionComplete}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Accuracy Panel - below board as bottom sheet */}
+          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
+            <AccuracyBottomSheet 
+              comparison={gameState.whiteTeamComparison}
+              isVisible={gameState.showResolution && !!gameState.whiteTeamComparison}
+            />
+          </div>
           
           {/* Right side - BLACK team (Timer + Resolution + Captured) */}
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
