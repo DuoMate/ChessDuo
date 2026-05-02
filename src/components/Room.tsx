@@ -25,26 +25,14 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
   const [error, setError] = useState<string | null>(null)
   const [roomPlayers, setRoomPlayers] = useState<RoomPlayer[]>([])
 
-  const createRoom = async () => {
+const createRoom = async () => {
     setLoading(true)
     setError(null)
+    
     try {
-      console.log('[Room] Creating room...')
       const code = generateRoomCode()
       
-      // First, let's try to check if table exists by selecting
-      const { data: testData, error: testError } = await supabase
-        .from('rooms')
-        .select('id')
-        .limit(1)
-      
-      console.log('[Room] Table test:', { testData, testError })
-      
-      if (testError) {
-        console.error('[Room] Table check failed:', testError)
-        throw new Error(`Database table 'rooms' not accessible: ${testError.message}. Please create tables in Supabase.`)
-      }
-
+      // First save to database - wait for it
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .insert({
@@ -55,12 +43,10 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         .select()
         .single()
 
-      if (roomError) {
-        console.error('[Room] Create room error:', roomError)
-        throw new Error(`Insert error: ${roomError.message}`)
-      }
+      if (roomError) throw roomError
 
-      const { error: playerError } = await supabase
+      // Add player to room_players
+      await supabase
         .from('room_players')
         .insert({
           room_id: room.id,
@@ -70,12 +56,9 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           status: 'waiting'
         })
 
-      if (playerError) throw playerError
-
-       setMyRoomCode(code)
-       // Automatically join the creator to the match
-       onRoomJoined(room as Room, 'WHITE', playerId)
-     } catch (err) {
+      setMyRoomCode(code)
+      onRoomJoined(room as Room, 'WHITE', playerId)
+    } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room')
     } finally {
       setLoading(false)
@@ -126,7 +109,8 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       console.log('[Join] Room found:', rooms)
 
-      if (rooms.status !== 'waiting') {
+      // Allow joining if room is waiting or playing (late joiners can sync to game state)
+      if (rooms.status !== 'waiting' && rooms.status !== 'playing') {
         throw new Error('Room is no longer available (status: ' + rooms.status + ')')
       }
 
@@ -222,10 +206,9 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         <div className="space-y-4">
           <button
             onClick={createRoom}
-            disabled={loading}
-            className="w-full p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
+            className="w-full p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400"
           >
-            {loading ? 'Creating...' : 'Create New Room'}
+            Create New Room
           </button>
 
           <div className="flex items-center gap-2">

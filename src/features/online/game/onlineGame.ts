@@ -55,6 +55,7 @@ export class OnlineGame {
     player1Accuracy: 0,
     player2Accuracy: 0
   }
+  private gameSaved = false
   private evaluator: ServerMoveEvaluator
 
   constructor() {
@@ -181,9 +182,20 @@ export class OnlineGame {
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
     console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
     
+    if (this._channel) {
+      console.log('[ONLINE] Already joined, skipping')
+      return
+    }
+    
     this._room = room
     this._playerId = playerId
     this._team = team
+
+    // If room is already playing (late joiner), ensure status shows correctly
+    if (room.status === 'playing') {
+      this._status = GameStatus.PLAYING
+      console.log('[ONLINE] Late joiner - game already in progress')
+    }
 
     // Don't add player here - wait for startGameWhenReady to add all players from room_players
 
@@ -199,9 +211,10 @@ export class OnlineGame {
         const playersOnline = Object.keys(state)
         console.log('[ONLINE] Presence sync:', playersOnline)
         
-        // If both players are online, ensure game is ready
-        // If game hasn't started, start it. If already started, just ensure state is synced.
-        if (playersOnline.length >= 2) {
+        // Start game when:
+        // 1. Both players online (2+ players), OR
+        // 2. At least 1 player (single player mode with bots)
+        if (playersOnline.length >= 1) {
           if (this._status !== GameStatus.PLAYING) {
             this.startGameWhenReady()
           } else {
@@ -236,6 +249,21 @@ export class OnlineGame {
 
     this._status = GameStatus.READY
     console.log('[ONLINE] joinRoom completed, status:', this._status)
+    
+    // Immediately add the player to game state so game can start
+    const playerTeam = this._team === 'WHITE' ? Team.WHITE : Team.BLACK
+    this.gameState.addPlayer(playerId as Player, playerTeam)
+    
+    // Add bot teammates/opponents based on team
+    if (this._team === 'WHITE') {
+      this.gameState.addPlayer('player2' as Player, Team.WHITE)
+      this.gameState.addPlayer('bot_opponent_1' as Player, Team.BLACK)
+      this.gameState.addPlayer('bot_opponent_2' as Player, Team.BLACK)
+    } else {
+      this.gameState.addPlayer('player2' as Player, Team.BLACK)
+      this.gameState.addPlayer('bot_opponent_1' as Player, Team.WHITE)
+      this.gameState.addPlayer('bot_opponent_2' as Player, Team.WHITE)
+    }
   }
 
   async startGameWhenReady(): Promise<void> {
@@ -262,27 +290,21 @@ export class OnlineGame {
 
       const humanPlayers = (players || []).filter(p => p.team === this._team)
 
-      // Add human players in sorted order (by player_id) to ensure consistent state
-      const playerNum = this._team === 'WHITE' ? Team.WHITE : Team.BLACK
-      for (const p of humanPlayers) {
-        try {
-          this.gameState.addPlayer(p.player_id as Player, playerNum)
-        } catch (e) {
-          // Player might already exist, skip
-          console.log('[ONLINE] Player already exists or error:', e)
-        }
-      }
-
-      // Add bot opponents
-      const opponentTeam = this._team === 'WHITE' ? Team.BLACK : Team.WHITE
-      this.gameState.addPlayer('bot_opponent_1' as Player, opponentTeam)
-      this.gameState.addPlayer('bot_opponent_2' as Player, opponentTeam)
+      // Players are already added in joinRoom, just ensure team is ready
+      // Bots were already added in joinRoom as well
 
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
       this.startPendingTurn()
       this.notifyStateChange()
+
+      // Update room status in database
+      if (this._room) {
+        await supabase.from('rooms').update({ status: 'playing' }).eq('id', this._room.id)
+        console.log('[ONLINE] Room status updated to playing')
+      }
+
       console.log('[ONLINE] Game started successfully')
     } catch (e) {
       console.error('[ONLINE] Failed to start game:', e)
@@ -294,6 +316,13 @@ export class OnlineGame {
   private async syncGameState(): Promise<void> {
     console.log('[ONLINE] Syncing game state (late joiner)...')
     try {
+      // Query room to get game log and current state
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('id', this._room!.id)
+        .single()
+
       // Query room_players to get all human players
       const { data: players } = await supabase
         .from('room_players')
@@ -329,9 +358,42 @@ export class OnlineGame {
         this.gameState.addPlayer('bot_opponent_2' as Player, Team.BLACK)
       } catch (e) {}
 
+      // Restore board from game log if exists
+      if (room?.game_log && Array.isArray(room.game_log) && room.game_log.length > 0) {
+        console.log('[ONLINE] Found game log with', room.game_log.length, 'entries, restoring board...')
+        this.restoreFromGameLog(room.game_log)
+      }
+
       console.log('[ONLINE] Game state synced successfully')
     } catch (e) {
       console.error('[ONLINE] Failed to sync game state:', e)
+    }
+  }
+
+  private restoreFromGameLog(gameLog: any[]): void {
+    try {
+      // Create fresh chess board
+      const chess = new Chess()
+      
+      // Replay all moves from game log (only 'M' entries, not 'F' resolution entries)
+      for (const entry of gameLog) {
+        if (entry.type === 'M') {
+          const uciMove = entry.move // UCI format: e2e4
+          if (uciMove && uciMove.length >= 4) {
+            try {
+              chess.move(uciMove, { strict: false })
+            } catch (e) {
+              console.warn('[ONLINE] Could not replay move:', uciMove, e)
+            }
+          }
+        }
+      }
+      
+      // Reset game state with restored board
+      this.gameState.resetBoard(chess)
+      console.log('[ONLINE] Board restored to FEN:', chess.fen())
+    } catch (e) {
+      console.error('[ONLINE] Failed to restore from game log:', e)
     }
   }
 
@@ -339,6 +401,8 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
+      // Store move in UCI format (from + to)
+      this.gameState.logPlayerMove(payload.playerId as Player, payload.from + payload.to)
       
       // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
       // This ensures pendingOverlay shows the teammate's move
@@ -420,12 +484,21 @@ export class OnlineGame {
     console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
+      console.log('[SAVE] Game over detected, saving...')
+      this.saveGameToDatabase().catch(e => console.error('[SAVE] Error:', e))
+    } else {
+      // Save game log after each turn - this is the foundational truth
+      this.saveGameLogOnly().catch(e => console.error('[SAVE] Error:', e))
     }
     this.notifyStateChange()
   }
 
   async broadcastMove(move: string, from: string, to: string): Promise<void> {
     if (!this._channel) return
+
+    // Store move in UCI format (from + to)
+    const uciMove = from + to
+    this.gameState.logPlayerMove(this._playerId as Player, uciMove)
 
     await this._channel.send({
       type: 'broadcast',
@@ -572,6 +645,10 @@ export class OnlineGame {
     const player2From = move2.from
     const player2To = move2.to
     const isSync = player1Move === player2Move
+    
+    // Log both player moves for this turn
+    this.gameState.logPlayerMove(player1Id as Player, player1From + player1To)
+    this.gameState.logPlayerMove(player2Id as Player, player2From + player2To)
 
     console.log(`\n${'='.repeat(60)}`)
     console.log(`[ONLINE RESOLVE] ${currentTeam} team to move`)
@@ -614,6 +691,7 @@ export class OnlineGame {
     console.log(`  [${player2Id}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
 
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
+    const winningMoveUci = winningMove === player1Move ? player1From + player1To : player2From + player2To
     const winningScore = winningMove === player1Move ? player1Score : player2Score
     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
     const winnerId: 'player1' | 'player2' = isSync ? 'player1' : (winningMove === player1Move ? 'player1' : 'player2')
@@ -625,8 +703,8 @@ export class OnlineGame {
     
     // Store the comparison for UI
     this._lastMoveComparison = {
-      player1Move,
-      player2Move,
+      player1Move: player1Uci,
+      player2Move: player2Uci,
       player1Score,
       player2Score,
       player1Accuracy,
@@ -653,7 +731,14 @@ export class OnlineGame {
       this._lastMove = moveParts
     }
 
+    // Log the resolution to game log
+    const winnerPlayerId = winnerId === 'player1' ? player1Id : player2Id
+    this.gameState.logResolution(winningMoveUci, winnerPlayerId as Player, player1Accuracy / 100, player2Accuracy / 100)
+
     this.gameState.resolve(winningMove)
+
+    // Save game log after EVERY turn - this is the foundational truth
+    await this.saveGameLogOnly()
 
     if (this._channel) {
       await this._channel.send({
@@ -670,6 +755,8 @@ export class OnlineGame {
 
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
+      // Save full game data (including team dynamics) on game over
+      await this.saveGameToDatabase()
     }
 
     return { winnerId, winningMove }
@@ -741,6 +828,148 @@ export class OnlineGame {
     return {
       white: captured.white || [],
       black: captured.black || []
+    }
+  }
+
+  getGameLog() {
+    return this.gameState.getGameLog()
+  }
+
+  async saveGameLogOnly(): Promise<void> {
+    if (!this._room) return
+    
+    const gameLog = this.gameState.getGameLogJSON()
+    console.log('[SAVE] Saving game log after turn, entries:', this.gameState.getGameLog().length)
+    
+    try {
+      await supabase
+        .from('rooms')
+        .update({ game_log: gameLog })
+        .eq('id', this._room.id)
+    } catch (e) {
+      console.error('[SAVE] Failed to save game log:', e)
+    }
+  }
+
+  async saveGameToDatabase(): Promise<void> {
+    if (this.gameSaved) {
+      console.log('[SAVE] Game already saved, skipping')
+      return
+    }
+    
+    if (!this._room) {
+      console.log('[SAVE] No room, skipping save')
+      return
+    }
+
+    this.gameSaved = true
+
+    const gameLog = this.gameState.getGameLogJSON()
+    const outcome = this.gameState.board.isGameOver() 
+      ? this.gameState.board.isCheckmate() 
+        ? 'checkmate' 
+        : this.gameState.board.isDraw() 
+          ? 'draw' 
+          : 'resigned'
+      : null
+
+    const result = this._status === GameStatus.GAME_OVER 
+      ? this.gameState.board.isCheckmate() 
+        ? (this.gameState.board.turn() === 'w' ? '0-1' : '1-0')
+        : this.gameState.board.isDraw() 
+          ? '1/2-1/2' 
+          : '*'
+      : '*'
+
+    console.log('[SAVE] Saving game to database:', { 
+      roomId: this._room.id, 
+      gameLogLength: gameLog.length,
+      outcome,
+      result
+    })
+
+    try {
+      const { error } = await supabase
+        .from('rooms')
+        .update({
+          game_log: gameLog,
+          outcome: outcome,
+          result: { result, game_log: this.gameState.getGameLog() },
+          status: 'finished'
+        })
+        .eq('id', this._room.id)
+
+      if (error) {
+        console.error('[SAVE] Failed to save game:', error)
+      } else {
+        console.log('[SAVE] Game saved successfully')
+        
+        // Save team dynamics
+        await this.saveTeamDynamics()
+      }
+    } catch (e) {
+      console.error('[SAVE] Error saving game:', e)
+    }
+  }
+
+  private async saveTeamDynamics(): Promise<void> {
+    const gameLog = this.gameState.getGameLog()
+    
+    // Calculate sync rate
+    const teamATurns = gameLog.filter(e => e.team === 'A' && e.p === 'F')
+    const teamBTurns = gameLog.filter(e => e.team === 'B' && e.p === 'F')
+    
+    let syncCount = 0
+    let conflictCount = 0
+    
+    for (const entry of teamATurns) {
+      if (entry.a1 !== undefined && entry.a2 !== undefined) {
+        // Same accuracy = same move (sync)
+        if (Math.abs(entry.a1 - entry.a2) < 0.01) {
+          syncCount++
+        } else {
+          conflictCount++
+        }
+      }
+    }
+
+    for (const entry of teamBTurns) {
+      if (entry.a1 !== undefined && entry.a2 !== undefined) {
+        if (Math.abs(entry.a1 - entry.a2) < 0.01) {
+          syncCount++
+        } else {
+          conflictCount++
+        }
+      }
+    }
+
+    const totalTurns = teamATurns.length + teamBTurns.length
+    const syncRate = totalTurns > 0 ? syncCount / totalTurns : 0
+    const learningMoments = conflictCount
+
+    // Calculate average accuracy
+    const whiteAccuracy = teamATurns.length > 0 
+      ? teamATurns.reduce((sum, e) => sum + (e.a1 || 0), 0) / teamATurns.length 
+      : 0
+    const blackAccuracy = teamBTurns.length > 0 
+      ? teamBTurns.reduce((sum, e) => sum + (e.a1 || 0), 0) / teamBTurns.length 
+      : 0
+
+    console.log('[DYNAMICS] Saving team dynamics:', { syncRate, conflictCount, whiteAccuracy, blackAccuracy })
+
+    try {
+      await supabase
+        .from('team_dynamics')
+        .insert({
+          room_id: this._room!.id,
+          sync_rate: syncRate,
+          total_conflicts: conflictCount,
+          learning_moments: learningMoments,
+          white_accuracy: whiteAccuracy,
+          black_accuracy: blackAccuracy
+        })
+    } catch (e) {
+      console.error('[DYNAMICS] Failed to save:', e)
     }
   }
 }

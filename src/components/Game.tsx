@@ -220,6 +220,50 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const [soundEnabled, setSoundEnabled] = useState(true)
+  
+  // Replay state
+  const [isReplayMode, setIsReplayMode] = useState(false)
+  const [replayTurn, setReplayTurn] = useState(0)
+  const [gameLog, setGameLog] = useState<any[]>([])
+
+  // Get game log from online game
+  const getGameLog = useCallback(() => {
+    if (onlineGame && isOnline) {
+      return onlineGame.getGameLog?.() || []
+    }
+    return []
+  }, [onlineGame, isOnline])
+
+  // Navigate to previous turn
+  const goToPreviousTurn = useCallback(() => {
+    if (replayTurn > 0) {
+      setReplayTurn(replayTurn - 1)
+    }
+  }, [replayTurn])
+
+  // Navigate to next turn
+  const goToNextTurn = useCallback(() => {
+    const log = getGameLog()
+    const maxTurn = Math.max(...log.map((e: any) => e.t), 0)
+    if (replayTurn < maxTurn) {
+      setReplayTurn(replayTurn + 1)
+    }
+  }, [replayTurn, getGameLog])
+
+  // Toggle replay mode
+  const toggleReplayMode = useCallback(() => {
+    if (!isReplayMode) {
+      // Enter replay mode - load current game log
+      const log = getGameLog()
+      setGameLog(log)
+      const maxTurn = Math.max(...log.map((e: any) => e.t), 0)
+      setReplayTurn(maxTurn)
+    } else {
+      // Exit replay mode
+      setReplayTurn(0)
+    }
+    setIsReplayMode(!isReplayMode)
+  }, [isReplayMode, getGameLog])
 
   // Update sound engine when setting changes
   useEffect(() => {
@@ -624,8 +668,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       // Online mode - human vs human with bots as opponents
       const g = onlineGameRef.current
       const currentTurn = g.currentTurn
+      const turnState = (g as any).turnState
 
-      console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
+      console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn}, turnState: ${turnState})`)
+
+      // Only allow moves when turnState is 'selecting' (not waiting, locked, or resolving)
+      if (turnState !== 'selecting') {
+        console.warn(`[HUMAN] BLOCKED - Not in selecting state! Current: ${turnState}`)
+        return
+      }
 
       if (currentTurn !== Team.WHITE) {
         console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
@@ -990,14 +1041,31 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
         
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">ClashMate</h1>
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
-            title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-          >
-            {soundEnabled ? '🔊' : '🔇'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.location.href = '/'}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              title="Back to menu"
+            >
+              ←
+            </button>
+            <h1 className="text-3xl font-bold">ClashMate</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {roomCode && (
+              <div className="px-3 py-1 bg-gray-700 rounded text-sm">
+                <span className="text-gray-400">Room:</span>{' '}
+                <span className="text-yellow-400 font-bold font-mono">{roomCode}</span>
+              </div>
+            )}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+          </div>
         </div>
 
         {roomCode && (
@@ -1006,6 +1074,55 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
             <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
               {roomCode}
             </p>
+          </div>
+        )}
+        
+        {/* Replay Controls */}
+        {isOnline && (
+          <div className="mb-4 flex items-center justify-center gap-3 p-2 bg-gray-800 rounded-lg">
+            <button
+              onClick={toggleReplayMode}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                isReplayMode ? 'bg-yellow-500 text-gray-900' : 'bg-gray-600 hover:bg-gray-500'
+              }`}
+            >
+              {isReplayMode ? 'Exit Replay' : '📼 Replay'}
+            </button>
+            
+            {isReplayMode && (
+              <>
+                <button
+                  onClick={goToPreviousTurn}
+                  disabled={replayTurn <= 0}
+                  className="p-2 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Previous turn"
+                >
+                  ◀
+                </button>
+                
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400">Turn:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={Math.max(...gameLog.map((e: any) => e.t), 0)}
+                    value={replayTurn}
+                    onChange={(e) => setReplayTurn(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-16 px-2 py-1 bg-gray-700 rounded text-center text-white"
+                  />
+                  <span className="text-gray-400">/ {Math.max(...gameLog.map((e: any) => e.t), 0)}</span>
+                </div>
+                
+                <button
+                  onClick={goToNextTurn}
+                  disabled={replayTurn >= Math.max(...gameLog.map((e: any) => e.t), 0)}
+                  className="p-2 rounded-lg bg-gray-600 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Next turn"
+                >
+                  ▶
+                </button>
+              </>
+            )}
           </div>
         )}
         

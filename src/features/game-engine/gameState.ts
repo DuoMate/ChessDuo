@@ -15,6 +15,17 @@ export enum Team {
 
 export type Player = string
 
+export interface GameLogEntry {
+  t: number          // Turn number
+  team: string       // 'A' (White) or 'B' (Black)
+  p: string          // Player ID: 'A1', 'A2', 'B1', 'B2', 'F'
+  m: string          // Move in UCI format
+  ts: number         // Timestamp in seconds
+  a1?: number        // Player 1 accuracy (only for F entry)
+  a2?: number        // Player 2 accuracy (only for F entry)
+  w?: string         // Winner: 'A1', 'A2', 'B1', 'B2' (only for F entry)
+}
+
 export interface MoveResult {
   move: string
   player: Player
@@ -51,6 +62,9 @@ export class GameState {
   private teamTimer: number
   private timerActive: boolean
 
+  private gameLog: GameLogEntry[] = []
+  private turnStartTime: number = 0
+
   constructor() {
     this.chess = new Chess()
     this._phase = GamePhase.WAITING
@@ -66,6 +80,7 @@ export class GameState {
     this.pendingMoves = new Map()
     this.teamTimer = 10
     this.timerActive = false
+    this.gameLog = []
   }
 
   get phase(): GamePhase {
@@ -103,6 +118,18 @@ export class GameState {
     players.push(player)
   }
 
+  resetBoard(chess: Chess): void {
+    this.chess = chess
+    this._phase = GamePhase.SELECTING
+    this._currentTeam = Team.WHITE
+    this.selections.clear()
+    this.locked.clear()
+    this.pendingMoves.clear()
+    this._capturedByWhite = []
+    this._capturedByBlack = []
+    this.timerActive = false
+  }
+
   startMatch(): void {
     if (this.whitePlayers.length !== 2 || this.blackPlayers.length !== 2) {
       throw new Error('Both teams must have 2 players to start')
@@ -115,6 +142,7 @@ export class GameState {
     this.pendingMoves.clear()
     this.teamTimer = 10
     this.timerActive = true
+    this.turnStartTime = Date.now()
   }
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
@@ -333,5 +361,69 @@ export class GameState {
       ? this.whitePlayers
       : this.blackPlayers
     return currentPlayers.every(p => this.locked.has(p))
+  }
+
+  logPlayerMove(player: Player, move: string): void {
+    const teamLetter = this._currentTeam === Team.WHITE ? 'A' : 'B'
+    
+    // Determine player number - check if this player is first or second in the team's player list
+    let playerNum = '1'
+    const currentTeamPlayers = this._currentTeam === Team.WHITE ? this.whitePlayers : this.blackPlayers
+    const playerIndex = currentTeamPlayers.indexOf(player)
+    if (playerIndex === 0) {
+      playerNum = '1'
+    } else if (playerIndex === 1) {
+      playerNum = '2'
+    } else {
+      // Fallback for players not in the list - use heuristics
+      playerNum = (player.includes('1') || player === 'player1' || player.includes('anon')) ? '1' : '2'
+    }
+    
+    const playerId = `${teamLetter}${playerNum}`
+    const timestamp = this.getTurnElapsedTime()
+
+    this.gameLog.push({
+      t: this.getTurnNumber(),
+      team: teamLetter,
+      p: playerId,
+      m: move,
+      ts: timestamp
+    })
+    console.log('[GAME_LOG] logPlayerMove:', playerId, move, 'total entries:', this.gameLog.length)
+  }
+
+  logResolution(winningMove: string, winnerPlayer: Player, player1Accuracy: number, player2Accuracy: number): void {
+    const teamLetter = this._currentTeam === Team.WHITE ? 'A' : 'B'
+    const timestamp = this.getTurnElapsedTime()
+    const winnerNum = this.whitePlayers.includes(winnerPlayer) || winnerPlayer === 'player1' ? '1' : '2'
+
+    this.gameLog.push({
+      t: this.getTurnNumber(),
+      team: teamLetter,
+      p: 'F',
+      m: winningMove,
+      ts: timestamp,
+      a1: player1Accuracy,
+      a2: player2Accuracy,
+      w: `${teamLetter}${winnerNum}`
+    })
+    console.log('[GAME_LOG] logResolution:', winningMove, 'winner:', `${teamLetter}${winnerNum}`, 'a1:', player1Accuracy, 'a2:', player2Accuracy, 'total entries:', this.gameLog.length)
+  }
+
+  private getTurnNumber(): number {
+    const fullMoves = this.chess.moveNumber()
+    return this._currentTeam === Team.WHITE ? fullMoves : fullMoves
+  }
+
+  private getTurnElapsedTime(): number {
+    return (Date.now() - this.turnStartTime) / 1000
+  }
+
+  getGameLog(): GameLogEntry[] {
+    return [...this.gameLog]
+  }
+
+  getGameLogJSON(): string {
+    return JSON.stringify(this.gameLog)
   }
 }
