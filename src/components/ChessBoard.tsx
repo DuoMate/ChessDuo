@@ -299,7 +299,7 @@ export function ChessBoard({
               animate={{ 
                 x: getSquarePosition(myPendingOverlay.to).x,
                 y: getSquarePosition(myPendingOverlay.to).y,
-                opacity: 0.3
+                opacity: 1
               }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
