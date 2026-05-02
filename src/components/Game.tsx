@@ -1036,25 +1036,32 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
             />
           </div>
           
-          {/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
+{/* Accuracy Panel - below board as bottom sheet */}
+          <div className="w-[280px] md:w-[360px] lg:w-[5000px] px-2">
             {(() => {
               // Compute accuracy display directly from game object (no stored state)
               const g = isOnline ? onlineGameRef.current : gameRef.current
               const currentTurn = g?.currentTurn
-              const gamePhase = isOnline ? (g as any)?.gamePhase : null
               
-              // Only show during WHITE turn AFTER resolution complete (phase = RESOLVED)
+              // Get comparison and check if it's from the current turn
+              // Use turnStartFen from comparison to determine which team resolved
+              // FEN format: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+              // Position 6 (after 5th slash) = 'w' (WHITE) or 'b' (BLACK)
+              const rawComparison = g?.lastMoveComparison
+              const comparisonTurn = rawComparison?.turnStartFen?.split(' ')[1] // 'w' or 'b'
+              const currentTurnIndicator = currentTurn === Team.WHITE ? 'w' : 'b'
+              const isCorrectTurn = comparisonTurn === currentTurnIndicator
+              
+              // Only show during WHITE turn when comparison is from WHITE's turn
               // This prevents stale BLACK comparison from showing during new WHITE turn
-              const isResolvedPhase = gamePhase === 'RESOLVED'
-              const rawComparison = (currentTurn === Team.WHITE && isResolvedPhase) ? g?.lastMoveComparison : null
               const comparison: MoveComparison | null = rawComparison ?? null
-              const isVisible = currentTurn === Team.WHITE && isResolvedPhase && !!comparison
+              const isVisible = currentTurn === Team.WHITE && isCorrectTurn && !!comparison
               
               if (isVisible) {
                 console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
                   currentTurn,
-                  gamePhase,
+                  comparisonTurn,
+                  isCorrectTurn,
                   comparisonDetails: comparison ? {
                     player1Move: comparison.player1Move,
                     player2Move: comparison.player2Move,
