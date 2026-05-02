@@ -88,6 +88,7 @@ interface GameState {
   timerSeconds: number
   timerActive: boolean
   pendingOverlay: PendingOverlay | null
+  myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
   showResolution: boolean
   isLoading: boolean
@@ -212,6 +213,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     timerSeconds: 10,
     timerActive: false,
     pendingOverlay: null,
+    myPendingOverlay: null,
     highlightSquares: null,
     showResolution: false,
     isLoading: true
@@ -361,6 +363,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     // Get pendingOverlay for online mode - show teammate's pending move
     const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
     
+    // Get my pending overlay - show my own pending move as secondary animation
+    let myPendingOverlay: PendingOverlay | null = null
+    if (isOnline && playerId) {
+      const allMoves = (g as any).getAllPendingMoves()
+      for (const [player, pending] of allMoves) {
+        if (player === playerId && pending.from && pending.to) {
+          myPendingOverlay = { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+          break
+        }
+      }
+    }
+    
     setGameState(prev => {
       const newState = {
         ...prev,
@@ -389,6 +403,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
         pendingOverlay: pendingOverlay || prev.pendingOverlay,
+        myPendingOverlay: myPendingOverlay || prev.myPendingOverlay,
         // Clear loading when game is ready
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
       }
@@ -674,7 +689,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 g.startPendingTurn()
               }
               
-              setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
               
               // Start next WHITE turn
               g.startPendingTurn()
@@ -743,7 +758,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
-            pendingOverlay: null
+            pendingOverlay: null,
+            myPendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'white' }
           }))
         }
 
@@ -855,7 +871,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       pendingOpponentTurnRef.current = false
       setGameState(prev => ({ ...prev, isBotThinking: true }))
       await executeBotMove()
-      setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+      setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
@@ -955,6 +971,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.myPendingOverlay}
               highlightSquares={gameState.highlightSquares}
               onAnimationComplete={handleResolutionComplete}
             />
