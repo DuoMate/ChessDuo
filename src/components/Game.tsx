@@ -21,84 +21,6 @@ import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, pl
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
-// ISOLATED HELPER: Accuracy Display State Computation
-// Only affects accuracy banner visibility - no side effects
-// ============================================================
-function computeAccuracyDisplayState(
-  currentTurn: Team,
-  comparison: MoveComparison | null,
-  isNewWhiteTurn: boolean,
-  prevWhiteComparison: MoveComparison | null
-): { showBanner: boolean; whiteTeamComparison: MoveComparison | null } {
-// ROBUST FIX: NEVER show accuracy banner during BLACK turn
-  // This completely isolates WHITE vs BLACK and prevents cross-turn data leakage
-  
-  // Show banner ONLY during WHITE turn after resolution
-  const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
-  
-  // DEBUG: Enhanced logging with full details
-  const computedIsSync = comparison ? (comparison.player1Move === comparison.player2Move) : null
-  console.log('[ACCURACY-DEBUG] computeAccuracyDisplayState:', {
-    currentTurn: currentTurn === Team.WHITE ? 'WHITE' : 'BLACK',
-    comparison: comparison ? {
-      player1Move: comparison.player1Move,
-      player2Move: comparison.player2Move,
-      isSync: comparison.isSync,
-      winnerId: comparison.winnerId,
-    } : null,
-    isNewWhiteTurn,
-    prevWhiteComparison: prevWhiteComparison ? {
-      player1Move: prevWhiteComparison.player1Move,
-      player2Move: prevWhiteComparison.player2Move,
-      isSync: prevWhiteComparison.isSync,
-    } : null,
-    computedIsSync,
-    isSyncMismatch: comparison && computedIsSync !== null ? (comparison.isSync !== computedIsSync) : null,
-    output: {
-      shouldShowBanner,
-      whiteTeamComparison_source: currentTurn === Team.BLACK ? 'null (never show during BLACK)' : 
-                                    (currentTurn === Team.WHITE && isNewWhiteTurn) ? 'null (new white)' : 
-                                    (currentTurn === Team.WHITE && comparison) ? 'current comparison' : 'null'
-    }
-  })
-  
-  // Warn if isSync doesn't match actual moves
-  if (comparison && comparison.isSync && computedIsSync !== null && !computedIsSync) {
-    console.warn('[ACCURACY-WARN] isSync is TRUE but moves are different!', {
-      player1Move: comparison.player1Move,
-      player2Move: comparison.player2Move,
-      isSync: comparison.isSync,
-      computedIsSync
-    })
-  }
-  
-  // ROBUST FIX: NEVER carry over any data during BLACK turn
-  // ONLY store/update comparison during WHITE turn
-  let whiteTeamComparison: MoveComparison | null = null
-  
-  if (currentTurn === Team.BLACK) {
-    // FIXED: Never show any comparison during BLACK turn
-    // This prevents stale data or BLACK stats from being shown during WHITE's turn
-    whiteTeamComparison = null
-  } else if (currentTurn === Team.WHITE) {
-    if (isNewWhiteTurn) {
-      // New WHITE turn starting: clear (no comparison yet until WHITE resolves)
-      whiteTeamComparison = null
-    } else {
-      // WHITE turn: use current comparison from resolved WHITE turn
-      whiteTeamComparison = comparison
-    }
-  }
-
-  return {
-    showBanner: shouldShowBanner,
-    whiteTeamComparison
-  }
-}
-// ============================================================
-// END: Accuracy Display State Computation
-// ============================================================
-
 interface GameProps {
   level?: number
   roomCode?: string
@@ -163,13 +85,11 @@ interface GameState {
   moveAccuracyP2: number
   totalMoves: number
   moveComparison: MoveComparison | null
-  whiteTeamComparison: MoveComparison | null
   timerSeconds: number
   timerActive: boolean
   pendingOverlay: PendingOverlay | null
   myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
-  showResolution: boolean
   isLoading: boolean
 }
 
@@ -288,13 +208,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracyP2: 100,
     totalMoves: 0,
     moveComparison: null,
-    whiteTeamComparison: null,
     timerSeconds: 10,
     timerActive: false,
     pendingOverlay: null,
     myPendingOverlay: null,
     highlightSquares: null,
-    showResolution: false,
     isLoading: true
   })
 
@@ -472,26 +390,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const currentTurn = g.currentTurn
     
     // Get comparison data for WHITE turn only (not BLACK)
-    let comparison: MoveComparison | null = null
     const prevTurn = gameState.currentTurn
-    
-    // Clear whiteTeamComparison when new WHITE turn starts (turn changed from BLACK to WHITE)
     const isNewWhiteTurn = prevTurn === Team.BLACK && currentTurn === Team.WHITE
     
     // Only get comparison during WHITE turn (not during BLACK turn)
+    // and not during the first render of a new WHITE turn
+    let comparison: MoveComparison | null = null
     if (currentTurn === Team.WHITE && isOnline && !isNewWhiteTurn) {
       comparison = g.lastMoveComparison
     }
-    
-    // Use isolated helper for accuracy display computation
-    // This ONLY affects accuracy banner visibility - no side effects on other code
-    const accuracyState = computeAccuracyDisplayState(
-      currentTurn,
-      comparison,
-      isNewWhiteTurn,
-      gameState.whiteTeamComparison
-    )
-    const showResolution = accuracyState.showBanner
     
     // Get pendingOverlay for online mode - show teammate's pending move
     // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
@@ -557,9 +464,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracyP2: 100,
         totalMoves: 0,
         moveComparison: comparison,
-        // Use isolated helper result for accuracy display
-        whiteTeamComparison: accuracyState.whiteTeamComparison,
-        showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
         pendingOverlay,
@@ -630,8 +534,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       setGameState(prev => ({
         ...prev,
-        highlightSquares,
-        showResolution: true
+        highlightSquares
       }))
 
       updateStateRef.current()
@@ -725,7 +628,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
-            showResolution: false,
             highlightSquares: null
           }))
         }
@@ -789,7 +691,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               }
             }
             
-            setGameState(prev => ({ ...prev, highlightSquares, showResolution: true }))
+            setGameState(prev => ({ ...prev, highlightSquares }))
           }
           
           try {
@@ -870,9 +772,7 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               console.log('[RESOLVE-CLEANUP] Non-coordinator clearing resolution state for new WHITE turn')
               setGameState(prev => ({ 
                 ...prev, 
-                highlightSquares: null,
-                showResolution: false,
-                whiteTeamComparison: null
+                highlightSquares: null
               }))
               
               // Start timer for next WHITE turn
@@ -907,7 +807,6 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
 
         setGameState(prev => ({
           ...prev,
-          showResolution: false,
           highlightSquares: null
         }))
 
@@ -1044,9 +943,7 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
                 isBotThinking: false, 
                 highlightSquares: null, 
                 pendingOverlay: null, 
-                myPendingOverlay: null,
-                showResolution: false,
-                whiteTeamComparison: null
+                myPendingOverlay: null
               }))
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
@@ -1156,21 +1053,20 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
           {/* Accuracy Panel - below board as bottom sheet */}
           <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
             <AccuracyBottomSheet 
-              comparison={gameState.whiteTeamComparison}
+              comparison={gameState.moveComparison}
               isVisible={(() => {
-                const visible = gameState.showResolution && !!gameState.whiteTeamComparison
-                // Additional debug for troubleshooting
+                // Derived state: compute visibility directly from game state
+                // Only show during WHITE turn with valid comparison
+                const visible = gameState.currentTurn === Team.WHITE && !!gameState.moveComparison
                 if (visible) {
                   console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
-                    showResolution: gameState.showResolution,
-                    hasComparison: !!gameState.whiteTeamComparison,
-                    comparisonDetails: gameState.whiteTeamComparison ? {
-                      player1Move: gameState.whiteTeamComparison.player1Move,
-                      player2Move: gameState.whiteTeamComparison.player2Move,
-                      winnerId: gameState.whiteTeamComparison.winnerId,
-                      isSync: gameState.whiteTeamComparison.isSync
-                    } : null,
-                    currentTurn: gameState.currentTurn
+                    currentTurn: gameState.currentTurn,
+                    comparisonDetails: gameState.moveComparison ? {
+                      player1Move: gameState.moveComparison.player1Move,
+                      player2Move: gameState.moveComparison.player2Move,
+                      winnerId: gameState.moveComparison.winnerId,
+                      isSync: gameState.moveComparison.isSync
+                    } : null
                   })
                 }
                 return visible
