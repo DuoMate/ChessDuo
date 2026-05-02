@@ -84,7 +84,6 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
-  moveComparison: MoveComparison | null
   timerSeconds: number
   timerActive: boolean
   pendingOverlay: PendingOverlay | null
@@ -207,7 +206,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    moveComparison: null,
     timerSeconds: 10,
     timerActive: false,
     pendingOverlay: null,
@@ -389,17 +387,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const captured = g.getCapturedPieces()
     const currentTurn = g.currentTurn
     
-    // Get comparison data for WHITE turn only (not BLACK)
-    const prevTurn = gameState.currentTurn
-    const isNewWhiteTurn = prevTurn === Team.BLACK && currentTurn === Team.WHITE
-    
-    // Only get comparison during WHITE turn (not during BLACK turn)
-    // and not during the first render of a new WHITE turn
-    let comparison: MoveComparison | null = null
-    if (currentTurn === Team.WHITE && isOnline && !isNewWhiteTurn) {
-      comparison = g.lastMoveComparison
-    }
-    
     // Get pendingOverlay for online mode - show teammate's pending move
     // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
     let pendingOverlay: PendingOverlay | null = null
@@ -463,7 +450,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracy: 100,
         moveAccuracyP2: 100,
         totalMoves: 0,
-        moveComparison: comparison,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
         pendingOverlay,
@@ -1052,26 +1038,34 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
           
           {/* Accuracy Panel - below board as bottom sheet */}
           <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
-            <AccuracyBottomSheet 
-              comparison={gameState.moveComparison}
-              isVisible={(() => {
-                // Derived state: compute visibility directly from game state
-                // Only show during WHITE turn with valid comparison
-                const visible = gameState.currentTurn === Team.WHITE && !!gameState.moveComparison
-                if (visible) {
-                  console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
-                    currentTurn: gameState.currentTurn,
-                    comparisonDetails: gameState.moveComparison ? {
-                      player1Move: gameState.moveComparison.player1Move,
-                      player2Move: gameState.moveComparison.player2Move,
-                      winnerId: gameState.moveComparison.winnerId,
-                      isSync: gameState.moveComparison.isSync
-                    } : null
-                  })
-                }
-                return visible
-              })()}
-            />
+            {(() => {
+              // Compute accuracy display directly from game object (no stored state)
+              const g = isOnline ? onlineGameRef.current : gameRef.current
+              const currentTurn = g?.currentTurn
+              // Only show comparison during WHITE turn - BLACK comparison is ignored
+              const rawComparison = (currentTurn === Team.WHITE) ? g?.lastMoveComparison : null
+              const comparison: MoveComparison | null = rawComparison ?? null
+              const isVisible = currentTurn === Team.WHITE && !!comparison
+              
+              if (isVisible) {
+                console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
+                  currentTurn,
+                  comparisonDetails: comparison ? {
+                    player1Move: comparison.player1Move,
+                    player2Move: comparison.player2Move,
+                    winnerId: comparison.winnerId,
+                    isSync: comparison.isSync
+                  } : null
+                })
+              }
+              
+              return (
+                <AccuracyBottomSheet 
+                  comparison={comparison}
+                  isVisible={isVisible}
+                />
+              )
+            })()}
           </div>
           
           {/* Right side - BLACK team (Timer + Resolution + Captured) */}
