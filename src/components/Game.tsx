@@ -34,6 +34,14 @@ function computeAccuracyDisplayState(
   // NEVER show during BLACK turn
   const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
   
+  // DEBUG: Log what we're computing
+  console.log('[ACCURACY-DEBUG] computeAccuracyDisplayState:', {
+    currentTurn: currentTurn === Team.WHITE ? 'WHITE' : 'BLACK',
+    comparison: comparison ? { player1Move: comparison.player1Move, player2Move: comparison.player2Move, isSync: comparison.isSync } : null,
+    isNewWhiteTurn,
+    prevWhiteComparison: prevWhiteComparison ? { player1Move: prevWhiteComparison.player1Move, isSync: prevWhiteComparison.isSync } : null
+  })
+  
   // Store WHITE team comparison - EXPLICIT handling for each turn:
   let whiteTeamComparison: MoveComparison | null = null
   
