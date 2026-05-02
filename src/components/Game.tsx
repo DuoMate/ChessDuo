@@ -34,13 +34,45 @@ function computeAccuracyDisplayState(
   // NEVER show during BLACK turn
   const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
   
-  // DEBUG: Log what we're computing
+  // DEBUG: Enhanced logging with full details
+  const computedIsSync = comparison ? (comparison.player1Move === comparison.player2Move) : null
   console.log('[ACCURACY-DEBUG] computeAccuracyDisplayState:', {
     currentTurn: currentTurn === Team.WHITE ? 'WHITE' : 'BLACK',
-    comparison: comparison ? { player1Move: comparison.player1Move, player2Move: comparison.player2Move, isSync: comparison.isSync } : null,
+    // Full comparison details
+    comparison: comparison ? {
+      player1Move: comparison.player1Move,
+      player2Move: comparison.player2Move,
+      isSync: comparison.isSync,
+      winnerId: comparison.winnerId,
+    } : null,
     isNewWhiteTurn,
-    prevWhiteComparison: prevWhiteComparison ? { player1Move: prevWhiteComparison.player1Move, isSync: prevWhiteComparison.isSync } : null
+    // Previous WHITE comparison
+    prevWhiteComparison: prevWhiteComparison ? {
+      player1Move: prevWhiteComparison.player1Move,
+      player2Move: prevWhiteComparison.player2Move,
+      isSync: prevWhiteComparison.isSync,
+    } : null,
+    // Validate: computed sync vs stored isSync
+    computedIsSync,
+    isSyncMismatch: comparison && computedIsSync !== null ? (comparison.isSync !== computedIsSync) : null,
+    // Output info
+    output: {
+      shouldShowBanner,
+      whiteTeamComparison_source: currentTurn === Team.BLACK ? 'prevWhiteComparison' : 
+                                    (currentTurn === Team.WHITE && isNewWhiteTurn) ? 'null (new white)' : 
+                                    (currentTurn === Team.WHITE && comparison) ? 'current comparison' : 'prevWhiteComparison fallback'
+    }
   })
+  
+  // Warn if isSync doesn't match actual moves
+  if (comparison && comparison.isSync && computedIsSync !== null && !computedIsSync) {
+    console.warn('[ACCURACY-WARN] isSync is TRUE but moves are different!', {
+      player1Move: comparison.player1Move,
+      player2Move: comparison.player2Move,
+      isSync: comparison.isSync,
+      computedIsSync
+    })
+  }
   
   // Store WHITE team comparison - EXPLICIT handling for each turn:
   let whiteTeamComparison: MoveComparison | null = null
