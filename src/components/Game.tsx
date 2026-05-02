@@ -20,6 +20,43 @@ import { PendingMoveOverlay } from './PendingMoveOverlay'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// ============================================================
+// ISOLATED HELPER: Accuracy Display State Computation
+// Only affects accuracy banner visibility - no side effects
+// ============================================================
+function computeAccuracyDisplayState(
+  currentTurn: Team,
+  comparison: MoveComparison | null,
+  isNewWhiteTurn: boolean,
+  prevWhiteComparison: MoveComparison | null
+): { showBanner: boolean; whiteTeamComparison: MoveComparison | null } {
+  // Only show accuracy banner during WHITE turn (after WHITE resolves)
+  // NEVER show during BLACK turn
+  const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
+  
+  // Store WHITE team comparison:
+  // - During WHITE turn: store current comparison (from resolved WHITE turn)
+  // - During BLACK turn: keep previous WHITE stats visible
+  // - Clear when new WHITE turn starts
+  let whiteTeamComparison: MoveComparison | null = null
+  if (isNewWhiteTurn) {
+    whiteTeamComparison = null
+  } else if (currentTurn === Team.WHITE && comparison) {
+    whiteTeamComparison = comparison
+  } else {
+    // During BLACK turn, keep previous WHITE stats
+    whiteTeamComparison = prevWhiteComparison
+  }
+  
+  return {
+    showBanner: shouldShowBanner,
+    whiteTeamComparison
+  }
+}
+// ============================================================
+// END: Accuracy Display State Computation
+// ============================================================
+
 interface GameProps {
   level?: number
   roomCode?: string
@@ -392,24 +429,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const captured = g.getCapturedPieces()
     const currentTurn = g.currentTurn
     
-    // Get comparison data for both WHITE and BLACK turns (not just BLACK)
+    // Get comparison data for WHITE turn only (not BLACK)
     let comparison: MoveComparison | null = null
     const prevTurn = gameState.currentTurn
     
     // Clear whiteTeamComparison when new WHITE turn starts (turn changed from BLACK to WHITE)
     const isNewWhiteTurn = prevTurn === Team.BLACK && currentTurn === Team.WHITE
     
-    if (currentTurn === Team.BLACK) {
-      comparison = g.lastMoveComparison
-    } else if (currentTurn === Team.WHITE && isOnline && !isNewWhiteTurn) {
-      // For WHITE turn in online mode, also check for comparison from previous resolution
-      // BUT don't show at start of new WHITE turn (it's from previous WHITE turn - stale)
+    // Only get comparison during WHITE turn (not during BLACK turn)
+    if (currentTurn === Team.WHITE && isOnline && !isNewWhiteTurn) {
       comparison = g.lastMoveComparison
     }
     
-    // Determine showResolution: show when there's comparison data
-    // Only show when turn is BLACK or when comparison exists from previous resolution (not at new WHITE start)
-    const showResolution = comparison !== null && !isNewWhiteTurn
+    // Use isolated helper for accuracy display computation
+    // This ONLY affects accuracy banner visibility - no side effects on other code
+    const accuracyState = computeAccuracyDisplayState(
+      currentTurn,
+      comparison,
+      isNewWhiteTurn,
+      gameState.whiteTeamComparison
+    )
+    const showResolution = accuracyState.showBanner
     
     // Get pendingOverlay for online mode - show teammate's pending move
     // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
@@ -475,14 +515,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracyP2: 100,
         totalMoves: 0,
         moveComparison: comparison,
-        // Store WHITE team comparison separately
-        // Only update during WHITE turn - keep same during BLACK turn
-        // Clear when new WHITE turn starts (isNewWhiteTurn)
-        whiteTeamComparison: isNewWhiteTurn 
-          ? null 
-          : (currentTurn === Team.WHITE && comparison 
-            ? comparison 
-            : prev.whiteTeamComparison),
+        // Use isolated helper result for accuracy display
+        whiteTeamComparison: accuracyState.whiteTeamComparison,
         showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
