@@ -1141,7 +1141,11 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
           <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
             <AccuracyBottomSheet 
               comparison={gameState.whiteTeamComparison}
-              isVisible={gameState.showResolution && !!gameState.whiteTeamComparison}
+              isVisible={(() => {
+                const visible = gameState.showResolution && !!gameState.whiteTeamComparison
+                console.log('[ACCURACY-RENDER] isVisible:', visible, 'showResolution:', gameState.showResolution, 'hasComparison:', !!gameState.whiteTeamComparison)
+                return visible
+              })()}
             />
           </div>
           
