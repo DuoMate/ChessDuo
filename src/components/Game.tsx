@@ -12,7 +12,6 @@ import { supabase } from '@/lib/supabase'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
-import { MobileStatusBar } from './MobileStatusBar'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
@@ -888,17 +887,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onPlayAgain={() => window.location.reload()}
         />
       )}
-      
-      {/* Mobile Status Bar - always visible */}
-      <MobileStatusBar 
-        currentTurn={gameState.currentTurn}
-        timerSeconds={gameState.timerSeconds}
-        timerActive={gameState.timerActive}
-        whiteCaptured={gameState.capturedByWhite}
-        blackCaptured={gameState.capturedByBlack}
-      />
         
-      <div className="max-w-4xl mx-auto pt-16 md:pt-4">
+      <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">ClashMate</h1>
           <button

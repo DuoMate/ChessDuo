@@ -95,12 +95,13 @@ export class OnlineGame {
   }
 
   get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
-    // Always show teammate's pending move if it exists - don't check turnState
+    // Always show teammate's pending move if it exists
     const allMoves = this.gameState.getAllPendingMoves()
+    console.log('[PENDING] allMoves:', Array.from(allMoves.entries()), 'myId:', this._playerId)
     for (const [player, pending] of allMoves) {
-      if (player !== this._playerId && pending.move) {
-        // Teammate's pending move - show as shadow overlay
-        return { from: pending.from, to: pending.to, piece: pending.piece, color: 'white' }
+      if (player !== this._playerId) {
+        console.log('[PENDING] Found teammate move:', player, pending)
+        return { from: pending.from, to: pending.to, piece: pending.piece || 'p', color: 'white' }
       }
     }
     return null
