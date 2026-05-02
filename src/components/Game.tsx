@@ -286,8 +286,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           timerSeconds: g.getTeamTimer(),
           timerActive: g.isTimerActive(),
           isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
-          pendingOverlay: pendingOverlay || prev.pendingOverlay,
-          myPendingOverlay: myPendingOverlay || prev.myPendingOverlay
+          pendingOverlay,
+          myPendingOverlay
         }))
       }
     })
@@ -440,8 +440,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
-        pendingOverlay: pendingOverlay || prev.pendingOverlay,
-        myPendingOverlay: myPendingOverlay || prev.myPendingOverlay,
+        pendingOverlay,
+        myPendingOverlay,
         // Clear loading when game is ready
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
       }
