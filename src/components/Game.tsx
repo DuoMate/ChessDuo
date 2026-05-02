@@ -385,8 +385,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     
     // Determine showResolution: show when there's comparison data
-    // Only show when turn is BLACK or when comparison exists from previous resolution (not at new WHITE start)
-    const showResolution = comparison !== null && !isNewWhiteTurn
+    // Only show during WHITE turn (after WHITE resolves) OR during BLACK turn with valid WHITE stats
+    // Never show during new WHITE start or when no WHITE stats available
     
     // Get pendingOverlay for online mode - show teammate's pending move
     const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
@@ -437,7 +437,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           : (currentTurn === Team.WHITE && comparison 
             ? comparison 
             : prev.whiteTeamComparison),
-        showResolution: showResolution,
+        showResolution: (currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn) || 
+                       (currentTurn === Team.BLACK && prev.whiteTeamComparison !== null),
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
         pendingOverlay,
