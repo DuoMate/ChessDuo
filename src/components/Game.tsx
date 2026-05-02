@@ -34,18 +34,21 @@ function computeAccuracyDisplayState(
   // NEVER show during BLACK turn
   const shouldShowBanner = currentTurn === Team.WHITE && comparison !== null && !isNewWhiteTurn
   
-  // Store WHITE team comparison:
-  // - During WHITE turn: store current comparison (from resolved WHITE turn)
-  // - During BLACK turn: keep previous WHITE stats visible
-  // - Clear when new WHITE turn starts
+  // Store WHITE team comparison - EXPLICIT handling for each turn:
   let whiteTeamComparison: MoveComparison | null = null
-  if (isNewWhiteTurn) {
-    whiteTeamComparison = null
-  } else if (currentTurn === Team.WHITE && comparison) {
-    whiteTeamComparison = comparison
-  } else {
-    // During BLACK turn, keep previous WHITE stats
+  
+  if (currentTurn === Team.BLACK) {
+    // During BLACK turn: ALWAYS keep previous WHITE stats (never show BLACK stats)
     whiteTeamComparison = prevWhiteComparison
+  } else if (currentTurn === Team.WHITE) {
+    if (isNewWhiteTurn) {
+      // New WHITE turn starting: clear (no comparison yet until WHITE resolves)
+      whiteTeamComparison = null
+    } else {
+      // WHITE turn in progress (after first move): use current comparison if available
+      // comparison here is from g.lastMoveComparison which was set during WHITE resolve
+      whiteTeamComparison = comparison || prevWhiteComparison
+    }
   }
   
   return {
