@@ -35,7 +35,10 @@ export class OnlineGame {
   private gameState: GameState
   private _status: GameStatus
   private _lastMove: { from: string; to: string } | null = null
-  private _lastMoveComparison: MoveComparison | null = null
+  // FIX: Separate comparisons for WHITE and BLACK teams to prevent stale data
+  private _whiteComparison: MoveComparison | null = null
+  private _blackComparison: MoveComparison | null = null
+  private _lastMoveComparison: MoveComparison | null = null // Keep for backward compatibility
   private _room: Room | null = null
   private _playerId: string = ''
   private _team: 'WHITE' | 'BLACK' = 'WHITE'
@@ -91,7 +94,15 @@ export class OnlineGame {
   }
 
   get lastMoveComparison(): MoveComparison | null {
-    return this._lastMoveComparison
+    // FIX: Return comparison for current turn's team
+    const currentTeam = this.gameState.currentTeam
+    console.log('[COMPARISON-GET] currentTurn:', currentTeam, 'white:', !!this._whiteComparison, 'black:', !!this._blackComparison)
+    
+    if (currentTeam === Team.WHITE) {
+      return this._whiteComparison
+    } else {
+      return this._blackComparison
+    }
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
@@ -375,8 +386,16 @@ export class OnlineGame {
     // If comparison data is provided (from coordinator), use it
     // This ensures both players see the same accuracy stats
     if (payload.comparison) {
-      console.log('[SYNC] Setting comparison from coordinator broadcast')
+      console.log('[SYNC] Setting comparison from coordinator broadcast for team:', payload.winningTeam)
       this._lastMoveComparison = payload.comparison
+      // FIX: Store comparison for the correct team
+      if (payload.winningTeam === Team.WHITE) {
+        console.log('[SYNC] Storing WHITE comparison:', { move: payload.comparison.player1Move })
+        this._whiteComparison = payload.comparison
+      } else {
+        console.log('[SYNC] Storing BLACK comparison:', { move: payload.comparison.player1Move })
+        this._blackComparison = payload.comparison
+      }
     }
     
     // Try to apply the move through normal resolve flow
@@ -645,6 +664,16 @@ export class OnlineGame {
       loserId,
       loserFrom,
       loserTo
+    }
+
+    // FIX: Store comparison for the correct team based on currentTeam
+    console.log(`[RESULT] Storing comparison for team: ${currentTeam}`)
+    if (currentTeam === Team.WHITE) {
+      console.log(`[RESULT] Storing WHITE comparison:`, { player1Move, player2Move, isSync })
+      this._whiteComparison = this._lastMoveComparison
+    } else {
+      console.log(`[RESULT] Storing BLACK comparison:`, { player1Move, player2Move, isSync })
+      this._blackComparison = this._lastMoveComparison
     }
 
     // Set lastMove for board animation

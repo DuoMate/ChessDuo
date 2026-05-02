@@ -1045,17 +1045,30 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
               
               // Get comparison and check if it's from the current turn
               // Use turnStartFen from comparison to determine which team resolved
-              // FEN format: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-              // Position 6 (after 5th slash) = 'w' (WHITE) or 'b' (BLACK)
               const rawComparison = g?.lastMoveComparison
               const comparisonTurn = rawComparison?.turnStartFen?.split(' ')[1] // 'w' or 'b'
               const currentTurnIndicator = currentTurn === Team.WHITE ? 'w' : 'b'
               const isCorrectTurn = comparisonTurn === currentTurnIndicator
               
               // Only show during WHITE turn when comparison is from WHITE's turn
-              // This prevents stale BLACK comparison from showing during new WHITE turn
               const comparison: MoveComparison | null = rawComparison ?? null
               const isVisible = currentTurn === Team.WHITE && isCorrectTurn && !!comparison
+              
+              // DEBUG: Log for troubleshooting
+              console.log('[ACCURACY-DEBUG] Render check:', {
+                currentTurn,
+                hasComparison: !!rawComparison,
+                comparisonTurn,
+                currentTurnIndicator,
+                isCorrectTurn,
+                isVisible,
+                comparisonData: rawComparison ? {
+                  player1Move: rawComparison.player1Move,
+                  player2Move: rawComparison.player2Move,
+                  isSync: rawComparison.isSync,
+                  turnStartFen: rawComparison.turnStartFen?.substring(0, 50)
+                } : null
+              })
               
               if (isVisible) {
                 console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
