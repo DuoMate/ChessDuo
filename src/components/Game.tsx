@@ -632,6 +632,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         return
       }
 
+      // Block if player already submitted a move this turn
+      const allPending = (g as any).getAllPendingMoves() as Map<string, any>
+      if (allPending && allPending.has(playerId)) {
+        console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
+        return
+      }
+
       // Clear accuracy panel when player starts new WHITE move
       setAccuracyComparison(null)
       console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
