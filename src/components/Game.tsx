@@ -332,8 +332,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
-          console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, clearing accuracy')
-          setAccuracyComparison(null)
+          console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
         }
         prevTurnRef.current = currentTurn
         console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
@@ -484,11 +483,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         timerActive: g.isTimerActive(),
         pendingOverlay,
         myPendingOverlay,
-        // Clear loading when game is ready
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
       }
       return newState
     })
+    
+    // Accuracy transition detection (for coordinator who uses updateStateRef)
+    const prevTurn = prevTurnRef.current
+    if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
+      const comp = g.lastMoveComparison as MoveComparison | null
+      if (comp) {
+        console.log('[ACCURACY-TRANSITION] (updateState) WHITE→BLACK detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
+        setAccuracyComparison(comp)
+      }
+    }
+    prevTurnRef.current = currentTurn
   }, [isOnline, game])
 
   const updateStateRef = useRef(updateState)
@@ -622,6 +631,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
         return
       }
+
+      // Clear accuracy panel when player starts new WHITE move
+      setAccuracyComparison(null)
+      console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
 
       console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
 
