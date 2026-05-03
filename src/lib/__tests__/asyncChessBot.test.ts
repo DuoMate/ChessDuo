@@ -1,4 +1,4 @@
-import { ChessBot, createBot } from '../chessBot'
+import { ChessBot, createBot } from '../../features/bots/chessBot'
 import { Chess } from 'chess.js'
 
 // Mock MoveEvaluator for testing - simulates Stockfish behavior
@@ -44,6 +44,14 @@ class MockMoveEvaluator {
       return { move, score: -Infinity }
     }
   }
+
+  async evaluateMoves(moves: string[], fen: string, depth: number = 12, movetime: number = 2600): Promise<{ move: string; score: number }[]> {
+    const results: { move: string; score: number }[] = []
+    for (const move of moves) {
+      results.push(await this.evaluateMove(move, fen))
+    }
+    return results
+  }
 }
 
 function createMockBot(skillLevel: number = 4): ChessBot {
@@ -60,7 +68,7 @@ describe('ChessBot Async Support', () => {
       const move = await bot.selectMoveAsync(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
     })
 
     test('selectMoveAsync returns null when no moves available', async () => {
@@ -79,7 +87,7 @@ describe('ChessBot Async Support', () => {
       const move = await bot.selectMoveAsync(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
     })
 
     test('selectMoveAsync returns legal move', async () => {
@@ -87,7 +95,8 @@ describe('ChessBot Async Support', () => {
       const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
       const move = await bot.selectMoveAsync(fen)
-      const [from, to] = move!.split('-')
+      const from = move!.substring(0, 2)
+      const to = move!.substring(2, 4)
 
       const chess = new Chess(fen)
       const legalMoves = chess.moves({ verbose: true })
@@ -103,8 +112,8 @@ describe('ChessBot Async Support', () => {
         const bot = createMockBot(level)
         const move = await bot.selectMoveAsync(fen)
         
-        expect(move).not.toBeNull()
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).not.toBeNull()
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
       }
     })
   })
@@ -117,7 +126,7 @@ describe('ChessBot Async Support', () => {
       const move = bot.selectMove(fen)
 
       expect(move).not.toBeNull()
-      expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
     })
 
     test('sync selectMove returns null when no moves', () => {
@@ -138,8 +147,8 @@ describe('ChessBot Async Support', () => {
 
       expect(syncMove).not.toBeNull()
       expect(asyncMove).not.toBeNull()
-      expect(syncMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
-      expect(asyncMove).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+      expect(syncMove).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
+      expect(asyncMove).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
     })
 
     test('createBot creates bot with default settings', () => {
@@ -241,7 +250,7 @@ describe('ChessBot Async Support', () => {
 
       // Should still return valid move
       if (move) {
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+        expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
       }
     })
   })
@@ -257,8 +266,11 @@ describe('ChessBot Async Support', () => {
 
       // Make the move
       const chess = new Chess(fen)
-      const [from, to] = move1!.split('-')
-      const result = chess.move({ from, to, promotion: 'q' })
+      const uci = move1!
+      const from = uci.substring(0, 2)
+      const to = uci.substring(2, 4)
+      const promotion = uci.length === 5 ? uci.substring(4, 5) : undefined
+      const result = chess.move({ from, to, promotion })
       expect(result).not.toBeNull()
 
       // Get next position
@@ -277,7 +289,8 @@ describe('ChessBot Async Support', () => {
         const move = await bot.selectMoveAsync(fen)
 
         if (move) {
-          const [from, to] = move.split('-')
+          const from = move.substring(0, 2)
+          const to = move.substring(2, 4)
           try {
             chess.move({ from, to })
           } catch {
@@ -359,7 +372,7 @@ describe('ChessBot Async Support', () => {
 
       // May or may not return promotion, depending on position
       if (move) {
-        expect(move).toMatch(/^[a-h][1-8]-[a-h][1-8]$/)
+        expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
       }
     })
   })

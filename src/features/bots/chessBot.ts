@@ -120,29 +120,45 @@ export class ChessBot {
 
   private async evaluateMovesWithFallback(moves: Move[], fen: string): Promise<{ move: Move; score: number }[]> {
     const isBlackTurn = new Chess(fen).turn() === 'b'
+    const difficulty = DIFFICULTY[this.config.skillLevel] || DIFFICULTY[4]
+    const topMovesLimit = difficulty.topMoves
+    
     const uciMoves = moves.map(m => this.moveToUci(m))
+    const movesToEvaluate = uciMoves.slice(0, topMovesLimit)
     
     try {
-      const results = await this.moveEvaluator.evaluateMoves(uciMoves, fen, 15, 2600)
+      const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, 12, 2600)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
-      const evaluatedScores = results.map((r: { move: string; score: number }) => r.score)
-      const worstScore = evaluatedScores.length > 0 
-        ? (isBlackTurn ? Math.min(...evaluatedScores) : Math.max(...evaluatedScores))
-        : 0
+      const evaluatedMoves: { move: Move; score: number }[] = []
+      const unevaluatedMoves: Move[] = []
       
-      return moves.map(move => {
+      for (const move of moves) {
         const uci = this.moveToUci(move)
         const score = scoreMap.get(uci)
-        return {
-          move,
-          score: score !== undefined ? score : worstScore
+        if (score !== undefined) {
+          evaluatedMoves.push({ move, score })
+        } else {
+          unevaluatedMoves.push(move)
+        }
+      }
+      
+      const fallbackForUnevaluated = unevaluatedMoves.map(move => {
+        const chess = new Chess(fen)
+        try {
+          chess.move(move)
+          return { move, score: this.fallbackEvaluate(chess.fen()) }
+        } catch {
+          return { move, score: isBlackTurn ? 1000 : -1000 }
         }
       })
-    } catch {
+      
+      return [...evaluatedMoves, ...fallbackForUnevaluated]
+    } catch (error) {
+      console.warn('[ChessBot] Server evaluation failed, using random fallback:', error)
       return moves.map(move => ({
         move,
-        score: isBlackTurn ? Infinity : -Infinity
+        score: Math.random() * 10 * (isBlackTurn ? -1 : 1)
       }))
     }
   }
@@ -190,7 +206,14 @@ export class ChessBot {
       console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
     })
 
-    const topMoves = sortedMoves.slice(0, Math.min(difficulty.topMoves, sortedMoves.length))
+    const validMoves = sortedMoves.filter(m => isFinite(m.score))
+    console.log(`[ChessBot] Filtered ${sortedMoves.length - validMoves.length} unevaluated moves (score=±Infinity)`)
+
+    if (validMoves.length === 0) {
+      throw new Error('No valid moves to select from')
+    }
+
+    const topMoves = validMoves.slice(0, Math.min(difficulty.topMoves, validMoves.length))
     console.log(`[ChessBot] Top ${topMoves.length} candidates: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
 
     const movesWithNoise = this.addNoise(topMoves, difficulty.noise)
@@ -200,6 +223,16 @@ export class ChessBot {
     const guardrailMoves = this.applyScoreGuardrail(movesWithNoise, difficulty.maxDrop, isBlackTurn)
     console.log(`[ChessBot] After guardrail (maxDrop=${difficulty.maxDrop}): ${guardrailMoves.map(m => m.move.san).join(', ')}`)
 
+    if (guardrailMoves.length >= 2) {
+      const best = guardrailMoves[0]
+      const second = guardrailMoves[1]
+      const dominanceThreshold = 80
+      if (best.score - second.score > dominanceThreshold) {
+        console.log(`[ChessBot] DOMINANCE RULE: ${best.move.san} (${best.score})远超 ${second.move.san} (${second.score}), 强制选择`)
+        return best.move
+      }
+    }
+
     const filteredMoves = this.filterWeirdMoves(guardrailMoves, difficulty.weirdChance, moveNumber)
     console.log(`[ChessBot] After weird filter: ${filteredMoves.map(m => m.move.san).join(', ')}`)
 
@@ -208,7 +241,7 @@ export class ChessBot {
       console.log(`[ChessBot] Blunder injected!`)
     }
 
-    const finalMove = this.weightedPick(blunderMoves, difficulty.weights)
+    const finalMove = this.softmaxPick(blunderMoves, isBlackTurn)
     console.log(`[ChessBot] SELECTED: ${finalMove.move.san}`)
     return finalMove.move
   }
@@ -334,6 +367,35 @@ export class ChessBot {
     }
     
     console.log(`[ChessBot] Weighted pick fallback: ${moves[0].move.san}`)
+    return moves[0]
+  }
+
+  private softmaxPick(
+    moves: { move: Move; score: number }[],
+    isBlackTurn: boolean
+  ): { move: Move; score: number } {
+    if (moves.length === 0) {
+      throw new Error('No moves to pick from')
+    }
+    if (moves.length === 1) {
+      return moves[0]
+    }
+
+    const temperature = 30
+    const maxScore = Math.max(...moves.map(m => m.score))
+    const weights = moves.map(m => Math.exp((m.score - maxScore) / temperature))
+    const total = weights.reduce((a, b) => a + b, 0)
+
+    let r = Math.random() * total
+    for (let i = 0; i < moves.length; i++) {
+      r -= weights[i]
+      if (r <= 0) {
+        console.log(`[ChessBot] Softmax pick: ${moves[i].move.san} (weight=${weights[i].toFixed(2)}, temp=${temperature})`)
+        return moves[i]
+      }
+    }
+
+    console.log(`[ChessBot] Softmax fallback: ${moves[0].move.san}`)
     return moves[0]
   }
 

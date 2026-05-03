@@ -1,6 +1,6 @@
 import { Chess, Move } from 'chess.js'
-import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from './gameState'
-import { ServerMoveEvaluator } from './serverMoveEvaluator'
+import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
+import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
@@ -242,14 +242,24 @@ export class LocalGame {
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
      
      const turnStartFen = this.gameState.getTurnStartFen()
-       
-     const optimalMove = await this.evaluator.getBestScore(turnStartFen)
-     const bestMoveScore = optimalMove.score
      
-     const movesToEvaluate = [player1Move, player2Move]
-     const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
-     const player1Score = evalResults[0].score
-     const player2Score = evalResults[1].score
+     const player1Uci = player1From + player1To
+     const player2Uci = player2From + player2To
+     
+     const Chess = (await import('chess.js')).Chess
+     const chess = new Chess(turnStartFen)
+     const verboseMoves = chess.moves({ verbose: true })
+     const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
+     const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+     
+     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
+     
+     const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0])
+     const bestMoveScore = bestResult?.score ?? 0
+     const bestMoveUci = bestResult?.move ?? ''
+     
+     const player1Score = scoreMap.get(player1Uci) ?? 0
+     const player2Score = scoreMap.get(player2Uci) ?? 0
 
      const player1Loss = Math.abs(bestMoveScore - player1Score)
      const player2Loss = Math.abs(bestMoveScore - player2Score)
@@ -263,10 +273,10 @@ export class LocalGame {
      const player1Category = this.getAccuracyCategory(player1Loss)
      const player2Category = this.getAccuracyCategory(player2Loss)
 
-    console.log(`\n[EVALUATION] (Blind from: ${turnStartFen})`)
-    console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
-    console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
-    console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
+     console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
+     console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
+     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+     console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
     
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
      const winningScore = winningMove === player1Move ? player1Score : player2Score
@@ -299,7 +309,7 @@ export class LocalGame {
       winningMove,
       winningScore,
       isSync,
-      bestEngineMove: optimalMove.move,
+      bestEngineMove: bestMoveUci,
       bestEngineScore: bestMoveScore,
       turnStartFen,
       winnerId: winnerId as 'player1' | 'player2',
@@ -356,16 +366,36 @@ export class LocalGame {
     console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
     
     const currentFen = this.gameState.fen
-    
-    const turnStartFen = currentFen
-    
-     const optimalMove = await this.evaluator.getBestScore(turnStartFen)
-     const bestMoveScore = optimalMove.score
      
-     const movesToEvaluate = [player1Move, player2Move]
-     const evalResults = await this.evaluator.evaluateMoves(movesToEvaluate, turnStartFen)
-     const player1Score = evalResults[0].score
-     const player2Score = evalResults[1].score
+     const turnStartFen = currentFen
+     
+     const sanToUci = (san: string, fen: string): string => {
+       const chess = new Chess(fen)
+       const moves = chess.moves({ verbose: true })
+       const found = moves.find(m => m.san === san || m.lan === san)
+       if (found) {
+         return found.from + found.to + (found.promotion || '')
+       }
+       return san
+     }
+     
+     const player1Uci = sanToUci(player1Move, turnStartFen)
+     const player2Uci = sanToUci(player2Move, turnStartFen)
+     
+     const ChessLib = (await import('chess.js')).Chess
+     const chess = new ChessLib(turnStartFen)
+     const verboseMoves = chess.moves({ verbose: true })
+     const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
+     const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+     
+     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
+     
+     const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0])
+     const bestMoveScore = bestResult?.score ?? 0
+     const bestMoveUci = bestResult?.move ?? ''
+     
+     const player1Score = scoreMap.get(player1Uci) ?? 0
+     const player2Score = scoreMap.get(player2Uci) ?? 0
 
      const player1Loss = Math.abs(bestMoveScore - player1Score)
      const player2Loss = Math.abs(bestMoveScore - player2Score)
@@ -379,9 +409,9 @@ export class LocalGame {
      const player1Category = this.getAccuracyCategory(player1Loss)
      const player2Category = this.getAccuracyCategory(player2Loss)
       
-     console.log(`\n[EVALUATION] (from: ${turnStartFen})`)
-     console.log(`  [Optimal] ${optimalMove.move}: score=${bestMoveScore}`)
-     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move}: score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+     console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
+     console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
+     console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
      console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
       
      const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
@@ -412,7 +442,7 @@ export class LocalGame {
       winningMove,
       winningScore,
       isSync,
-      bestEngineMove: optimalMove.move,
+      bestEngineMove: bestMoveUci,
       bestEngineScore: bestMoveScore,
       turnStartFen,
       winnerId: winnerId as 'player1' | 'player2',

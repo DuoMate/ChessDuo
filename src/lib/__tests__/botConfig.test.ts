@@ -5,7 +5,7 @@ import {
   getAvailableSkillLevels,
   BotSkillConfig,
   SkillLevel,
-} from '../botConfig'
+} from '../../features/bots/botConfig'
 
 describe('Bot Configuration Module', () => {
   // Store original env variables

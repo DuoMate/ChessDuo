@@ -1,18 +1,16 @@
-# render.yaml - Render Deployment with Docker
-# Stockfish requires native binary, so we use Docker with Alpine
-
+# Render configuration for ChessDuo Frontend (Next.js)
 services:
   - type: web
-    name: chessduo-stockfish
-    region: oregon
-    plan: free
-    dockerfilePath: Dockerfile
-    buildContext: .
-    healthCheckPath: /health
+    name: chessduo-frontend
+    env: node
+    rootDirectory: /
+    buildCommand: npm install && npm run build
+    startCommand: npx next start -p $PORT
+    healthCheckPath: /api/healthz
     envVars:
-      - key: PORT
-        value: 3001
-      - key: NODE_ENV
-        value: production
-      - key: STOCKFISH_DEPTH
-        value: 8
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://kyojsrllyczlpjvqnlpa.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5b2pzcmxseWN6bHBqdnFubHBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTc1ODIsImV4cCI6MjA5MDE5MzU4Mn0.RT7lA7WBRsUcObKCECA-JwTuxtJUAFxnjNdLsfmsAzQ
+      - key: NEXT_PUBLIC_STOCKFISH_SERVER_URL
+        value: https://chessduo-bllo.onrender.com

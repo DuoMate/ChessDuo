@@ -122,7 +122,9 @@ export class GameState {
       return
     }
 
-    const isHuman = player === 'player1' || player === 'player3'
+    // In online mode, we use actual player IDs. Determine isHuman based on team.
+    // WHITE team = human players, BLACK team = bots (in 2v2 mode)
+    const isHuman = this.whitePlayers.includes(player) || (player === 'player1' || player === 'player3')
 
     this.pendingMoves.set(player, {
       move,
@@ -178,6 +180,10 @@ export class GameState {
     return { human, teammate }
   }
 
+  getAllPendingMoves(): Map<Player, PendingMoveInfo> {
+    return this.pendingMoves
+  }
+
   getTurnStartFen(): string {
     return this.turnStartFen
   }
@@ -188,6 +194,10 @@ export class GameState {
 
   setTeamTimer(seconds: number): void {
     this.teamTimer = seconds
+  }
+
+  setCurrentTeam(team: Team): void {
+    this._currentTeam = team
   }
 
   isTimerActive(): boolean {

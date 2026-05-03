@@ -33,41 +33,38 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Evaluating position with MultiPV: ${fen.substring(0, 60)}...`)
+    console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}...`)
     console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
 
     let lastError: Error | null = null
-    
+
     for (let attempt = 0; attempt < retries; attempt++) {
-      const attemptStart = Date.now()
       try {
         console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
-        const response = await fetch(`${this.serverUrl}/evaluate-multipv`, {
+        const response = await fetch(`${this.serverUrl}/evaluate-moves`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ fen, depth, uciElo, multiPv: Math.min(moves.length, 10) })
+          body: JSON.stringify({ fen, moves, movetime: 500 })
         })
 
-        if (!response.ok) {
-          throw new Error(`MultiPV evaluation failed: ${response.statusText}`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log(`[EVALUATOR] Response received`)
+
+          const results = data.moves.map((m: { move: string; score: number }) => {
+            console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
+            return { move: m.move, score: m.score }
+          })
+
+          console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
+          return results
         }
 
-        const data = await response.json()
-        const elapsed = Date.now() - attemptStart
-        
-        console.log(`[EVALUATOR] MultiPV response received in ${elapsed}ms`)
-        
-        const results = data.moves.map((m: { move: string; score: number }) => {
-          console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
-          return { move: m.move, score: m.score }
-        })
-        
-        console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
-        
-        return results
+        console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}`)
+        throw new Error(`HTTP ${response.status}`)
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
         console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
@@ -77,7 +74,7 @@ export class ServerMoveEvaluator {
       }
     }
 
-    throw lastError || new Error('MultiPV evaluation failed after retries')
+    throw lastError || new Error('Move evaluation failed after retries')
   }
 
   async evaluatePosition(fen: string, depth: number = 15, uciElo: number = 2600, retries: number = 3): Promise<number> {
@@ -125,19 +122,28 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    const chess = new (await import('chess.js')).Chess(fen)
-    const moves = chess.moves()
+    const Chess = (await import('chess.js')).Chess
+    const chess = new Chess(fen)
+    const verboseMoves = chess.moves({ verbose: true })
 
-    if (moves.length === 0) {
+    if (verboseMoves.length === 0) {
       return { move: '', score: 0 }
     }
 
-    if (moves.length === 1) {
-      return { move: moves[0], score: 0 }
+    if (verboseMoves.length === 1) {
+      const move = verboseMoves[0]
+      return { move: move.from + move.to + (move.promotion || ''), score: 0 }
     }
 
-    const results = await this.evaluateMoves(moves, fen, depth, uciElo)
-    const best = results.reduce((a, b) => a.score > b.score ? a : b)
+    const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
+    const results = await this.evaluateMoves(topMovesUci, fen, depth, uciElo)
+    
+    if (results.length === 0) {
+      const randomMove = verboseMoves[Math.floor(Math.random() * verboseMoves.length)]
+      return { move: randomMove.from + randomMove.to + (randomMove.promotion || ''), score: 0 }
+    }
+    
+    const best = results.reduce((a, b) => a.score > b.score ? a : b, results[0])
 
     return { move: best.move, score: best.score }
   }

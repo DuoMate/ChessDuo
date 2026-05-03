@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js'
-import { LocalGame, GameStatus } from '../localGame'
-import { Team } from '../gameState'
-import { createBot } from '../chessBot'
+import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
+import { createBot } from '../../features/bots/chessBot'
 
 function createTestGameWithBot(): { game: LocalGame; bot: ReturnType<typeof createBot> } {
   const game = new LocalGame()

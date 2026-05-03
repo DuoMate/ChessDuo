@@ -1,5 +1,5 @@
-import { LocalGame, GameStatus, MoveComparison } from '../localGame'
-import { Team } from '../gameState'
+import { LocalGame, GameStatus, MoveComparison } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 describe('Parallel Model - Pending Moves', () => {
   let game: LocalGame
