@@ -41,6 +41,7 @@ export class OnlineGame {
   private _lastMoveComparison: MoveComparison | null = null // Keep for backward compatibility
   private _room: Room | null = null
   private _playerId: string = ''
+  private _player1Id: string = '' // Track which player ID is player1 for this client
   private _team: 'WHITE' | 'BLACK' = 'WHITE'
   private _players: Map<string, RoomPlayer> = new Map()
   private _channel: RealtimeChannel | null = null
@@ -103,6 +104,11 @@ export class OnlineGame {
     } else {
       return this._blackComparison
     }
+  }
+
+  get player1Id(): string {
+    console.log('[PLAYER1-ID] Getting player1Id:', this._player1Id, 'current user:', this._playerId)
+    return this._player1Id || this._playerId
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
@@ -558,6 +564,8 @@ export class OnlineGame {
         if (player === this._playerId) {
           move1 = pending
           player1Id = player
+          this._player1Id = player // Track player1 for this client
+          console.log('[PLAYER1-ID] Set player1Id to:', player)
         } else {
           move2 = pending
           player2Id = player
