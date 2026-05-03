@@ -200,6 +200,14 @@ export class GameState {
     this._currentTeam = team
   }
 
+  resetBoard(fen: string): void {
+    const { Chess } = require('chess.js')
+    const newBoard = new Chess(fen)
+    this.board.load(fen)
+    const fenParts = fen.split(' ')
+    this._currentTeam = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
+  }
+
   isTimerActive(): boolean {
     return this.timerActive
   }

@@ -9,14 +9,13 @@ import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
+import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
-import { GameInfo } from './GameInfo'
-import { PendingMoveOverlay } from './PendingMoveOverlay'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -28,45 +27,6 @@ interface GameProps {
   roomId?: string
   team?: 'WHITE' | 'BLACK'
   playerId?: string
-}
-
-function normalizeUci(uci: string): string {
-  return uci.replace(/-/g, '')
-}
-
-function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
-  const chess = new Chess(fen)
-  const moves = chess.moves({ verbose: true })
-  
-  const normalized = normalizeUci(uciMove)
-  const from = normalized.substring(0, 2)
-  const to = normalized.substring(2, 4)
-  
-  for (const move of moves) {
-    if (move.from === from && move.to === to) {
-      if (promotion) {
-        return `${from}${to}=${promotion.toUpperCase()}`
-      }
-      return move.san
-    }
-  }
-  
-  throw new Error(`uciToSan: Move ${uciMove} not found in legal moves from position ${fen}`)
-}
-
-function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
-  const normalized = normalizeUci(uciMove)
-  const from = normalized.substring(0, 2)
-  const to = normalized.substring(2, 4)
-  const chess = new Chess(fen)
-  const moves = chess.moves({ verbose: true })
-  const move = moves.find(m => m.from === from && m.to === to)
-  
-  if (move) {
-    const piece = move.piece || chess.get(from as any)?.type || ''
-    return { from, to, piece }
-  }
-  return null
 }
 
 interface GameState {
@@ -705,27 +665,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
               const highlightSquares: HighlightSquares = {}
-              const winnerId = comparison.winnerId
+              const isPlayer1 = playerId === (g as any).player1Id
               
-              if (winnerId === 'player1' && comparison.player1Move) {
+              if (comparison.winningMove && comparison.player1Move) {
                 const wf = comparison.winningMove.substring(0, 2)
                 const wt = comparison.winningMove.substring(2, 4)
                 if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
                 if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-                if (!comparison.isSync && comparison.loserId === 'player2') {
-                  const lf = comparison.player2Move?.substring(0, 2)
-                  const lt = comparison.player2Move?.substring(2, 4)
-                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
-                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
-                }
-              } else if (winnerId === 'player2' && comparison.player2Move) {
-                const wf = comparison.winningMove.substring(0, 2)
-                const wt = comparison.winningMove.substring(2, 4)
-                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-                if (!comparison.isSync && comparison.loserId === 'player1') {
-                  const lf = comparison.player1Move?.substring(0, 2)
-                  const lt = comparison.player1Move?.substring(2, 4)
+                if (!comparison.isSync) {
+                  const loserMove = comparison.winningMove === comparison.player1Move ? comparison.player2Move : comparison.player1Move
+                  const lf = loserMove?.substring(0, 2)
+                  const lt = loserMove?.substring(2, 4)
                   if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
                   if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
                 }
@@ -738,42 +688,43 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
             playResolutionSound()
             
-            // BLACK handling: only coordinator runs bots
+            // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
             if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
               console.log(`[RESOLVE] Coordinator handling BLACK bot moves...`)
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
               const currentFen = g.board.fen()
-              const botUciMove = await bot.selectMoveAsync(currentFen)
-              console.log(`[RESOLVE] Bot selected move:`, botUciMove)
               
-              if (botUciMove) {
-                const sanMove = uciToSan(botUciMove, currentFen)
-                const moveInfo = getMoveFromUci(botUciMove, currentFen)
+              ;(async () => {
+                const botUciMove = await bot.selectMoveAsync(currentFen)
+                console.log(`[RESOLVE] Bot selected move:`, botUciMove)
                 
-                if (moveInfo) {
-                  g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                  g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                  g.lockPendingMove('bot_opponent_1' as any)
-                  g.lockPendingMove('bot_opponent_2' as any)
+                if (botUciMove) {
+                  const sanMove = uciToSan(botUciMove, currentFen)
+                  const moveInfo = getMoveFromUci(botUciMove, currentFen)
                   
-                  setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
+                  if (moveInfo) {
+                    g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                    g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                    g.lockPendingMove('bot_opponent_1' as any)
+                    g.lockPendingMove('bot_opponent_2' as any)
+                  }
                 }
-              }
-              
-              try {
-                await g.resolvePendingMoves()
-                console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
+                
+                try {
+                  await g.resolvePendingMoves()
+                  console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
+                  updateStateRef.current()
+                  g.setTurnState('selecting' as any)
+                  console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
+                } catch (e) {
+                  console.log(`[RESOLVE] BLACK resolve failed:`, e)
+                }
+                
+                setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
                 updateStateRef.current()
-                g.setTurnState('selecting' as any)
-                console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
-              } catch (e) {
-                console.log(`[RESOLVE] BLACK resolve failed:`, e)
-              }
-              
-              setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
-              updateStateRef.current()
-              startTimer()
+                startTimer()
+              })()
             }
           } catch (e: any) {
             if (e?.message === 'NOT_COORDINATOR') {

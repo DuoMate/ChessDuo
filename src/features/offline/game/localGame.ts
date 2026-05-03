@@ -1,6 +1,7 @@
 import { Chess, Move } from 'chess.js'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
+import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
@@ -268,10 +269,10 @@ export class LocalGame {
        console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
      }
 
-     const player1Accuracy = this.calculateAccuracy(player1Loss)
-     const player2Accuracy = this.calculateAccuracy(player2Loss)
-     const player1Category = this.getAccuracyCategory(player1Loss)
-     const player2Category = this.getAccuracyCategory(player2Loss)
+     const player1Accuracy = calculateAccuracy(player1Loss)
+     const player2Accuracy = calculateAccuracy(player2Loss)
+     const player1Category = getAccuracyCategory(player1Loss)
+     const player2Category = getAccuracyCategory(player2Loss)
 
      console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
      console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
@@ -287,7 +288,7 @@ export class LocalGame {
      const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
      
     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
      console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -404,10 +405,10 @@ export class LocalGame {
        console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
      }
 
-     const player1Accuracy = this.calculateAccuracy(player1Loss)
-     const player2Accuracy = this.calculateAccuracy(player2Loss)
-     const player1Category = this.getAccuracyCategory(player1Loss)
-     const player2Category = this.getAccuracyCategory(player2Loss)
+     const player1Accuracy = calculateAccuracy(player1Loss)
+     const player2Accuracy = calculateAccuracy(player2Loss)
+     const player1Category = getAccuracyCategory(player1Loss)
+     const player2Category = getAccuracyCategory(player2Loss)
       
      console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
      console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
@@ -420,7 +421,7 @@ export class LocalGame {
      const winnerId = winningMove === player1Move ? player1Id : player2Id
      
      console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${this.calculateAccuracy(chosenLoss).toFixed(1)}%`)
+     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
     console.log(`${'='.repeat(60)}\n`)
 
     const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
@@ -460,92 +461,6 @@ export class LocalGame {
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
-  }
-
-  private calculateAccuracy(cpLoss: number, isSacrifice: boolean = false): number {
-    if (cpLoss < 0 || cpLoss === Infinity) {
-      return 0
-    }
-
-    if (isSacrifice) {
-      return 100
-    }
-
-    return Math.max(0, Math.min(100, 100 * 200 / (cpLoss + 200)))
-  }
-
-  private isBrilliantMove(
-    move: Move,
-    beforeFen: string,
-    afterFen: string,
-    beforeScore: number,
-    afterScore: number
-  ): boolean {
-    if (!move.captured && !move.flags.includes('e') && !move.promotion) {
-      return false
-    }
-
-    if (move.promotion) {
-      return false
-    }
-
-    if (move.captured) {
-      const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 }
-      const movedPieceValue = pieceValues[move.piece] || 0
-      const capturedPieceValue = pieceValues[move.captured.toLowerCase()] || 0
-
-      if (capturedPieceValue >= movedPieceValue) {
-        return false
-      }
-
-      const chess = new Chess(beforeFen)
-      const moves = chess.moves({ verbose: true })
-      const opponentMoves = moves.filter(m => m.color !== chess.turn())
-
-      for (const oppMove of opponentMoves) {
-        if (oppMove.to === move.to && (oppMove.flags.includes('c') || oppMove.flags.includes('e'))) {
-          return false
-        }
-      }
-
-      if (afterScore < beforeScore - 100) {
-        return false
-      }
-    }
-
-    if (move.flags.includes('e')) {
-      return true
-    }
-
-    return false
-  }
-
-  private getAccuracyCategory(
-    centipawnLoss: number,
-    isBrilliant: boolean = false
-  ): { label: string; color: string; emoji: string } {
-    if (isBrilliant) {
-      return { label: 'Brilliant', color: '#4ade80', emoji: '💎' }
-    }
-    if (centipawnLoss === Infinity || centipawnLoss < 0) {
-      return { label: 'Error', color: 'gray', emoji: '?' }
-    }
-    if (centipawnLoss === 0) {
-      return { label: 'Great', color: '#22c55e', emoji: '!' }
-    }
-    if (centipawnLoss < 30) {
-      return { label: 'Great', color: '#22c55e', emoji: '!' }
-    }
-    if (centipawnLoss < 80) {
-      return { label: 'Good', color: '#84cc16', emoji: '' }
-    }
-    if (centipawnLoss < 180) {
-      return { label: 'Inaccuracy', color: '#eab308', emoji: '?' }
-    }
-    if (centipawnLoss < 300) {
-      return { label: 'Mistake', color: '#f97316', emoji: '??' }
-    }
-    return { label: 'Blunder', color: '#ef4444', emoji: '???' }
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {

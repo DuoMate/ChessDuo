@@ -3,6 +3,8 @@ import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { GameStatus, MoveComparison } from '../../offline/game/localGame'
 import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
+import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
+import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_EVALUATOR_URL || ''
@@ -61,26 +63,14 @@ export class OnlineGame {
     player2Accuracy: 0
   }
   private evaluator: ServerMoveEvaluator
+  private _broadcastThrottle: Map<string, number> = new Map()
+  private readonly BROADCAST_MIN_INTERVAL_MS = 500
 
   constructor() {
     this.gameState = new GameState()
     this._status = GameStatus.WAITING
     console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
     this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
-  }
-
-  private calculateAccuracy(lossInCentipawns: number): number {
-    if (lossInCentipawns <= 10) return 100
-    if (lossInCentipawns >= 300) return 0
-    return Math.round(100 * (1 - (lossInCentipawns - 10) / 290))
-  }
-
-  private getAccuracyCategory(lossInCentipawns: number): { label: string; color: string; emoji: string } {
-    if (lossInCentipawns <= 10) return { label: 'Perfect', color: '#22c55e', emoji: '✓' }
-    if (lossInCentipawns <= 30) return { label: 'Great', color: '#22c55e', emoji: '!' }
-    if (lossInCentipawns <= 70) return { label: 'Good', color: '#84cc16', emoji: '?' }
-    if (lossInCentipawns <= 150) return { label: 'Inaccuracy', color: '#eab308', emoji: '??' }
-    return { label: 'Mistake', color: '#ef4444', emoji: '!!!' }
   }
 
   get highlightSquares() {
@@ -317,6 +307,11 @@ export class OnlineGame {
       this.notifyStateChange()
       console.log('[ONLINE] Game started successfully')
       console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
+      
+      // Persist initial game state
+      if (this._room) {
+        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status)
+      }
     } catch (e) {
       console.error('[ONLINE] Failed to start game:', e)
     } finally {
@@ -363,6 +358,31 @@ export class OnlineGame {
       } catch (e) {}
 
       console.log('[ONLINE] Game state synced successfully')
+
+      // Recover game state from DB (survives refresh/OS kill)
+      if (this._room) {
+        const saved = await loadGameState(this._room.id)
+        if (saved && saved.moveHistory.length > 0) {
+          console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
+          try {
+            this.gameState.resetBoard(saved.fen)
+          } catch (e) {
+            console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
+            this.gameState.startMatch()
+            for (const entry of saved.moveHistory) {
+              try {
+                this.gameState.board.move(entry.move)
+              } catch (me) {
+                console.warn('[ONLINE] Could not replay move:', entry.move, me)
+              }
+            }
+          }
+          this._status = saved.status as GameStatus
+          this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          this.startPendingTurn()
+          this.notifyStateChange()
+        }
+      }
     } catch (e) {
       console.error('[ONLINE] Failed to sync game state:', e)
     }
@@ -477,8 +497,20 @@ export class OnlineGame {
     this.notifyStateChange()
   }
 
+  private canBroadcast(event: string): boolean {
+    const now = Date.now()
+    const last = this._broadcastThrottle.get(event) || 0
+    if (now - last < this.BROADCAST_MIN_INTERVAL_MS) {
+      console.warn(`[RATE-LIMIT] Broadcast throttled for event: ${event}`)
+      return false
+    }
+    this._broadcastThrottle.set(event, now)
+    return true
+  }
+
   async broadcastMove(move: string, from: string, to: string): Promise<void> {
     if (!this._channel) return
+    if (!this.canBroadcast('player_move')) return
 
     await this._channel.send({
       type: 'broadcast',
@@ -489,6 +521,7 @@ export class OnlineGame {
 
   async broadcastLocked(): Promise<void> {
     if (!this._channel) return
+    if (!this.canBroadcast('player_locked')) return
 
     await this._channel.send({
       type: 'broadcast',
@@ -672,10 +705,10 @@ export class OnlineGame {
       console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
     }
 
-    const player1Accuracy = this.calculateAccuracy(player1Loss)
-    const player2Accuracy = this.calculateAccuracy(player2Loss)
-    const player1Category = this.getAccuracyCategory(player1Loss)
-    const player2Category = this.getAccuracyCategory(player2Loss)
+    const player1Accuracy = calculateAccuracy(player1Loss)
+    const player2Accuracy = calculateAccuracy(player2Loss)
+    const player1Category = getAccuracyCategory(player1Loss)
+    const player2Category = getAccuracyCategory(player2Loss)
 
     console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
     console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
@@ -734,7 +767,7 @@ export class OnlineGame {
 
     this.gameState.resolve(winningMove)
 
-    if (this._channel) {
+    if (this._channel && this.canBroadcast('turn_resolved')) {
       await this._channel.send({
         type: 'broadcast',
         event: 'turn_resolved',
@@ -745,6 +778,18 @@ export class OnlineGame {
           coordinatorId: this._playerId
         }
       })
+    }
+
+    // Persist game state for recovery from refresh/OS kill
+    if (this._room) {
+      const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
+      saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
+        team: currentTeam,
+        move: winningMove,
+        fen_before: fenBefore,
+        fen_after: this.gameState.fen,
+        timestamp: new Date().toISOString()
+      }, this._status)
     }
 
     if (this.gameState.board.isGameOver()) {

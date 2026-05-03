@@ -1,4 +1,5 @@
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
+import { evaluationCache } from '../shared/evaluationCache'
 
 interface EvaluateResponse {
   fen: string
@@ -33,8 +34,24 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}...`)
-    console.log(`[EVALUATOR] Moves: ${moves.join(', ')}`)
+    // Check cache before making HTTP request
+    const cachedResults: { move: string; score: number }[] = []
+    const uncachedMoves: string[] = []
+    for (const move of moves) {
+      const cached = evaluationCache.getScore(fen, move)
+      if (cached !== null) {
+        cachedResults.push({ move, score: cached })
+      } else {
+        uncachedMoves.push(move)
+      }
+    }
+    
+    if (uncachedMoves.length === 0 && cachedResults.length > 0) {
+      console.log(`[EVALUATOR] All ${moves.length} moves cached, skipping HTTP`)
+      return cachedResults
+    }
+    
+    console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}... (${cachedResults.length} cached, ${uncachedMoves.length} uncached)`)
 
     let lastError: Error | null = null
 
@@ -60,7 +77,11 @@ export class ServerMoveEvaluator {
           })
 
           console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
-          return results
+          
+          // Cache results for future reuse
+          evaluationCache.setScores(fen, results)
+          
+          return [...cachedResults, ...results]
         }
 
         console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}`)
