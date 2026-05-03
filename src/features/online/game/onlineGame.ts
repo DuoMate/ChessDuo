@@ -22,6 +22,7 @@ interface ResolvedPayload {
   winningTeam: string
   winningMove: string
   comparison?: MoveComparison | null
+  coordinatorId?: string
 }
 
 export interface OnlineGameState {
@@ -95,20 +96,34 @@ export class OnlineGame {
   }
 
   get lastMoveComparison(): MoveComparison | null {
-    // FIX: Return comparison for current turn's team
-    const currentTeam = this.gameState.currentTeam
-    console.log('[COMPARISON-GET] currentTurn:', currentTeam, 'white:', !!this._whiteComparison, 'black:', !!this._blackComparison)
-    
-    if (currentTeam === Team.WHITE) {
-      return this._whiteComparison
-    } else {
-      return this._blackComparison
-    }
+    return this._lastMoveComparison
   }
 
   get player1Id(): string {
-    console.log('[PLAYER1-ID] Getting player1Id:', this._player1Id, 'current user:', this._playerId)
-    return this._player1Id || this._playerId
+    return this._player1Id || this.getCoordinatorId() || this._playerId
+  }
+
+  isCoordinator(): boolean {
+    try {
+      const players = this.gameState.getPlayers(Team.WHITE)
+      if (players.length === 0) return true
+      const sorted = [...players].sort()
+      const result = this._playerId === sorted[0]
+      console.log('[COORDINATOR] Decision:', { myId: this._playerId, players, sorted, isCoordinator: result })
+      return result
+    } catch {
+      return true
+    }
+  }
+
+  getCoordinatorId(): string {
+    try {
+      const players = this.gameState.getPlayers(Team.WHITE)
+      const sorted = [...players].sort()
+      return sorted[0] || ''
+    } catch {
+      return ''
+    }
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
@@ -301,6 +316,7 @@ export class OnlineGame {
       this.startPendingTurn()
       this.notifyStateChange()
       console.log('[ONLINE] Game started successfully')
+      console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
     } catch (e) {
       console.error('[ONLINE] Failed to start game:', e)
     } finally {
@@ -385,21 +401,33 @@ export class OnlineGame {
     }
   }
 
-  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null }) {
-    console.log('[ONLINE] Turn resolved:', payload)
-    console.log('[ONLINE] Current phase:', this.gameState.phase, 'currentTurn:', this.gameState.currentTeam)
+  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string }) {
+    console.log('[TURN-RESOLVED] Received broadcast:', {
+      winningTeam: payload.winningTeam,
+      winningMove: payload.winningMove,
+      hasComparison: !!payload.comparison,
+      coordinatorId: payload.coordinatorId,
+      amCoordinator: this.isCoordinator(),
+      myId: this._playerId,
+      currentTurn: this.gameState.currentTeam,
+      currentPhase: this.gameState.phase
+    })
     
-    // If comparison data is provided (from coordinator), use it
-    // This ensures both players see the same accuracy stats
     if (payload.comparison) {
-      console.log('[SYNC] Setting comparison from coordinator broadcast for team:', payload.winningTeam)
+      console.log('[TURN-RESOLVED] Comparison received:', {
+        player1Move: payload.comparison.player1Move,
+        player2Move: payload.comparison.player2Move,
+        isSync: payload.comparison.isSync,
+        winnerId: payload.comparison.winnerId
+      })
       this._lastMoveComparison = payload.comparison
-      // FIX: Store comparison for the correct team
+      if (payload.coordinatorId) {
+        this._player1Id = payload.coordinatorId
+        console.log('[PLAYER1-ID] Set from coordinator:', payload.coordinatorId)
+      }
       if (payload.winningTeam === Team.WHITE) {
-        console.log('[SYNC] Storing WHITE comparison:', { move: payload.comparison.player1Move })
         this._whiteComparison = payload.comparison
       } else {
-        console.log('[SYNC] Storing BLACK comparison:', { move: payload.comparison.player1Move })
         this._blackComparison = payload.comparison
       }
     }
@@ -476,6 +504,14 @@ export class OnlineGame {
   }
 
   startPendingTurn(): void {
+    if (this.gameState.currentTeam === Team.WHITE) {
+      const hadWhite = !!this._whiteComparison
+      const hadBlack = !!this._blackComparison
+      this._whiteComparison = null
+      this._blackComparison = null
+      this._lastMoveComparison = null
+      console.log('[COMPARISON-CLEAR] New WHITE turn: cleared comparisons (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
+    }
     const fen = this.gameState.fen
     this.gameState.startPendingTurn(fen)
   }
@@ -544,10 +580,16 @@ export class OnlineGame {
   }
 
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
+    const currentTeam = this.gameState.currentTeam
+    
+    if (currentTeam === Team.WHITE && !this.isCoordinator()) {
+      console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
+      throw new Error('NOT_COORDINATOR')
+    }
+    
     this.turnState = 'resolving'
     console.log('[STATE] Resolving, set turnState to resolving')
     
-    const currentTeam = this.gameState.currentTeam
     const allPendingMoves = this.gameState.getAllPendingMoves()
     const pendingMovesArray = Array.from(allPendingMoves.entries())
     
@@ -699,8 +741,8 @@ export class OnlineGame {
         payload: { 
           winningTeam: currentTeam, 
           winningMove,
-          // Send comparison data so both players see the same stats
-          comparison: this._lastMoveComparison
+          comparison: this._lastMoveComparison,
+          coordinatorId: this._playerId
         }
       })
     }

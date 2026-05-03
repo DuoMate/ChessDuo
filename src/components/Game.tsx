@@ -215,6 +215,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+  const prevTurnRef = useRef<Team | null>(null)
+
+  // Update sound engine when setting changes
 
   // Update sound engine when setting changes
   useEffect(() => {
@@ -307,6 +311,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           pendingOverlay,
           myPendingOverlay
         }))
+        
+        // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
+        const prevTurn = prevTurnRef.current
+        const currentTurn = g.currentTurn
+        
+        if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
+          const comp = (g as any).lastMoveComparison as MoveComparison | null
+          console.log('[ACCURACY-TRANSITION] WHITE→BLACK detected', {
+            hasComparison: !!comp,
+            compPlayer1Move: comp?.player1Move,
+            compPlayer2Move: comp?.player2Move,
+            compWinnerId: comp?.winnerId,
+            isSync: comp?.isSync
+          })
+          if (comp) {
+            setAccuracyComparison(comp)
+            console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+          } else {
+            console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
+          }
+        } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
+          console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, clearing accuracy')
+          setAccuracyComparison(null)
+        }
+        prevTurnRef.current = currentTurn
+        console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
       }
     })
     console.log('[Game] setOnStateChange callback set up complete')
@@ -484,11 +514,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return false
     }
 
-    if (isOnline) {
-      await g.resolvePendingMoves()
-    } else {
-      await g.resolvePendingMoves()
-    }
+    await g.resolvePendingMoves()
 
     const comparison = g.lastMoveComparison
 
@@ -640,70 +666,61 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
         if (g.isBothPendingLocked()) {
-          // Try to resolve - will fail gracefully if already resolved by other client
-          console.log(`[RESOLVE] Both locked, attempting resolve...`)
-          const comparison = g.lastMoveComparison
-          
-          // Validate chess square format (e.g., "e2", "d4")
-          const isValidSquare = (sq: string | undefined): sq is string => 
-            !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
-
-          // Set highlight squares for winner/loser moves
-          if (comparison) {
-            const highlightSquares: HighlightSquares = {}
-            const winnerId = comparison.winnerId
-            
-            if (winnerId === 'player1' && comparison.player1Move) {
-              const wf = comparison.winningMove.substring(0, 2)
-              const wt = comparison.winningMove.substring(2, 4)
-              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-              if (!comparison.isSync && comparison.loserId === 'player2') {
-                const lf = comparison.player2Move?.substring(0, 2)
-                const lt = comparison.player2Move?.substring(2, 4)
-                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
-                if (isValidSquare(lt)) highlightSquares.loserTo = lt
-              }
-            } else if (winnerId === 'player2' && comparison.player2Move) {
-              const wf = comparison.winningMove.substring(0, 2)
-              const wt = comparison.winningMove.substring(2, 4)
-              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-              if (!comparison.isSync && comparison.loserId === 'player1') {
-                const lf = comparison.player1Move?.substring(0, 2)
-                const lt = comparison.player1Move?.substring(2, 4)
-                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
-                if (isValidSquare(lt)) highlightSquares.loserTo = lt
-              }
-            }
-            
-            setGameState(prev => ({ ...prev, highlightSquares }))
-          }
+          console.log(`[RESOLVE] Both locked, my role:`, { 
+            playerId, 
+            isCoordinator: g.isCoordinator(), 
+            coordinatorId: (g as any).getCoordinatorId?.() 
+          })
+          console.log(`[RESOLVE] Attempting resolve...`)
           
           try {
             await g.resolvePendingMoves()
             updateStateRef.current()
             console.log(`[RESOLVE] Resolve succeeded`)
-          } catch (e) {
-            console.log(`[RESOLVE] Resolve failed (already resolved by other client):`, e)
-          }
-          
-          const newTurn = g.currentTurn as Team
-          console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
-          playResolutionSound()
-          
-          // In online mode, after WHITE resolves, BLACK (bots) need to move
-          // Only one client should handle bot moves - use playerId to coordinate
-          if (newTurn === Team.BLACK && bot && playerId) {
-            // Get both players from game state to determine coordinator
-            const players = g.getPlayers(Team.WHITE)
-            console.log(`[RESOLVE] BLACK handling check - players:`, players, 'playerId:', playerId, 'bot:', !!bot)
-            const sortedPlayers = [...players].sort()
-            const isCoordinator = playerId === sortedPlayers[0]
-            console.log(`[RESOLVE] isCoordinator:`, isCoordinator, 'sortedPlayers:', sortedPlayers)
             
-            if (isCoordinator) {
-              console.log(`[RESOLVE] Handling BLACK bot moves (coordinator)...`)
+            // Set highlight squares after resolve (comparison now available)
+            const comparison = g.lastMoveComparison
+            if (comparison) {
+              const isValidSquare = (sq: string): sq is string => 
+                !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
+              
+              const highlightSquares: HighlightSquares = {}
+              const winnerId = comparison.winnerId
+              
+              if (winnerId === 'player1' && comparison.player1Move) {
+                const wf = comparison.winningMove.substring(0, 2)
+                const wt = comparison.winningMove.substring(2, 4)
+                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
+                if (!comparison.isSync && comparison.loserId === 'player2') {
+                  const lf = comparison.player2Move?.substring(0, 2)
+                  const lt = comparison.player2Move?.substring(2, 4)
+                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
+                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
+                }
+              } else if (winnerId === 'player2' && comparison.player2Move) {
+                const wf = comparison.winningMove.substring(0, 2)
+                const wt = comparison.winningMove.substring(2, 4)
+                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
+                if (!comparison.isSync && comparison.loserId === 'player1') {
+                  const lf = comparison.player1Move?.substring(0, 2)
+                  const lt = comparison.player1Move?.substring(2, 4)
+                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
+                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
+                }
+              }
+              
+              setGameState(prev => ({ ...prev, highlightSquares }))
+            }
+            
+            const newTurn = g.currentTurn as Team
+            console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
+            playResolutionSound()
+            
+            // BLACK handling: only coordinator runs bots
+            if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
+              console.log(`[RESOLVE] Coordinator handling BLACK bot moves...`)
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
               const currentFen = g.board.fen()
@@ -720,49 +737,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   g.lockPendingMove('bot_opponent_1' as any)
                   g.lockPendingMove('bot_opponent_2' as any)
                   
-                  console.log(`[RESOLVE] Bot moves set and locked, pending moves:`, g.getAllPendingMoves())
                   setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
                 }
               }
               
-              // Skip the isBothPendingLocked check - we just set and locked the moves, just resolve
-              console.log(`[RESOLVE] Attempting BLACK resolve directly...`)
               try {
                 await g.resolvePendingMoves()
                 console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
                 updateStateRef.current()
               } catch (e) {
                 console.log(`[RESOLVE] BLACK resolve failed:`, e)
-                // Force advance to WHITE if resolve fails
-                g.startPendingTurn()
               }
               
-setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
-              
-              // Start next WHITE turn
-              g.startPendingTurn()
+              setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
               updateStateRef.current()
               startTimer()
+            }
+          } catch (e: any) {
+            if (e?.message === 'NOT_COORDINATOR') {
+              console.log(`[RESOLVE] Not coordinator — waiting for broadcast`)
             } else {
-              console.log(`[RESOLVE] Non-coordinator waiting for BLACK to complete...`)
-              // Wait for turn to change to WHITE
-              let attempts = 0
-              while (g.currentTurn !== Team.WHITE && attempts < 30) {
-                await new Promise(resolve => setTimeout(resolve, 500))
-                attempts++
-                console.log(`[RESOLVE] Waiting for WHITE... ${attempts}/30, turn: ${g.currentTurn}`)
-              }
-              console.log(`[RESOLVE] Turn changed to: ${g.currentTurn}`)
-              
-              // Clear the resolution UI (non-coordinator path)
-              console.log('[RESOLVE-CLEANUP] Non-coordinator clearing resolution state for new WHITE turn')
-              setGameState(prev => ({ 
-                ...prev, 
-                highlightSquares: null
-              }))
-              
-              // Start timer for next WHITE turn
-              startTimer()
+              console.log(`[RESOLVE] Resolve failed:`, e)
             }
           }
         } else {
@@ -1037,72 +1032,15 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
           </div>
           
 {/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-[280px] md:w-[360px] lg:w-[5000px] px-2">
+          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
             {(() => {
-              // Compute accuracy display directly from game object (no stored state)
               const g = isOnline ? onlineGameRef.current : gameRef.current
-              const currentTurn = g?.currentTurn
-              
-              // Get comparison and check if it's from the current turn
-              // Use turnStartFen from comparison to determine which team resolved
-              const rawComparison = g?.lastMoveComparison
-              const comparisonTurn = rawComparison?.turnStartFen?.split(' ')[1] // 'w' or 'b'
-              const currentTurnIndicator = currentTurn === Team.WHITE ? 'w' : 'b'
-              const isCorrectTurn = comparisonTurn === currentTurnIndicator
-              
-              // Only show during WHITE turn when comparison is from WHITE's turn
-              const comparison: MoveComparison | null = rawComparison ?? null
-              const isVisible = currentTurn === Team.WHITE && isCorrectTurn && !!comparison
-              
-              // FIX: Determine if human is player1 or player2 for accurate display
-              // Use player1Id getter from onlineGame instead of alphabetical sorting
-              let isPlayer1 = true // Default to player1 for offline mode
-              if (isOnline && playerId && g) {
-                try {
-                  const determinedPlayer1Id = (g as any).player1Id
-                  isPlayer1 = playerId === determinedPlayer1Id
-                  console.log('[ACCURACY-DEBUG] Player determination:', { playerId, player1Id: determinedPlayer1Id, isPlayer1 })
-                } catch (e) {
-                  console.log('[ACCURACY-DEBUG] Could not get player1Id:', e)
-                }
-              }
-              
-              // DEBUG: Log for troubleshooting
-              console.log('[ACCURACY-DEBUG] Render check:', {
-                currentTurn,
-                hasComparison: !!rawComparison,
-                comparisonTurn,
-                currentTurnIndicator,
-                isCorrectTurn,
-                isVisible,
-                comparisonData: rawComparison ? {
-                  player1Move: rawComparison.player1Move,
-                  player2Move: rawComparison.player2Move,
-                  isSync: rawComparison.isSync,
-                  turnStartFen: rawComparison.turnStartFen?.substring(0, 50)
-                } : null
-              })
-              
-              if (isVisible) {
-                console.log('[ACCURACY-RENDER] SHOWING accuracy panel!', {
-                  currentTurn,
-                  comparisonTurn,
-                  isCorrectTurn,
-                  comparisonDetails: comparison ? {
-                    player1Move: comparison.player1Move,
-                    player2Move: comparison.player2Move,
-                    winnerId: comparison.winnerId,
-                    isSync: comparison.isSync
-                  } : null
-                })
-              }
-              
               return (
                 <AccuracyBottomSheet 
-                  comparison={comparison}
-                  isVisible={isVisible}
+                  comparison={accuracyComparison}
+                  isVisible={!!accuracyComparison}
                   playerId={playerId}
-                  player1Id={isOnline ? (g as any).player1Id : null}
+                  player1Id={isOnline ? (g as any)?.player1Id : null}
                 />
               )
             })()}
