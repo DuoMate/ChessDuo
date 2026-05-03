@@ -1101,7 +1101,8 @@ setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, p
                 <AccuracyBottomSheet 
                   comparison={comparison}
                   isVisible={isVisible}
-                  isPlayer1={isPlayer1}
+                  playerId={playerId}
+                  player1Id={isOnline ? (g as any).player1Id : null}
                 />
               )
             })()}

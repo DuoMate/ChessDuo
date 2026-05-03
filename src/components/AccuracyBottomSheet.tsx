@@ -6,22 +6,27 @@ import { MoveComparison } from '@/features/offline/game/localGame'
 interface AccuracyBottomSheetProps {
   comparison: MoveComparison | null
   isVisible: boolean
-  isPlayer1: boolean // Is the human player1 or player2?
+  playerId?: string | null  // Current player's ID
+  player1Id?: string | null // Which player ID is player1 in the game
 }
 
-export function AccuracyBottomSheet({ comparison, isVisible, isPlayer1 }: AccuracyBottomSheetProps) {
-  // FIX: Determine which player is "you" based on isPlayer1 prop
-  const humanAccuracy = isPlayer1 
+export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id }: AccuracyBottomSheetProps) {
+  // FIX: Determine if current player is player1 by comparing IDs
+  const isPlayer1 = playerId && player1Id ? playerId === player1Id : true
+  
+  // FIX: Determine if YOU won by comparing winnerId with your position
+  // winnerId tells us which player (player1 or player2) won
+  // isPlayer1 tells us if we are player1
+  const youWon = (isPlayer1 && comparison?.winnerId === 'player1') || 
+                 (!isPlayer1 && comparison?.winnerId === 'player2')
+  
+  // Accuracy based on your position
+  const yourAccuracy = isPlayer1 
     ? (comparison?.player1Accuracy ?? 0) 
     : (comparison?.player2Accuracy ?? 0)
   const teammateAccuracy = isPlayer1 
     ? (comparison?.player2Accuracy ?? 0) 
     : (comparison?.player1Accuracy ?? 0)
-  
-  // Winner depends on which player ID won
-  const humanWon = isPlayer1 
-    ? (comparison?.winnerId === 'player1') 
-    : (comparison?.winnerId === 'player2')
   
   // Your move
   const yourMove = isPlayer1 
@@ -32,6 +37,23 @@ export function AccuracyBottomSheet({ comparison, isVisible, isPlayer1 }: Accura
   const teammateMove = isPlayer1 
     ? comparison?.player2Move 
     : comparison?.player1Move
+  
+  // Your category
+  const yourCategory = isPlayer1 
+    ? (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
+    : (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
+  
+  // Teammate's category  
+  const teammateCategory = isPlayer1 
+    ? (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
+    : (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
+  
+  // For header: "You Won" or "Teammate Won"
+  const humanWon = youWon
+  
+  // Use the categories from earlier
+  const humanCategory = yourCategory
+  // teammateCategory already defined above
   
   // ROBUST FIX: Compute sync from actual moves, don't trust stored isSync
   // This prevents stale isSync from previous turns being shown incorrectly
@@ -51,14 +73,6 @@ export function AccuracyBottomSheet({ comparison, isVisible, isPlayer1 }: Accura
       player2Move: comparison.player2Move
     })
   }
-
-  // FIX: Use correct category based on which player is "you"
-  const humanCategory = isPlayer1 
-    ? (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
-    : (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
-  const teammateCategory = isPlayer1 
-    ? (comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' })
-    : (comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' })
 
   if (!isVisible || !comparison) return null
 
@@ -147,20 +161,20 @@ export function AccuracyBottomSheet({ comparison, isVisible, isPlayer1 }: Accura
                 <motion.div 
                   className="h-full rounded-full"
                   style={{ 
-                    backgroundColor: humanAccuracy >= 90 ? '#22c55e' : humanAccuracy >= 70 ? '#eab308' : '#ef4444'
+                    backgroundColor: yourAccuracy >= 90 ? '#22c55e' : yourAccuracy >= 70 ? '#eab308' : '#ef4444'
                   }}
                   initial={{ width: 0 }}
-                  animate={{ width: `${humanAccuracy}%` }}
+                  animate={{ width: `${yourAccuracy}%` }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 />
               </div>
               <motion.span 
                 className={`font-bold text-xl ${humanWon ? 'text-green-400' : 'text-gray-400'}`}
-                key={humanAccuracy}
+                key={yourAccuracy}
                 initial={{ scale: 1.3 }}
                 animate={{ scale: 1 }}
               >
-                {humanAccuracy.toFixed(0)}%
+                {yourAccuracy.toFixed(0)}%
               </motion.span>
             </div>
           </motion.div>
