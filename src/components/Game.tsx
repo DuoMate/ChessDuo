@@ -765,6 +765,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 await g.resolvePendingMoves()
                 console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
                 updateStateRef.current()
+                g.setTurnState('selecting' as any)
+                console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
               } catch (e) {
                 console.log(`[RESOLVE] BLACK resolve failed:`, e)
               }
@@ -1041,7 +1043,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             <ChessBoard 
               fen={gameState.fen}
               onMove={handleMove}
-              enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
+              enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId))}
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
