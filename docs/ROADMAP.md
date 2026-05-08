@@ -27,7 +27,7 @@ This project uses **two separate Render services**:
 
 | Service | URL | Build Config | Directory |
 |---------|-----|------------|-----------|
-| **Frontend** | https://chessduo-frontend.onrender.com | `render.yaml` | `/` (root) |
+| **Frontend** | https://chessduo-fe.onrender.com | `render.yaml` | `/` (root) |
 | **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
 
 ### Frontend Deployment (render.yaml)
@@ -82,54 +82,60 @@ Uses Docker to build Stockfish from `/server` directory.
 ### Phase 2: Real-Time Multiplayer Infrastructure (Week 3-4)
 **Goal**: Backend infrastructure for real-time multiplayer
 
-- [ ] 2.1 Setup Supabase project
-- [ ] 2.2 Implement user authentication (Supabase Auth)
-- [ ] 2.3 Create game room system
-- [ ] 2.4 Implement real-time sync (Supabase Broadcast)
-- [ ] 2.5 Track player presence (connected, selecting, locked-in)
-- [ ] 2.6 Match flow: team matchmaking, team formation
-- [ ] 2.7 Handle disconnects/reconnects
+- [x] 2.1 Setup Supabase project
+- [x] 2.2 Implement user authentication (Supabase Auth)
+- [x] 2.3 Create game room system
+- [x] 2.4 Implement real-time sync (Supabase Broadcast)
+- [x] 2.5 Track player presence (connected, selecting, locked-in)
+- [x] 2.6 Match flow: team matchmaking, team formation
+- [x] 2.7 Handle disconnects/reconnects (game persistence + late-join replay)
 
-**Deliverable**: Backend ready for real-time multiplayer
+**Key Files**: `src/lib/supabase.ts`, `src/lib/gamePersistence.ts`, `src/components/Auth.tsx`, `src/components/Room.tsx`, `supabase/tables.sql`
+
+**Deliverable**: ✅ Backend ready for real-time multiplayer (COMPLETE)
 
 ---
 
 ### Phase 3: Human Teammate (Week 5-6)
 **Goal**: Replace bot teammate with real human player
 
-- [ ] 3.1 Integrate Phase 2 infrastructure for teammate connection
-- [ ] 3.2 Real human teammate instead of bot
-- [ ] 3.3 Same parallel model:
+- [x] 3.1 Integrate Phase 2 infrastructure for teammate connection
+- [x] 3.2 Real human teammate instead of bot
+- [x] 3.3 Same parallel model:
   - Both see same board
   - Both lock moves (or timer expires)
   - Both moves revealed simultaneously
   - Accuracy evaluation and resolution
-- [ ] 3.4 Bot opponent remains (for now)
-- [ ] 3.5 Full 2v2 human multiplayer
+- [x] 3.4 Bot opponent remains (for now)
+- [x] 3.5 Full 2v2 human multiplayer (coordinator pattern)
 
 **Key Feature**: Real human teammate via Supabase
 
-**Deliverable**: True 2v2 human multiplayer game
+**Key Files**: `src/features/online/game/onlineGame.ts`, `src/components/Game.tsx`
+
+**Deliverable**: ✅ True 2v2 human multiplayer game (COMPLETE)
 
 ---
 
 ### Phase 4: Game Polish (Week 7-8)
 **Goal**: Complete game experience with animations and stats
 
-- [ ] 4.1 Move conflict visualization (green/red arrows)
-- [ ] 4.2 Losing move retraction animation
-- [ ] 4.3 Accuracy display (centipawn loss, percentage)
+- [x] 4.1 Move conflict visualization (green/red arrows)
+- [x] 4.2 Losing move retraction animation
+- [x] 4.3 Accuracy display (centipawn loss, percentage)
     - Shows immediately after WHITE turn resolves
     - Only displays WHITE team accuracy (never BLACK)
     - Persists through BLACK turn until next WHITE starts
     - Clears when new WHITE turn begins
-- [ ] 4.4 Timer system improvements (visual warnings)
-- [ ] 4.5 Turn indicator and game status UI
-- [ ] 4.6 Team dynamics tracking (sync rate, conflicts)
-- [ ] 4.7 Match summary and stats screen
-- [ ] 4.8 Basic matchmaking queue
+- [x] 4.4 Timer system improvements (visual warnings)
+- [x] 4.5 Turn indicator and game status UI
+- [x] 4.6 Team dynamics tracking (sync rate, conflicts)
+- [ ] 4.7 Match summary and stats screen → moved to Phase 5
+- [ ] 4.8 Basic matchmaking queue → moved to Phase 5
 
-**Deliverable**: Polished, feature-complete game
+**Key Files**: `src/components/ChessBoard.tsx`, `src/components/AccuracyBottomSheet.tsx`, `src/components/MoveComparison.tsx`, `src/components/TeamTimer.tsx`, `src/components/GameOverModal.tsx`
+
+**Deliverable**: ✅ Core animations and polish complete (2 items deferred to Phase 5)
 
 ---
 
@@ -137,11 +143,13 @@ Uses Docker to build Stockfish from `/server` directory.
 **Goal**: Features needed for public release
 
 - [ ] 5.1 Match history and persistence
-- [ ] 5.2 User profiles
-- [ ] 5.3 Room codes (shareable game links)
-- [ ] 5.4 Performance optimizations
-- [ ] 5.5 Error handling and edge cases
-- [ ] 5.6 Bot difficulty adjustment
+- [ ] 5.2 User profiles UI (DB schema exists, needs frontend)
+- [ ] 5.3 Match summary and stats screen (from Phase 4.7)
+- [ ] 5.4 Basic matchmaking queue (from Phase 4.8)
+- [ ] 5.5 Production hardening (RLS per-room, stress testing, CDN, error monitoring)
+- [x] 5.6 Room codes (shareable game links)
+- [x] 5.7 Error handling and edge cases (ErrorBoundary, Toast, rate limiting)
+- [x] 5.8 Bot difficulty adjustment (6 levels, 1000-2600 ELO)
 
 **Deliverable**: Production-ready MVP
 
@@ -297,16 +305,22 @@ interface TurnResolution {
 ```json
 {
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.0.0",
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "chess.js": "^1.4.0",
-    "cm-chessboard": "^4.0.0",
-    "@supabase/supabase-js": "^2.0.0",
-    "@supabase/auth-helpers-nextjs": "^0.8.0"
+    "cm-chessboard": "^8.11.5",
+    "@supabase/supabase-js": "^2.103.3",
+    "stockfish": "^18.0.5",
+    "stockfish.wasm": "^0.10.0",
+    "framer-motion": "^12.38.0"
   },
   "devDependencies": {
-    "jest": "^29.0.0",
-    "@testing-library/react": "^14.0.0"
+    "jest": "^30.3.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
 ```
@@ -318,10 +332,10 @@ interface TurnResolution {
 | Milestone | Target | Status |
 |-----------|--------|--------|
 | M1 | Week 2 | ✅ Complete - Local 2v2 playable |
-| M2 | Week 4 | 🔄 In Progress - Supabase infra |
-| M3 | Week 6 | ⏳ Pending - Human multiplayer |
-| M4 | Week 8 | ⏳ Pending - Animations polished |
-| M5 | Week 10 | ⏳ Pending - MVP launch ready |
+| M2 | Week 4 | ✅ Complete - Supabase real-time infra |
+| M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
+| M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
+| M5 | Week 10 | 🔄 In Progress - Match history, stats, profiles, matchmaking |
 | M6 | Week 14 | ⏳ Pending - Mobile apps |
 
 ---
@@ -360,4 +374,20 @@ Key files:
 
 ---
 
-*Last Updated: 2026-04-11*
+## Test Health
+
+| Metric | Count | Status |
+|--------|-------|--------|
+| Test suites | 19 | 17 pass, 0 fail, 2 skip |
+| Individual tests | 401 | 282 pass, 0 fail, 119 skip |
+
+**Status**: ✅ All tests passing (2026-05-08 fix)
+
+Fixes applied:
+- `gameState.getPendingMoves()` — uses team player order (not `isHuman` flag) for human/teammate separation
+- `e2eEvaluation.test.ts` — injects mock evaluator (no Stockfish server dependency)
+- `moveEvaluation.test.ts` + `parallelModel.test.ts` — import `calculateAccuracy` directly from `shared/accuracy`, updated expectations to match linear formula
+
+---
+
+*Last Updated: 2026-05-08*

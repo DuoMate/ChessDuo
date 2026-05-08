@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { applyRateLimit } from '@/lib/rateLimit'
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimitResponse = applyRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
   const results: Record<string, unknown> = {}
   
   // Test 1: Check env vars

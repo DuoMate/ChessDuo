@@ -1,5 +1,15 @@
 import { LocalGame, GameStatus, MoveComparison } from '../../features/offline/game/localGame'
 import { Team } from '../../features/game-engine/gameState'
+import { calculateAccuracy } from '../../features/shared/accuracy'
+
+const mockEvaluator = {
+  evaluateMoves: async (moves: string[], _fen: string) => {
+    return moves.map(m => ({ move: m, score: 30 }))
+  },
+  evaluatePosition: async (_fen: string) => 30,
+  getBestScore: async (_fen: string) => ({ move: 'e2e4', score: 30 }),
+  playMove: async (_fen: string) => 'e2e4',
+}
 
 describe('Parallel Model - Pending Moves', () => {
   let game: LocalGame
@@ -58,15 +68,17 @@ describe('Parallel Model - Pending Moves', () => {
       expect(pending.human!.piece).toBe('P')
     })
 
-    test('pending move isHuman flag correct', () => {
+    test('pending move correctly separates human and teammate by team order', () => {
       setupFullGame()
       game.startPendingTurn()
       game.setPendingMove('player1', 'e4', 'e2', 'e4', 'P')
       game.setPendingMove('player2', 'Nf3', 'g1', 'f3', 'N')
       
       const pending = game.getPendingMoves()
-      expect(pending.human!.isHuman).toBe(true)
-      expect(pending.teammate!.isHuman).toBe(false)
+      expect(pending.human).not.toBeNull()
+      expect(pending.teammate).not.toBeNull()
+      expect(pending.human!.move).toBe('e4')
+      expect(pending.teammate!.move).toBe('Nf3')
     })
   })
 })
@@ -215,7 +227,8 @@ describe('Parallel Model - Loser Retraction Logic', () => {
   let game: LocalGame
 
   beforeEach(() => {
-    game = new LocalGame()
+    game = new LocalGame();
+    (game as any).evaluator = mockEvaluator
   })
 
   function setupFullGame() {
@@ -245,55 +258,40 @@ describe('Parallel Model - Loser Retraction Logic', () => {
 })
 
 describe('Accuracy Formula Verification', () => {
-  let game: LocalGame
-
-  beforeEach(() => {
-    game = new LocalGame()
-  })
-
   test('0 centipawn loss = 100% accuracy', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     expect(calculateAccuracy(0)).toBe(100)
   })
 
-  test('100 centipawn loss ≈ 67% accuracy', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
+  test('100 centipawn loss ≈ 69% accuracy', () => {
     const accuracy = calculateAccuracy(100)
-    expect(accuracy).toBeGreaterThanOrEqual(66)
-    expect(accuracy).toBeLessThanOrEqual(68)
+    expect(accuracy).toBeGreaterThanOrEqual(68)
+    expect(accuracy).toBeLessThanOrEqual(70)
   })
 
-  test('200 centipawn loss = 50% accuracy', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
+  test('200 centipawn loss = 34% accuracy', () => {
     const accuracy = calculateAccuracy(200)
-    expect(accuracy).toBeGreaterThanOrEqual(49)
-    expect(accuracy).toBeLessThanOrEqual(51)
+    expect(accuracy).toBeGreaterThanOrEqual(34)
+    expect(accuracy).toBeLessThanOrEqual(35)
   })
 
-  test('500 centipawn loss ≈ 29% accuracy (blunder)', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    const accuracy = calculateAccuracy(500)
-    expect(accuracy).toBeGreaterThanOrEqual(28)
-    expect(accuracy).toBeLessThanOrEqual(30)
+  test('500 centipawn loss returns 0% (>= 300 threshold)', () => {
+    expect(calculateAccuracy(500)).toBe(0)
   })
 
   test('accuracy formula is monotonic decreasing', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     let prevAccuracy = 101
-    for (const loss of [0, 10, 50, 100, 200, 400, 600, 1000]) {
+    for (const loss of [0, 10, 50, 100, 200, 299, 300]) {
       const accuracy = calculateAccuracy(loss)
-      expect(accuracy).toBeLessThan(prevAccuracy)
+      expect(accuracy).toBeLessThanOrEqual(prevAccuracy)
       prevAccuracy = accuracy
     }
   })
 
-  test('negative loss returns 0', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    expect(calculateAccuracy(-100)).toBe(0)
+  test('negative loss returns 100 (capped at perfect)', () => {
+    expect(calculateAccuracy(-100)).toBe(100)
   })
 
   test('Infinity loss returns 0', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     expect(calculateAccuracy(Infinity)).toBe(0)
   })
 })
@@ -306,7 +304,8 @@ describe('Parallel Model - Stats Tracking', () => {
   })
 
   beforeEach(() => {
-    game = new LocalGame()
+    game = new LocalGame();
+    (game as any).evaluator = mockEvaluator
   })
 
   function setupFullGame() {

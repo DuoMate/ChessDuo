@@ -1,11 +1,21 @@
 import { LocalGame } from '../../features/offline/game/localGame'
 import { Team } from '../../features/game-engine/gameState'
 
+const mockEvaluator = {
+  evaluateMoves: async (_moves: string[], _fen: string) => {
+    return _moves.map(m => ({ move: m, score: 30 }))
+  },
+  evaluatePosition: async (_fen: string) => 30,
+  getBestScore: async (_fen: string) => ({ move: 'e2e4', score: 30 }),
+  playMove: async (_fen: string) => 'e2e4',
+}
+
 describe('End-to-End Move Evaluation', () => {
   let game: LocalGame
 
   beforeEach(() => {
-    game = new LocalGame()
+    game = new LocalGame();
+    (game as any).evaluator = mockEvaluator
   })
 
   test('complete turn with Stockfish evaluation', async () => {

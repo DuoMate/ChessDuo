@@ -166,16 +166,12 @@ export class GameState {
   }
 
   getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {
-    let human: PendingMoveInfo | null = null
-    let teammate: PendingMoveInfo | null = null
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
+      : this.blackPlayers
 
-    for (const [player, pending] of this.pendingMoves) {
-      if (pending.isHuman) {
-        human = pending
-      } else {
-        teammate = pending
-      }
-    }
+    const human = this.pendingMoves.get(currentPlayers[0]) ?? null
+    const teammate = this.pendingMoves.get(currentPlayers[1]) ?? null
 
     return { human, teammate }
   }

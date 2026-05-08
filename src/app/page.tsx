@@ -27,6 +27,15 @@ export default function SetupPage() {
         setUsername(session.user.email?.split('@')[0] || 'Player')
       }
     })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setPlayerId(session.user.id)
+        setUsername(session.user.email?.split('@')[0] || 'Player')
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleAuthComplete = (userId: string, name: string) => {
@@ -73,6 +82,29 @@ export default function SetupPage() {
           {gameMode === null && (
             <div className="text-center text-gray-500 text-sm">
               <p>White team: You + Teammate (2v2 vs Black bots)</p>
+              <div className="mt-3 flex justify-center gap-4">
+                <button
+                  onClick={() => router.push('/history')}
+                  className="text-gray-500 hover:text-yellow-400 text-sm transition-colors"
+                >
+                  📋 Match History
+                </button>
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="text-gray-500 hover:text-yellow-400 text-sm transition-colors"
+                >
+                  👤 Profile
+                </button>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut()
+                    window.location.reload()
+                  }}
+                  className="text-gray-500 hover:text-red-400 text-sm transition-colors"
+                >
+                  🚪 Sign Out
+                </button>
+              </div>
             </div>
           )}
         </div>

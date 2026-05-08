@@ -43,16 +43,37 @@ CREATE TABLE IF NOT EXISTS games (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create completed_games table for match history/stats
+CREATE TABLE IF NOT EXISTS completed_games (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  room_id UUID REFERENCES rooms(id) ON DELETE SET NULL,
+  winner TEXT NOT NULL CHECK (winner IN ('WHITE', 'BLACK', 'DRAW')),
+  game_result TEXT NOT NULL,
+  game_over_reason TEXT,
+  white_moves INTEGER DEFAULT 0,
+  white_sync_rate REAL DEFAULT 0,
+  white_conflicts INTEGER DEFAULT 0,
+  player1_accuracy REAL DEFAULT 0,
+  player2_accuracy REAL DEFAULT 0,
+  total_moves INTEGER DEFAULT 0,
+  is_online BOOLEAN DEFAULT false,
+  move_comparisons JSONB DEFAULT '[]'::jsonb,
+  played_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
 CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
 CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
+CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
+ALTER TABLE completed_games ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies (idempotent: drop first to allow re-running)
 DO $$ BEGIN
@@ -60,61 +81,123 @@ DO $$ BEGIN
   DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
   DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
   DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+  DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
   -- rooms
   DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON rooms;
   DROP POLICY IF EXISTS "Anyone can create rooms" ON rooms;
+  DROP POLICY IF EXISTS "Authenticated users can create rooms" ON rooms;
   DROP POLICY IF EXISTS "Room creator can update" ON rooms;
   -- room_players
   DROP POLICY IF EXISTS "Room players are viewable by everyone" ON room_players;
+  DROP POLICY IF EXISTS "Room members can view players" ON room_players;
   DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
+  DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
   DROP POLICY IF EXISTS "Players can update own record" ON room_players;
+  DROP POLICY IF EXISTS "Players can leave rooms" ON room_players;
   -- games
   DROP POLICY IF EXISTS "Room participants can view game" ON games;
   DROP POLICY IF EXISTS "Anyone can view game state" ON games;
+  DROP POLICY IF EXISTS "Room members can view game" ON games;
   DROP POLICY IF EXISTS "Anyone can insert game state" ON games;
+  DROP POLICY IF EXISTS "Room members can insert game" ON games;
   DROP POLICY IF EXISTS "Anyone can update game state" ON games;
+  DROP POLICY IF EXISTS "Room members can update game" ON games;
+  -- completed_games
+  DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
+  DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
 EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 
--- profiles (anon users generate their own IDs)
+-- ============================================
+-- RLS Policies — Production Hardening
+-- ============================================
+-- Policies use auth.uid() for authenticated users.
+-- For anonymous play, the app creates an anonymous Supabase user
+-- via signInAnonymously(), which provides a real auth.uid().
+-- ============================================
+
+-- profiles
 CREATE POLICY "Profiles are viewable by everyone" ON profiles
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can insert their own profile" ON profiles
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND auth.uid()::text = id);
 
 CREATE POLICY "Users can update own profile" ON profiles
-  FOR UPDATE USING (true);
+  FOR UPDATE USING (auth.uid()::text = id);
 
--- rooms
+-- rooms: public discovery via room codes, authenticated creation/edit
 CREATE POLICY "Rooms are viewable by everyone" ON rooms
   FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can create rooms" ON rooms
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated users can create rooms" ON rooms
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Room creator can update" ON rooms
-  FOR UPDATE USING (created_by = (SELECT created_by FROM rooms r2 WHERE r2.id = id));
+  FOR UPDATE USING (auth.uid()::text = created_by);
 
--- room_players
-CREATE POLICY "Room players are viewable by everyone" ON room_players
-  FOR SELECT USING (true);
+-- room_players: must be room member to view players list
+CREATE POLICY "Room members can view players" ON room_players
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM room_players rp
+      WHERE rp.room_id = room_players.room_id
+        AND rp.player_id = auth.uid()::text
+    )
+  );
 
-CREATE POLICY "Anyone can join rooms" ON room_players
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated users can join rooms" ON room_players
+  FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated'
+    AND auth.uid()::text = player_id
+  );
+
+CREATE POLICY "Players can leave rooms" ON room_players
+  FOR DELETE USING (
+    auth.uid()::text = player_id
+  );
 
 CREATE POLICY "Players can update own record" ON room_players
-  FOR UPDATE USING (player_id = player_id);
+  FOR UPDATE USING (auth.uid()::text = player_id);
 
--- games (anon-friendly for MVP - random room codes provide access control)
-CREATE POLICY "Anyone can view game state" ON games
-  FOR SELECT USING (true);
+-- games: must be room member for all operations
+CREATE POLICY "Room members can view game" ON games
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM room_players rp
+      WHERE rp.room_id = games.room_id
+        AND rp.player_id = auth.uid()::text
+    )
+  );
 
-CREATE POLICY "Anyone can insert game state" ON games
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "Room members can insert game" ON games
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM room_players rp
+      WHERE rp.room_id = games.room_id
+        AND rp.player_id = auth.uid()::text
+    )
+  );
 
-CREATE POLICY "Anyone can update game state" ON games
-  FOR UPDATE USING (true);
+CREATE POLICY "Room members can update game" ON games
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM room_players rp
+      WHERE rp.room_id = games.room_id
+        AND rp.player_id = auth.uid()::text
+    )
+  );
+
+-- completed_games: authenticated users can view and insert
+CREATE POLICY "Authenticated users can view completed games" ON completed_games
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can insert completed games" ON completed_games
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Function to auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

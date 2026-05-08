@@ -6,44 +6,7 @@ A real-time 2v2 chess game where teammates make simultaneous moves and compete a
 
 | Service | URL | Description | Config |
 |---------|-----|-------------|--------|
-| **Frontend** | https://chessduo-frontend.onrender.com | Next.js FE | `render.yaml` |
-| **Backend** | https://chessduo-bllo.onrender.com | Stockfish Server | `Dockerfile` |
-| **Database** | Supabase | Auth & Room Storage | `supabase/tables.sql` |
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 16 + TypeScript |
-| UI | Tailwind CSS + React |
-| Chess Board | cm-chessboard |
-| Chess Logic | chess.js |
-| Engine | Stockfish (server-side) |
-| Real-time | Supabase |
-| Auth | Supabase Auth |
-| Deployment | Render |
-
-## Deployment
-
-### Two Separate Render Services
-
-This project uses **two separate Render services** for BE and FE:
-
-#### 1. Backend (Stockfish Server)
-- **Service**: chessduo-bllo
-- **URL**: https://chessduo-bllo.onrender.com
-- **Config**: Uses `Dockerfile` in root (`buildContext: .`)
-- **Root**: `server/` directory
-- **How it works**: Docker builds the Stockfish server from `/server` folder
-
-```bash
-# Render auto-deploys on push to main/develop
-# Dockerfile handles: npm install, npm run build, Stockfish binary
-```
-
-#### 2. Frontend (Next.js App)
-- **Service**: chessduo-frontend
-- **URL**: https://chessduo-frontend.onrender.com
+| **Frontend** | https://chessduo-fe.onrender.com | Next.js FE | `render.yaml` |
 - **Config**: Uses `render.yaml` in root
 - **Root**: `/` (root directory)
 - **How it works**: Standard Next.js build + start

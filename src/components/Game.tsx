@@ -17,6 +17,8 @@ import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
+import { saveCompletedGame } from '@/lib/matchHistory'
+import { MovePlayback, MoveEntry } from './MovePlayback'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -177,6 +179,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
   const prevTurnRef = useRef<Team | null>(null)
+  const gameSavedRef = useRef(false)
+  const moveHistoryRef = useRef<MoveEntry[]>([])
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
+  const [playbackFen, setPlaybackFen] = useState<string | null>(null)
 
   // Update sound engine when setting changes
 
@@ -184,6 +190,41 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   useEffect(() => {
     setSoundEnabled(soundEnabled)
   }, [soundEnabled])
+
+  useEffect(() => {
+    if (gameState.status !== GameStatus.GAME_OVER) return
+    if (gameSavedRef.current) return
+    if (isOnline) return
+
+    const localGame = game
+    if (!localGame) return
+
+    const stats = localGame.getStats()
+    const result = localGame.getResult()
+    const reason = localGame.getGameOverReason()
+
+    let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
+    if (result.includes('White wins')) winner = 'WHITE'
+    else if (result.includes('Black wins')) winner = 'BLACK'
+
+    saveCompletedGame({
+      winner,
+      gameResult: result,
+      gameOverReason: reason,
+      stats: {
+        whiteMovesPlayed: stats.whiteMovesPlayed,
+        whiteSyncRate: stats.whiteSyncRate,
+        whiteConflicts: stats.whiteConflicts,
+        player1Accuracy: stats.player1Accuracy,
+        player2Accuracy: stats.player2Accuracy,
+        totalMoves: stats.movesPlayed,
+      },
+      isOnline: false,
+      moveComparisons: moveHistoryRef.current,
+    })
+
+    gameSavedRef.current = true
+  }, [gameState.status, isOnline, game])
 
   // Player ID from URL props (passed from Room component)
   // No need to get session - use the playerId directly from URL
@@ -294,7 +335,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
           console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
         }
-        prevTurnRef.current = currentTurn
+    prevTurnRef.current = currentTurn
+
+    const comp = g.lastMoveComparison as MoveComparison | null
+    if (comp && moveHistoryRef.current.length === 0 ||
+        (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as any))) {
+      const entry: MoveEntry = {
+        turn: moveHistoryRef.current.length + 1,
+        team: prevTurn || currentTurn,
+        winningMove: comp.winningMove,
+        winningMoveUci: (comp as any).winningMove || '',
+        shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+        shadowMoveUci: '',
+        isSync: comp.isSync,
+        player1Accuracy: comp.player1Accuracy,
+        player2Accuracy: comp.player2Accuracy,
+        fenAfter: g.board.fen(),
+      }
+      moveHistoryRef.current = [...moveHistoryRef.current, entry]
+    }
         console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
       }
     })
@@ -928,19 +987,48 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
           onPlayAgain={() => window.location.reload()}
+          gameResult={game?.getResult()}
+          gameOverReason={game?.getGameOverReason() || null}
+          stats={!isOnline && game ? {
+            whiteMovesPlayed: game.getStats().whiteMovesPlayed,
+            whiteSyncRate: game.getStats().whiteSyncRate,
+            whiteConflicts: game.getStats().whiteConflicts,
+            player1Accuracy: game.getStats().player1Accuracy,
+            player2Accuracy: game.getStats().player2Accuracy,
+            totalMoves: game.getStats().movesPlayed,
+          } : undefined}
         />
       )}
         
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">ClashMate</h1>
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
-            title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-          >
-            {soundEnabled ? '🔊' : '🔇'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = '/'
+              }}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              title="Sign out"
+            >
+              🚪
+            </button>
+            <button
+              onClick={() => window.location.href = '/profile'}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              title="Profile"
+            >
+              👤
+            </button>
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+          </div>
         </div>
 
         {roomCode && (
@@ -992,9 +1080,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           {/* Chess Board */}
           <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
             <ChessBoard 
-              fen={gameState.fen}
+              fen={playbackFen || gameState.fen}
               onMove={handleMove}
-              enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId))}
+              enabled={playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
@@ -1044,6 +1132,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           {gameState.isBotThinking && (
             <p className="text-blue-400">Bot is making a move...</p>
           )}
+        </div>
+
+        <div className="mt-6 max-w-[500px] mx-auto">
+          <MovePlayback
+            moves={moveHistoryRef.current}
+            currentIndex={playbackIndex}
+            onSelectMove={(index, fen) => {
+              setPlaybackIndex(index)
+              setPlaybackFen(fen)
+            }}
+            onReset={() => {
+              setPlaybackIndex(null)
+              setPlaybackFen(null)
+            }}
+          />
         </div>
 
         <div className="mt-8 p-4 bg-gray-800 rounded">
