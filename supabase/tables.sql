@@ -54,7 +54,29 @@ ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for profiles (anon users generate their own IDs)
+-- RLS Policies (idempotent: drop first to allow re-running)
+DO $$ BEGIN
+  -- profiles
+  DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
+  DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
+  DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+  -- rooms
+  DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON rooms;
+  DROP POLICY IF EXISTS "Anyone can create rooms" ON rooms;
+  DROP POLICY IF EXISTS "Room creator can update" ON rooms;
+  -- room_players
+  DROP POLICY IF EXISTS "Room players are viewable by everyone" ON room_players;
+  DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
+  DROP POLICY IF EXISTS "Players can update own record" ON room_players;
+  -- games
+  DROP POLICY IF EXISTS "Room participants can view game" ON games;
+  DROP POLICY IF EXISTS "Anyone can view game state" ON games;
+  DROP POLICY IF EXISTS "Anyone can insert game state" ON games;
+  DROP POLICY IF EXISTS "Anyone can update game state" ON games;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+-- profiles (anon users generate their own IDs)
 CREATE POLICY "Profiles are viewable by everyone" ON profiles
   FOR SELECT USING (true);
 
@@ -64,38 +86,30 @@ CREATE POLICY "Users can insert their own profile" ON profiles
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (true);
 
--- RLS Policies for rooms
--- Everyone needs SELECT to find rooms by code
+-- rooms
 CREATE POLICY "Rooms are viewable by everyone" ON rooms
   FOR SELECT USING (true);
 
--- Authenticated or anon users can create rooms
 CREATE POLICY "Anyone can create rooms" ON rooms
   FOR INSERT WITH CHECK (true);
 
--- Only room creator can update room status
 CREATE POLICY "Room creator can update" ON rooms
   FOR UPDATE USING (created_by = (SELECT created_by FROM rooms r2 WHERE r2.id = id));
 
--- RLS Policies for room_players
--- Everyone needs SELECT to see who's in a room
+-- room_players
 CREATE POLICY "Room players are viewable by everyone" ON room_players
   FOR SELECT USING (true);
 
--- Anyone can join a room (insert)
 CREATE POLICY "Anyone can join rooms" ON room_players
   FOR INSERT WITH CHECK (true);
 
--- Players can update only their own room_players record
 CREATE POLICY "Players can update own record" ON room_players
   FOR UPDATE USING (player_id = player_id);
 
--- RLS Policies for games (anon-friendly for MVP)
--- Room codes are random 6-char — provide sufficient access control
+-- games (anon-friendly for MVP - random room codes provide access control)
 CREATE POLICY "Anyone can view game state" ON games
   FOR SELECT USING (true);
 
--- Anyone can insert/update game state (coordinator writes)
 CREATE POLICY "Anyone can insert game state" ON games
   FOR INSERT WITH CHECK (true);
 
