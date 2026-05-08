@@ -18,40 +18,27 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
   try {
     const { data: existing } = await supabase
       .from('games')
-      .select('id, move_history')
+      .select('move_history')
       .eq('room_id', roomId)
-      .single()
+      .maybeSingle()
 
     const moveHistory: GameSaveData['move_history'] = existing?.move_history || []
     if (moveEntry) {
       moveHistory.push(moveEntry)
     }
 
-    if (existing) {
-      await supabase
-        .from('games')
-        .update({
-          fen,
-          current_turn: currentTurn,
-          move_history: moveHistory,
-          status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('room_id', roomId)
-    } else {
-      await supabase
-        .from('games')
-        .insert({
-          room_id: roomId,
-          fen,
-          current_turn: currentTurn,
-          move_history: moveHistory,
-          status,
-          updated_at: new Date().toISOString()
-        })
-    }
+    await supabase
+      .from('games')
+      .upsert({
+        room_id: roomId,
+        fen,
+        current_turn: currentTurn,
+        move_history: moveHistory,
+        status,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'room_id' })
 
-    console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn })
+    console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
   } catch (e) {
     console.warn('[PERSIST] Failed to save game state:', e)
   }
@@ -68,10 +55,10 @@ export async function loadGameState(roomId: string): Promise<{
       .from('games')
       .select('fen, current_turn, move_history, status')
       .eq('room_id', roomId)
-      .single()
+      .maybeSingle()
 
     if (error || !data) {
-      console.log('[PERSIST] No saved state for room:', roomId)
+      console.log('[PERSIST] No saved state for room:', roomId, error?.message || '')
       return null
     }
 

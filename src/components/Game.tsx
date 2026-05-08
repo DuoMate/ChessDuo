@@ -443,7 +443,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         timerActive: g.isTimerActive(),
         pendingOverlay,
         myPendingOverlay,
-        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading
+        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+        isBotThinking: currentTurn === Team.BLACK ? prev.isBotThinking : false,
+        highlightSquares: null as HighlightSquares | null
       }
       return newState
     })
@@ -714,15 +716,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 try {
                   await g.resolvePendingMoves()
                   console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
-                  updateStateRef.current()
                   g.setTurnState('selecting' as any)
                   console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
+                  updateStateRef.current()
                 } catch (e) {
                   console.log(`[RESOLVE] BLACK resolve failed:`, e)
                 }
                 
-                setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null, myPendingOverlay: null }))
-                updateStateRef.current()
                 startTimer()
               })()
             }

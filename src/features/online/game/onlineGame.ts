@@ -543,7 +543,7 @@ export class OnlineGame {
       this._whiteComparison = null
       this._blackComparison = null
       this._lastMoveComparison = null
-      console.log('[COMPARISON-CLEAR] New WHITE turn: cleared comparisons (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
+      console.log('[STATE-SYNC] New WHITE turn: resetting internal comparison refs (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
     }
     const fen = this.gameState.fen
     this.gameState.startPendingTurn(fen)
