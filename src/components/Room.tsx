@@ -195,15 +195,17 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
   const startMatch = () => {
     if (!myRoomCode) return
-    console.log(`[ROOM] Starting match: code=${myRoomCode} difficulty=${difficulty}`)
-    // For now, route to offline game with bots. 
-    // Later: real room ID from Supabase for online mode.
+    const whiteCount = slots.filter((s, i) => i < 2 && s.type !== 'empty').length
+    if (whiteCount < 2) return
+    console.log(`[ROOM] Starting match: both players ready, code=${myRoomCode} difficulty=${difficulty}`)
     onRoomJoined(
-      { id: '', code: myRoomCode, status: 'waiting', created_by: playerId } as Room,
+      { id: supabaseRoomId ?? '', code: myRoomCode, status: 'waiting', created_by: playerId } as Room,
       'WHITE',
       playerId
     )
   }
+
+  const whiteCount = slots.filter((s, i) => i < 2 && s.type !== 'empty').length
 
   const joinRoom = async () => {
     if (!joinCode.trim()) return
@@ -588,13 +590,25 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
                 </div>
 
                 {myRoomCode && (
-                  <button
-                    onClick={startMatch}
-                    className="w-full py-3 rounded-xl bg-yellow-500 text-gray-900 font-extrabold text-sm hover:bg-yellow-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-sm">play_arrow</span>
-                    START MATCH
-                  </button>
+                  <div>
+                    <button
+                      onClick={startMatch}
+                      disabled={whiteCount < 2}
+                      className={`w-full py-3 rounded-xl font-extrabold text-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${
+                        whiteCount < 2
+                          ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-yellow-500 text-gray-900 hover:bg-yellow-400'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-sm">play_arrow</span>
+                      {whiteCount < 2 ? 'WAITING FOR FRIEND' : 'START MATCH'}
+                    </button>
+                    {whiteCount < 2 && (
+                      <p className="text-center text-[10px] text-gray-500 mt-1">
+                        Ask your friend to join via the invite link above
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
