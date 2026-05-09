@@ -85,20 +85,25 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
     console.log('[ROOM] Creating room...')
     setLoading(true)
     setError(null)
-    try {
-      console.log('[Room] Creating room...')
-      const code = generateRoomCode()
 
+    const code = generateRoomCode()
+
+    // Show invite code immediately - don't wait for Supabase
+    setMyRoomCode(code)
+    console.log(`[ROOM] Room code generated: ${code} difficulty=${difficulty}`)
+    setLoading(false)
+
+    // Try Supabase in background
+    try {
+      console.log('[ROOM] Syncing to Supabase...')
       const { data: testData, error: testError } = await supabase
         .from('rooms')
         .select('id')
         .limit(1)
 
-      console.log('[Room] Table test:', { testData, testError })
-
       if (testError) {
-        console.error('[Room] Table check failed:', testError)
-        throw new Error(`Database table 'rooms' not accessible: ${testError.message}. Please create tables in Supabase.`)
+        console.warn('[ROOM] Supabase not available, playing offline:', testError.message)
+        return
       }
 
       const { data: room, error: roomError } = await supabase
@@ -112,8 +117,8 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
         .single()
 
       if (roomError) {
-        console.error('[Room] Create room error:', roomError)
-        throw new Error(`Insert error: ${roomError.message}`)
+        console.warn('[ROOM] Supabase room insert failed:', roomError.message)
+        return
       }
 
       const { error: playerError } = await supabase
@@ -126,15 +131,14 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
           status: 'waiting'
         })
 
-      if (playerError) throw playerError
+      if (playerError) {
+        console.warn('[ROOM] Supabase player insert failed:', playerError.message)
+        return
+      }
 
-      console.log(`[ROOM] Room created: code=${code} difficulty=${difficulty} elo=${eloLabel}`)
-      setMyRoomCode(code)
+      console.log(`[ROOM] Synced to Supabase: room_id=${room.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create room')
-      console.error(`[ROOM] Create FAILED: ${err instanceof Error ? err.message : err}`)
-    } finally {
-      setLoading(false)
+      console.warn('[ROOM] Supabase sync failed (playing offline):', err)
     }
   }
 
