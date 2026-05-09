@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@utility glass-panel {
+  background: rgb(31 41 55 / 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgb(75 85 99 / 0.3);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
