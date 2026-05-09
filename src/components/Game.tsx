@@ -15,6 +15,11 @@ import { AnimatePresence } from 'framer-motion'
 
 interface GameProps {
   level?: number
+  mode?: string
+  roomCode?: string
+  roomId?: string
+  team?: 'WHITE' | 'BLACK'
+  playerId?: string
 }
 
 function normalizeUci(uci: string): string {
