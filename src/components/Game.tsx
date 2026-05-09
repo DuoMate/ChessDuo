@@ -194,32 +194,57 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   useEffect(() => {
     if (gameState.status !== GameStatus.GAME_OVER) return
     if (gameSavedRef.current) return
-    if (isOnline) return
 
-    const localGame = game
-    if (!localGame) return
-
-    const stats = localGame.getStats()
-    const result = localGame.getResult()
-    const reason = localGame.getGameOverReason()
+    const g = isOnline ? onlineGameRef.current : game
+    if (!g) return
 
     let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
-    if (result.includes('White wins')) winner = 'WHITE'
-    else if (result.includes('Black wins')) winner = 'BLACK'
+    let result = 'Game Over'
+    let reason: string | null = null
+    let movesPlayed = 0
+    let syncRate = 0
+    let conflicts = 0
+    let p1Acc = 0
+    let p2Acc = 0
+
+    if (isOnline) {
+      result = g.getResult()
+      reason = g.getGameOverReason()
+      if (result.includes('White wins')) winner = 'WHITE'
+      else if (result.includes('Black wins')) winner = 'BLACK'
+      const s = g.getStats()
+      movesPlayed = s.movesPlayed
+      syncRate = s.syncRate
+      conflicts = s.conflicts
+      p1Acc = s.player1Accuracy
+      p2Acc = s.player2Accuracy
+    } else {
+      const localGame = g as LocalGame
+      result = localGame.getResult()
+      reason = localGame.getGameOverReason()
+      if (result.includes('White wins')) winner = 'WHITE'
+      else if (result.includes('Black wins')) winner = 'BLACK'
+      const s = localGame.getStats()
+      movesPlayed = s.whiteMovesPlayed
+      syncRate = s.whiteSyncRate
+      conflicts = s.whiteConflicts
+      p1Acc = s.player1Accuracy
+      p2Acc = s.player2Accuracy
+    }
 
     saveCompletedGame({
       winner,
       gameResult: result,
       gameOverReason: reason,
       stats: {
-        whiteMovesPlayed: stats.whiteMovesPlayed,
-        whiteSyncRate: stats.whiteSyncRate,
-        whiteConflicts: stats.whiteConflicts,
-        player1Accuracy: stats.player1Accuracy,
-        player2Accuracy: stats.player2Accuracy,
-        totalMoves: stats.movesPlayed,
+        whiteMovesPlayed: movesPlayed,
+        whiteSyncRate: syncRate,
+        whiteConflicts: conflicts,
+        player1Accuracy: p1Acc,
+        player2Accuracy: p2Acc,
+        totalMoves: movesPlayed,
       },
-      isOnline: false,
+      isOnline: !!isOnline,
       moveComparisons: moveHistoryRef.current,
     })
 

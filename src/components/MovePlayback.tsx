@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useState } from 'react'
 
 export interface MoveEntry {
   turn: number
@@ -23,124 +23,141 @@ interface MovePlaybackProps {
 }
 
 export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: MovePlaybackProps) {
-  const listRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (currentIndex !== null && listRef.current) {
-      const items = listRef.current.querySelectorAll('[data-move-index]')
-      const target = items[currentIndex]
-      if (target) {
-        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      }
-    }
-  }, [currentIndex])
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showAll, setShowAll] = useState(false)
 
   if (moves.length === 0) return null
 
-  const whiteMoves = moves.filter(m => m.team === 'WHITE')
-  const blackMoves = moves.filter(m => m.team === 'BLACK')
-  const maxRows = Math.max(whiteMoves.length, blackMoves.length)
+  const activeIndex = currentIndex ?? moves.length - 1
+  const isLive = currentIndex === null
 
-  const getGlobalIndex = (row: number, team: 'WHITE' | 'BLACK'): number => {
-    let count = 0
-    for (const m of moves) {
-      if (m.team === team) {
-        if (count === row) return moves.indexOf(m)
-        count++
-      }
-    }
-    return -1
+  const goTo = (index: number) => {
+    const clamped = Math.max(0, Math.min(moves.length - 1, index))
+    const move = moves[clamped]
+    if (move) onSelectMove(clamped, move.fenAfter)
   }
 
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-      <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-white">Moves</h3>
-        {currentIndex !== null && (
+      <div className="p-2 border-b border-gray-700 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-gray-400">Moves</h3>
+        <div className="flex items-center gap-1">
+          {!isLive && (
+            <button
+              onClick={onReset}
+              className="text-[10px] text-yellow-400 hover:text-yellow-300 px-1.5 py-0.5 rounded bg-yellow-400/10 transition-colors"
+            >
+              Live
+            </button>
+          )}
           <button
-            onClick={onReset}
-            className="text-xs text-yellow-400 hover:text-yellow-300 transition-colors"
+            onClick={() => setShowAll(!showAll)}
+            className="text-[10px] text-gray-500 hover:text-gray-400 px-1"
           >
-            ← Live
+            {showAll ? 'compact' : 'all'}
           </button>
-        )}
+        </div>
       </div>
 
-      <div ref={listRef} className="max-h-[260px] overflow-y-auto">
-        <table className="w-full text-sm">
-          <tbody>
-            {Array.from({ length: maxRows }).map((_, row) => {
-              const wIdx = getGlobalIndex(row, 'WHITE')
-              const bIdx = getGlobalIndex(row, 'BLACK')
-              const wMove = wIdx >= 0 ? moves[wIdx] : null
-              const bMove = bIdx >= 0 ? moves[bIdx] : null
-
-              return (
-                <tr key={row} className="border-b border-gray-700/50">
-                  <td className="py-1.5 px-2 text-gray-500 text-xs w-8 text-right font-mono">
-                    {row + 1}.
+      {showAll ? (
+        <div className="max-h-[200px] overflow-y-auto border-b border-gray-700/50">
+          <table className="w-full text-xs">
+            <tbody>
+              {moves.map((m, i) => (
+                <tr
+                  key={i}
+                  onClick={() => onSelectMove(i, m.fenAfter)}
+                  className={`cursor-pointer border-b border-gray-700/30 ${
+                    i === activeIndex && !isLive
+                      ? 'bg-yellow-500/20'
+                      : 'hover:bg-gray-700/30'
+                  }`}
+                >
+                  <td className="py-1 px-2 text-gray-500 w-8 text-right font-mono">
+                    {m.turn}.
                   </td>
-                  <td
-                    data-move-index={wIdx}
-                    className={`py-1.5 px-2 cursor-pointer transition-colors w-[45%] ${
-                      currentIndex === wIdx
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'hover:bg-gray-700/50 text-white'
-                    }`}
-                    onClick={() => wMove && onSelectMove(wIdx, wMove.fenAfter)}
-                  >
-                    {wMove && (
-                      <div>
-                        <span className="font-medium">{wMove.winningMove}</span>
-                        {!wMove.isSync && wMove.shadowMove && (
-                          <span className="text-gray-600 line-through ml-1 text-xs">
-                            ({wMove.shadowMove})
-                          </span>
-                        )}
-                        {wMove.isSync && (
-                          <span className="text-green-400 ml-1 text-xs">✓</span>
-                        )}
-                        <span className="text-gray-600 text-[10px] ml-1">
-                          {wMove.player1Accuracy}%
-                        </span>
-                      </div>
+                  <td className="py-1 px-1 w-6 text-gray-500">
+                    {m.team === 'WHITE' ? 'W' : 'B'}
+                  </td>
+                  <td className="py-1 px-2 text-white">
+                    {m.winningMove}
+                    {!m.isSync && m.shadowMove && (
+                      <span className="text-gray-600 line-through ml-1">
+                        ({m.shadowMove})
+                      </span>
+                    )}
+                    {m.isSync && (
+                      <span className="text-green-400 ml-1">✓</span>
                     )}
                   </td>
-                  <td
-                    data-move-index={bIdx}
-                    className={`py-1.5 px-2 cursor-pointer transition-colors w-[45%] ${
-                      currentIndex === bIdx
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'hover:bg-gray-700/50 text-gray-400'
-                    }`}
-                    onClick={() => bMove && onSelectMove(bIdx, bMove.fenAfter)}
-                  >
-                    {bMove && (
-                      <div>
-                        <span className="font-medium">{bMove.winningMove}</span>
-                        {!bMove.isSync && bMove.shadowMove && (
-                          <span className="text-gray-600 line-through ml-1 text-xs">
-                            ({bMove.shadowMove})
-                          </span>
-                        )}
-                        {bMove.isSync && (
-                          <span className="text-green-400 ml-1 text-xs">✓</span>
-                        )}
-                      </div>
-                    )}
-                    {bMove && !bMove && <span>&nbsp;</span>}
+                  <td className="py-1 px-2 text-gray-500 text-right">
+                    {Math.round((m.player1Accuracy + m.player2Accuracy) / 2)}%
                   </td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="border-b border-gray-700/50">
+          <p className="px-2 pt-1.5 text-[10px] text-gray-500">
+            {isLive ? `${moves.length} moves` : `${activeIndex + 1}/${moves.length}`}
+          </p>
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto whitespace-nowrap p-2 pt-0"
+          >
+            {moves.map((m, i) => (
+              <span
+                key={i}
+                onClick={() => onSelectMove(i, m.fenAfter)}
+                className={`inline-flex items-center cursor-pointer px-1.5 py-0.5 rounded text-xs transition-colors ${
+                  i === activeIndex && !isLive
+                    ? 'bg-yellow-400/20 text-yellow-400 font-medium'
+                    : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+              >
+                {m.winningMove}
+                {!m.isSync && m.shadowMove && (
+                  <span className="text-gray-600 line-through ml-0.5">
+                    {m.shadowMove}
+                  </span>
+                )}
+                {m.isSync && (
+                  <span className="text-green-500 ml-0.5">✓</span>
+                )}
+                <span className="text-gray-600 ml-0.5">,</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="p-2 border-t border-gray-700 flex gap-4 text-[10px] text-gray-500 justify-center">
-        <span>✓ sync</span>
-        <span className="line-through">(shadow)</span>
-        <span>SAN acc%</span>
+      <div className="flex items-center justify-center gap-3 p-2">
+        <button
+          onClick={() => goTo(activeIndex - 1)}
+          disabled={activeIndex === 0}
+          className="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors"
+        >
+          ←
+        </button>
+        <button
+          onClick={onReset}
+          className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] transition-colors ${
+            isLive
+              ? 'bg-yellow-500/30 text-yellow-400 ring-1 ring-yellow-400/50'
+              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+          }`}
+        >
+          ●
+        </button>
+        <button
+          onClick={() => goTo(activeIndex + 1)}
+          disabled={activeIndex >= moves.length - 1}
+          className="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors"
+        >
+          →
+        </button>
       </div>
     </div>
   )

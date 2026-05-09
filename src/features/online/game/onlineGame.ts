@@ -89,6 +89,32 @@ export class OnlineGame {
     return this._lastMoveComparison
   }
 
+  getStats() {
+    return { ...this.stats }
+  }
+
+  getResult(): string {
+    const board = this.gameState.board
+    if (board.isCheckmate()) {
+      return board.turn() === 'w' ? 'Black wins by checkmate' : 'White wins by checkmate'
+    }
+    if (board.isStalemate()) return 'Draw by stalemate'
+    if (board.isThreefoldRepetition()) return 'Draw by threefold repetition'
+    if (board.isInsufficientMaterial()) return 'Draw by insufficient material'
+    if (board.isDraw()) return 'Draw'
+    return 'Game in progress'
+  }
+
+  getGameOverReason(): string | null {
+    const board = this.gameState.board
+    if (board.isCheckmate()) return 'checkmate'
+    if (board.isStalemate()) return 'stalemate'
+    if (board.isThreefoldRepetition()) return 'threefoldRepetition'
+    if (board.isInsufficientMaterial()) return 'insufficientMaterial'
+    if (board.isDraw()) return 'draw'
+    return null
+  }
+
   get player1Id(): string {
     return this._player1Id || this.getCoordinatorId() || this._playerId
   }
