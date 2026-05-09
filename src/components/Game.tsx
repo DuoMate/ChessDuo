@@ -570,7 +570,7 @@ export function Game({ level }: GameProps) {
         status={gameState.status}
       />
 
-      <main className="flex-1 flex pt-16 pb-10 overflow-hidden">
+      <main className="flex-1 flex pt-16 pb-10">
         <PlayerPanel
           team={Team.WHITE}
           capturedPieces={gameState.capturedByWhite}
@@ -579,7 +579,7 @@ export function Game({ level }: GameProps) {
         />
 
         <section className="flex-1 flex items-center justify-center p-4">
-          <div className="glass-panel rounded-xl p-2 w-full max-w-[600px] aspect-square relative">
+          <div className="glass-panel rounded-xl p-2 w-full max-w-[600px] relative">
             <ChessBoard
               fen={gameState.fen}
               onMove={handleMove}
