@@ -127,10 +127,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 
 export function Game({ level }: GameProps) {
   const router = useRouter()
-  console.log(`\n══════════════════════════════════════════`)
-  console.log(`[GAME] MOUNT: level=${level ?? 'default'}`)
-  console.log(`[GAME] Mode: offline (bot teammate + bot opponents)`)
-
+  const navigatedRef = useRef(false)
   const [game] = useState(() => new LocalGame())
 
   const botConfig = useMemo(() => {
@@ -498,15 +495,19 @@ export function Game({ level }: GameProps) {
       game.addPlayer('player3', Team.BLACK)
       game.addPlayer('player4', Team.BLACK)
       game.start()
-      console.log(`[GAME] STARTED: ${botConfig.opponentSkillLevel ? `level=${botConfig.opponentSkillLevel}` : 'default'} → WHITE to move`)
+      console.log(`\n══════════════════════════════════════════`)
+      console.log(`[GAME] STARTED: level=${level ?? 'default'} → WHITE to move`)
+      console.log(`[GAME] Mode: offline (bot teammate + bot opponents)`)
       updateStateRef.current()
     }
   }, [game])
 
   useEffect(() => {
-    if (game.status === GameStatus.GAME_OVER) {
-      const stats = game.getStats()
-      const resultText = game.getResult()
+    if (gameState.status === GameStatus.GAME_OVER && !navigatedRef.current) {
+      navigatedRef.current = true
+      const g = gameRef.current
+      const stats = g.getStats()
+      const resultText = g.getResult()
       console.log(`\n══════════════════════════════════════════`)
       console.log(`[GAME] OVER: ${resultText}`)
       console.log(`[GAME] Stats: moves=${stats.whiteMovesPlayed} sync=${Math.round(stats.whiteSyncRate * 100)}% conflicts=${stats.whiteConflicts}`)
@@ -528,7 +529,7 @@ export function Game({ level }: GameProps) {
       setGameResult(summary)
       router.push('/results')
     }
-  }, [game, gameState.status, level, router])
+  }, [gameState.status])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
