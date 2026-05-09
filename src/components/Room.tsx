@@ -82,6 +82,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   }
 
   const createRoom = async () => {
+    console.log('[ROOM] Creating room...')
     setLoading(true)
     setError(null)
     try {
@@ -127,9 +128,11 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
       if (playerError) throw playerError
 
+      console.log(`[ROOM] Room created: code=${code} difficulty=${difficulty} elo=${eloLabel}`)
       setMyRoomCode(code)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room')
+      console.error(`[ROOM] Create FAILED: ${err instanceof Error ? err.message : err}`)
     } finally {
       setLoading(false)
     }
@@ -137,6 +140,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
   const startMatch = () => {
     if (!myRoomCode) return
+    console.log(`[ROOM] Starting match: code=${myRoomCode} difficulty=${difficulty}`)
     // For now, route to offline game with bots. 
     // Later: real room ID from Supabase for online mode.
     onRoomJoined(
@@ -148,6 +152,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
   const joinRoom = async () => {
     if (!joinCode.trim()) return
+    console.log(`[ROOM] Joining room: code=${joinCode.toUpperCase()}`)
     setLoading(true)
     setError(null)
     try {

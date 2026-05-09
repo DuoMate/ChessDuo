@@ -127,6 +127,10 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 
 export function Game({ level }: GameProps) {
   const router = useRouter()
+  console.log(`\n══════════════════════════════════════════`)
+  console.log(`[GAME] MOUNT: level=${level ?? 'default'}`)
+  console.log(`[GAME] Mode: offline (bot teammate + bot opponents)`)
+
   const [game] = useState(() => new LocalGame())
 
   const botConfig = useMemo(() => {
@@ -494,6 +498,7 @@ export function Game({ level }: GameProps) {
       game.addPlayer('player3', Team.BLACK)
       game.addPlayer('player4', Team.BLACK)
       game.start()
+      console.log(`[GAME] STARTED: ${botConfig.opponentSkillLevel ? `level=${botConfig.opponentSkillLevel}` : 'default'} → WHITE to move`)
       updateStateRef.current()
     }
   }, [game])
@@ -501,9 +506,16 @@ export function Game({ level }: GameProps) {
   useEffect(() => {
     if (game.status === GameStatus.GAME_OVER) {
       const stats = game.getStats()
+      const resultText = game.getResult()
+      console.log(`\n══════════════════════════════════════════`)
+      console.log(`[GAME] OVER: ${resultText}`)
+      console.log(`[GAME] Stats: moves=${stats.whiteMovesPlayed} sync=${Math.round(stats.whiteSyncRate * 100)}% conflicts=${stats.whiteConflicts}`)
+      console.log(`[GAME] Accuracy: P1=${Math.round(stats.player1Accuracy)}% P2=${Math.round(stats.player2Accuracy)}%`)
+      console.log(`[GAME] Redirecting to /results...`)
+      console.log(`══════════════════════════════════════════\n`)
       const summary: GameSummary = {
         result: 'win',
-        resultText: game.getResult(),
+        resultText,
         team: 'WHITE',
         difficulty: level ?? 4,
         stats,

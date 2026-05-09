@@ -22,25 +22,34 @@ export default function SetupPage() {
   const skillLevels = getAvailableSkillLevels()
 
   useEffect(() => {
+    console.log('[PAGE] Home mounted, checking session...')
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        const name = session.user.email?.split('@')[0] || 'Player'
+        console.log(`[PAGE] Existing session found: userId=${session.user.id.substring(0,8)}... name=${name}`)
         setPlayerId(session.user.id)
-        setUsername(session.user.email?.split('@')[0] || 'Player')
+        setUsername(name)
+      } else {
+        console.log('[PAGE] No existing session')
       }
     })
   }, [])
 
   const handleAuthComplete = (userId: string, name: string) => {
+    console.log(`[PAGE] Auth complete: userId=${userId.substring(0,8)}... name=${name} → entering online lobby`)
     setPlayerId(userId)
     setUsername(name)
     setGameMode('online')
   }
 
   const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
-    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}`)
+    const url = `/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}`
+    console.log(`[PAGE] Room joined: code=${room.code} team=${team} → navigating to game`)
+    router.push(url)
   }
 
   const handleStartOffline = () => {
+    console.log(`[PAGE] Starting offline game: level=${selectedLevel}`)
     router.push(`/game?level=${selectedLevel}`)
   }
 
@@ -71,7 +80,7 @@ export default function SetupPage() {
                 <h2 className="text-2xl font-extrabold text-yellow-400 mb-1 uppercase tracking-tight">War Room</h2>
                 <p className="text-gray-400 font-bold text-sm mb-8 uppercase tracking-widest">2v2 Matchmaking</p>
                 <button
-                  onClick={() => setGameMode('online')}
+                  onClick={() => { console.log('[PAGE] Mode selected: ONLINE → War Room'); setGameMode('online') }}
                   className="w-full bg-yellow-500 text-gray-900 font-extrabold text-lg py-4 rounded-2xl uppercase tracking-tighter hover:bg-yellow-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   BATTLE
@@ -89,7 +98,7 @@ export default function SetupPage() {
                 <h2 className="text-2xl font-extrabold text-white mb-1 uppercase tracking-tight">Training</h2>
                 <p className="text-gray-400 font-bold text-sm mb-8 uppercase tracking-widest">Play vs Bots</p>
                 <button
-                  onClick={() => setGameMode('offline')}
+                  onClick={() => { console.log('[PAGE] Mode selected: OFFLINE → Training'); setGameMode('offline') }}
                   className="w-full border-2 border-gray-600 text-gray-300 font-extrabold text-lg py-4 rounded-2xl uppercase tracking-tighter hover:bg-gray-700/50 hover:border-gray-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 >
                   PRACTICE

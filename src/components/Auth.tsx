@@ -34,17 +34,23 @@ export function Auth({ onAuthComplete }: AuthProps) {
 
     try {
       if (isLogin) {
+        console.log(`[AUTH] Signing in: ${email}`)
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password
         })
 
-        if (authError) throw authError
+        if (authError) {
+          console.error(`[AUTH] Sign in FAILED: ${authError.message}`)
+          throw authError
+        }
 
         if (authData.user) {
+          console.log(`[AUTH] Sign in SUCCESS: userId=${authData.user.id.substring(0,8)}... email=${email}`)
           onAuthComplete(authData.user.id, email.split('@')[0])
         }
       } else {
+        console.log(`[AUTH] Signing up: ${email} username=${username}`)
         const redirectTo = `${window.location.origin}`
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -55,9 +61,13 @@ export function Auth({ onAuthComplete }: AuthProps) {
           }
         })
 
-        if (authError) throw authError
+        if (authError) {
+          console.error(`[AUTH] Sign up FAILED: ${authError.message}`)
+          throw authError
+        }
 
         if (authData.user) {
+          console.log(`[AUTH] Sign up SUCCESS: userId=${authData.user.id.substring(0,8)}... verification=${!authData.user.email_confirmed_at ? 'pending' : 'done'}`)
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -84,6 +94,7 @@ export function Auth({ onAuthComplete }: AuthProps) {
   }
 
   const handleAnonymous = async () => {
+    console.log('[AUTH] Guest sign-in started')
     setLoading(true)
     try {
       const { data, error } = await supabase.auth.signInAnonymously()
@@ -92,11 +103,13 @@ export function Auth({ onAuthComplete }: AuthProps) {
         console.warn('[Auth] Anonymous sign-in failed, using fallback:', error.message)
         const randomId = Math.random().toString(36).substring(2, 15)
         const anonymousUsername = `Player${randomId}`
+        console.log(`[AUTH] Guest fallback: id=${anonymousUsername.substring(0,10)}...`)
         onAuthComplete(`anon_${randomId}`, anonymousUsername)
         return
       }
 
       if (data.user) {
+        console.log(`[AUTH] Guest sign-in SUCCESS: userId=${data.user.id.substring(0,8)}...`)
         onAuthComplete(data.user.id, `Player${data.user.id.substring(0, 8)}`)
       }
     } finally {
