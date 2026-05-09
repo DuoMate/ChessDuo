@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
 
@@ -46,6 +46,8 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [supabaseRoomId, setSupabaseRoomId] = useState<string | null>(null)
+  const supabaseRoomIdRef = useRef<string | null>(null)
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
 
@@ -140,10 +142,56 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       }
 
       console.log(`[ROOM] Synced to Supabase: room_id=${room.id}`)
+      setSupabaseRoomId(room.id)
+      supabaseRoomIdRef.current = room.id
     } catch (err) {
       console.warn('[ROOM] Supabase sync failed (playing offline):', err)
     }
   }
+
+  // Subscribe to room_players changes so host sees when friend joins
+  useEffect(() => {
+    const roomId = supabaseRoomIdRef.current
+    if (!roomId) return
+
+    console.log(`[ROOM] Subscribing to room_players for room_id=${roomId}`)
+    const channel = supabase
+      .channel(`room-players-${roomId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'room_players',
+        filter: `room_id=eq.${roomId}`
+      }, (payload) => {
+        const newPlayer = payload.new as RoomPlayer
+        console.log(`[ROOM] Player joined: team=${newPlayer.team} slot=${newPlayer.slot} player_id=${newPlayer.player_id?.substring(0, 8)}...`)
+
+        if (newPlayer.team === 'WHITE' && newPlayer.slot === 1) {
+          setSlots(prev => prev.map((s, i) =>
+            i === 1 ? { type: 'human', label: `Friend`, ready: true } : s
+          ))
+          console.log('[ROOM] Friend joined White team - slot updated')
+        } else if (newPlayer.team === 'BLACK') {
+          setSlots(prev => {
+            const targetIndex = 2 + newPlayer.slot
+            return prev.map((s, i) =>
+              i === targetIndex && s.type === 'bot'
+                ? { type: 'human', label: `Opponent`, ready: true }
+                : s
+            )
+          })
+          console.log('[ROOM] Opponent joined Black team')
+        }
+      })
+      .subscribe((status) => {
+        console.log(`[ROOM] Subscription status: ${status}`)
+      })
+
+    return () => {
+      console.log('[ROOM] Cleaning up subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [myRoomCode])
 
   const startMatch = () => {
     if (!myRoomCode) return
@@ -472,7 +520,9 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
                         <span className="w-2.5 h-2.5 rounded-full bg-white" />
                         TEAM WHITE
                       </span>
-                      <span className="text-[10px] font-bold text-gray-500">1/2</span>
+                      <span className="text-[10px] font-bold text-gray-500">
+                        {slots.filter((s, i) => i < 2 && s.type !== 'empty').length}/2
+                      </span>
                     </div>
 
                     {[0, 1].map(slotIndex => {
