@@ -679,7 +679,7 @@ export class OnlineGame {
     console.log(`[ONLINE RESOLVE] ${currentTeam} team to move`)
     console.log(`[MOVES] ${player1Id}: ${player1Move} (${player1From}${player1To}) | ${player2Id}: ${player2Move} (${player2From}${player2To})`)
     
-    const turnStartFen = this.gameState.getTurnStartFen()
+    const turnStartFen = this.gameState.fen
     
     const player1Uci = player1From + player1To
     const player2Uci = player2From + player2To
