@@ -19,6 +19,9 @@ import { GameLoading } from './GameLoading'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
+import { SlideOver } from './SlideOver'
+import { ProfilePanel } from './ProfilePanel'
+import { HistoryPanel } from './HistoryPanel'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -183,6 +186,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const moveHistoryRef = useRef<MoveEntry[]>([])
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
+  const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
 
   // Update sound engine when setting changes
 
@@ -1030,7 +1034,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <h1 className="text-3xl font-bold">ClashMate</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.location.href = '/profile'}
+              onClick={() => setOverlayMode('profile')}
               className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
               title="Profile"
             >
@@ -1097,7 +1101,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             <ChessBoard 
               fen={playbackFen || gameState.fen}
               onMove={handleMove}
-              enabled={playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
@@ -1184,6 +1188,33 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
       </div>
+
+      <SlideOver
+        open={overlayMode === 'profile'}
+        onClose={() => setOverlayMode('none')}
+        title="Profile"
+      >
+        {playerId ? (
+          <ProfilePanel
+            playerId={playerId}
+            onViewHistory={() => setOverlayMode('history')}
+          />
+        ) : (
+          <p className="text-gray-400 text-center py-4">Sign in to view your profile</p>
+        )}
+      </SlideOver>
+
+      <SlideOver
+        open={overlayMode === 'history'}
+        onClose={() => setOverlayMode('none')}
+        title="Match History"
+      >
+        {playerId ? (
+          <HistoryPanel playerId={playerId} />
+        ) : (
+          <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
+        )}
+      </SlideOver>
     </div>
   )
 }
