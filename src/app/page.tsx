@@ -170,6 +170,14 @@ export default function SetupPage() {
     if (!playerId) {
       return (
         <div className="min-h-screen bg-gray-900 text-white">
+          <div className="absolute top-4 left-4 z-10">
+            <button
+              onClick={() => setGameMode(null)}
+              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+            >
+              ← Back
+            </button>
+          </div>
           <Auth onAuthComplete={handleAuthComplete} />
         </div>
       )
