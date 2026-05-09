@@ -3,7 +3,7 @@ import {
   getOpeningBookForLevel,
   getBookMove,
   isInOpeningBook
-} from '../openings'
+} from '../../features/bots/openings'
 import { Chess } from 'chess.js'
 
 describe('Opening Book', () => {

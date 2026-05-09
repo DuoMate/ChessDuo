@@ -1,5 +1,5 @@
-import { LocalGame, GameStatus } from '../localGame'
-import { Team } from '../gameState'
+import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 describe.skip('LocalGame LastMove Tracking', () => {
   let game: LocalGame

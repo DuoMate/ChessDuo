@@ -1,5 +1,5 @@
-import { LocalGame } from '../localGame'
-import { Team } from '../gameState'
+import { LocalGame } from '../../features/offline/game/localGame'
+import { Team } from '../../features/game-engine/gameState'
 
 const STOCKFISH_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL
 

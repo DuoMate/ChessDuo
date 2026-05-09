@@ -10,14 +10,48 @@
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 14+ (App Router) + TypeScript |
+| Framework | Next.js 16 + TypeScript |
 | UI | Tailwind CSS + React |
 | Chess Board | cm-chessboard (web) |
 | Chess Logic | chess.js |
-| Engine | Stockfish WASM (server-side) |
+| Engine | Stockfish (server-side) |
 | Real-time | Supabase (Broadcast + Presence) |
 | Auth | Supabase Auth |
 | Mobile Bridge | Capacitor (future) |
+
+---
+
+## Deployment Architecture
+
+This project uses **two separate Render services**:
+
+| Service | URL | Build Config | Directory |
+|---------|-----|------------|-----------|
+| **Frontend** | https://chessduo-frontend.onrender.com | `render.yaml` | `/` (root) |
+| **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
+
+### Frontend Deployment (render.yaml)
+
+```yaml
+rootDirectory: /
+buildCommand: npm run build
+startCommand: npm start
+healthCheckPath: /healthz
+```
+
+### Backend Deployment (Dockerfile)
+
+Uses Docker to build Stockfish from `/server` directory.
+
+### Environment Variables
+
+**Frontend:**
+- `NEXT_PUBLIC_SUPABASE_URL` → Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Supabase anon key
+- `NEXT_PUBLIC_STOCKFISH_SERVER_URL` → `https://chessduo-bllo.onrender.com`
+
+**Backend:**
+- `PORT` → `3001`
 
 ---
 
@@ -30,18 +64,18 @@
 - [x] 1.2 Integrate chess.js for move validation
 - [x] 1.3 Integrate cm-chessboard for board UI
 - [x] 1.4 Integrate Stockfish (server-side) for move evaluation
-- [ ] 1.5 **Implement Parallel Model (CURRENT)**:
-  - [ ] 10-second team timer
-  - [ ] Human move applied immediately (prominent)
-  - [ ] Bot move as greyed shadow
-  - [ ] Both moves visible before resolution
-  - [ ] Green/red highlight after accuracy check
-  - [ ] Loser retracts to origin
-- [ ] 1.6 Basic win/lose/draw detection
+- [x] 1.5 **Implement Parallel Model**:
+  - [x] 10-second team timer (split timers on each side)
+  - [x] Human move applied immediately (prominent)
+  - [x] Bot move as greyed shadow
+  - [x] Both moves visible before resolution
+  - [x] Green/red highlight after accuracy check
+  - [x] Loser retracts to origin (animated)
+- [x] 1.6 Basic win/lose/draw detection
 
 **Key Feature**: Human vs Bot teammate (bot plays blind, greyed shadow display)
 
-**Deliverable**: Playable 2v2 local game with bot teammate
+**Deliverable**: ✅ Playable 2v2 local game with bot teammate (COMPLETE)
 
 ---
 
@@ -265,14 +299,14 @@ interface TurnResolution {
 
 ## Milestones
 
-| Milestone | Target | Criteria |
-|-----------|--------|----------|
-| M1 | Week 2 | Local 2v2 playable with parallel model |
-| M2 | Week 4 | Supabase infrastructure ready |
-| M3 | Week 6 | True 2v2 human multiplayer |
-| M4 | Week 8 | Full game with animations polished |
-| M5 | Week 10 | MVP ready for launch |
-| M6 | Week 14 | Mobile apps live |
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| M1 | Week 2 | ✅ Complete - Local 2v2 playable |
+| M2 | Week 4 | 🔄 In Progress - Supabase infra |
+| M3 | Week 6 | ⏳ Pending - Human multiplayer |
+| M4 | Week 8 | ⏳ Pending - Animations polished |
+| M5 | Week 10 | ⏳ Pending - MVP launch ready |
+| M6 | Week 14 | ⏳ Pending - Mobile apps |
 
 ---
 
