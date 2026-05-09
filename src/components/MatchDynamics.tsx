@@ -1,6 +1,6 @@
 'use client'
 
-import { GameStats } from '@/features/offline/game/localGame'
+import { GameStats } from '@/lib/localGame'
 
 interface MatchDynamicsProps {
   stats: GameStats

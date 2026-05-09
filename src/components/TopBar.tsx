@@ -1,8 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Team } from '@/features/game-engine/gameState'
-import { GameStatus } from '@/features/offline/game/localGame'
+import { Team } from '@/lib/gameState'
+import { GameStatus } from '@/lib/localGame'
 
 interface TopBarProps {
   currentTurn: Team

@@ -1,4 +1,4 @@
-import { GameStats } from '@/features/offline/game/localGame'
+import { GameStats } from '@/lib/localGame'
 
 export interface TurnEntry {
   turnNumber: number
