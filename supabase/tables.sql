@@ -105,6 +105,8 @@ DO $$ BEGIN
   -- completed_games
   DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
   DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
+  -- function
+  DROP FUNCTION IF EXISTS public.is_room_member(UUID);
 EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 
@@ -136,15 +138,25 @@ CREATE POLICY "Authenticated users can create rooms" ON rooms
 CREATE POLICY "Room creator can update" ON rooms
   FOR UPDATE USING (auth.uid()::text = created_by);
 
+-- Helper function: checks room membership without RLS (avoids recursion)
+CREATE OR REPLACE FUNCTION public.is_room_member(check_room_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM room_players
+    WHERE room_id = check_room_id
+      AND player_id = auth.uid()::text
+  )
+$$;
+
 -- room_players: must be room member to view players list
 CREATE POLICY "Room members can view players" ON room_players
   FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM room_players rp
-      WHERE rp.room_id = room_players.room_id
-        AND rp.player_id = auth.uid()::text
-    )
+    auth.uid() IS NOT NULL
+    AND is_room_member(room_id)
   );
 
 CREATE POLICY "Authenticated users can join rooms" ON room_players
@@ -164,32 +176,17 @@ CREATE POLICY "Players can update own record" ON room_players
 -- games: must be room member for all operations
 CREATE POLICY "Room members can view game" ON games
   FOR SELECT USING (
-    auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM room_players rp
-      WHERE rp.room_id = games.room_id
-        AND rp.player_id = auth.uid()::text
-    )
+    auth.uid() IS NOT NULL AND is_room_member(room_id)
   );
 
 CREATE POLICY "Room members can insert game" ON games
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM room_players rp
-      WHERE rp.room_id = games.room_id
-        AND rp.player_id = auth.uid()::text
-    )
+    auth.uid() IS NOT NULL AND is_room_member(room_id)
   );
 
 CREATE POLICY "Room members can update game" ON games
   FOR UPDATE USING (
-    auth.uid() IS NOT NULL AND
-    EXISTS (
-      SELECT 1 FROM room_players rp
-      WHERE rp.room_id = games.room_id
-        AND rp.player_id = auth.uid()::text
-    )
+    auth.uid() IS NOT NULL AND is_room_member(room_id)
   );
 
 -- completed_games: authenticated users can view and insert
