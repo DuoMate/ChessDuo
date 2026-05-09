@@ -294,7 +294,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           winnerId={comparison.winnerId as 'player1' | 'player2'}
           bestEngineMove={(comparison as any).bestEngineMove}
           bestEngineScore={(comparison as any).bestEngineScore}
-        />*
+        />
       </div>
     </motion.div>
   )

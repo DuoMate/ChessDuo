@@ -23,12 +23,12 @@ const { chromium } = require('playwright');
   
   // Look for key elements
   const hasBoard = html.includes('cm-chessboard');
-  const hasClashMate = html.includes('ClashMate');
+  const hasChessDuo = html.includes('ChessDuo');
   const status = html.includes('Playing') ? 'Playing' : (html.includes('Waiting') ? 'Waiting' : 'Unknown');
   
   console.log('=== RESULTS ===');
   console.log('Has board container:', hasBoard);
-  console.log('Has ClashMate title:', hasClashMate);
+  console.log('Has ChessDuo title:', hasChessDuo);
   console.log('Game status:', status);
   
   // Check console messages

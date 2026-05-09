@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { Team } from '@/features/game-engine/gameState'
@@ -12,6 +13,8 @@ import { PlayerPanel } from './PlayerPanel'
 import { ComparisonPanel } from './ComparisonPanel'
 import { StatsTicker } from './StatsTicker'
 import { AnimatePresence } from 'framer-motion'
+import { setGameResult, GameSummary } from '@/lib/resultsStore'
+import { SplashScreen } from './SplashScreen'
 
 interface GameProps {
   level?: number
@@ -123,6 +126,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 }
 
 export function Game({ level }: GameProps) {
+  const router = useRouter()
   const [game] = useState(() => new LocalGame())
 
   const botConfig = useMemo(() => {
@@ -166,15 +170,24 @@ export function Game({ level }: GameProps) {
     highlightSquares: null,
     showResolution: false
   })
+  const [showSplash, setShowSplash] = useState(true)
 
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const gameRef = useRef(game)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
+  const turnHistoryRef = useRef<Array<{ turnNumber: number; player1Move: string; player1Accuracy: number; player2Move: string; player2Accuracy: number; isSync: boolean; winnerId: string }>>([])
   
   useEffect(() => {
     gameRef.current = game
   }, [game])
+
+  useEffect(() => {
+    if (gameState.status === GameStatus.PLAYING && showSplash) {
+      const timer = setTimeout(() => setShowSplash(false), 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [gameState.status, showSplash])
 
   const startTimer = useCallback(() => {
     if (timerRef.current) {
@@ -269,6 +282,15 @@ export function Game({ level }: GameProps) {
     const comparison = g.lastMoveComparison
     
     if (comparison) {
+      turnHistoryRef.current.push({
+        turnNumber: turnHistoryRef.current.length + 1,
+        player1Move: comparison.player1Move,
+        player1Accuracy: comparison.player1Accuracy,
+        player2Move: comparison.player2Move,
+        player2Accuracy: comparison.player2Accuracy,
+        isSync: comparison.isSync,
+        winnerId: comparison.winnerId
+      })
       const winnerId = comparison.winnerId
       const loserId = comparison.loserId
       
@@ -476,6 +498,26 @@ export function Game({ level }: GameProps) {
     }
   }, [game])
 
+  useEffect(() => {
+    if (game.status === GameStatus.GAME_OVER) {
+      const stats = game.getStats()
+      const summary: GameSummary = {
+        result: 'win',
+        resultText: game.getResult(),
+        team: 'WHITE',
+        difficulty: level ?? 4,
+        stats,
+        categoryBreakdown: {
+          player1: { great: 70, good: 20, inaccuracy: 5, mistake: 3, blunder: 2 },
+          player2: { great: 55, good: 25, inaccuracy: 10, mistake: 7, blunder: 3 },
+        },
+        turnHistory: turnHistoryRef.current,
+      }
+      setGameResult(summary)
+      router.push('/results')
+    }
+  }, [game, gameState.status, level, router])
+
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
       const [from, to] = uciMove.split('-')
@@ -513,6 +555,8 @@ export function Game({ level }: GameProps) {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
+      <SplashScreen isVisible={showSplash} />
+
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}

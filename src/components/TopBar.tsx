@@ -28,7 +28,7 @@ export function TopBar({ currentTurn, timerSeconds, timerActive, isMyTurn, statu
   return (
     <header className="fixed top-0 w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 h-16 flex items-center justify-between px-4 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
       <div className="flex items-center gap-2">
-        <span className="text-2xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ClashMate</span>
+        <span className="text-2xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ChessDuo</span>
       </div>
 
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-6">
@@ -74,17 +74,7 @@ export function TopBar({ currentTurn, timerSeconds, timerActive, isMyTurn, statu
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <button className="p-2 text-gray-400 hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-700/50">
-          <span className="material-symbols-outlined">leaderboard</span>
-        </button>
-        <button className="p-2 text-gray-400 hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-700/50">
-          <span className="material-symbols-outlined">settings</span>
-        </button>
-        <div className="w-9 h-9 rounded-full border border-yellow-500/30 overflow-hidden bg-gray-700 flex items-center justify-center">
-          <span className="material-symbols-outlined text-yellow-400 text-sm">person</span>
-        </div>
-      </div>
+      <div />
     </header>
   )
 }

@@ -28,12 +28,6 @@ export function StatsTicker({ syncRate, conflicts, totalMoves }: StatsTickerProp
           </div>
         )}
       </div>
-      <div className="ml-auto flex items-center gap-6 opacity-40">
-        <div className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[14px]">wifi</span>
-          <span className="text-[10px] font-bold">12ms</span>
-        </div>
-      </div>
     </footer>
   )
 }
