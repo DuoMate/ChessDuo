@@ -33,6 +33,7 @@ type Tab = 'create' | 'join' | 'quick'
 type PlayerSlot = 
   | { type: 'human'; label: string; ready: boolean }
   | { type: 'bot'; label: string; eloLabel: string }
+  | { type: 'empty'; label: string }
 
 export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }: RoomManagerProps) {
   const [activeTab, setActiveTab] = useState<Tab>('create')
@@ -41,12 +42,13 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
 
   const [slots, setSlots] = useState<PlayerSlot[]>([
     { type: 'human', label: username, ready: true },
-    { type: 'bot', label: 'Teammate Bot', eloLabel },
+    { type: 'empty', label: 'Invite your friend' },
     { type: 'bot', label: 'Opponent Bot', eloLabel },
     { type: 'bot', label: 'Opponent Bot', eloLabel },
   ])
@@ -56,6 +58,26 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       await navigator.clipboard.writeText(myRoomCode)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const copyShareLink = async () => {
+    if (myRoomCode) {
+      const link = `${window.location.origin}/join?code=${myRoomCode}`
+      await navigator.clipboard.writeText(link)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    }
+  }
+
+  const shareInvite = async () => {
+    if (myRoomCode) {
+      const link = `${window.location.origin}/join?code=${myRoomCode}`
+      if (navigator.share) {
+        await navigator.share({ title: 'Join my ChessDuo room', text: `Join my 2v2 chess match! Room code: ${myRoomCode}`, url: link })
+      } else {
+        await copyShareLink()
+      }
     }
   }
 
@@ -316,14 +338,14 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
                   <div className="space-y-3">
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Game Mode</label>
-                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold text-yellow-400">
+                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold text-yellow-400 cursor-pointer hover:border-yellow-400/30 transition-colors">
                         <span>Competitive 2v2</span>
                         <span className="material-symbols-outlined text-xs text-gray-500">expand_more</span>
                       </div>
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Time per Move</label>
-                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold">
+                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold cursor-pointer hover:border-yellow-400/30 transition-colors">
                         <span>10s</span>
                         <span className="material-symbols-outlined text-xs text-gray-500">timer</span>
                       </div>
@@ -345,7 +367,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
               <div className="lg:col-span-8 space-y-4">
                 {myRoomCode ? (
-                  <div className="glass-panel rounded-xl p-4 border-yellow-500/20">
+                  <div className="glass-panel rounded-xl p-4 border-yellow-500/20 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                       <div>
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Invite Code</span>
@@ -366,6 +388,30 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
                         <p className="text-xs font-bold text-yellow-400 mt-0.5">{eloLabel}</p>
                       </div>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex items-center gap-2 bg-gray-800/40 border border-gray-700/30 rounded-lg px-3 py-2">
+                        <span className="material-symbols-outlined text-sm text-gray-500">link</span>
+                        <span className="text-[11px] text-gray-400 font-mono truncate">
+                          {typeof window !== 'undefined' ? `${window.location.origin}/join?code=${myRoomCode}` : `join?code=${myRoomCode}`}
+                        </span>
+                      </div>
+                      <button
+                        onClick={copyShareLink}
+                        className="p-2 bg-gray-700/50 border border-gray-600/50 rounded-lg hover:bg-gray-600/50 transition-colors shrink-0"
+                      >
+                        <span className="material-symbols-outlined text-sm text-gray-300">
+                          {linkCopied ? 'check' : 'content_copy'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={shareInvite}
+                        className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/20 transition-colors shrink-0"
+                      >
+                        <span className="material-symbols-outlined text-sm text-yellow-400">share</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-500">Share this link with a friend to join your team</p>
                   </div>
                 ) : (
                   <div className="glass-panel rounded-xl p-6 text-center">
@@ -388,34 +434,40 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
                         <span className="w-2.5 h-2.5 rounded-full bg-white" />
                         TEAM WHITE
                       </span>
-                      <span className="text-[10px] font-bold text-gray-500">2/2</span>
+                      <span className="text-[10px] font-bold text-gray-500">1/2</span>
                     </div>
 
-                    {[0, 1].map(slotIndex => (
+                    {[0, 1].map(slotIndex => {
+                      const slot = slots[slotIndex]
+                      const isHuman = slot.type === 'human'
+                      const isEmpty = slot.type === 'empty'
+                      return (
                       <div
                         key={slotIndex}
                         className={`glass-panel rounded-xl p-3 flex items-center gap-3 ${
-                          slots[slotIndex].type === 'human' ? 'border-yellow-500/30' : 'border-gray-700/30'
+                          isHuman ? 'border-yellow-500/30' : isEmpty ? 'border-dashed border-gray-600/40 opacity-60' : 'border-gray-700/30'
                         }`}
                       >
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                          slots[slotIndex].type === 'human' ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-gray-700/50'
+                          isHuman ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-gray-700/50'
                         }`}>
                           <span className="text-lg">
-                            {slots[slotIndex].type === 'human' ? '👤' : '🤖'}
+                            {isHuman ? '👤' : isEmpty ? '👥' : '🤖'}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-white truncate">{slots[slotIndex].label}</p>
+                          <p className={`text-sm font-bold truncate ${isEmpty ? 'text-gray-400 italic' : 'text-white'}`}>
+                            {isEmpty ? 'Waiting for friend...' : slot.label}
+                          </p>
                           <p className="text-[10px] font-bold text-gray-500">
-                            {slots[slotIndex].type === 'bot' ? (slots[slotIndex] as { type: 'bot'; eloLabel: string }).eloLabel : 'Online'}
+                            {slot.type === 'bot' ? (slot as { type: 'bot'; eloLabel: string }).eloLabel : isEmpty ? 'Invite a friend to join' : 'Online'}
                           </p>
                         </div>
-                        {slots[slotIndex].type === 'human' && (
+                        {isHuman && (
                           <span className="text-[10px] font-bold uppercase text-green-400">Ready</span>
                         )}
                       </div>
-                    ))}
+                    )})}
                   </div>
 
                   <div className="space-y-2">
