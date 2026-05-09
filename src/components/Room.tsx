@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
 
 interface RoomManagerProps {
@@ -36,6 +37,7 @@ type PlayerSlot =
   | { type: 'empty'; label: string }
 
 export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }: RoomManagerProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('create')
   const [joinCode, setJoinCode] = useState('')
   const [myRoomCode, setMyRoomCode] = useState<string | null>(null)
@@ -279,8 +281,26 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-x-hidden">
-      <header className="fixed top-0 w-full z-40 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 h-14 flex items-center px-4">
+      <header className="fixed top-0 w-full z-40 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 h-14 flex items-center justify-between px-4">
+        <button
+          onClick={() => router.push('/')}
+          className="text-xs font-bold text-gray-400 hover:text-yellow-400 transition-colors flex items-center gap-1"
+        >
+          <span className="material-symbols-outlined text-sm">arrow_back</span>
+          Home
+        </button>
         <span className="text-xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ChessDuo</span>
+        <button
+          onClick={async () => {
+            console.log('[ROOM] Signing out...')
+            await supabase.auth.signOut()
+            router.push('/')
+          }}
+          className="text-xs font-bold text-gray-500 hover:text-red-400 transition-colors flex items-center gap-1"
+        >
+          Sign Out
+          <span className="material-symbols-outlined text-sm">logout</span>
+        </button>
       </header>
 
       <main className="flex-1 pt-16 pb-8 px-4 max-w-5xl mx-auto w-full">
