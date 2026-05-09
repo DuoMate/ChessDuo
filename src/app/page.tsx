@@ -90,6 +90,12 @@ export default function SetupPage() {
                   📋 Match History
                 </button>
                 <button
+                  onClick={() => router.push('/premium')}
+                  className="text-gray-500 hover:text-yellow-400 text-sm transition-colors"
+                >
+                  ✨ Premium
+                </button>
+                <button
                   onClick={() => router.push('/profile')}
                   className="text-gray-500 hover:text-yellow-400 text-sm transition-colors"
                 >

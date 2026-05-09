@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { MoveComparison } from '@/features/offline/game/localGame'
+import { InsightsGate } from './InsightsGate'
 
 interface AccuracyBottomSheetProps {
   comparison: MoveComparison | null
@@ -280,6 +281,20 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             </span>
           </div>
         </motion.div>
+
+        <InsightsGate
+          playerId={playerId || ''}
+          player1Move={comparison.player1Move}
+          player2Move={comparison.player2Move}
+          player1Accuracy={comparison.player1Accuracy}
+          player2Accuracy={comparison.player2Accuracy}
+          player1Loss={comparison.player1Loss}
+          player2Loss={comparison.player2Loss}
+          isSync={isSync}
+          winnerId={comparison.winnerId as 'player1' | 'player2'}
+          bestEngineMove={(comparison as any).bestEngineMove}
+          bestEngineScore={(comparison as any).bestEngineScore}
+        />*
       </div>
     </motion.div>
   )

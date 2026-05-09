@@ -150,8 +150,13 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 5.6 Room codes (shareable game links)
 - [x] 5.7 Error handling and edge cases (ErrorBoundary, Toast, rate limiting)
 - [x] 5.8 Bot difficulty adjustment (6 levels, 1000-2600 ELO)
+- [x] 5.9 Match history and stats (completed_games table, /history page)
+- [x] 5.10 User profiles UI (/profile page, ProfileEditor)
+- [x] 5.11 Match summary screen (enhanced GameOverModal with stats)
+- [x] 5.12 Move playback (MovePlayback component, click-to-replay with shadow moves)
+- [x] 5.13 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
 
-**Deliverable**: Production-ready MVP
+**Deliverable**: Production-ready MVP with freemium insights
 
 ---
 
@@ -374,6 +379,31 @@ Key files:
 
 ---
 
+## Premium Features
+
+### Move Insights (Freemium)
+
+- **3 free reveals** per account (stored in `profiles.insights_reveals_used`)
+- **After 3 uses**: Premium upsell via `/premium` page
+- **Premium users** (`profiles.is_premium = true`): unlimited insights
+
+**Insights shown:**
+- Engine's best move + centipawn score
+- Per-move classification (check, capture, castle, development, etc.)
+- Score comparison — how far each move was from engine's optimal
+- Descriptive text explaining the move's impact
+
+**Tech**: `moveClassifier.ts` — heuristic SAN-based move analysis (no Stockfish required)
+
+### Move Replay
+
+- Scrollable move list on game page
+- Shows winning moves + shadow (losing) moves with strikethrough
+- Click any move to replay board position
+- Sync indicators (✓) and accuracy percentages per move
+
+---
+
 ## Test Health
 
 | Metric | Count | Status |
@@ -390,4 +420,4 @@ Fixes applied:
 
 ---
 
-*Last Updated: 2026-05-08*
+*Last Updated: 2026-05-09*

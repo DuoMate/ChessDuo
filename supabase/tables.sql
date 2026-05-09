@@ -7,10 +7,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create profiles table (standalone - no auth dependency for now)
 CREATE TABLE IF NOT EXISTS profiles (
   id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-      avatar_url TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
+  username TEXT NOT NULL,
+  avatar_url TEXT,
+  insights_reveals_used INTEGER DEFAULT 0,
+  is_premium BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
         -- Create rooms table
         CREATE TABLE IF NOT EXISTS rooms (

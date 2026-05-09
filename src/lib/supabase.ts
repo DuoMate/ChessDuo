@@ -22,17 +22,23 @@ export type Database = {
           id: string
           username: string
           avatar_url: string | null
+          insights_reveals_used: number
+          is_premium: boolean
           created_at: string
         }
         Insert: {
           id: string
           username: string
           avatar_url?: string | null
+          insights_reveals_used?: number
+          is_premium?: boolean
         }
         Update: {
           id?: string
           username?: string
           avatar_url?: string | null
+          insights_reveals_used?: number
+          is_premium?: boolean
         }
       }
       rooms: {
