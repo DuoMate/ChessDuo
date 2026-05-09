@@ -119,7 +119,7 @@ export default function SetupPage() {
               <Link href="/terms" className="hover:text-yellow-400 transition-colors">Terms</Link>
               <Link href="/support" className="hover:text-yellow-400 transition-colors">Support</Link>
             </div>
-            <span className="text-[10px] text-gray-600 uppercase tracking-widest">© 2024</span>
+            <span className="text-[10px] text-gray-600 uppercase tracking-widest">© 2026</span>
           </div>
         </footer>
       </div>
