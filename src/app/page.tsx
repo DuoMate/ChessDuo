@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAvailableSkillLevels, SkillLevel } from '@/lib/botConfig'
+import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 
 export default function SetupPage() {
   const router = useRouter()

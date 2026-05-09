@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { MoveComparison } from '@/lib/localGame'
+import { MoveComparison } from '@/features/offline/game/localGame'
 
 interface ComparisonPanelProps {
   comparison: MoveComparison | null

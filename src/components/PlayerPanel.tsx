@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Team } from '@/lib/gameState'
+import { Team } from '@/features/game-engine/gameState'
 
 const PIECE_SYMBOLS: Record<string, string> = {
   'p': '♟',
