@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
@@ -45,37 +46,73 @@ export default function SetupPage() {
 
   if (!gameMode) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
-        <div className="max-w-3xl w-full">
-          <h1 className="text-4xl font-bold text-center mb-2 text-yellow-400">ChessDuo</h1>
-          <p className="text-gray-400 text-center mb-8">Choose your game mode</p>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-x-hidden">
+        <header className="fixed top-0 w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/30 h-14 flex items-center px-4">
+          <span className="text-xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ChessDuo</span>
+        </header>
 
-          <div className="glass-panel rounded-xl p-6">
+        <main className="flex-1 pt-28 pb-24 px-4 flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none opacity-5 overflow-hidden">
+            <span className="material-symbols-outlined absolute -top-10 -left-10 text-[300px] text-yellow-400 rotate-12">chess</span>
+            <span className="material-symbols-outlined absolute bottom-0 -right-20 text-[350px] text-yellow-400 -rotate-45">swords</span>
+          </div>
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(rgb(234 179 8) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+
+          <div className="w-full max-w-4xl relative z-10">
+            <h1 className="text-4xl md:text-6xl text-white text-center font-extrabold tracking-tight uppercase mb-12">
+              SELECT <span className="text-yellow-400 italic">MODE</span>
+            </h1>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <button
-                onClick={() => setGameMode('offline')}
-                className="p-8 rounded-lg border-2 border-gray-600 bg-gray-800 hover:border-yellow-500 hover:bg-gray-700 transition-all text-center"
-              >
-                <div className="text-3xl mb-2">🤖</div>
-                <div className="text-xl font-bold mb-2">Play Offline</div>
-                <div className="text-gray-400 text-sm">vs Bot teammate</div>
-              </button>
+              <div className="glass-card rounded-[2rem] p-8 md:p-10 flex flex-col items-center group cursor-pointer hover:border-yellow-400/50 hover:-translate-y-2 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_30px_rgba(234,179,8,0.15)] transition-all duration-500">
+                <div className="w-32 h-32 rounded-full flex items-center justify-center mb-6 bg-yellow-500/10 group-hover:scale-110 transition-transform duration-500">
+                  <span className="material-symbols-outlined text-6xl text-yellow-400">groups</span>
+                </div>
+                <h2 className="text-2xl font-extrabold text-yellow-400 mb-1 uppercase tracking-tight">War Room</h2>
+                <p className="text-gray-400 font-bold text-sm mb-8 uppercase tracking-widest">2v2 Matchmaking</p>
+                <button
+                  onClick={() => setGameMode('online')}
+                  className="w-full bg-yellow-500 text-gray-900 font-extrabold text-lg py-4 rounded-2xl uppercase tracking-tighter hover:bg-yellow-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  BATTLE
+                  <span className="material-symbols-outlined font-bold">arrow_forward</span>
+                </button>
+                <div className="mt-5 flex items-center gap-3 text-gray-500">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">You + Friend vs Rivals</span>
+                </div>
+              </div>
 
-              <button
-                onClick={() => setGameMode('online')}
-                className="p-8 rounded-lg border-2 border-gray-600 bg-gray-800 hover:border-yellow-500 hover:bg-gray-700 transition-all text-center"
-              >
-                <div className="text-3xl mb-2">👥</div>
-                <div className="text-xl font-bold mb-2">Play Online</div>
-                <div className="text-gray-400 text-sm">with a friend</div>
-              </button>
+              <div className="glass-card rounded-[2rem] p-8 md:p-10 flex flex-col items-center group cursor-pointer hover:border-gray-400/50 hover:-translate-y-2 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-500">
+                <div className="w-32 h-32 rounded-full flex items-center justify-center mb-6 bg-gray-700/30 group-hover:scale-110 transition-transform duration-500">
+                  <span className="material-symbols-outlined text-6xl text-gray-300">smart_toy</span>
+                </div>
+                <h2 className="text-2xl font-extrabold text-white mb-1 uppercase tracking-tight">Training</h2>
+                <p className="text-gray-400 font-bold text-sm mb-8 uppercase tracking-widest">Play vs Bots</p>
+                <button
+                  onClick={() => setGameMode('offline')}
+                  className="w-full border-2 border-gray-600 text-gray-300 font-extrabold text-lg py-4 rounded-2xl uppercase tracking-tighter hover:bg-gray-700/50 hover:border-gray-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  PRACTICE
+                  <span className="material-symbols-outlined font-bold">fitness_center</span>
+                </button>
+                <div className="mt-5 flex items-center gap-3 text-gray-500">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Team up with AI Teammate</span>
+                </div>
+              </div>
             </div>
           </div>
+        </main>
 
-          <div className="mt-6 text-center text-gray-500 text-sm">
-            <p>White team: You + Teammate (2v2 vs Black bots)</p>
+        <footer className="w-full py-4 bg-gray-950 border-t border-gray-800/30 relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-center px-4 gap-2 max-w-4xl mx-auto">
+            <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">ChessDuo</span>
+            <div className="flex gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              <Link href="/terms" className="hover:text-yellow-400 transition-colors">Terms</Link>
+              <Link href="/support" className="hover:text-yellow-400 transition-colors">Support</Link>
+            </div>
+            <span className="text-[10px] text-gray-600 uppercase tracking-widest">© 2024</span>
           </div>
-        </div>
+        </footer>
       </div>
     )
   }

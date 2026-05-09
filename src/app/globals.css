@@ -31,6 +31,13 @@ body {
   border: 1px solid rgb(75 85 99 / 0.3);
 }
 
+@utility glass-card {
+  background: linear-gradient(180deg, rgb(31 41 55 / 0.4), rgb(31 41 55 / 0.8));
+  backdrop-filter: blur(16px);
+  border: 1px solid rgb(234 179 8 / 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
