@@ -191,7 +191,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       console.log('[ROOM] Cleaning up subscription')
       supabase.removeChannel(channel)
     }
-  }, [myRoomCode])
+  }, [myRoomCode, supabaseRoomId])
 
   const startMatch = () => {
     if (!myRoomCode) return
