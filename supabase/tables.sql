@@ -75,40 +75,37 @@ ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE completed_games ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies (idempotent: drop first to allow re-running)
-DO $$ BEGIN
-  -- profiles
-  DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
-  DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
-  DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
-  DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
-  -- rooms
-  DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON rooms;
-  DROP POLICY IF EXISTS "Anyone can create rooms" ON rooms;
-  DROP POLICY IF EXISTS "Authenticated users can create rooms" ON rooms;
-  DROP POLICY IF EXISTS "Room creator can update" ON rooms;
-  -- room_players
-  DROP POLICY IF EXISTS "Room players are viewable by everyone" ON room_players;
-  DROP POLICY IF EXISTS "Room members can view players" ON room_players;
-  DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
-  DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
-  DROP POLICY IF EXISTS "Players can update own record" ON room_players;
-  DROP POLICY IF EXISTS "Players can leave rooms" ON room_players;
-  -- games
-  DROP POLICY IF EXISTS "Room participants can view game" ON games;
-  DROP POLICY IF EXISTS "Anyone can view game state" ON games;
-  DROP POLICY IF EXISTS "Room members can view game" ON games;
-  DROP POLICY IF EXISTS "Anyone can insert game state" ON games;
-  DROP POLICY IF EXISTS "Room members can insert game" ON games;
-  DROP POLICY IF EXISTS "Anyone can update game state" ON games;
-  DROP POLICY IF EXISTS "Room members can update game" ON games;
-  -- completed_games
-  DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
-  DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
-  -- function
-  DROP FUNCTION IF EXISTS public.is_room_member(UUID);
-EXCEPTION WHEN undefined_table THEN NULL;
-END $$;
+-- RLS Policies (idempotent: drops old policies first)
+-- profiles
+DROP POLICY IF EXISTS "Profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
+-- rooms
+DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON rooms;
+DROP POLICY IF EXISTS "Anyone can create rooms" ON rooms;
+DROP POLICY IF EXISTS "Authenticated users can create rooms" ON rooms;
+DROP POLICY IF EXISTS "Room creator can update" ON rooms;
+-- room_players
+DROP POLICY IF EXISTS "Room players are viewable by everyone" ON room_players;
+DROP POLICY IF EXISTS "Room members can view players" ON room_players;
+DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
+DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
+DROP POLICY IF EXISTS "Players can update own record" ON room_players;
+DROP POLICY IF EXISTS "Players can leave rooms" ON room_players;
+-- games
+DROP POLICY IF EXISTS "Room participants can view game" ON games;
+DROP POLICY IF EXISTS "Anyone can view game state" ON games;
+DROP POLICY IF EXISTS "Room members can view game" ON games;
+DROP POLICY IF EXISTS "Anyone can insert game state" ON games;
+DROP POLICY IF EXISTS "Room members can insert game" ON games;
+DROP POLICY IF EXISTS "Anyone can update game state" ON games;
+DROP POLICY IF EXISTS "Room members can update game" ON games;
+-- completed_games
+DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
+DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
+-- function
+DROP FUNCTION IF EXISTS public.is_room_member(UUID);
 
 -- ============================================
 -- RLS Policies — Production Hardening
