@@ -43,10 +43,13 @@ startCommand: npm start
 - **Move Playback**: Click-to-replay move history with shadow moves
 - **Move Insights**: Heuristic analysis — move classification, engine comparison (3 free/account)
 - **Premium**: Freemium model — 3 free insights, then upgrade for unlimited
-- **Match History**: Per-player stats, sync rate, accuracy trends
+- **Match History**: Per-player stats, sync rate, accuracy trends (`/history`)
+- **User Profiles**: Username editing, match stats overview (`/profile`)
+- **Auth**: Email/password signup with verification, anonymous guest play, logout
 - **6 Bot Difficulties**: 1000-2600 ELO via Stockfish server
 - **Supabase RLS**: Per-room access control with SECURITY DEFINER functions
 - **Rate Limiting**: In-memory per-endpoint rate limiting on API routes
+- **Auth Guard**: Next.js middleware protects `/game` route
 
 ## Local Development
 

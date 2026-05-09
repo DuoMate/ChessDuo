@@ -130,8 +130,8 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 4.4 Timer system improvements (visual warnings)
 - [x] 4.5 Turn indicator and game status UI
 - [x] 4.6 Team dynamics tracking (sync rate, conflicts)
-- [ ] 4.7 Match summary and stats screen → moved to Phase 5
-- [ ] 4.8 Basic matchmaking queue → moved to Phase 5
+- [~] 4.7 Match summary and stats screen → completed in Phase 5.3
+- [~] 4.8 Basic matchmaking queue → pending in Phase 5.4
 
 **Key Files**: `src/components/ChessBoard.tsx`, `src/components/AccuracyBottomSheet.tsx`, `src/components/MoveComparison.tsx`, `src/components/TeamTimer.tsx`, `src/components/GameOverModal.tsx`
 
@@ -142,19 +142,16 @@ Uses Docker to build Stockfish from `/server` directory.
 ### Phase 5: Launch Features (Week 9-10)
 **Goal**: Features needed for public release
 
-- [ ] 5.1 Match history and persistence
-- [ ] 5.2 User profiles UI (DB schema exists, needs frontend)
-- [ ] 5.3 Match summary and stats screen (from Phase 4.7)
+- [x] 5.1 Match history and persistence (completed_games table, /history page, W/L/D stats)
+- [x] 5.2 User profiles UI (/profile page, ProfileEditor, username editing)
+- [x] 5.3 Match summary and stats screen (enhanced GameOverModal with sync rate, accuracy cards)
 - [ ] 5.4 Basic matchmaking queue (from Phase 4.8)
-- [ ] 5.5 Production hardening (RLS per-room, stress testing, CDN, error monitoring)
+- [x] 5.5 Production hardening (RLS per-room, rate limiting, auth guard middleware, logout)
 - [x] 5.6 Room codes (shareable game links)
 - [x] 5.7 Error handling and edge cases (ErrorBoundary, Toast, rate limiting)
 - [x] 5.8 Bot difficulty adjustment (6 levels, 1000-2600 ELO)
-- [x] 5.9 Match history and stats (completed_games table, /history page)
-- [x] 5.10 User profiles UI (/profile page, ProfileEditor)
-- [x] 5.11 Match summary screen (enhanced GameOverModal with stats)
-- [x] 5.12 Move playback (MovePlayback component, click-to-replay with shadow moves)
-- [x] 5.13 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
+- [x] 5.9 Move playback (MovePlayback component, click-to-replay with shadow moves)
+- [x] 5.10 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
 
 **Deliverable**: Production-ready MVP with freemium insights
 
@@ -243,13 +240,18 @@ Uses Docker to build Stockfish from `/server` directory.
 
 ### Turn Resolution
 ```typescript
-interface TurnResolution {
-  humanMove: string;      // e.g., "e2e4"
-  botMove: string;        // e.g., "g1f3"
-  humanAccuracy: number;  // 0-100
-  botAccuracy: number;   // 0-100
-  winner: 'human' | 'bot';
-  turnStartFen: string;  // For blind evaluation
+interface MoveComparison {
+  player1Move: string       // Player 1's move (UCI)
+  player2Move: string       // Player 2's move (UCI)
+  winningMove: string       // The move Stockfish chose
+  winnerId: 'player1' | 'player2'
+  isSync: boolean           // Both players chose same move
+  player1Accuracy: number   // 0-100
+  player2Accuracy: number   // 0-100
+  player1Loss: number       // Centipawn loss
+  player2Loss: number       // Centipawn loss
+  bestEngineMove?: string   // Engine's optimal move
+  bestEngineScore?: number  // Score of optimal move (cp)
 }
 ```
 
@@ -340,7 +342,7 @@ interface TurnResolution {
 | M2 | Week 4 | ✅ Complete - Supabase real-time infra |
 | M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
 | M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
-| M5 | Week 10 | 🔄 In Progress - Match history, stats, profiles, matchmaking |
+| M5 | Week 10 | 🔄 In Progress — Matchmaking queue only |
 | M6 | Week 14 | ⏳ Pending - Mobile apps |
 
 ---
@@ -411,7 +413,7 @@ Key files:
 | Test suites | 19 | 17 pass, 0 fail, 2 skip |
 | Individual tests | 401 | 282 pass, 0 fail, 119 skip |
 
-**Status**: ✅ All tests passing (2026-05-08 fix)
+**Status**: ✅ All tests passing (2026-05-09 fix)
 
 Fixes applied:
 - `gameState.getPendingMoves()` — uses team player order (not `isHuman` flag) for human/teammate separation
