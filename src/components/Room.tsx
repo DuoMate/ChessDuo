@@ -48,6 +48,8 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const [signingOut, setSigningOut] = useState(false)
   const [supabaseRoomId, setSupabaseRoomId] = useState<string | null>(null)
   const supabaseRoomIdRef = useRef<string | null>(null)
+  const [joinedRoom, setJoinedRoom] = useState(false)
+  const [joinedRoomCode, setJoinedRoomCode] = useState('')
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
 
@@ -149,57 +151,74 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
     }
   }
 
-  // Subscribe to room_players changes so host sees when friend joins
+  // Poll room_players every 3s to detect when friend joins
   useEffect(() => {
-    const roomId = supabaseRoomIdRef.current
-    if (!roomId) return
+    if (!supabaseRoomId) return
+    const poll = setInterval(async () => {
+      try {
+        const { data } = await supabase
+          .from('room_players')
+          .select('*')
+          .eq('room_id', supabaseRoomId)
+          .eq('team', 'WHITE')
+          .eq('slot', 1)
+          .maybeSingle()
 
-    console.log(`[ROOM] Subscribing to room_players for room_id=${roomId}`)
-    const channel = supabase
-      .channel(`room-players-${roomId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_players',
-        filter: `room_id=eq.${roomId}`
-      }, (payload) => {
-        const newPlayer = payload.new as RoomPlayer
-        console.log(`[ROOM] Player joined: team=${newPlayer.team} slot=${newPlayer.slot} player_id=${newPlayer.player_id?.substring(0, 8)}...`)
-
-        if (newPlayer.team === 'WHITE' && newPlayer.slot === 1) {
+        if (data) {
+          console.log(`[ROOM] Friend detected via poll: player_id=${data.player_id?.substring(0, 8)}...`)
           setSlots(prev => prev.map((s, i) =>
-            i === 1 ? { type: 'human', label: `Friend`, ready: true } : s
+            i === 1 && s.type === 'empty'
+              ? { type: 'human', label: data.player_id?.substring(0, 8) ?? 'Friend', ready: true }
+              : s
           ))
-          console.log('[ROOM] Friend joined White team - slot updated')
-        } else if (newPlayer.team === 'BLACK') {
-          setSlots(prev => {
-            const targetIndex = 2 + newPlayer.slot
-            return prev.map((s, i) =>
-              i === targetIndex && s.type === 'bot'
-                ? { type: 'human', label: `Opponent`, ready: true }
-                : s
-            )
-          })
-          console.log('[ROOM] Opponent joined Black team')
         }
-      })
-      .subscribe((status) => {
-        console.log(`[ROOM] Subscription status: ${status}`)
-      })
+      } catch {
+        // Supabase unavailable — ignore
+      }
+    }, 3000)
+    return () => clearInterval(poll)
+  }, [supabaseRoomId])
 
-    return () => {
-      console.log('[ROOM] Cleaning up subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [myRoomCode, supabaseRoomId])
+  // Poll room status — friend side: detect when host starts match
+  useEffect(() => {
+    if (!joinedRoom || !joinedRoomCode) return
+    const poll = setInterval(async () => {
+      try {
+        const { data } = await supabase
+          .from('rooms')
+          .select('status')
+          .eq('code', joinedRoomCode.toUpperCase())
+          .single()
 
-  const startMatch = () => {
+        if (data?.status === 'playing') {
+          console.log('[ROOM] Host started match — navigating to game')
+          onRoomJoined({ id: '', code: joinedRoomCode, status: 'playing', created_by: '' } as Room, 'WHITE', playerId)
+        }
+      } catch {
+        // Supabase unavailable — ignore
+      }
+    }, 2000)
+    return () => clearInterval(poll)
+  }, [joinedRoom, joinedRoomCode, playerId, onRoomJoined])
+
+  const startMatch = async () => {
     if (!myRoomCode) return
     const whiteCount = slots.filter((s, i) => i < 2 && s.type !== 'empty').length
     if (whiteCount < 2) return
-    console.log(`[ROOM] Starting match: both players ready, code=${myRoomCode} difficulty=${difficulty}`)
+    console.log('[ROOM] Starting match...')
+
+    // Update room status so friend's poll picks it up
+    if (supabaseRoomId) {
+      try {
+        await supabase.from('rooms').update({ status: 'playing' }).eq('id', supabaseRoomId)
+        console.log('[ROOM] Room status updated to playing')
+      } catch {
+        console.warn('[ROOM] Failed to update room status — proceeding anyway')
+      }
+    }
+
     onRoomJoined(
-      { id: supabaseRoomId ?? '', code: myRoomCode, status: 'waiting', created_by: playerId } as Room,
+      { id: supabaseRoomId ?? '', code: myRoomCode, status: 'playing', created_by: playerId } as Room,
       'WHITE',
       playerId
     )
@@ -297,8 +316,9 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       }
 
       if (existingPlayer) {
-        console.log('[Join] Already in room, joining existing')
-        onRoomJoined(rooms as Room, existingPlayer.team, playerId)
+        console.log('[Join] Already in room, waiting for host')
+        setJoinedRoomCode(rooms.code)
+        setJoinedRoom(true)
         return
       }
 
@@ -315,13 +335,16 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       if (playerError) {
         console.error('[Join] Insert player error:', playerError)
         if (playerError.code === '409' || playerError.message.includes('duplicate')) {
-          onRoomJoined(rooms as Room, team, playerId)
+          setJoinedRoomCode(rooms.code)
+          setJoinedRoom(true)
           return
         }
         throw new Error(`Failed to join: ${playerError.message}`)
       }
 
-      onRoomJoined(rooms as Room, team, playerId)
+      console.log(`[ROOM] Joined room: code=${rooms.code} team=${team} slot=${slot}`)
+      setJoinedRoomCode(rooms.code)
+      setJoinedRoom(true)
     } catch (err) {
       console.error('[Join] Full error:', err)
       setError(err instanceof Error ? err.message : 'Failed to join room')
@@ -392,7 +415,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
           </div>
         )}
 
-        {activeTab === 'join' && (
+        {activeTab === 'join' && !joinedRoom && (
           <div className="glass-panel rounded-xl p-6 max-w-md mx-auto">
             <h3 className="text-sm font-bold text-gray-300 mb-4 text-center">Join a Room</h3>
             <div className="flex gap-3">
@@ -414,6 +437,20 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
             </div>
             {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
             <p className="text-[10px] text-gray-500 text-center mt-3">Room code is 6 characters, e.g. XJ92K3</p>
+          </div>
+        )}
+
+        {activeTab === 'join' && joinedRoom && (
+          <div className="glass-panel rounded-xl p-8 text-center max-w-md mx-auto">
+            <div className="text-3xl mb-3">✅</div>
+            <h2 className="text-base font-bold text-green-400 mb-2">Joined Room!</h2>
+            <p className="text-sm text-gray-400 mb-1">Team: WHITE · Code: {joinedRoomCode}</p>
+            <p className="text-sm text-gray-500 mb-4">Waiting for host to start the match...</p>
+            <div className="flex gap-1.5 justify-center">
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" />
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
           </div>
         )}
 
