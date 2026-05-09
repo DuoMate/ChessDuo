@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
 
-interface RoomProps {
+interface RoomManagerProps {
   playerId: string
   username: string
+  difficulty?: number
   onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => void
 }
 
@@ -18,12 +19,45 @@ export function generateRoomCode(): string {
   return code
 }
 
-export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
+const ELO_LABELS: Record<number, string> = {
+  1: 'Beginner ~1000 ELO',
+  2: 'Intermediate ~1200 ELO',
+  3: 'Advanced Player ~1400 ELO',
+  4: 'Advanced ~2000 ELO',
+  5: 'Expert ~2200 ELO',
+  6: 'Master ~2600 ELO',
+}
+
+type Tab = 'create' | 'join' | 'quick'
+
+type PlayerSlot = 
+  | { type: 'human'; label: string; ready: boolean }
+  | { type: 'bot'; label: string; eloLabel: string }
+
+export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }: RoomManagerProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('create')
   const [joinCode, setJoinCode] = useState('')
   const [myRoomCode, setMyRoomCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [roomPlayers, setRoomPlayers] = useState<RoomPlayer[]>([])
+  const [copied, setCopied] = useState(false)
+
+  const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
+
+  const [slots, setSlots] = useState<PlayerSlot[]>([
+    { type: 'human', label: username, ready: true },
+    { type: 'bot', label: 'Teammate Bot', eloLabel },
+    { type: 'bot', label: 'Opponent Bot', eloLabel },
+    { type: 'bot', label: 'Opponent Bot', eloLabel },
+  ])
+
+  const copyCode = async () => {
+    if (myRoomCode) {
+      await navigator.clipboard.writeText(myRoomCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   const createRoom = async () => {
     setLoading(true)
@@ -31,15 +65,14 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     try {
       console.log('[Room] Creating room...')
       const code = generateRoomCode()
-      
-      // First, let's try to check if table exists by selecting
+
       const { data: testData, error: testError } = await supabase
         .from('rooms')
         .select('id')
         .limit(1)
-      
+
       console.log('[Room] Table test:', { testData, testError })
-      
+
       if (testError) {
         console.error('[Room] Table check failed:', testError)
         throw new Error(`Database table 'rooms' not accessible: ${testError.message}. Please create tables in Supabase.`)
@@ -72,14 +105,23 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       if (playerError) throw playerError
 
-       setMyRoomCode(code)
-       // Automatically join the creator to the match
-       onRoomJoined(room as Room, 'WHITE', playerId)
-     } catch (err) {
+      setMyRoomCode(code)
+    } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room')
     } finally {
       setLoading(false)
     }
+  }
+
+  const startMatch = () => {
+    if (!myRoomCode) return
+    // For now, route to offline game with bots. 
+    // Later: real room ID from Supabase for online mode.
+    onRoomJoined(
+      { id: '', code: myRoomCode, status: 'waiting', created_by: playerId } as Room,
+      'WHITE',
+      playerId
+    )
   }
 
   const joinRoom = async () => {
@@ -88,28 +130,25 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     setError(null)
     try {
       console.log('[Join] Looking for room:', joinCode.toUpperCase())
-      
-      // Try to find by code first (6-char code), then by ID (UUID)
+
       let rooms = null
       let roomError = null
-      
-      // First try as room code
+
       const { data: byCode, error: codeError } = await supabase
         .from('rooms')
         .select('*')
         .eq('code', joinCode.toUpperCase())
         .single()
-      
+
       if (byCode) {
         rooms = byCode
       } else {
-        // If not found by code, try as UUID
         const { data: byId, error: idError } = await supabase
           .from('rooms')
           .select('*')
           .eq('id', joinCode)
           .single()
-        
+
         if (byId) {
           rooms = byId
         } else {
@@ -162,18 +201,17 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       console.log('[Join] Joining as team:', team, 'slot:', slot)
 
-      // Check if player already in room
       const { data: existingPlayer, error: checkError } = await supabase
         .from('room_players')
         .select('*')
         .eq('room_id', rooms.id)
         .eq('player_id', playerId)
         .maybeSingle()
-      
+
       if (checkError) {
         console.warn('[Join] Error checking existing player:', checkError)
       }
-      
+
       if (existingPlayer) {
         console.log('[Join] Already in room, joining existing')
         onRoomJoined(rooms as Room, existingPlayer.team, playerId)
@@ -192,7 +230,6 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
 
       if (playerError) {
         console.error('[Join] Insert player error:', playerError)
-        // Handle 409 conflict - already joined
         if (playerError.code === '409' || playerError.message.includes('duplicate')) {
           onRoomJoined(rooms as Room, team, playerId)
           return
@@ -210,62 +247,220 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-yellow-400">
-          ♟️ ChessDuo
-        </h1>
-        <h2 className="text-xl text-center mb-6 text-white">
-          Game Rooms
-        </h2>
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-x-hidden">
+      <header className="fixed top-0 w-full z-40 bg-gray-900/80 backdrop-blur-md border-b border-gray-700/50 h-14 flex items-center px-4">
+        <span className="text-xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ChessDuo</span>
+      </header>
 
-        <div className="space-y-4">
-          <button
-            onClick={createRoom}
-            disabled={loading}
-            className="w-full p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
-          >
-            {loading ? 'Creating...' : 'Create New Room'}
-          </button>
-
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-700" />
-            <span className="text-gray-500 text-sm">OR</span>
-            <div className="flex-1 h-px bg-gray-700" />
-          </div>
-
-          <div className="flex gap-2">
-             <input
-               type="text"
-               placeholder="Enter room code or URL"
-               value={joinCode}
-               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-               maxLength={36}
-               className="flex-1 p-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-xl tracking-widest font-mono"
-             />
+      <main className="flex-1 pt-16 pb-8 px-4 max-w-5xl mx-auto w-full">
+        <div className="flex items-center gap-1 mb-6 border-b border-gray-700/30">
+          {(['create', 'join', 'quick'] as Tab[]).map(tab => (
             <button
-              onClick={joinRoom}
-              disabled={loading || joinCode.length < 6}
-              className="p-4 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50"
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                activeTab === tab
+                  ? 'text-yellow-400 border-yellow-400'
+                  : 'text-gray-500 border-transparent hover:text-gray-300'
+              }`}
             >
-              Join
+              {tab === 'create' && 'Create Room'}
+              {tab === 'join' && 'Join Room'}
+              {tab === 'quick' && 'Quick Match'}
             </button>
-          </div>
-
-          {error && (
-            <p className="text-red-400 text-center">{error}</p>
-          )}
-
-          {myRoomCode && (
-            <div className="mt-6 p-4 bg-gray-700 rounded">
-              <p className="text-gray-400 text-center mb-2">Share this code with your teammate:</p>
-              <p className="text-3xl font-bold text-center text-yellow-400 tracking-widest font-mono">
-                {myRoomCode}
-              </p>
-            </div>
-          )}
+          ))}
         </div>
-      </div>
+
+        {activeTab === 'quick' && (
+          <div className="glass-panel rounded-xl p-8 text-center">
+            <div className="text-4xl mb-3">🏗️</div>
+            <h2 className="text-base font-bold text-gray-300 mb-2">Matchmaking Coming Soon</h2>
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
+              Automated queue will match you with players of similar skill.
+              For now, create a room and share the code with friends.
+            </p>
+          </div>
+        )}
+
+        {activeTab === 'join' && (
+          <div className="glass-panel rounded-xl p-6 max-w-md mx-auto">
+            <h3 className="text-sm font-bold text-gray-300 mb-4 text-center">Join a Room</h3>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Enter room code"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={36}
+                className="flex-1 p-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-center text-lg tracking-widest font-mono focus:outline-none focus:border-yellow-400 transition-colors"
+              />
+              <button
+                onClick={joinRoom}
+                disabled={loading || joinCode.length < 6}
+                className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
+              >
+                {loading ? '...' : 'Join'}
+              </button>
+            </div>
+            {error && <p className="text-red-400 text-xs text-center mt-3">{error}</p>}
+            <p className="text-[10px] text-gray-500 text-center mt-3">Room code is 6 characters, e.g. XJ92K3</p>
+          </div>
+        )}
+
+        {activeTab === 'create' && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className="lg:col-span-4 space-y-4">
+                <div className="glass-panel rounded-xl p-4">
+                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Room Config</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Game Mode</label>
+                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold text-yellow-400">
+                        <span>Competitive 2v2</span>
+                        <span className="material-symbols-outlined text-xs text-gray-500">expand_more</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Time per Move</label>
+                      <div className="p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-between text-xs font-bold">
+                        <span>10s</span>
+                        <span className="material-symbols-outlined text-xs text-gray-500">timer</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-panel rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-yellow-400 mb-2">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Rules</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    2v2 Cooperative Chess. Both teammates submit moves simultaneously.
+                    The more accurate move gets played. Bots fill empty slots.
+                  </p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-8 space-y-4">
+                {myRoomCode ? (
+                  <div className="glass-panel rounded-xl p-4 border-yellow-500/20">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Invite Code</span>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-2xl font-extrabold text-yellow-400 tracking-widest font-mono">{myRoomCode}</span>
+                          <button
+                            onClick={copyCode}
+                            className="p-2 bg-gray-700/50 border border-gray-600/50 rounded-lg hover:bg-gray-600/50 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm text-gray-300">
+                              {copied ? 'check' : 'content_copy'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase">Difficulty</span>
+                        <p className="text-xs font-bold text-yellow-400 mt-0.5">{eloLabel}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="glass-panel rounded-xl p-6 text-center">
+                    <p className="text-gray-400 text-sm mb-3">Create your room to get started</p>
+                    <button
+                      onClick={createRoom}
+                      disabled={loading}
+                      className="px-8 py-2.5 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
+                    >
+                      {loading ? 'Creating...' : 'Create Room'}
+                    </button>
+                    {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-white" />
+                        TEAM WHITE
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-500">2/2</span>
+                    </div>
+
+                    {[0, 1].map(slotIndex => (
+                      <div
+                        key={slotIndex}
+                        className={`glass-panel rounded-xl p-3 flex items-center gap-3 ${
+                          slots[slotIndex].type === 'human' ? 'border-yellow-500/30' : 'border-gray-700/30'
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                          slots[slotIndex].type === 'human' ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-gray-700/50'
+                        }`}>
+                          <span className="text-lg">
+                            {slots[slotIndex].type === 'human' ? '👤' : '🤖'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{slots[slotIndex].label}</p>
+                          <p className="text-[10px] font-bold text-gray-500">
+                            {slots[slotIndex].type === 'bot' ? (slots[slotIndex] as { type: 'bot'; eloLabel: string }).eloLabel : 'Online'}
+                          </p>
+                        </div>
+                        {slots[slotIndex].type === 'human' && (
+                          <span className="text-[10px] font-bold uppercase text-green-400">Ready</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-gray-700 border border-gray-500" />
+                        TEAM BLACK
+                      </span>
+                      <span className="text-[10px] font-bold text-gray-500">2/2</span>
+                    </div>
+
+                    {[2, 3].map(slotIndex => (
+                      <div
+                        key={slotIndex}
+                        className="glass-panel rounded-xl p-3 flex items-center gap-3 border-gray-700/30"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-gray-700/50 flex items-center justify-center">
+                          <span className="text-lg">🤖</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-300 truncate">{slots[slotIndex].label}</p>
+                          <p className="text-[10px] font-bold text-gray-500">
+                            {(slots[slotIndex] as { type: 'bot'; eloLabel: string }).eloLabel}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase text-green-400">Ready</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {myRoomCode && (
+                  <button
+                    onClick={startMatch}
+                    className="w-full py-3 rounded-xl bg-yellow-500 text-gray-900 font-extrabold text-sm hover:bg-yellow-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">play_arrow</span>
+                    START MATCH
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   )
 }

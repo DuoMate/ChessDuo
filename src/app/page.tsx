@@ -144,6 +144,7 @@ export default function SetupPage() {
         <RoomManager
           playerId={playerId}
           username={username}
+          difficulty={selectedLevel}
           onRoomJoined={handleRoomJoined}
         />
         <div className="mt-8 text-center">
