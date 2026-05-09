@@ -45,6 +45,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
 
@@ -292,13 +293,21 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
         <span className="text-xl font-extrabold italic uppercase tracking-tighter text-yellow-400">ChessDuo</span>
         <button
           onClick={async () => {
+            if (signingOut) return
+            setSigningOut(true)
             console.log('[ROOM] Signing out...')
-            await supabase.auth.signOut()
+            try {
+              await supabase.auth.signOut()
+              console.log('[ROOM] Sign out complete')
+            } catch (e) {
+              console.warn('[ROOM] Sign out error (navigating anyway):', e)
+            }
             router.push('/')
           }}
-          className="text-xs font-bold text-gray-500 hover:text-red-400 transition-colors flex items-center gap-1"
+          disabled={signingOut}
+          className="text-xs font-bold text-gray-500 hover:text-red-400 transition-colors flex items-center gap-1 disabled:opacity-50"
         >
-          Sign Out
+          {signingOut ? '...' : 'Sign Out'}
           <span className="material-symbols-outlined text-sm">logout</span>
         </button>
       </header>
