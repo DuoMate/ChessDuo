@@ -152,6 +152,11 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 5.8 Bot difficulty adjustment (6 levels, 1000-2600 ELO)
 - [x] 5.9 Move playback (MovePlayback component, click-to-replay with shadow moves)
 - [x] 5.10 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
+- [x] 5.11 In-game slide-over panels (profile & history without leaving game)
+- [x] 5.12 Landing page redesign (hero, auth modal, Google sign-in, guest play)
+- [x] 5.13 Game resume via Supabase state persistence
+
+**Key Files**: `src/components/SlideOver.tsx`, `src/components/LandingHero.tsx`, `src/components/AuthModal.tsx`
 
 **Deliverable**: Production-ready MVP with freemium insights
 
