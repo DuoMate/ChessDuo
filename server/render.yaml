@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: chessduo-be
+    env: node
+    rootDirectory: server
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health

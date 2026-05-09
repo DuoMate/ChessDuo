@@ -4,11 +4,11 @@ FROM node:20 AS builder
 
 WORKDIR /app/server
 
-COPY package*.json ./
+COPY server/package*.json ./
 RUN npm ci
 
-COPY tsconfig.json ./
-COPY src ./src
+COPY server/tsconfig.json ./
+COPY server/src ./src
 
 RUN npm run build
 
