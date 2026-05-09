@@ -141,10 +141,10 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
                                                                                         RETURNS BOOLEAN
                                                                                         LANGUAGE sql
                                                                                         SECURITY DEFINER
-                                                                                        SET search_path = ''
-                                                                                        AS $$
-                                                                                          SELECT EXISTS (
-                                                                                              SELECT 1 FROM room_players
+SET search_path = 'public'
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM room_players
                                                                                                   WHERE room_id = check_room_id
                                                                                                         AND player_id = auth.uid()::text
                                                                                                           )
