@@ -1005,16 +1005,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <h1 className="text-3xl font-bold">ClashMate</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={async () => {
-                await supabase.auth.signOut()
-                window.location.href = '/'
-              }}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
-              title="Sign out"
-            >
-              🚪
-            </button>
-            <button
               onClick={() => window.location.href = '/profile'}
               className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
               title="Profile"

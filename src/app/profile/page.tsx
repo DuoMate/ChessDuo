@@ -34,10 +34,10 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <p className="text-gray-400 mb-4">Sign in to view your profile</p>
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.back()}
           className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
         >
-          Go Home
+          Go Back
         </button>
       </div>
     )
@@ -49,10 +49,10 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Profile</h1>
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.back()}
             className="text-gray-400 hover:text-yellow-400 text-sm"
           >
-            ← Home
+            ← Back
           </button>
         </div>
 
