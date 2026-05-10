@@ -344,15 +344,16 @@ export class OnlineGame {
       }
 
       // Fill remaining slots with bots (up to 2 per team)
+      // Must match IDs used in Game.tsx resolve flow: bot_opponent_1/2 for BLACK team
       for (let i = whiteHumans.length; i < 2; i++) {
         try {
-          this.gameState.addPlayer(`bot_white_${i + 1}` as Player, Team.WHITE)
+          this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
         } catch (e) {}
       }
 
       for (let i = blackHumans.length; i < 2; i++) {
         try {
-          this.gameState.addPlayer(`bot_black_${i + 1}` as Player, Team.BLACK)
+          this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
         } catch (e) {}
       }
 
@@ -406,14 +407,15 @@ export class OnlineGame {
       }
 
       // Fill remaining slots with bots on both teams
+      // Must match IDs used in Game.tsx resolve flow: bot_opponent_1/2 for BLACK team
       for (let i = whitePlayers.length; i < 2; i++) {
         try {
-          this.gameState.addPlayer(`bot_white_${i + 1}` as Player, Team.WHITE)
+          this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
         } catch (e) {}
       }
       for (let i = blackPlayers.length; i < 2; i++) {
         try {
-          this.gameState.addPlayer(`bot_black_${i + 1}` as Player, Team.BLACK)
+          this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
         } catch (e) {}
       }
 

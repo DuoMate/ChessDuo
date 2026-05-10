@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Idempotent: add columns that may be missing on existing tables
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS insights_reveals_used INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
+
         -- Create rooms table
         CREATE TABLE IF NOT EXISTS rooms (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
