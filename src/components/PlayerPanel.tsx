@@ -165,7 +165,7 @@ export function PlayerPanel({ team, capturedPieces, blackCapturedPieces, accurac
       </AnimatePresence>
 
       <div className="flex flex-col gap-2">
-        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Captured Pieces</h4>
+        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Captured by White</h4>
         <div className="flex flex-wrap gap-1 p-2 bg-gray-800/40 rounded-lg border border-gray-700/30 min-h-[80px] content-start">
           {sortedPieces.length === 0 ? (
             <span className="text-gray-600 text-xs">None yet</span>

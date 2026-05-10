@@ -922,7 +922,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           blackCapturedPieces={gameState.capturedByBlack}
           accuracy={stats.player1Accuracy}
           isActive={gameState.currentTurn === Team.WHITE && gameState.status === GameStatus.PLAYING}
-          comparison={gameState.moveComparison}
+          comparison={gameState.showResolution ? gameState.whiteTeamComparison : null}
           playerId={playerId}
           player1Id={isOnline ? null : 'player1'}
         />
@@ -967,11 +967,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         />
       </main>
 
-      <StatsTicker
-        syncRate={stats.whiteSyncRate}
-        conflicts={stats.whiteConflicts}
-        totalMoves={stats.whiteMovesPlayed}
-      />
+      <StatsTicker totalMoves={stats.whiteMovesPlayed} />
     </div>
   )
 }
