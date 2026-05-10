@@ -919,6 +919,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.pendingOverlay}
               highlightSquares={gameState.highlightSquares}
               onAnimationComplete={handleResolutionComplete}
             />
