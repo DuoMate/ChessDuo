@@ -12,7 +12,6 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { TopBar } from './TopBar'
 import { PlayerPanel } from './PlayerPanel'
-import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { StatsTicker } from './StatsTicker'
 import { SplashScreen } from './SplashScreen'
 import { setGameResult, GameSummary } from '@/lib/resultsStore'
@@ -908,6 +907,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedPieces={gameState.capturedByWhite}
           accuracy={stats.player1Accuracy}
           isActive={gameState.currentTurn === Team.WHITE && gameState.status === GameStatus.PLAYING}
+          comparison={gameState.moveComparison}
+          playerId={playerId}
+          player1Id={isOnline ? null : 'player1'}
         />
 
         <section className="flex-1 flex items-center justify-center p-4">
@@ -942,13 +944,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             </div>
           </div>
         </section>
-
-        <AccuracyBottomSheet
-          comparison={gameState.moveComparison}
-          isVisible={gameState.showResolution && !!gameState.moveComparison}
-          playerId={playerId}
-          player1Id={isOnline ? null : 'player1'}
-        />
       </main>
 
       <StatsTicker
