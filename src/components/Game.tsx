@@ -12,7 +12,7 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { TopBar } from './TopBar'
 import { PlayerPanel } from './PlayerPanel'
-import { ComparisonPanel } from './ComparisonPanel'
+import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { StatsTicker } from './StatsTicker'
 import { SplashScreen } from './SplashScreen'
 import { setGameResult, GameSummary } from '@/lib/resultsStore'
@@ -943,10 +943,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </section>
 
-        <ComparisonPanel
+        <AccuracyBottomSheet
           comparison={gameState.moveComparison}
           isVisible={gameState.showResolution && !!gameState.moveComparison}
-          onAnimationComplete={handleResolutionComplete}
+          playerId={playerId}
+          player1Id={isOnline ? null : 'player1'}
         />
       </main>
 
