@@ -238,12 +238,31 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
         const overlay = (g as any).pendingOverlay || null
-        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn, pendingOverlay: !!overlay })
+        const comparison = (g as any).lastMoveComparison as MoveComparison | null
+
+        // Record turn history for online mode (non-coordinator doesn't run checkAndResolve)
+        if (comparison?.player1Move) {
+          turnHistoryRef.current.push({
+            turnNumber: turnHistoryRef.current.length + 1,
+            player1Move: comparison.player1Move,
+            player1Accuracy: comparison.player1Accuracy,
+            player2Move: comparison.player2Move,
+            player2Accuracy: comparison.player2Accuracy,
+            isSync: comparison.isSync,
+            winnerId: comparison.winnerId
+          })
+          setTurnHistory([...turnHistoryRef.current])
+        }
+
+        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn, pendingOverlay: !!overlay, hasComparison: !!comparison })
         setGameState(prev => ({
           ...prev,
           status: g.status,
           fen: g.fen,
           currentTurn: g.currentTurn,
+          showResolution: !!comparison,
+          whiteTeamComparison: comparison || prev.whiteTeamComparison,
+          moveComparison: comparison || prev.moveComparison,
           isMyTurn: g.currentTurn === Team.WHITE,
           capturedByWhite: captured.white,
           capturedByBlack: captured.black,
