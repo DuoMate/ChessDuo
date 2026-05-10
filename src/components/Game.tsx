@@ -236,7 +236,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (onlineGameRef.current) {
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
-        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
+        const overlay = (g as any).pendingOverlay || null
+        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn, pendingOverlay: !!overlay })
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -247,7 +248,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
           timerSeconds: g.getTeamTimer(),
-          timerActive: g.isTimerActive()
+          timerActive: g.isTimerActive(),
+          pendingOverlay: overlay || prev.pendingOverlay
         }))
       }
     })
