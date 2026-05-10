@@ -79,8 +79,8 @@ export default function SetupPage() {
             <div className="text-[42px] mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.2)]">
 {"\u2654"}
             </div>
-            <h1 className="text-[30px] font-black text-yellow-400 tracking-wider">CHESSDUO</h1>
-            <p className="text-[9px] text-gray-500 tracking-[0.2em] uppercase mt-0.5">Cooperative Chess</p>
+            <h1 className="text-[30px] font-black text-yellow-400 tracking-wider">ChessDuo</h1>
+            <p className="text-[9px] text-gray-500 tracking-[0.2em] uppercase mt-0.5">Play Smarter, Together</p>
           </div>
 
           {/* Prompt */}
