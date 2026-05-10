@@ -50,6 +50,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const supabaseRoomIdRef = useRef<string | null>(null)
   const [joinedRoom, setJoinedRoom] = useState(false)
   const [joinedRoomCode, setJoinedRoomCode] = useState('')
+  const [friendRoomId, setFriendRoomId] = useState('')
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
 
@@ -192,14 +193,14 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
         if (data?.status === 'playing') {
           console.log('[ROOM] Host started match — navigating to game')
-          onRoomJoined({ id: '', code: joinedRoomCode, status: 'playing', created_by: '' } as Room, 'WHITE', playerId)
+          onRoomJoined({ id: friendRoomId, code: joinedRoomCode, status: 'playing', created_by: '' } as Room, 'WHITE', playerId)
         }
       } catch {
         // Supabase unavailable — ignore
       }
     }, 2000)
     return () => clearInterval(poll)
-  }, [joinedRoom, joinedRoomCode, playerId, onRoomJoined])
+  }, [joinedRoom, joinedRoomCode, friendRoomId, playerId, onRoomJoined])
 
   const startMatch = async () => {
     if (!myRoomCode) return
@@ -318,6 +319,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
       if (existingPlayer) {
         console.log('[Join] Already in room, waiting for host')
         setJoinedRoomCode(rooms.code)
+        setFriendRoomId(rooms.id)
         setJoinedRoom(true)
         return
       }
@@ -336,6 +338,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
         console.error('[Join] Insert player error:', playerError)
         if (playerError.code === '409' || playerError.message.includes('duplicate')) {
           setJoinedRoomCode(rooms.code)
+          setFriendRoomId(rooms.id)
           setJoinedRoom(true)
           return
         }
@@ -344,6 +347,7 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
 
       console.log(`[ROOM] Joined room: code=${rooms.code} team=${team} slot=${slot}`)
       setJoinedRoomCode(rooms.code)
+      setFriendRoomId(rooms.id)
       setJoinedRoom(true)
     } catch (err) {
       console.error('[Join] Full error:', err)
