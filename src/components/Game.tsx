@@ -238,23 +238,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
         const overlay = (g as any).pendingOverlay || null
-        const comparison = (g as any).lastMoveComparison as MoveComparison | null
+        // Use WHITE team comparison only — _whiteComparison stores only WHITE resolves (not BLACK bots)
+        const comparison = (g as any)._whiteComparison as MoveComparison | null
 
-        // Record turn history for online mode (non-coordinator doesn't run checkAndResolve)
+        // Record turn history for online mode (same data flow as checkAndResolve on coordinator)
         if (comparison?.player1Move) {
-          turnHistoryRef.current.push({
-            turnNumber: turnHistoryRef.current.length + 1,
-            player1Move: comparison.player1Move,
-            player1Accuracy: comparison.player1Accuracy,
-            player2Move: comparison.player2Move,
-            player2Accuracy: comparison.player2Accuracy,
-            isSync: comparison.isSync,
-            winnerId: comparison.winnerId
-          })
-          setTurnHistory([...turnHistoryRef.current])
+          // Deduplicate: only add if last entry isn't the same
+          const lastEntry = turnHistoryRef.current[turnHistoryRef.current.length - 1]
+          const isDuplicate = lastEntry &&
+            lastEntry.player1Move === comparison.player1Move &&
+            lastEntry.player2Move === comparison.player2Move &&
+            lastEntry.turnNumber === turnHistoryRef.current.length
+          if (!isDuplicate) {
+            turnHistoryRef.current.push({
+              turnNumber: turnHistoryRef.current.length + 1,
+              player1Move: comparison.player1Move,
+              player1Accuracy: comparison.player1Accuracy,
+              player2Move: comparison.player2Move,
+              player2Accuracy: comparison.player2Accuracy,
+              isSync: comparison.isSync,
+              winnerId: comparison.winnerId
+            })
+            setTurnHistory([...turnHistoryRef.current])
+          }
         }
 
-        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn, pendingOverlay: !!overlay, hasComparison: !!comparison })
+        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn, hasComparison: !!comparison })
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -852,7 +861,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (gameState.status === GameStatus.GAME_OVER && !navigatedRef.current && g) {
       navigatedRef.current = true
-      const stats = isOnline ? { whiteMovesPlayed: 0, whiteSyncRate: 0, whiteConflicts: 0, player1Accuracy: 0, player2Accuracy: 0, lastMoveAccuracy: 0, lastMoveAccuracyP2: 0, movesPlayed: 0 } : (g as LocalGame).getStats()
+      const stats = isOnline ? { whiteMovesPlayed: turnHistory.length, whiteSyncRate: 0, whiteConflicts: 0, player1Accuracy: 0, player2Accuracy: 0, lastMoveAccuracy: 0, lastMoveAccuracyP2: 0, movesPlayed: turnHistory.length } : (g as LocalGame).getStats()
       const resultText = g instanceof LocalGame ? g.getResult() : 'Game Over'
       console.log(`\n══════════════════════════════════════════`)
       console.log(`[GAME] OVER: ${resultText}`)
@@ -909,7 +918,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove, startTimer])
 
-  const stats = !isOnline && game ? game.getStats() : { whiteMovesPlayed: 0, whiteSyncRate: 0, whiteConflicts: 0, player1Accuracy: 100, player2Accuracy: 100 }
+  const stats = !isOnline && game ? game.getStats() : { whiteMovesPlayed: turnHistory.length, whiteSyncRate: 0, whiteConflicts: 0, player1Accuracy: 100, player2Accuracy: 100 }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
