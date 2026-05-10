@@ -200,6 +200,15 @@ AS $$
                                                                                                                                                                       CREATE POLICY "Authenticated users can insert completed games" ON completed_games
                                                                                                                                                                         FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
+-- Allow anonymous users too (players who skip sign-up)
+DROP POLICY IF EXISTS "Anyone can view completed games" ON completed_games;
+CREATE POLICY "Anyone can view completed games" ON completed_games
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can insert completed games" ON completed_games;
+CREATE POLICY "Anyone can insert completed games" ON completed_games
+  FOR INSERT WITH CHECK (true);
+
                                                                                                                                                                         -- Function to auto-create profile on signup
                                                                                                                                                                         CREATE OR REPLACE FUNCTION public.handle_new_user()
                                                                                                                                                                         RETURNS TRIGGER AS $$

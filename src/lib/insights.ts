@@ -30,8 +30,7 @@ export async function getUserInsightsState(userId: string): Promise<{
       .eq('id', userId)
       .maybeSingle()
 
-    if (error) {
-      console.warn('[Insights] Server fetch failed, using local state:', error.message?.substring?.(0, 80) || error.code)
+    if (error || !data) {
       return {
         revealsUsed: local.revealsUsed,
         isPremium: local.isPremium,
@@ -39,18 +38,29 @@ export async function getUserInsightsState(userId: string): Promise<{
       }
     }
 
-    if (data) {
-      setLocalState(userId, { revealsUsed: data.insights_reveals_used ?? 0, isPremium: data.is_premium ?? false })
+    const serverUsed = data.insights_reveals_used ?? 0
+    const serverPremium = data.is_premium ?? false
+
+    // Merge: use the higher reveal count (whichever is more recent)
+    const revealsUsed = Math.max(local.revealsUsed, serverUsed)
+    const isPremium = local.isPremium || serverPremium
+
+    // Sync merged state back to localStorage
+    if (revealsUsed !== local.revealsUsed || isPremium !== local.isPremium) {
+      setLocalState(userId, { revealsUsed, isPremium })
     }
 
-    const used = data?.insights_reveals_used ?? 0
-    return {
-      revealsUsed: used,
-      isPremium: data?.is_premium ?? false,
-      revealsRemaining: Math.max(0, 3 - used),
+    // If server had an older count, try to sync local state back to server
+    if (local.revealsUsed > serverUsed) {
+      trySyncToServer(userId, local.revealsUsed)
     }
-  } catch (e) {
-    console.warn('[Insights] Server error, using local state:', e)
+
+    return {
+      revealsUsed,
+      isPremium,
+      revealsRemaining: Math.max(0, 3 - revealsUsed),
+    }
+  } catch {
     return {
       revealsUsed: local.revealsUsed,
       isPremium: local.isPremium,
@@ -59,45 +69,39 @@ export async function getUserInsightsState(userId: string): Promise<{
   }
 }
 
+async function trySyncToServer(userId: string, revealsUsed: number) {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: userId, username: 'Player', insights_reveals_used: revealsUsed }, { onConflict: 'id' })
+
+    if (error) {
+      console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
+    }
+  } catch {}
+}
+
 export async function incrementInsightsReveals(userId: string): Promise<number> {
   const local = getLocalState(userId)
   const nextLocal = local.revealsUsed + 1
   setLocalState(userId, { ...local, revealsUsed: nextLocal })
 
-  try {
-    const { data: current } = await supabase
-      .from('profiles')
-      .select('insights_reveals_used')
-      .eq('id', userId)
-      .maybeSingle()
+  trySyncToServer(userId, nextLocal)
 
-    const next = (current?.insights_reveals_used ?? 0) + 1
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, insights_reveals_used: next }, { onConflict: 'id' })
-
-    if (error) {
-      console.warn('[Insights] Server increment failed, using local:', error.message?.substring?.(0, 80) || error.code)
-    }
-
-    return Math.max(0, 3 - Math.max(next, nextLocal))
-  } catch (e) {
-    console.warn('[Insights] Server error on increment, using local:', e)
-    return Math.max(0, 3 - nextLocal)
-  }
+  return Math.max(0, 3 - nextLocal)
 }
 
-export async function isUserPremium(userId: string): Promise<boolean> {
-  try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', userId)
-      .maybeSingle()
+export function setUserPremium(userId: string, isPremium: boolean) {
+  const local = getLocalState(userId)
+  setLocalState(userId, { ...local, isPremium })
 
-    return data?.is_premium ?? false
-  } catch {
-    return false
-  }
+  try {
+    supabase
+      .from('profiles')
+      .upsert({ id: userId, username: 'Player', is_premium: isPremium }, { onConflict: 'id' })
+  } catch {}
+}
+
+export function isUserPremium(userId: string): boolean {
+  return getLocalState(userId).isPremium
 }

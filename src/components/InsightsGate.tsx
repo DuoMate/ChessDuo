@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoveInsights } from './MoveInsights'
-import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
+import { getUserInsightsState, incrementInsightsReveals, isUserPremium } from '@/lib/insights'
 
 interface InsightsGateProps {
   playerId: string
@@ -20,13 +20,17 @@ interface InsightsGateProps {
 }
 
 export function InsightsGate({ playerId, ...comparison }: InsightsGateProps) {
-  const [isPremium, setIsPremium] = useState(false)
+  const [isPremium, setIsPremium] = useState(() => isUserPremium(playerId))
   const [revealsRemaining, setRevealsRemaining] = useState<number | null>(null)
-  const [showInsights, setShowInsights] = useState(false)
+  const [showInsights, setShowInsights] = useState(() => isUserPremium(playerId))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!playerId) return
+    const premium = isUserPremium(playerId)
+    setIsPremium(premium)
+    if (premium) setShowInsights(true)
+
     getUserInsightsState(playerId).then(state => {
       setIsPremium(state.isPremium)
       setRevealsRemaining(state.revealsRemaining)
