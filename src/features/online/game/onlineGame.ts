@@ -301,6 +301,17 @@ export class OnlineGame {
     this.starting = true
     
     try {
+      // Check if a game already exists for this room (e.g., started by another player)
+      if (this._room) {
+        const existing = await loadGameState(this._room.id)
+        if (existing && existing.status === 'PLAYING') {
+          console.log('[ONLINE] Game already exists in DB, syncing as late joiner')
+          this.starting = false
+          await this.syncGameState()
+          return
+        }
+      }
+
       // Query room_players to get all human players in the room
       const { data: players } = await supabase
         .from('room_players')
@@ -308,23 +319,42 @@ export class OnlineGame {
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
 
-      const humanPlayers = (players || []).filter(p => p.team === this._team)
+      // Reset game state - ensures clean state
+      this.gameState = new GameState()
+      this._status = GameStatus.READY
 
-      // Add human players in sorted order (by player_id) to ensure consistent state
-      const playerNum = this._team === 'WHITE' ? Team.WHITE : Team.BLACK
-      for (const p of humanPlayers) {
+      // Add human players to their respective teams
+      const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
+      const blackHumans = (players || []).filter(p => p.team === 'BLACK')
+
+      for (const p of whiteHumans) {
         try {
-          this.gameState.addPlayer(p.player_id as Player, playerNum)
+          this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
         } catch (e) {
-          // Player might already exist, skip
-          console.log('[ONLINE] Player already exists or error:', e)
+          console.log('[ONLINE] Player already exists or team full:', e)
         }
       }
 
-      // Add bot opponents
-      const opponentTeam = this._team === 'WHITE' ? Team.BLACK : Team.WHITE
-      this.gameState.addPlayer('bot_opponent_1' as Player, opponentTeam)
-      this.gameState.addPlayer('bot_opponent_2' as Player, opponentTeam)
+      for (const p of blackHumans) {
+        try {
+          this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
+        } catch (e) {
+          console.log('[ONLINE] Player already exists or team full:', e)
+        }
+      }
+
+      // Fill remaining slots with bots (up to 2 per team)
+      for (let i = whiteHumans.length; i < 2; i++) {
+        try {
+          this.gameState.addPlayer(`bot_white_${i + 1}` as Player, Team.WHITE)
+        } catch (e) {}
+      }
+
+      for (let i = blackHumans.length; i < 2; i++) {
+        try {
+          this.gameState.addPlayer(`bot_black_${i + 1}` as Player, Team.BLACK)
+        } catch (e) {}
+      }
 
       // Start the game
       this.gameState.startMatch()
@@ -375,13 +405,17 @@ export class OnlineGame {
         }
       }
 
-      // Add bots if not present
-      try {
-        this.gameState.addPlayer('bot_opponent_1' as Player, Team.BLACK)
-      } catch (e) {}
-      try {
-        this.gameState.addPlayer('bot_opponent_2' as Player, Team.BLACK)
-      } catch (e) {}
+      // Fill remaining slots with bots on both teams
+      for (let i = whitePlayers.length; i < 2; i++) {
+        try {
+          this.gameState.addPlayer(`bot_white_${i + 1}` as Player, Team.WHITE)
+        } catch (e) {}
+      }
+      for (let i = blackPlayers.length; i < 2; i++) {
+        try {
+          this.gameState.addPlayer(`bot_black_${i + 1}` as Player, Team.BLACK)
+        } catch (e) {}
+      }
 
       console.log('[ONLINE] Game state synced successfully')
 
