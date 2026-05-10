@@ -17,6 +17,7 @@ const PIECE_SYMBOLS: Record<string, string> = {
 interface PlayerPanelProps {
   team: Team
   capturedPieces: string[]
+  blackCapturedPieces: string[]
   accuracy: number
   isActive: boolean
   comparison?: MoveComparison | null
@@ -24,8 +25,12 @@ interface PlayerPanelProps {
   player1Id?: string | null
 }
 
-export function PlayerPanel({ team, capturedPieces, accuracy, isActive, comparison, playerId, player1Id }: PlayerPanelProps) {
+export function PlayerPanel({ team, capturedPieces, blackCapturedPieces, accuracy, isActive, comparison, playerId, player1Id }: PlayerPanelProps) {
   const sortedPieces = [...capturedPieces].sort((a, b) => {
+    const order = ['q', 'r', 'b', 'n', 'p']
+    return order.indexOf(a) - order.indexOf(b)
+  })
+  const sortedBlackPieces = [...blackCapturedPieces].sort((a, b) => {
     const order = ['q', 'r', 'b', 'n', 'p']
     return order.indexOf(a) - order.indexOf(b)
   })
@@ -169,6 +174,24 @@ export function PlayerPanel({ team, capturedPieces, accuracy, isActive, comparis
               <span
                 key={`${piece}-${index}`}
                 className="text-2xl bg-gray-700/50 rounded px-1 text-white border border-gray-600/50"
+              >
+                {PIECE_SYMBOLS[piece] || piece}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Captured by Black</h4>
+        <div className="flex flex-wrap gap-1 p-2 bg-gray-800/40 rounded-lg border border-gray-700/30 min-h-[60px] content-start">
+          {sortedBlackPieces.length === 0 ? (
+            <span className="text-gray-600 text-xs">None yet</span>
+          ) : (
+            sortedBlackPieces.map((piece, index) => (
+              <span
+                key={`black-${piece}-${index}`}
+                className="text-2xl bg-gray-700/50 rounded px-1 text-gray-400 border border-gray-600/50"
               >
                 {PIECE_SYMBOLS[piece] || piece}
               </span>

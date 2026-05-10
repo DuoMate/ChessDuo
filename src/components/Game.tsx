@@ -12,6 +12,7 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { TopBar } from './TopBar'
 import { PlayerPanel } from './PlayerPanel'
+import { MoveHistory } from './MoveHistory'
 import { StatsTicker } from './StatsTicker'
 import { SplashScreen } from './SplashScreen'
 import { setGameResult, GameSummary } from '@/lib/resultsStore'
@@ -158,6 +159,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const router = useRouter()
   const navigatedRef = useRef(false)
   const turnHistoryRef = useRef<Array<{ turnNumber: number; player1Move: string; player1Accuracy: number; player2Move: string; player2Accuracy: number; isSync: boolean; winnerId: string }>>([])
+  const [turnHistory, setTurnHistory] = useState<Array<{ turnNumber: number; player1Move: string; player1Accuracy: number; player2Move: string; player2Accuracy: number; isSync: boolean; winnerId: string }>>([])
   console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
   
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
@@ -409,6 +411,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
 
     if (comparison) {
+      const entry = {
+        turnNumber: turnHistoryRef.current.length + 1,
+        player1Move: comparison.player1Move,
+        player1Accuracy: comparison.player1Accuracy,
+        player2Move: comparison.player2Move,
+        player2Accuracy: comparison.player2Accuracy,
+        isSync: comparison.isSync,
+        winnerId: comparison.winnerId
+      }
+      turnHistoryRef.current.push(entry)
+      setTurnHistory([...turnHistoryRef.current])
+
       const winnerId = comparison.winnerId
       const loserId = comparison.loserId
 
@@ -905,6 +919,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <PlayerPanel
           team={Team.WHITE}
           capturedPieces={gameState.capturedByWhite}
+          blackCapturedPieces={gameState.capturedByBlack}
           accuracy={stats.player1Accuracy}
           isActive={gameState.currentTurn === Team.WHITE && gameState.status === GameStatus.PLAYING}
           comparison={gameState.moveComparison}
@@ -944,6 +959,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             </div>
           </div>
         </section>
+
+        <MoveHistory
+          turns={turnHistory}
+          roomCode={roomCode}
+          isOnline={isOnline}
+        />
       </main>
 
       <StatsTicker
