@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
@@ -15,7 +15,9 @@ type GameMode = 'offline' | 'online' | null
 
 export default function SetupPage() {
   const router = useRouter()
-  const [gameMode, setGameMode] = useState<GameMode>(null)
+  const searchParams = useSearchParams()
+  const joinCode = searchParams.get('join')
+  const [gameMode, setGameMode] = useState<GameMode>(joinCode ? 'online' : null)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
@@ -29,11 +31,27 @@ export default function SetupPage() {
         console.log(`[PAGE] Existing session found: userId=${session.user.id.substring(0,8)}... name=${name}`)
         setPlayerId(session.user.id)
         setUsername(name)
+        if (joinCode) {
+          setGameMode('online')
+        }
+      } else if (joinCode) {
+        console.log('[PAGE] No session but join code present — auto guest sign-in')
+        supabase.auth.signInAnonymously().then(({ data, error }) => {
+          if (error || !data.user) {
+            const randomId = Math.random().toString(36).substring(2, 15)
+            setPlayerId(`anon_${randomId}`)
+            setUsername(`Player${randomId}`)
+          } else {
+            setPlayerId(data.user.id)
+            setUsername(`Player${data.user.id.substring(0, 8)}`)
+          }
+          setGameMode('online')
+        })
       } else {
         console.log('[PAGE] No existing session')
       }
     })
-  }, [])
+  }, [joinCode])
 
   const handleAuthComplete = (userId: string, name: string) => {
     console.log(`[PAGE] Auth complete: userId=${userId.substring(0,8)}... name=${name} → entering online lobby`)
@@ -191,6 +209,7 @@ export default function SetupPage() {
           playerId={playerId}
           username={username}
           difficulty={selectedLevel}
+          initialJoinCode={joinCode}
           onRoomJoined={handleRoomJoined}
         />
         <div className="mt-8 text-center">

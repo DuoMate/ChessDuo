@@ -8,6 +8,7 @@ interface RoomManagerProps {
   playerId: string
   username: string
   difficulty?: number
+  initialJoinCode?: string | null
   onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => void
 }
 
@@ -36,7 +37,7 @@ type PlayerSlot =
   | { type: 'bot'; label: string; eloLabel: string }
   | { type: 'empty'; label: string }
 
-export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }: RoomManagerProps) {
+export function RoomManager({ playerId, username, difficulty = 4, initialJoinCode, onRoomJoined }: RoomManagerProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('create')
   const [joinCode, setJoinCode] = useState('')
@@ -53,6 +54,24 @@ export function RoomManager({ playerId, username, difficulty = 4, onRoomJoined }
   const [friendRoomId, setFriendRoomId] = useState('')
 
   const eloLabel = ELO_LABELS[difficulty] || ELO_LABELS[4]
+
+  // Auto-join when initialJoinCode is provided (from shared link)
+  useEffect(() => {
+    if (initialJoinCode && activeTab !== 'join') {
+      setActiveTab('join')
+    }
+    if (initialJoinCode && !joinCode) {
+      setJoinCode(initialJoinCode)
+    }
+    // Auto-trigger join after code is set
+    if (initialJoinCode && joinCode === initialJoinCode && !loading && !joinedRoom) {
+      const timer = setTimeout(() => {
+        console.log(`[ROOM] Auto-joining with code: ${initialJoinCode}`)
+        joinRoom()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [initialJoinCode, joinCode, activeTab, loading, joinedRoom])
 
   const [slots, setSlots] = useState<PlayerSlot[]>([
     { type: 'human', label: username, ready: true },
