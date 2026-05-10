@@ -272,6 +272,9 @@ export class OnlineGame {
       })
       .subscribe(async (status: string) => {
         console.log('[ONLINE] Channel subscription status:', status)
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[ONLINE] Channel error — reconnection attempt in progress')
+        }
         if (status === 'SUBSCRIBED') {
           await this._channel?.track({
             player_id: playerId,
@@ -494,6 +497,11 @@ export class OnlineGame {
       currentTurn: this.gameState.currentTeam,
       currentPhase: this.gameState.phase
     })
+
+    const isOwnBroadcast = !!(payload.coordinatorId && payload.coordinatorId === this._playerId)
+    if (isOwnBroadcast) {
+      console.log('[TURN-RESOLVED] Own broadcast — skipping redundant resolve, running cleanup only')
+    }
     
     if (payload.comparison) {
       console.log('[TURN-RESOLVED] Comparison received:', {
@@ -514,28 +522,30 @@ export class OnlineGame {
       }
     }
     
-    // Try to apply the move through normal resolve flow
-    const result = this.gameState.resolve(payload.winningMove)
-    
-    if (result) {
-      console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
-    } else {
-      console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
+    if (!isOwnBroadcast) {
+      // Try to apply the move through normal resolve flow
+      const result = this.gameState.resolve(payload.winningMove)
       
-      // Phase is not LOCKED (already resolved by coordinator) - try to apply move directly to board
-      try {
-        this.gameState.board.move(payload.winningMove)
-        console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
-      } catch (e) {
-        console.log('[ONLINE] Could not apply move directly:', e)
-      }
-      
-      // Sync turn with board - FEN position 7 indicates 'w' or 'b'
-      const fenParts = this.gameState.fen.split(' ')
-      const boardTurn = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
-      if (this.gameState.currentTeam !== boardTurn) {
-        this.gameState.setCurrentTeam(boardTurn)
-        console.log('[ONLINE] Synced turn to match board:', boardTurn)
+      if (result) {
+        console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
+      } else {
+        console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
+        
+        // Phase is not LOCKED (already resolved by coordinator) - try to apply move directly to board
+        try {
+          this.gameState.board.move(payload.winningMove)
+          console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
+        } catch (e) {
+          console.log('[ONLINE] Could not apply move directly:', e)
+        }
+        
+        // Sync turn with board - FEN position 7 indicates 'w' or 'b'
+        const fenParts = this.gameState.fen.split(' ')
+        const boardTurn = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
+        if (this.gameState.currentTeam !== boardTurn) {
+          this.gameState.setCurrentTeam(boardTurn)
+          console.log('[ONLINE] Synced turn to match board:', boardTurn)
+        }
       }
     }
     
