@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 type GameMode = 'offline' | 'online' | null
 
-export default function SetupPage() {
+function SetupPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const joinCode = searchParams.get('join')
@@ -225,4 +225,16 @@ export default function SetupPage() {
   }
 
   return null
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </div>
+    }>
+      <SetupPageContent />
+    </Suspense>
+  )
 }
