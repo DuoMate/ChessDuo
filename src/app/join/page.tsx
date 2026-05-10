@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function JoinPage() {
+function JoinContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const code = searchParams.get('code')
@@ -13,7 +13,6 @@ export default function JoinPage() {
     async function autoJoin() {
       console.log(`[JOIN-PAGE] Auto-joining with code: ${code}`)
 
-      // Try guest sign-in
       try {
         const { data, error } = await supabase.auth.signInAnonymously()
         if (!error && data.user) {
@@ -26,7 +25,6 @@ export default function JoinPage() {
         console.warn('[JOIN-PAGE] Guest sign-in error')
       }
 
-      // Fallback: create a random ID and redirect without auth
       const randomId = Math.random().toString(36).substring(2, 15)
       console.log(`[JOIN-PAGE] Using fallback guest: Player${randomId}`)
       router.push(`/?mode=online&join=${code}`)
@@ -46,5 +44,19 @@ export default function JoinPage() {
         <p className="text-gray-400 text-sm">Joining room...</p>
       </div>
     </div>
+  )
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    }>
+      <JoinContent />
+    </Suspense>
   )
 }

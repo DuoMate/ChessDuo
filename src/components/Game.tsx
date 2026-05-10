@@ -920,7 +920,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           team={Team.WHITE}
           capturedPieces={gameState.capturedByWhite}
           blackCapturedPieces={gameState.capturedByBlack}
-          accuracy={stats.player1Accuracy}
           isActive={gameState.currentTurn === Team.WHITE && gameState.status === GameStatus.PLAYING}
           comparison={gameState.showResolution ? gameState.whiteTeamComparison : null}
           playerId={playerId}

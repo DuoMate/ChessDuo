@@ -18,14 +18,13 @@ interface PlayerPanelProps {
   team: Team
   capturedPieces: string[]
   blackCapturedPieces: string[]
-  accuracy: number
   isActive: boolean
   comparison?: MoveComparison | null
   playerId?: string | null
   player1Id?: string | null
 }
 
-export function PlayerPanel({ team, capturedPieces, blackCapturedPieces, accuracy, isActive, comparison, playerId, player1Id }: PlayerPanelProps) {
+export function PlayerPanel({ team, capturedPieces, blackCapturedPieces, isActive, comparison, playerId, player1Id }: PlayerPanelProps) {
   const sortedPieces = [...capturedPieces].sort((a, b) => {
     const order = ['q', 'r', 'b', 'n', 'p']
     return order.indexOf(a) - order.indexOf(b)
@@ -200,21 +199,6 @@ export function PlayerPanel({ team, capturedPieces, blackCapturedPieces, accurac
         </div>
       </div>
 
-      <div className="glass-panel p-3 rounded-xl">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[10px] font-bold text-gray-500 uppercase">Avg Accuracy</span>
-          <span className="text-sm font-bold text-yellow-400">{accuracy.toFixed(1)}%</span>
-        </div>
-        <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-yellow-400 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(accuracy, 100)}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            style={{ filter: 'drop-shadow(0 0 4px rgba(234,179,8,0.4))' }}
-          />
-        </div>
-      </div>
     </aside>
   )
 }
