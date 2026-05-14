@@ -16,6 +16,31 @@ err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# ─── Use Java 21 for Gradle compatibility ─────────
+if [ -f /usr/lib/jvm/java-21-openjdk-amd64/bin/java ]; then
+    export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+    export PATH="$JAVA_HOME/bin:$PATH"
+    ok "Using Java 21 for Gradle build"
+elif [ -f /usr/lib/jvm/java-17-openjdk-amd64/bin/java ]; then
+    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    export PATH="$JAVA_HOME/bin:$PATH"
+    ok "Using Java 17 for Gradle build"
+fi
+
+# ─── Set Android SDK path ─────────────────────────
+if [ -z "${ANDROID_HOME:-}" ]; then
+    if [ -d "$HOME/android-sdk" ]; then
+        export ANDROID_HOME="$HOME/android-sdk"
+    elif [ -d "$HOME/Android/Sdk" ]; then
+        export ANDROID_HOME="$HOME/Android/Sdk"
+    fi
+fi
+if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
+    err "ANDROID_HOME not set and no SDK found at ~/android-sdk or ~/Android/Sdk. Run: npm run cap:setup"
+fi
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+ok "ANDROID_HOME=$ANDROID_HOME"
+
 # ─── Verify prerequisites ────────────────────────
 if [ ! -d "android" ]; then
     err "android/ directory not found. Run: bash scripts/setup-capacitor.sh"
@@ -34,6 +59,12 @@ source android/keystore.properties
 
 # ─── Sync web assets ─────────────────────────────
 log "Syncing Capacitor web assets..."
+mkdir -p out
+echo '<html><body>ChessDuo loads from server</body></html>' > out/index.html
+
+# Ensure Gradle can find Android SDK
+echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
 npx cap sync android
 ok "Sync complete"
 
