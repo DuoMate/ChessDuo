@@ -11,14 +11,6 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: true,
-    buildOptions: {
-      signingConfig: {
-        storeFile: '../../chessduo.keystore',
-        storePassword: '',
-        keyAlias: 'chessduo',
-        keyPassword: '',
-      },
-    },
   },
 }
 

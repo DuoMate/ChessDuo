@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
 
 # ──────────────────────────────────────────────────
 # ChessDuo Capacitor Setup Runbook
-# One command to bootstrap Android build on any machine
+# One command to bootstrap Android build on any machine.
+# Safe to re-run — skips steps that are already done.
 # Run: bash scripts/setup-capacitor.sh
 # ──────────────────────────────────────────────────
 
 RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' NC='\033[0m'
-log()  { echo -e "${CYAN}[SETUP]${NC} $1"; }
-ok()   { echo -e "${GREEN}[OK]${NC}   $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
+log()    { echo -e "${CYAN}[SETUP]${NC} $1"; }
+ok()     { echo -e "${GREEN}[OK]${NC}   $1"; }
+warn()   { echo -e "${YELLOW}[WARN]${NC} $1"; }
+fatal()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
+section(){ echo ""; echo -e "${CYAN}───${NC} $1 ${CYAN}───${NC}"; }
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -22,13 +24,12 @@ echo "  ────────────────────────
 echo ""
 
 # ─── 1. Check / Install Java ────────────────────
-log "Checking Java..."
+section "1. Java"
 if command -v java &>/dev/null; then
-    JAVA_VER=$(java -version 2>&1 | head -1)
-    ok "Java found: $JAVA_VER"
+    ok "Java found: $(java -version 2>&1 | head -1)"
 else
     warn "Java not found. Installing OpenJDK 17..."
-    sudo apt-get update -qq && sudo apt-get install -y -qq openjdk-17-jdk
+    sudo apt-get update -qq && sudo apt-get install -y -qq openjdk-17-jdk || fatal "Failed to install Java"
     ok "Java 17 installed"
 fi
 
@@ -36,76 +37,117 @@ export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
 ok "JAVA_HOME=$JAVA_HOME"
 
 # ─── 2. Check / Install Android SDK ─────────────
-log "Checking Android SDK..."
-if [ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ]; then
-    ok "ANDROID_HOME=$ANDROID_HOME"
+section "2. Android SDK"
+SDK_ROOT="${ANDROID_HOME:-$HOME/android-sdk}"
+export ANDROID_HOME="$SDK_ROOT"
+mkdir -p "$SDK_ROOT"
+
+CMDTOOLS_BIN="$SDK_ROOT/cmdline-tools/latest/bin"
+ADB="$SDK_ROOT/platform-tools/adb"
+ANDROID_PLATFORM="$SDK_ROOT/platforms/android-34"
+BUILD_TOOLS="$SDK_ROOT/build-tools/34.0.0"
+
+need_cmdtools=false
+need_platform_tools=false
+need_platform=false
+need_build_tools=false
+
+[ -x "$CMDTOOLS_BIN/sdkmanager" ] || need_cmdtools=true
+[ -x "$ADB" ]                     || need_platform_tools=true
+[ -d "$ANDROID_PLATFORM" ]        || need_platform=true
+[ -d "$BUILD_TOOLS" ]             || need_build_tools=true
+
+if ! $need_cmdtools && ! $need_platform_tools && ! $need_platform && ! $need_build_tools; then
+    ok "Android SDK complete at $ANDROID_HOME"
 else
-    warn "Android SDK not found. Installing..."
-    SDK_ROOT="$HOME/android-sdk"
-    mkdir -p "$SDK_ROOT"
+    if $need_cmdtools; then
+        warn "Command-line tools not found. Downloading (~120MB)..."
+        CMDTOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+        CMDTOOLS_ZIP="/tmp/android-cmdline-tools.zip"
+        curl -sL "$CMDTOOLS_URL" -o "$CMDTOOLS_ZIP" || fatal "Failed to download cmdline-tools"
+        mkdir -p "$SDK_ROOT/cmdline-tools"
+        unzip -qo "$CMDTOOLS_ZIP" -d /tmp/android-cmdtools
+        mv /tmp/android-cmdtools/cmdline-tools "$SDK_ROOT/cmdline-tools/latest"
+        rm -f "$CMDTOOLS_ZIP"
+        ok "Command-line tools installed"
+    else
+        ok "Command-line tools: already present"
+    fi
 
-    CMDTOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
-    CMDTOOLS_ZIP="/tmp/android-cmdline-tools.zip"
+    export PATH="$CMDTOOLS_BIN:$SDK_ROOT/platform-tools:$PATH"
 
-    log "Downloading Android command-line tools (~120MB)..."
-    curl -sL "$CMDTOOLS_URL" -o "$CMDTOOLS_ZIP"
+    # Accept licenses (feed explicit y inputs — newer cmdline-tools requires this)
+    if $need_cmdtools || $need_platform_tools || $need_platform || $need_build_tools; then
+        log "Accepting SDK licenses..."
+        echo -e "y\ny\ny\ny\ny\ny\ny\ny" | sdkmanager --sdk_root="$SDK_ROOT" --licenses > /tmp/sdk-licenses.log 2>&1 || {
+            warn "License acceptance had issues (see /tmp/sdk-licenses.log). Continuing..."
+        }
+        ok "Licenses accepted"
+    fi
 
-    log "Extracting..."
-    mkdir -p "$SDK_ROOT/cmdline-tools"
-    unzip -qo "$CMDTOOLS_ZIP" -d /tmp/android-cmdtools
-    mv /tmp/android-cmdtools/cmdline-tools "$SDK_ROOT/cmdline-tools/latest"
-    rm -f "$CMDTOOLS_ZIP"
+    # Install platform-tools
+    if $need_platform_tools; then
+        log "Installing platform-tools..."
+        sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" || fatal "Failed to install platform-tools"
+        ok "platform-tools installed"
+    else
+        ok "platform-tools: already present"
+    fi
 
-    export ANDROID_HOME="$SDK_ROOT"
-    export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+    # Install Android platform
+    if $need_platform; then
+        log "Installing Android 34 platform (~200MB)..."
+        sdkmanager --sdk_root="$SDK_ROOT" "platforms;android-34" || fatal "Failed to install android-34 platform"
+        ok "Android platform 34 installed"
+    else
+        ok "Android platform 34: already present"
+    fi
 
-    # Accept licenses
-    log "Accepting SDK licenses..."
-    yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1
-
-    # Install required packages
-    log "Installing Android SDK packages (~500MB)..."
-    "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-        "platform-tools" \
-        "platforms;android-34" \
-        "build-tools;34.0.0" > /dev/null 2>&1
-
-    ok "Android SDK installed at $ANDROID_HOME"
+    # Install build-tools
+    if $need_build_tools; then
+        log "Installing build-tools 34.0.0 (~100MB)..."
+        sdkmanager --sdk_root="$SDK_ROOT" "build-tools;34.0.0" || fatal "Failed to install build-tools"
+        ok "build-tools 34.0.0 installed"
+    else
+        ok "build-tools 34.0.0: already present"
+    fi
 fi
 
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/android-sdk}"
-export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$CMDTOOLS_BIN:$SDK_ROOT/platform-tools:$PATH"
 ok "ANDROID_HOME=$ANDROID_HOME"
 
 # ─── 3. Check / Install Gradle ──────────────────
-log "Checking Gradle..."
+section "3. Gradle"
 if command -v gradle &>/dev/null; then
-    ok "Gradle found: $(gradle --version 2>/dev/null | head -1)"
+    ok "Gradle found: $(gradle --version 2>/dev/null | head -1 || echo 'installed')"
 elif [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    source "$HOME/.sdkman/bin/sdkman-init.sh" 2>/dev/null || true
     if ! command -v gradle &>/dev/null; then
-        sdk install gradle > /dev/null 2>&1
+        warn "Installing Gradle via sdkman..."
+        sdk install gradle || fatal "Failed to install Gradle"
     fi
     ok "Gradle installed via sdkman"
 else
-    warn "Gradle not found. Installing via sdkman..."
-    curl -s "https://get.sdkman.io" | bash
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk install gradle > /dev/null 2>&1
-    ok "Gradle installed via sdkman"
+    warn "Installing sdkman + Gradle..."
+    curl -s "https://get.sdkman.io" | bash || fatal "Failed to install sdkman"
+    source "$HOME/.sdkman/bin/sdkman-init.sh" 2>/dev/null || true
+    sdk install gradle || fatal "Failed to install Gradle"
+    ok "Gradle installed"
 fi
 
 # ─── 4. Install npm dependencies ────────────────
-log "Installing Capacitor packages..."
-npm install --save @capacitor/core @capacitor/cli @capacitor/android 2>&1 | tail -1
+section "4. Capacitor npm packages"
+log "Installing @capacitor/core @capacitor/cli @capacitor/android..."
+npm install --save @capacitor/core @capacitor/cli @capacitor/android || fatal "npm install failed"
 ok "Capacitor npm packages installed"
 
 # ─── 5. Initialize Capacitor ────────────────────
+section "5. Capacitor Android project"
 if [ -d "android" ]; then
     ok "Android project already exists (android/ directory found)"
 else
-    log "Initializing Capacitor Android project..."
-    npx cap add android
+    log "Creating Android project..."
+    npx cap add android || fatal "Failed to create Android project"
     ok "Android project created"
 fi
 
