@@ -43,3 +43,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor / Android
+/android
+chessduo.keystore
+*.jks
+*.p12
+android/keystore.properties
+android/app/build/outputs/

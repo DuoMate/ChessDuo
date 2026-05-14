@@ -11,7 +11,11 @@
     "precheck": "npm run lint && npm test",
     "clean": "rm -rf node_modules .next package-lock.json",
     "reinstall": "npm run clean && npm install",
-    "setup": "npm install"
+    "setup": "npm install",
+    "cap:setup": "bash scripts/setup-capacitor.sh",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:build": "bash scripts/build-apk.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",

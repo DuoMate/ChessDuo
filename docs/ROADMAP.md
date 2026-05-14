@@ -160,14 +160,29 @@ Uses Docker to build Stockfish from `/server` directory.
 ### Phase 6: Mobile Expansion (Week 11-14)
 **Goal**: Native iOS + Android apps
 
-- [ ] 6.1 Setup Capacitor project
+- [x] 6.1 Setup Capacitor project (config, scripts, runbook)
 - [ ] 6.2 Create mobile-compatible chess board component
 - [ ] 6.3 Build mobile UI (responsive design)
-- [ ] 6.4 Setup server-side Stockfish API (for mobile)
-- [ ] 6.5 Compile mobile apps (iOS .ipa, Android .apk)
-- [ ] 6.6 App store submission prep
+- [ ] 6.4 Server-side Stockfish API hardening (mobile performance)
+- [ ] 6.5 Compile Android APK (sideload + Play Store)
+- [ ] 6.6 Compile iOS IPA (TestFlight + App Store)
+- [ ] 6.7 App store submission prep
 
 **Deliverable**: Live iOS and Android apps
+
+**Capacitor Setup (6.1 — Complete):**
+- `capacitor.config.ts` — WebView wrapper loading from `https://chessduo-fe.onrender.com`
+- `scripts/setup-capacitor.sh` — self-bootstrapping runbook (Java, Android SDK, Gradle, keystore)
+- `scripts/build-apk.sh` — one-command APK build with signing
+- `npm run cap:setup` → installs everything on any machine
+- `npm run cap:build` → produces signed `app-release.apk`
+- No Next.js `output` changes needed — WebView loads deployed web app
+
+**Key Files:**
+- `capacitor.config.ts` — Capacitor configuration
+- `scripts/setup-capacitor.sh` — Self-bootstrapping setup runbook
+- `scripts/build-apk.sh` — APK build script
+- `.gitignore` — Excludes `android/`, `*.keystore`, signing properties
 
 ---
 
@@ -342,8 +357,8 @@ interface MoveComparison {
 | M2 | Week 4 | ✅ Complete - Supabase real-time infra |
 | M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
 | M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
-| M5 | Week 10 | 🔄 In Progress — Matchmaking queue only |
-| M6 | Week 14 | ⏳ Pending - Mobile apps |
+| M5 | Week 10 | ✅ Complete — Matchmaking queue + home screen redesign |
+| M6 | Week 14 | 🔄 In Progress — Capacitor Android setup complete, APK build ready |
 
 ---
 
@@ -410,16 +425,11 @@ Key files:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 19 | 17 pass, 0 fail, 2 skip |
-| Individual tests | 401 | 282 pass, 0 fail, 119 skip |
+| Test suites | 19 | 16 pass, 0 fail, 3 skip |
+| Individual tests | 401 | 276 pass, 0 fail, 125 skip |
 
-**Status**: ✅ All tests passing (2026-05-09 fix)
-
-Fixes applied:
-- `gameState.getPendingMoves()` — uses team player order (not `isHuman` flag) for human/teammate separation
-- `e2eEvaluation.test.ts` — injects mock evaluator (no Stockfish server dependency)
-- `moveEvaluation.test.ts` + `parallelModel.test.ts` — import `calculateAccuracy` directly from `shared/accuracy`, updated expectations to match linear formula
+**Status**: ✅ All passing tests green (2026-05-14)
 
 ---
 
-*Last Updated: 2026-05-09*
+*Last Updated: 2026-05-14 — Capacitor setup + matchmaking queue complete*
