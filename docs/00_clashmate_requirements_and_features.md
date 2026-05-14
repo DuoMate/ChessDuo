@@ -80,8 +80,45 @@ ClashMate sits at the intersection of:
 
 ### 5. 💥 Losing Move Animation (Signature Feature)
 - Losing move is visually destroyed
-- Particle-based “shatter” animation
+- Particle-based "shatter" animation
 - Enhances emotional impact and feedback
+
+---
+
+### 5.1 🎭 Shadow Move Animation System
+
+During a team's turn, both players' moves are visible on the board simultaneously:
+
+| Move Type | Visual | Opacity |
+|-----------|--------|---------|
+| My move (as the logged-in player) | SOLID piece | 1.0 |
+| Teammate's move | SHADOW piece | 0.4 |
+
+**Trigger Points:**
+
+1. **During Turn Selection** (WHITE team's turn):
+   - When a player broadcasts their move via real-time event
+   - The moving piece appears as a shadow animation on the board
+   - My move shows solid (opacity 1.0)
+   - Teammate's move shows as shadow (opacity 0.4)
+
+2. **After Resolution** (accuracy comparison completes):
+   - Winning move stays as the final move on the board (via `lastMove`)
+   - Losing move shows retraction animation (fades back to origin)
+   - All shadow overlays are cleared
+   - Only the resolved move remains visible
+
+**Perspective-Based Behavior:**
+- The system determines which move is SOLID vs SHADOW based on your player ID
+- Player 1 logged in: Player 1's move = SOLID, Player 2's move = SHADOW
+- Player 2 logged in: Player 2's move = SOLID, Player 1's move = SHADOW
+- This ensures each player sees their own move as primary
+
+**Technical Implementation:**
+- `myPendingOverlay`: Shows your own pending move (opacity 1.0)
+- `pendingOverlay`: Shows teammate's pending move (opacity 0.4)
+- `lastMove`: The resolved winning move after accuracy comparison
+- State change callback triggers overlay updates when teammates broadcast moves
 
 ---
 
@@ -134,6 +171,23 @@ ClashMate sits at the intersection of:
 - Play with a teammate against AI
 - Adjustable difficulty
 - Ideal for new users
+
+---
+
+### 12. 📈 Accuracy Display System
+- Shows **after WHITE turn resolves** (when winner is decided)
+- Displays **WHITE team's move comparison** (both players on WHITE team)
+- **Remains visible** through entire BLACK turn
+- **Clears** when next WHITE turn starts (before moves are locked)
+- **NEVER shows** BLACK team accuracy (only WHITE team)
+
+#### Display Timing Table
+| Game State | Accuracy Shown? | Which Team |
+|-----------|-----------------|-------------|
+| WHITE turn playing | ❌ No | - |
+| WHITE turn resolved | ✅ Yes | WHITE |
+| BLACK turn playing | ✅ Yes | WHITE |
+| Next WHITE starts | ❌ No (cleared) | - |
 
 ---
 

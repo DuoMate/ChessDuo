@@ -34,6 +34,7 @@ interface ChessBoardProps {
   orientation?: 'white' | 'black'
   lastMove?: { from: string; to: string } | null
   pendingOverlay?: PendingOverlay | null
+  myPendingOverlay?: PendingOverlay | null
   highlightSquares?: HighlightSquares | null
   onAnimationComplete?: () => void
 }
@@ -50,6 +51,7 @@ export function ChessBoard({
   orientation = 'white', 
   lastMove,
   pendingOverlay,
+  myPendingOverlay,
   highlightSquares,
   onAnimationComplete
 }: ChessBoardProps) {
@@ -281,6 +283,37 @@ export function ChessBoard({
               }}
             >
               {getPieceChar(pendingOverlay.piece, pendingOverlay.color)}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {myPendingOverlay && !showRetraction && (
+            <motion.div
+              key={`my-pending-${myPendingOverlay.from}-${myPendingOverlay.to}`}
+              initial={{ 
+                x: getSquarePosition(myPendingOverlay.from).x,
+                y: getSquarePosition(myPendingOverlay.from).y,
+                opacity: 0
+              }}
+              animate={{ 
+                x: getSquarePosition(myPendingOverlay.to).x,
+                y: getSquarePosition(myPendingOverlay.to).y,
+                opacity: 1
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="absolute flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold select-none"
+              style={{ 
+                width: '12.5%', 
+                height: '12.5%',
+                color: myPendingOverlay.color === 'white' ? '#fff' : '#000',
+                textShadow: myPendingOverlay.color === 'white' 
+                  ? '0 0 3px #000, 0 0 3px #000' 
+                  : '0 0 3px #fff, 0 0 3px #fff'
+              }}
+            >
+              {getPieceChar(myPendingOverlay.piece, myPendingOverlay.color)}
             </motion.div>
           )}
         </AnimatePresence>

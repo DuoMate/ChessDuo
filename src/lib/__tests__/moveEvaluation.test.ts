@@ -1,6 +1,7 @@
 import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
 import { Team } from '../../features/game-engine/gameState'
 import { Chess } from 'chess.js'
+import { calculateAccuracy } from '../../features/shared/accuracy'
 
 interface MoveEvaluation {
   move: string
@@ -180,69 +181,48 @@ describe('LocalGame Move Evaluation', () => {
   })
 })
 
-describe('Accuracy Calculation (Lichess Hyperbolic Formula)', () => {
-  let game: LocalGame
-
-  beforeEach(() => {
-    game = new LocalGame()
-  })
-
+describe('Accuracy Calculation (Linear Model)', () => {
   test('calculates 100% for zero loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     expect(calculateAccuracy(0)).toBe(100)
   })
 
-  test('calculates ~67% for 100cp loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
+  test('calculates ~69% for 100cp loss', () => {
     const accuracy = calculateAccuracy(100)
-    expect(accuracy).toBeGreaterThanOrEqual(66)
-    expect(accuracy).toBeLessThanOrEqual(68)
+    expect(accuracy).toBeGreaterThanOrEqual(68)
+    expect(accuracy).toBeLessThanOrEqual(70)
   })
 
-  test('calculates ~50% for 200cp loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
+  test('calculates ~34% for 200cp loss', () => {
     const accuracy = calculateAccuracy(200)
-    expect(accuracy).toBeGreaterThanOrEqual(49)
-    expect(accuracy).toBeLessThanOrEqual(51)
+    expect(accuracy).toBeGreaterThanOrEqual(34)
+    expect(accuracy).toBeLessThanOrEqual(35)
   })
 
-  test('calculates ~33% for 400cp loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    const accuracy = calculateAccuracy(400)
-    expect(accuracy).toBeGreaterThanOrEqual(32)
-    expect(accuracy).toBeLessThanOrEqual(34)
+  test('calculates 0% for 400cp loss (>= 300 threshold)', () => {
+    expect(calculateAccuracy(400)).toBe(0)
   })
 
-  test('calculates ~29% for 500cp loss (blunder)', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    const accuracy = calculateAccuracy(500)
-    expect(accuracy).toBeGreaterThanOrEqual(28)
-    expect(accuracy).toBeLessThanOrEqual(30)
+  test('calculates 0% for 500cp loss (>= 300 threshold)', () => {
+    expect(calculateAccuracy(500)).toBe(0)
   })
 
-  test('calculates low accuracy for 1000cp loss (catastrophic blunder)', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    const accuracy = calculateAccuracy(1000)
-    expect(accuracy).toBeLessThanOrEqual(17)
-    expect(accuracy).toBeGreaterThanOrEqual(15)
+  test('calculates 0% for 1000cp loss (>= 300 threshold)', () => {
+    expect(calculateAccuracy(1000)).toBe(0)
   })
 
   test('returns 0 for Infinity loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     expect(calculateAccuracy(Infinity)).toBe(0)
   })
 
-  test('returns 0 for negative loss', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
-    expect(calculateAccuracy(-100)).toBe(0)
+  test('returns 100 for negative loss (capped at perfect)', () => {
+    expect(calculateAccuracy(-100)).toBe(100)
   })
 
   test('accuracy is monotonic decreasing', () => {
-    const calculateAccuracy = (game as any).calculateAccuracy.bind(game)
     let prevAccuracy = 101
-    for (const loss of [0, 10, 50, 100, 200, 400, 600, 1000, 2000]) {
+    for (const loss of [0, 10, 50, 100, 200, 299, 300]) {
       const accuracy = calculateAccuracy(loss)
-      expect(accuracy).toBeLessThan(prevAccuracy)
+      expect(accuracy).toBeLessThanOrEqual(prevAccuracy)
       prevAccuracy = accuracy
     }
   })

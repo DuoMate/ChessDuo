@@ -166,16 +166,12 @@ export class GameState {
   }
 
   getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {
-    let human: PendingMoveInfo | null = null
-    let teammate: PendingMoveInfo | null = null
+    const currentPlayers = this._currentTeam === Team.WHITE
+      ? this.whitePlayers
+      : this.blackPlayers
 
-    for (const [player, pending] of this.pendingMoves) {
-      if (pending.isHuman) {
-        human = pending
-      } else {
-        teammate = pending
-      }
-    }
+    const human = this.pendingMoves.get(currentPlayers[0]) ?? null
+    const teammate = this.pendingMoves.get(currentPlayers[1]) ?? null
 
     return { human, teammate }
   }
@@ -198,6 +194,14 @@ export class GameState {
 
   setCurrentTeam(team: Team): void {
     this._currentTeam = team
+  }
+
+  resetBoard(fen: string): void {
+    const { Chess } = require('chess.js')
+    const newBoard = new Chess(fen)
+    this.board.load(fen)
+    const fenParts = fen.split(' ')
+    this._currentTeam = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
   }
 
   isTimerActive(): boolean {

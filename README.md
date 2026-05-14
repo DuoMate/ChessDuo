@@ -6,44 +6,7 @@ A real-time 2v2 chess game where teammates make simultaneous moves and compete a
 
 | Service | URL | Description | Config |
 |---------|-----|-------------|--------|
-| **Frontend** | https://chessduo-frontend.onrender.com | Next.js FE | `render.yaml` |
-| **Backend** | https://chessduo-bllo.onrender.com | Stockfish Server | `Dockerfile` |
-| **Database** | Supabase | Auth & Room Storage | `supabase/tables.sql` |
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 16 + TypeScript |
-| UI | Tailwind CSS + React |
-| Chess Board | cm-chessboard |
-| Chess Logic | chess.js |
-| Engine | Stockfish (server-side) |
-| Real-time | Supabase |
-| Auth | Supabase Auth |
-| Deployment | Render |
-
-## Deployment
-
-### Two Separate Render Services
-
-This project uses **two separate Render services** for BE and FE:
-
-#### 1. Backend (Stockfish Server)
-- **Service**: chessduo-bllo
-- **URL**: https://chessduo-bllo.onrender.com
-- **Config**: Uses `Dockerfile` in root (`buildContext: .`)
-- **Root**: `server/` directory
-- **How it works**: Docker builds the Stockfish server from `/server` folder
-
-```bash
-# Render auto-deploys on push to main/develop
-# Dockerfile handles: npm install, npm run build, Stockfish binary
-```
-
-#### 2. Frontend (Next.js App)
-- **Service**: chessduo-frontend
-- **URL**: https://chessduo-frontend.onrender.com
+| **Frontend** | https://chessduo-fe.onrender.com | Next.js FE | `render.yaml` |
 - **Config**: Uses `render.yaml` in root
 - **Root**: `/` (root directory)
 - **How it works**: Standard Next.js build + start
@@ -72,6 +35,22 @@ startCommand: npm start
 |----------|-------|
 | `PORT` | `3001` |
 
+## Features
+
+- **2v2 Chess**: Simultaneous team moves with parallel blind evaluation
+- **Online Multiplayer**: Supabase real-time sync with Broadcaster + Presence
+- **Coordinator Pattern**: Distributed move resolution, no single server
+- **Move Playback**: Click-to-replay move history with shadow moves
+- **Move Insights**: Heuristic analysis — move classification, engine comparison (3 free/account)
+- **Premium**: Freemium model — 3 free insights, then upgrade for unlimited
+- **Match History**: Per-player stats, sync rate, accuracy trends (`/history`)
+- **User Profiles**: Username editing, match stats overview (`/profile`)
+- **Auth**: Email/password signup with verification, anonymous guest play, logout
+- **6 Bot Difficulties**: 1000-2600 ELO via Stockfish server
+- **Supabase RLS**: Per-room access control with SECURITY DEFINER functions
+- **Rate Limiting**: In-memory per-endpoint rate limiting on API routes
+- **Auth Guard**: Next.js middleware protects `/game` route
+
 ## Local Development
 
 ```bash
@@ -87,6 +66,13 @@ cd server && npm run dev
 ```
 
 ## Game Modes
+
+### Accuracy Display
+- Shows **after WHITE turn resolves** (winner decided)
+- Displays **WHITE team** accuracy only (both players on WHITE)
+- Persists through entire BLACK turn
+- Clears when next WHITE turn starts
+- NEVER shows BLACK team accuracy
 
 ### Offline Mode
 - Play vs Bot teammate (AI)

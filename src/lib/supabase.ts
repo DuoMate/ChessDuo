@@ -22,17 +22,23 @@ export type Database = {
           id: string
           username: string
           avatar_url: string | null
+          insights_reveals_used: number
+          is_premium: boolean
           created_at: string
         }
         Insert: {
           id: string
           username: string
           avatar_url?: string | null
+          insights_reveals_used?: number
+          is_premium?: boolean
         }
         Update: {
           id?: string
           username?: string
           avatar_url?: string | null
+          insights_reveals_used?: number
+          is_premium?: boolean
         }
       }
       rooms: {
@@ -72,6 +78,41 @@ export type Database = {
         }
         Update: {
           status?: 'waiting' | 'ready' | 'locked'
+        }
+      }
+      completed_games: {
+        Row: {
+          id: string
+          room_id: string | null
+          winner: 'WHITE' | 'BLACK' | 'DRAW'
+          game_result: string
+          game_over_reason: string | null
+          white_moves: number
+          white_sync_rate: number
+          white_conflicts: number
+          player1_accuracy: number
+          player2_accuracy: number
+          total_moves: number
+          is_online: boolean
+          move_comparisons: unknown
+          played_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id?: string | null
+          winner: 'WHITE' | 'BLACK' | 'DRAW'
+          game_result: string
+          game_over_reason?: string | null
+          white_moves?: number
+          white_sync_rate?: number
+          white_conflicts?: number
+          player1_accuracy?: number
+          player2_accuracy?: number
+          total_moves?: number
+          is_online?: boolean
+          move_comparisons?: unknown
+          played_at?: string
         }
       }
     }

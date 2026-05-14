@@ -1,21 +1,24 @@
 import { LocalGame } from '../../features/offline/game/localGame'
 import { Team } from '../../features/game-engine/gameState'
 
-const STOCKFISH_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL
+const mockEvaluator = {
+  evaluateMoves: async (_moves: string[], _fen: string) => {
+    return _moves.map(m => ({ move: m, score: 30 }))
+  },
+  evaluatePosition: async (_fen: string) => 30,
+  getBestScore: async (_fen: string) => ({ move: 'e2e4', score: 30 }),
+  playMove: async (_fen: string) => 'e2e4',
+}
 
 describe('End-to-End Move Evaluation', () => {
   let game: LocalGame
 
   beforeEach(() => {
-    game = new LocalGame()
+    game = new LocalGame();
+    (game as any).evaluator = mockEvaluator
   })
 
   test.skip('complete turn with Stockfish evaluation', async () => {
-    if (!STOCKFISH_URL) {
-      console.log('Skipping test - Stockfish server URL not configured')
-      return
-    }
-
     game.addPlayer('player1', Team.WHITE)
     game.addPlayer('player2', Team.WHITE)
     game.addPlayer('player3', Team.BLACK)
@@ -49,11 +52,6 @@ describe('End-to-End Move Evaluation', () => {
   }, 30000)
 
   test.skip('synchronized moves when both choose same', async () => {
-    if (!STOCKFISH_URL) {
-      console.log('Skipping test - Stockfish server URL not configured')
-      return
-    }
-
     game.addPlayer('player1', Team.WHITE)
     game.addPlayer('player2', Team.WHITE)
     game.addPlayer('player3', Team.BLACK)

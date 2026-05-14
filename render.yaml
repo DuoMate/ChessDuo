@@ -1,7 +1,7 @@
 # Render configuration for ChessDuo Frontend (Next.js)
 services:
   - type: web
-    name: chessduo-frontend
+    name: chessduo-fe
     env: node
     rootDirectory: /
     buildCommand: npm install && npm run build

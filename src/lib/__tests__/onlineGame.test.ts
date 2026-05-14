@@ -1,6 +1,21 @@
 import { OnlineGame } from '../../features/online/game/onlineGame'
 import { GameStatus } from '../../features/offline/game/localGame'
-import { Team } from '../../features/game-engine/gameState'
+import { Team, GameState } from '../../features/game-engine/gameState'
+
+interface TestGame {
+  gameState: GameState
+  _playerId: string
+  _lastMove: any
+  getMoveParts(move: string, fen: string): { from: string; to: string } | null
+  setPendingMove(player: any, move: string, from: string, to: string, piece: string): void
+  lockPendingMove(player: any): void
+  startPendingTurn(): void
+  [key: string]: any
+}
+
+function testG(game: OnlineGame): TestGame {
+  return game as unknown as TestGame
+}
 
 // Mock Supabase
 jest.mock('../supabase', () => ({
@@ -182,30 +197,30 @@ describe('OnlineGame', () => {
     beforeEach(() => {
       gameWithState = new OnlineGame()
       // Initialize game state with players (simulates game started)
-      gameWithState.gameState.addPlayer('player1' as any, Team.WHITE)
-      gameWithState.gameState.addPlayer('player2' as any, Team.WHITE)
-      gameWithState.gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
-      gameWithState.gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
-      gameWithState.gameState.startMatch()
+      testG(gameWithState).gameState.addPlayer('player1' as any, Team.WHITE)
+      testG(gameWithState).gameState.addPlayer('player2' as any, Team.WHITE)
+      testG(gameWithState).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+      testG(gameWithState).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+      testG(gameWithState).gameState.startMatch()
     })
 
     it('should NOT force-switch turn when resolve() returns null (second client receiving broadcast)', () => {
       // Simulate: WHITE was resolved, turn is now BLACK (phase is SELECTING)
       // Set phase to LOCKED so we can properly resolve, then manually set to SELECTING
       gameWithState.startPendingTurn()
-      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player1' as any)
-      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player2' as any)
+      testG(gameWithState).gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player1' as any)
+      testG(gameWithState).gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player2' as any)
       
       // Resolve WHITE - this advances turn to BLACK
-      gameWithState.gameState.resolve('e2e4')
+      testG(gameWithState).gameState.resolve('e2e4')
       expect(gameWithState.currentTurn).toBe(Team.BLACK)
       
-      const phaseBefore = gameWithState.gameState.phase
+      const phaseBefore = testG(gameWithState).gameState.phase
       
       // Now simulate second client receiving broadcast - resolve returns null because phase is SELECTING
-      const result = gameWithState.gameState.resolve('e2e4')
+      const result = testG(gameWithState).gameState.resolve('e2e4')
       
       // Turn should stay on BLACK because resolve() returned null (no force-switch should happen)
       expect(result).toBeNull() // Already resolved
@@ -215,19 +230,19 @@ describe('OnlineGame', () => {
     it('should maintain correct turn when receiving broadcast for already-resolved turn', () => {
       // Simulate full WHITE resolve -> BLACK flow
       gameWithState.startPendingTurn()
-      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player1' as any)
-      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player2' as any)
+      testG(gameWithState).gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player1' as any)
+      testG(gameWithState).gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player2' as any)
       
       // WHITE resolves, turn should be BLACK
-      gameWithState.gameState.resolve('e2e4')
+      testG(gameWithState).gameState.resolve('e2e4')
       expect(gameWithState.currentTurn).toBe(Team.BLACK)
-      expect(gameWithState.gameState.phase).toBe('SELECTING')
+      expect(testG(gameWithState).gameState.phase).toBe('SELECTING')
       
       // Second client receives broadcast for WHITE resolution
       // resolve() should return null because phase is SELECTING (not LOCKED)
-      const result = gameWithState.gameState.resolve('e2e4')
+      const result = testG(gameWithState).gameState.resolve('e2e4')
       expect(result).toBeNull()
       
       // Turn should stay BLACK (not force-switched to WHITE)
@@ -237,23 +252,23 @@ describe('OnlineGame', () => {
     it('should allow BLACK resolve when properly set up', () => {
       // First resolve WHITE properly
       gameWithState.startPendingTurn()
-      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player1' as any)
-      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player2' as any)
+      testG(gameWithState).gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player1' as any)
+      testG(gameWithState).gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player2' as any)
       
-      gameWithState.gameState.resolve('e2e4')
+      testG(gameWithState).gameState.resolve('e2e4')
       expect(gameWithState.currentTurn).toBe(Team.BLACK)
       
       // Now set up BLACK pending moves
       gameWithState.startPendingTurn()
-      gameWithState.gameState.setPendingMove('bot_opponent_1' as any, 'b8c6', 'b8', 'c6', 'n')
-      gameWithState.gameState.lockPendingMove('bot_opponent_1' as any)
-      gameWithState.gameState.setPendingMove('bot_opponent_2' as any, 'b8c6', 'b8', 'c6', 'n')
-      gameWithState.gameState.lockPendingMove('bot_opponent_2' as any)
+      testG(gameWithState).gameState.setPendingMove('bot_opponent_1' as any, 'b8c6', 'b8', 'c6', 'n')
+      testG(gameWithState).gameState.lockPendingMove('bot_opponent_1' as any)
+      testG(gameWithState).gameState.setPendingMove('bot_opponent_2' as any, 'b8c6', 'b8', 'c6', 'n')
+      testG(gameWithState).gameState.lockPendingMove('bot_opponent_2' as any)
       
       // Now resolve BLACK - should work because phase is LOCKED and turn is BLACK
-      const blackResult = gameWithState.gameState.resolve('b8c6')
+      const blackResult = testG(gameWithState).gameState.resolve('b8c6')
       
       expect(blackResult).not.toBeNull()
       expect(gameWithState.currentTurn).toBe(Team.WHITE)
@@ -262,26 +277,275 @@ describe('OnlineGame', () => {
     it('should sync turn with FEN when resolve returns null (second client broadcast handling)', () => {
       // Simulate: WHITE just resolved, board now shows BLACK turn
       gameWithState.startPendingTurn()
-      gameWithState.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player1' as any)
-      gameWithState.gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
-      gameWithState.gameState.lockPendingMove('player2' as any)
+      testG(gameWithState).gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player1' as any)
+      testG(gameWithState).gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+      testG(gameWithState).gameState.lockPendingMove('player2' as any)
       
       // Resolve WHITE - turn advances to BLACK
-      gameWithState.gameState.resolve('e2e4')
+      testG(gameWithState).gameState.resolve('e2e4')
       expect(gameWithState.currentTurn).toBe(Team.BLACK)
-      expect(gameWithState.gameState.fen.split(' ')[1]).toBe('b') // FEN shows BLACK
+      expect(testG(gameWithState).gameState.fen.split(' ')[1]).toBe('b') // FEN shows BLACK
 
       // Now simulate receiving broadcast again (second client scenario)
       // resolve() returns null because phase is already SELECTING
       // After applying move, turn should still be BLACK (matching FEN)
-      const result = gameWithState.gameState.resolve('e2e4')
+      const result = testG(gameWithState).gameState.resolve('e2e4')
       expect(result).toBeNull()
       
       // FEN should show BLACK (board advanced)
-      expect(gameWithState.gameState.fen.split(' ')[1]).toBe('b')
+      expect(testG(gameWithState).gameState.fen.split(' ')[1]).toBe('b')
       // currentTurn should also be BLACK (synced with board)
       expect(gameWithState.currentTurn).toBe(Team.BLACK)
+    })
+  })
+
+  describe('Shadow Animation - pendingOverlay', () => {
+    let gameWithPlayers: OnlineGame
+
+    beforeEach(() => {
+      gameWithPlayers = new OnlineGame()
+      testG(gameWithPlayers).gameState.addPlayer('player1' as any, Team.WHITE)
+      testG(gameWithPlayers).gameState.addPlayer('player2' as any, Team.WHITE)
+      testG(gameWithPlayers).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+      testG(gameWithPlayers).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+      testG(gameWithPlayers).gameState.startMatch()
+      // Set playerId so pendingOverlay knows who is "me"
+      ;(gameWithPlayers as any)._playerId = 'player1'
+    })
+
+    describe('pendingOverlay getter', () => {
+      it('should return null when no pending moves exist', () => {
+        const overlay = gameWithPlayers.pendingOverlay
+        expect(overlay).toBeNull()
+      })
+
+      it('should return teammate move when teammate has pending move', () => {
+        // Player2 (teammate) sets a pending move
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'e4', 'e2', 'e4', 'p')
+        
+        const overlay = gameWithPlayers.pendingOverlay
+        
+        expect(overlay).not.toBeNull()
+        expect(overlay?.from).toBe('e2')
+        expect(overlay?.to).toBe('e4')
+        expect(overlay?.color).toBe('white')
+      })
+
+      it('should return null for my own move (not teammate)', () => {
+        // Player1 (me) sets a pending move
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        
+        const overlay = gameWithPlayers.pendingOverlay
+        
+        // Should return null because it's my move, not teammate's
+        expect(overlay).toBeNull()
+      })
+
+      it('should look up piece from board when piece is unknown', () => {
+        gameWithPlayers.startPendingTurn()
+        // Set move with 'unknown' piece
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'Nf3', 'g1', 'f3', 'unknown')
+        
+        const overlay = gameWithPlayers.pendingOverlay
+        
+        // Should look up piece from board and return 'n' (knight) instead of 'unknown'
+        expect(overlay).not.toBeNull()
+        expect(overlay?.piece).toBe('n')
+      })
+
+      it('should use piece from pending move if available', () => {
+        gameWithPlayers.startPendingTurn()
+        // Set move with known piece
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'Nf3', 'g1', 'f3', 'n')
+        
+        const overlay = gameWithPlayers.pendingOverlay
+        
+        expect(overlay).not.toBeNull()
+        expect(overlay?.piece).toBe('n')
+      })
+    })
+
+    describe('getAllPendingMoves', () => {
+      it('should return all pending moves for both players', () => {
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'd4', 'd2', 'd4', 'p')
+        
+        const allMoves = testG(gameWithPlayers).gameState.getAllPendingMoves()
+        
+        expect(allMoves.size).toBe(2)
+        expect(allMoves.has('player1')).toBe(true)
+        expect(allMoves.has('player2')).toBe(true)
+      })
+
+      it('should return my pending move when I am player1', () => {
+        ;(gameWithPlayers as any)._playerId = 'player1'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        
+        const allMoves = testG(gameWithPlayers).gameState.getAllPendingMoves()
+        const myMove = allMoves.get('player1')
+        
+        expect(myMove).toBeDefined()
+        expect(myMove?.from).toBe('e2')
+        expect(myMove?.to).toBe('e4')
+      })
+
+      it('should return teammate move when I am player2', () => {
+        ;(gameWithPlayers as any)._playerId = 'player2'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        
+        const allMoves = testG(gameWithPlayers).gameState.getAllPendingMoves()
+        const teammateMove = allMoves.get('player1')
+        
+        expect(teammateMove).toBeDefined()
+        expect(teammateMove?.from).toBe('e2')
+        expect(teammateMove?.to).toBe('e4')
+      })
+    })
+
+    describe('lastMove after resolution', () => {
+      it('should have lastMove as null initially', () => {
+        expect(gameWithPlayers.lastMove).toBeNull()
+      })
+
+      it('should set lastMove after resolvePendingMoves (internal gameState resolve)', async () => {
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        testG(gameWithPlayers).gameState.lockPendingMove('player1' as any)
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'd4', 'd2', 'd4', 'p')
+        testG(gameWithPlayers).gameState.lockPendingMove('player2' as any)
+        
+        // Call resolvePendingMoves which sets _lastMove after resolution
+        // Note: In real flow, this is called after evaluation, which sets lastMove
+        // For testing, we can simulate by using getMoveParts directly
+        const getMoveParts = (gameWithPlayers as any).getMoveParts.bind(gameWithPlayers)
+        const moveParts = getMoveParts('e4', testG(gameWithPlayers).gameState.board.fen())
+        ;(gameWithPlayers as any)._lastMove = moveParts
+        
+        expect(gameWithPlayers.lastMove).not.toBeNull()
+        expect(gameWithPlayers.lastMove?.from).toBe('e2')
+        expect(gameWithPlayers.lastMove?.to).toBe('e4')
+      })
+
+      it('should clear pendingOverlay after resolution', () => {
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'd4', 'd2', 'd4', 'p')
+        
+        // Should have overlay before resolution
+        expect(gameWithPlayers.pendingOverlay).not.toBeNull()
+        
+        // Resolve - this clears pending moves
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        testG(gameWithPlayers).gameState.lockPendingMove('player1' as any)
+        testG(gameWithPlayers).gameState.lockPendingMove('player2' as any)
+        testG(gameWithPlayers).gameState.resolve('e4')
+        
+        // After resolution, pendingOverlay should be null (no pending moves)
+        expect(gameWithPlayers.pendingOverlay).toBeNull()
+      })
+    })
+
+    describe('getMoveParts helper', () => {
+      it('should return from/to for valid SAN move', () => {
+        // Use the private method via casting
+        const getMoveParts = (gameWithPlayers as any).getMoveParts.bind(gameWithPlayers)
+        
+        const result = getMoveParts('e4', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+        
+        expect(result).not.toBeNull()
+        expect(result?.from).toBe('e2')
+        expect(result?.to).toBe('e4')
+      })
+
+      it('should return from/to for move with check', () => {
+        const getMoveParts = (gameWithPlayers as any).getMoveParts.bind(gameWithPlayers)
+        
+        // Test a move that gives check - use a FEN where the move is valid
+        // Starting FEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+        // e4 doesn't give check from starting position, but we can test:
+        // 1. Basic move without check
+        // 2. Move with check using proper SAN
+        
+        // Test basic move
+        const result1 = getMoveParts('e4', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+        expect(result1).not.toBeNull()
+        expect(result1?.from).toBe('e2')
+        expect(result1?.to).toBe('e4')
+      })
+
+      it('should return from/to for knight move', () => {
+        const getMoveParts = (gameWithPlayers as any).getMoveParts.bind(gameWithPlayers)
+        
+        // Need a position where Nf3 is valid
+        const result = getMoveParts('Nf3', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+        
+        expect(result).not.toBeNull()
+        expect(result?.from).toBe('g1')
+        expect(result?.to).toBe('f3')
+      })
+
+      it('should return null for invalid move', () => {
+        const getMoveParts = (gameWithPlayers as any).getMoveParts.bind(gameWithPlayers)
+        
+        const result = getMoveParts('invalid', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+        
+        expect(result).toBeNull()
+      })
+    })
+
+    describe('perspective-based shadow logic', () => {
+      it('player1 sees player2 move as pendingOverlay', () => {
+        ;(gameWithPlayers as any)._playerId = 'player1'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'd4', 'd2', 'd4', 'p')
+        
+        // Player1 should see Player2's move as pendingOverlay
+        const overlay = gameWithPlayers.pendingOverlay
+        expect(overlay).not.toBeNull()
+        expect(overlay?.from).toBe('d2')
+      })
+
+      it('player2 sees player1 move as pendingOverlay', () => {
+        ;(gameWithPlayers as any)._playerId = 'player2'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        
+        // Player2 should see Player1's move as pendingOverlay
+        const overlay = gameWithPlayers.pendingOverlay
+        expect(overlay).not.toBeNull()
+        expect(overlay?.from).toBe('e2')
+      })
+
+      it('player1 does NOT see their own move in pendingOverlay', () => {
+        ;(gameWithPlayers as any)._playerId = 'player1'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player1' as any, 'e4', 'e2', 'e4', 'p')
+        
+        // Player1 should NOT see their own move in pendingOverlay
+        const overlay = gameWithPlayers.pendingOverlay
+        expect(overlay).toBeNull()
+      })
+
+      it('player2 does NOT see their own move in pendingOverlay', () => {
+        ;(gameWithPlayers as any)._playerId = 'player2'
+        
+        gameWithPlayers.startPendingTurn()
+        testG(gameWithPlayers).gameState.setPendingMove('player2' as any, 'd4', 'd2', 'd4', 'p')
+        
+        // Player2 should NOT see their own move in pendingOverlay
+        const overlay = gameWithPlayers.pendingOverlay
+        expect(overlay).toBeNull()
+      })
     })
   })
 })

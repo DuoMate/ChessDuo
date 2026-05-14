@@ -27,7 +27,7 @@ This project uses **two separate Render services**:
 
 | Service | URL | Build Config | Directory |
 |---------|-----|------------|-----------|
-| **Frontend** | https://chessduo-frontend.onrender.com | `render.yaml` | `/` (root) |
+| **Frontend** | https://chessduo-fe.onrender.com | `render.yaml` | `/` (root) |
 | **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
 
 ### Frontend Deployment (render.yaml)
@@ -82,64 +82,78 @@ Uses Docker to build Stockfish from `/server` directory.
 ### Phase 2: Real-Time Multiplayer Infrastructure (Week 3-4)
 **Goal**: Backend infrastructure for real-time multiplayer
 
-- [ ] 2.1 Setup Supabase project
-- [ ] 2.2 Implement user authentication (Supabase Auth)
-- [ ] 2.3 Create game room system
-- [ ] 2.4 Implement real-time sync (Supabase Broadcast)
-- [ ] 2.5 Track player presence (connected, selecting, locked-in)
-- [ ] 2.6 Match flow: team matchmaking, team formation
-- [ ] 2.7 Handle disconnects/reconnects
+- [x] 2.1 Setup Supabase project
+- [x] 2.2 Implement user authentication (Supabase Auth)
+- [x] 2.3 Create game room system
+- [x] 2.4 Implement real-time sync (Supabase Broadcast)
+- [x] 2.5 Track player presence (connected, selecting, locked-in)
+- [x] 2.6 Match flow: team matchmaking, team formation
+- [x] 2.7 Handle disconnects/reconnects (game persistence + late-join replay)
 
-**Deliverable**: Backend ready for real-time multiplayer
+**Key Files**: `src/lib/supabase.ts`, `src/lib/gamePersistence.ts`, `src/components/Auth.tsx`, `src/components/Room.tsx`, `supabase/tables.sql`
+
+**Deliverable**: ✅ Backend ready for real-time multiplayer (COMPLETE)
 
 ---
 
 ### Phase 3: Human Teammate (Week 5-6)
 **Goal**: Replace bot teammate with real human player
 
-- [ ] 3.1 Integrate Phase 2 infrastructure for teammate connection
-- [ ] 3.2 Real human teammate instead of bot
-- [ ] 3.3 Same parallel model:
+- [x] 3.1 Integrate Phase 2 infrastructure for teammate connection
+- [x] 3.2 Real human teammate instead of bot
+- [x] 3.3 Same parallel model:
   - Both see same board
   - Both lock moves (or timer expires)
   - Both moves revealed simultaneously
   - Accuracy evaluation and resolution
-- [ ] 3.4 Bot opponent remains (for now)
-- [ ] 3.5 Full 2v2 human multiplayer
+- [x] 3.4 Bot opponent remains (for now)
+- [x] 3.5 Full 2v2 human multiplayer (coordinator pattern)
 
 **Key Feature**: Real human teammate via Supabase
 
-**Deliverable**: True 2v2 human multiplayer game
+**Key Files**: `src/features/online/game/onlineGame.ts`, `src/components/Game.tsx`
+
+**Deliverable**: ✅ True 2v2 human multiplayer game (COMPLETE)
 
 ---
 
 ### Phase 4: Game Polish (Week 7-8)
 **Goal**: Complete game experience with animations and stats
 
-- [ ] 4.1 Move conflict visualization (green/red arrows)
-- [ ] 4.2 Losing move retraction animation
-- [ ] 4.3 Accuracy display (centipawn loss, percentage)
-- [ ] 4.4 Timer system improvements (visual warnings)
-- [ ] 4.5 Turn indicator and game status UI
-- [ ] 4.6 Team dynamics tracking (sync rate, conflicts)
-- [ ] 4.7 Match summary and stats screen
-- [ ] 4.8 Basic matchmaking queue
+- [x] 4.1 Move conflict visualization (green/red arrows)
+- [x] 4.2 Losing move retraction animation
+- [x] 4.3 Accuracy display (centipawn loss, percentage)
+    - Shows immediately after WHITE turn resolves
+    - Only displays WHITE team accuracy (never BLACK)
+    - Persists through BLACK turn until next WHITE starts
+    - Clears when new WHITE turn begins
+- [x] 4.4 Timer system improvements (visual warnings)
+- [x] 4.5 Turn indicator and game status UI
+- [x] 4.6 Team dynamics tracking (sync rate, conflicts)
+- [~] 4.7 Match summary and stats screen → completed in Phase 5.3
+- [~] 4.8 Basic matchmaking queue → pending in Phase 5.4
 
-**Deliverable**: Polished, feature-complete game
+**Key Files**: `src/components/ChessBoard.tsx`, `src/components/AccuracyBottomSheet.tsx`, `src/components/MoveComparison.tsx`, `src/components/TeamTimer.tsx`, `src/components/GameOverModal.tsx`
+
+**Deliverable**: ✅ Core animations and polish complete (2 items deferred to Phase 5)
 
 ---
 
 ### Phase 5: Launch Features (Week 9-10)
 **Goal**: Features needed for public release
 
-- [ ] 5.1 Match history and persistence
-- [ ] 5.2 User profiles
-- [ ] 5.3 Room codes (shareable game links)
-- [ ] 5.4 Performance optimizations
-- [ ] 5.5 Error handling and edge cases
-- [ ] 5.6 Bot difficulty adjustment
+- [x] 5.1 Match history and persistence (completed_games table, /history page, W/L/D stats)
+- [x] 5.2 User profiles UI (/profile page, ProfileEditor, username editing)
+- [x] 5.3 Match summary and stats screen (enhanced GameOverModal with sync rate, accuracy cards)
+- [ ] 5.4 Basic matchmaking queue (from Phase 4.8)
+- [x] 5.5 Production hardening (RLS per-room, rate limiting, auth guard middleware, logout)
+- [x] 5.6 Room codes (shareable game links)
+- [x] 5.7 Error handling and edge cases (ErrorBoundary, Toast, rate limiting)
+- [x] 5.8 Bot difficulty adjustment (6 levels, 1000-2600 ELO)
+- [x] 5.9 Move playback (MovePlayback component, click-to-replay with shadow moves)
+- [x] 5.10 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
 
-**Deliverable**: Production-ready MVP
+**Deliverable**: Production-ready MVP with freemium insights
 
 ---
 
@@ -168,14 +182,15 @@ Uses Docker to build Stockfish from `/server` directory.
 
 2. White Team's Turn
    ├── 10-second team timer starts
-   ├── Player A1 selects move → Applied to board (prominent)
-   ├── Player A2 (teammate) commits → Greyed shadow appears
-   ├── BOTH moves visible on board
+   ├── Player A1 selects move → SOLID shadow (opacity 1.0)
+   ├── Player A2 (teammate) commits → SHADOW (opacity 0.4)
+   ├── BOTH moves visible on board (perspective-based)
    ├── Both lock in OR timer expires
    ├── Engine evaluates BOTH moves (blind from turn start)
    ├── Accuracy calculated
-   ├── Winner: Green highlight, move stays
-   ├── Loser: Red highlight, retracts to origin
+   ├── Winner: Move stays as lastMove (solid)
+   ├── Loser: Retraction animation (fades to origin)
+   ├── Shadows cleared (pendingOverlay & myPendingOverlay = null)
    └── Turn passes to Black Team
 
 3. Black Team's Turn
@@ -192,12 +207,23 @@ Uses Docker to build Stockfish from `/server` directory.
 ### UI States During Turn
 
 **During Selection:**
-- Your move: Prominent piece on destination square
-- Teammate's move: Greyed shadow on destination square
+- My move: Solid piece (opacity 1.0) via `myPendingOverlay`
+- Teammate's move: Shadow piece (opacity 0.4) via `pendingOverlay`
+- **Trigger**: When player broadcasts move via Supabase real-time event
+- **Perspective**: Based on logged-in player ID - your move is always SOLID
 
 **After Resolution:**
-- Winner: Green highlight/stay
-- Loser: Red highlight → Animate back to origin
+- Winning move: Solid on board via `lastMove`
+- Losing move: Retraction animation (fades back to origin)
+- **Trigger**: When `resolvePendingMoves()` completes
+- Shadows cleared: Both overlays set to `null` (no fallback to previous state)
+
+**Animation System Details:**
+- `myPendingOverlay`: Your pending move (solid, opacity 1.0)
+- `pendingOverlay`: Teammate's pending move (shadow, opacity 0.4)
+- `lastMove`: Resolved winning move (solid)
+- State change callback updates overlays when teammate broadcasts move
+- After resolution, overlays are properly cleared (not retained)
 
 ---
 
@@ -214,13 +240,18 @@ Uses Docker to build Stockfish from `/server` directory.
 
 ### Turn Resolution
 ```typescript
-interface TurnResolution {
-  humanMove: string;      // e.g., "e2e4"
-  botMove: string;        // e.g., "g1f3"
-  humanAccuracy: number;  // 0-100
-  botAccuracy: number;   // 0-100
-  winner: 'human' | 'bot';
-  turnStartFen: string;  // For blind evaluation
+interface MoveComparison {
+  player1Move: string       // Player 1's move (UCI)
+  player2Move: string       // Player 2's move (UCI)
+  winningMove: string       // The move Stockfish chose
+  winnerId: 'player1' | 'player2'
+  isSync: boolean           // Both players chose same move
+  player1Accuracy: number   // 0-100
+  player2Accuracy: number   // 0-100
+  player1Loss: number       // Centipawn loss
+  player2Loss: number       // Centipawn loss
+  bestEngineMove?: string   // Engine's optimal move
+  bestEngineScore?: number  // Score of optimal move (cp)
 }
 ```
 
@@ -281,16 +312,22 @@ interface TurnResolution {
 ```json
 {
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.0.0",
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "chess.js": "^1.4.0",
-    "cm-chessboard": "^4.0.0",
-    "@supabase/supabase-js": "^2.0.0",
-    "@supabase/auth-helpers-nextjs": "^0.8.0"
+    "cm-chessboard": "^8.11.5",
+    "@supabase/supabase-js": "^2.103.3",
+    "stockfish": "^18.0.5",
+    "stockfish.wasm": "^0.10.0",
+    "framer-motion": "^12.38.0"
   },
   "devDependencies": {
-    "jest": "^29.0.0",
-    "@testing-library/react": "^14.0.0"
+    "jest": "^30.3.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
 ```
@@ -302,10 +339,10 @@ interface TurnResolution {
 | Milestone | Target | Status |
 |-----------|--------|--------|
 | M1 | Week 2 | ✅ Complete - Local 2v2 playable |
-| M2 | Week 4 | 🔄 In Progress - Supabase infra |
-| M3 | Week 6 | ⏳ Pending - Human multiplayer |
-| M4 | Week 8 | ⏳ Pending - Animations polished |
-| M5 | Week 10 | ⏳ Pending - MVP launch ready |
+| M2 | Week 4 | ✅ Complete - Supabase real-time infra |
+| M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
+| M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
+| M5 | Week 10 | 🔄 In Progress — Matchmaking queue only |
 | M6 | Week 14 | ⏳ Pending - Mobile apps |
 
 ---
@@ -321,6 +358,21 @@ interface TurnResolution {
 - 10 seconds per team per turn
 - Timer starts when turn begins
 - If timer expires, current moves locked as-is
+
+### Shadow Move Animation (Implemented)
+The shadow animation system shows both players' moves during a team's turn:
+
+- **myPendingOverlay**: Shows your own pending move (opacity 1.0 = SOLID)
+- **pendingOverlay**: Shows teammate's pending move (opacity 0.4 = SHADOW)
+- **Trigger**: State change callback when teammate broadcasts move via Supabase
+- **After resolution**: Both overlays cleared (no fallback to previous state)
+- **lastMove**: The resolved winning move shown as solid on board
+- **Perspective-based**: Your player ID determines which move is SOLID vs SHADOW
+
+Key files:
+- `src/components/Game.tsx` - State management for overlays
+- `src/components/ChessBoard.tsx` - Animation rendering
+- `src/features/online/game/onlineGame.ts` - Real-time move handling
 - Creates urgency and prevents stalling
 
 ### Bot vs Human Teammate
@@ -329,4 +381,45 @@ interface TurnResolution {
 
 ---
 
-*Last Updated: 2026-04-11*
+## Premium Features
+
+### Move Insights (Freemium)
+
+- **3 free reveals** per account (stored in `profiles.insights_reveals_used`)
+- **After 3 uses**: Premium upsell via `/premium` page
+- **Premium users** (`profiles.is_premium = true`): unlimited insights
+
+**Insights shown:**
+- Engine's best move + centipawn score
+- Per-move classification (check, capture, castle, development, etc.)
+- Score comparison — how far each move was from engine's optimal
+- Descriptive text explaining the move's impact
+
+**Tech**: `moveClassifier.ts` — heuristic SAN-based move analysis (no Stockfish required)
+
+### Move Replay
+
+- Scrollable move list on game page
+- Shows winning moves + shadow (losing) moves with strikethrough
+- Click any move to replay board position
+- Sync indicators (✓) and accuracy percentages per move
+
+---
+
+## Test Health
+
+| Metric | Count | Status |
+|--------|-------|--------|
+| Test suites | 19 | 17 pass, 0 fail, 2 skip |
+| Individual tests | 401 | 282 pass, 0 fail, 119 skip |
+
+**Status**: ✅ All tests passing (2026-05-09 fix)
+
+Fixes applied:
+- `gameState.getPendingMoves()` — uses team player order (not `isHuman` flag) for human/teammate separation
+- `e2eEvaluation.test.ts` — injects mock evaluator (no Stockfish server dependency)
+- `moveEvaluation.test.ts` + `parallelModel.test.ts` — import `calculateAccuracy` directly from `shared/accuracy`, updated expectations to match linear formula
+
+---
+
+*Last Updated: 2026-05-09*

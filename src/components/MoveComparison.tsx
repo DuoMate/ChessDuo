@@ -2,14 +2,16 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoveComparison } from '@/features/offline/game/localGame'
+import { InsightsGate } from './InsightsGate'
 
 interface MoveComparisonProps {
   comparison: MoveComparison | null
   isVisible: boolean
   onAnimationComplete?: () => void
+  playerId?: string | null
 }
 
-export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete }: MoveComparisonProps) {
+export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete, playerId }: MoveComparisonProps) {
   const humanAccuracy = comparison?.player1Accuracy ?? 0
   const teammateAccuracy = comparison?.player2Accuracy ?? 0
   const humanWon = comparison?.winnerId === 'player1'
@@ -137,6 +139,22 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                 <span>You: {comparison.player1Loss}cp | Bot: {comparison.player2Loss}cp</span>
               </div>
             </div>
+
+            {playerId && (
+              <InsightsGate
+                playerId={playerId}
+                player1Move={comparison.player1Move}
+                player2Move={comparison.player2Move}
+                player1Accuracy={comparison.player1Accuracy}
+                player2Accuracy={comparison.player2Accuracy}
+                player1Loss={comparison.player1Loss}
+                player2Loss={comparison.player2Loss}
+                isSync={comparison.isSync}
+                winnerId={comparison.winnerId as 'player1' | 'player2'}
+                bestEngineMove={(comparison as any).bestEngineMove}
+                bestEngineScore={(comparison as any).bestEngineScore}
+              />
+            )}
           </div>
         </motion.div>
       )}

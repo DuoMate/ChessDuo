@@ -9,11 +9,22 @@ import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
+import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
+import { GameOverModal } from './GameOverModal'
+import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
+import { GameLoading } from './GameLoading'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
+import { saveCompletedGame } from '@/lib/matchHistory'
+import { MovePlayback, MoveEntry } from './MovePlayback'
+import { SlideOver } from './SlideOver'
+import { ProfilePanel } from './ProfilePanel'
+import { HistoryPanel } from './HistoryPanel'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// ============================================================
 interface GameProps {
   level?: number
   roomCode?: string
@@ -21,45 +32,6 @@ interface GameProps {
   roomId?: string
   team?: 'WHITE' | 'BLACK'
   playerId?: string
-}
-
-function normalizeUci(uci: string): string {
-  return uci.replace(/-/g, '')
-}
-
-function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiece): string {
-  const chess = new Chess(fen)
-  const moves = chess.moves({ verbose: true })
-  
-  const normalized = normalizeUci(uciMove)
-  const from = normalized.substring(0, 2)
-  const to = normalized.substring(2, 4)
-  
-  for (const move of moves) {
-    if (move.from === from && move.to === to) {
-      if (promotion) {
-        return `${from}${to}=${promotion.toUpperCase()}`
-      }
-      return move.san
-    }
-  }
-  
-  throw new Error(`uciToSan: Move ${uciMove} not found in legal moves from position ${fen}`)
-}
-
-function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
-  const normalized = normalizeUci(uciMove)
-  const from = normalized.substring(0, 2)
-  const to = normalized.substring(2, 4)
-  const chess = new Chess(fen)
-  const moves = chess.moves({ verbose: true })
-  const move = moves.find(m => m.from === from && m.to === to)
-  
-  if (move) {
-    const piece = move.piece || chess.get(from as any)?.type || ''
-    return { from, to, piece }
-  }
-  return null
 }
 
 interface GameState {
@@ -77,13 +49,12 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
-  moveComparison: MoveComparison | null
-  whiteTeamComparison: MoveComparison | null
   timerSeconds: number
   timerActive: boolean
   pendingOverlay: PendingOverlay | null
+  myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
-  showResolution: boolean
+  isLoading: boolean
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -200,14 +171,89 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    moveComparison: null,
-    whiteTeamComparison: null,
     timerSeconds: 10,
     timerActive: false,
     pendingOverlay: null,
+    myPendingOverlay: null,
     highlightSquares: null,
-    showResolution: false
+    isLoading: true
   })
+
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+  const prevTurnRef = useRef<Team | null>(null)
+  const gameSavedRef = useRef(false)
+  const moveHistoryRef = useRef<MoveEntry[]>([])
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
+  const [playbackFen, setPlaybackFen] = useState<string | null>(null)
+  const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
+
+  // Update sound engine when setting changes
+
+  // Update sound engine when setting changes
+  useEffect(() => {
+    setSoundEnabled(soundEnabled)
+  }, [soundEnabled])
+
+  useEffect(() => {
+    if (gameState.status !== GameStatus.GAME_OVER) return
+    if (gameSavedRef.current) return
+
+    const g = isOnline ? onlineGameRef.current : game
+    if (!g) return
+
+    let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
+    let result = 'Game Over'
+    let reason: string | null = null
+    let movesPlayed = 0
+    let syncRate = 0
+    let conflicts = 0
+    let p1Acc = 0
+    let p2Acc = 0
+
+    if (isOnline) {
+      result = g.getResult()
+      reason = g.getGameOverReason()
+      if (result.includes('White wins')) winner = 'WHITE'
+      else if (result.includes('Black wins')) winner = 'BLACK'
+      const s = g.getStats()
+      movesPlayed = s.movesPlayed
+      syncRate = s.syncRate
+      conflicts = s.conflicts
+      p1Acc = s.player1Accuracy
+      p2Acc = s.player2Accuracy
+    } else {
+      const localGame = g as LocalGame
+      result = localGame.getResult()
+      reason = localGame.getGameOverReason()
+      if (result.includes('White wins')) winner = 'WHITE'
+      else if (result.includes('Black wins')) winner = 'BLACK'
+      const s = localGame.getStats()
+      movesPlayed = s.whiteMovesPlayed
+      syncRate = s.whiteSyncRate
+      conflicts = s.whiteConflicts
+      p1Acc = s.player1Accuracy
+      p2Acc = s.player2Accuracy
+    }
+
+    saveCompletedGame({
+      winner,
+      gameResult: result,
+      gameOverReason: reason,
+      stats: {
+        whiteMovesPlayed: movesPlayed,
+        whiteSyncRate: syncRate,
+        whiteConflicts: conflicts,
+        player1Accuracy: p1Acc,
+        player2Accuracy: p2Acc,
+        totalMoves: movesPlayed,
+      },
+      isOnline: !!isOnline,
+      moveComparisons: moveHistoryRef.current,
+    })
+
+    gameSavedRef.current = true
+  }, [gameState.status, isOnline, game])
 
   // Player ID from URL props (passed from Room component)
   // No need to get session - use the playerId directly from URL
@@ -231,6 +277,55 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const g = onlineGameRef.current
         const captured = g.getCapturedPieces()
         console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
+        
+        // Get pendingOverlay for online mode - show teammate's pending move
+        // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+        let pendingOverlay: PendingOverlay | null = null
+        if (playerId) {
+          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const entries = Array.from(allMoves.entries()) as [string, any][]
+          const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+          
+          // Only show pendingOverlay if there's a teammate move (not my own)
+          if (otherPlayerMoves.length > 0) {
+            const [, teammatePending] = otherPlayerMoves[0]
+            if (teammatePending.from && teammatePending.to) {
+              let piece = teammatePending.piece
+              if (!piece || piece === 'unknown') {
+                try {
+                  const boardPiece = (g as any).board.get(teammatePending.from)
+                  piece = boardPiece?.type || 'p'
+                } catch {
+                  piece = 'p'
+                }
+              }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+            }
+          }
+        }
+        
+        // Get my pending overlay - show my own pending move as secondary animation
+        // FIX: Only show if I have a pending move that is NOT locked (still selecting)
+        // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
+        let myPendingOverlay: PendingOverlay | null = null
+        if (playerId) {
+          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const myPending = allMoves.get(playerId)
+          // Only show myPendingOverlay if I have a move AND it's not locked yet
+          if (myPending && !myPending.locked && myPending.from && myPending.to) {
+            let piece = myPending.piece
+            if (!piece || piece === 'unknown') {
+              try {
+                const boardPiece = (g as any).board.get(myPending.from)
+                piece = boardPiece?.type || 'p'
+              } catch {
+                piece = 'p'
+              }
+            }
+            myPendingOverlay = { from: myPending.from, to: myPending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+          }
+        }
+        
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -241,12 +336,58 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
           timerSeconds: g.getTeamTimer(),
-          timerActive: g.isTimerActive()
+          timerActive: g.isTimerActive(),
+          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+          pendingOverlay,
+          myPendingOverlay
         }))
+        
+        // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
+        const prevTurn = prevTurnRef.current
+        const currentTurn = g.currentTurn
+        
+        if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
+          const comp = (g as any).lastMoveComparison as MoveComparison | null
+          console.log('[ACCURACY-TRANSITION] WHITE→BLACK detected', {
+            hasComparison: !!comp,
+            compPlayer1Move: comp?.player1Move,
+            compPlayer2Move: comp?.player2Move,
+            compWinnerId: comp?.winnerId,
+            isSync: comp?.isSync
+          })
+          if (comp) {
+            setAccuracyComparison(comp)
+            console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+          } else {
+            console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
+          }
+        } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
+          console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
+        }
+    prevTurnRef.current = currentTurn
+
+    const comp = g.lastMoveComparison as MoveComparison | null
+    if (comp && moveHistoryRef.current.length === 0 ||
+        (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as any))) {
+      const entry: MoveEntry = {
+        turn: moveHistoryRef.current.length + 1,
+        team: prevTurn || currentTurn,
+        winningMove: comp.winningMove,
+        winningMoveUci: (comp as any).winningMove || '',
+        shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+        shadowMoveUci: '',
+        isSync: comp.isSync,
+        player1Accuracy: comp.player1Accuracy,
+        player2Accuracy: comp.player2Accuracy,
+        fenAfter: g.board.fen(),
+      }
+      moveHistoryRef.current = [...moveHistoryRef.current, entry]
+    }
+        console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
       }
     })
     console.log('[Game] setOnStateChange callback set up complete')
-  }, [onlineGame])
+  }, [onlineGame, playerId])
 
   // Initialize online game - runs AFTER setOnStateChange is set up
   useEffect(() => {
@@ -323,21 +464,53 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const captured = g.getCapturedPieces()
     const currentTurn = g.currentTurn
     
-    // Get comparison data for both WHITE and BLACK turns (not just BLACK)
-    let comparison: MoveComparison | null = null
-    if (currentTurn === Team.BLACK) {
-      comparison = g.lastMoveComparison
-    } else if (currentTurn === Team.WHITE && isOnline) {
-      // For WHITE turn in online mode, also check for comparison from previous resolution
-      comparison = g.lastMoveComparison
+    // Get pendingOverlay for online mode - show teammate's pending move
+    // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+    let pendingOverlay: PendingOverlay | null = null
+    if (isOnline && playerId) {
+      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const entries = Array.from(allMoves.entries()) as [string, any][]
+      const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+      
+      // Only show pendingOverlay if there's a teammate move (not my own)
+      if (otherPlayerMoves.length > 0) {
+        const [, teammatePending] = otherPlayerMoves[0]
+        if (teammatePending.from && teammatePending.to) {
+          let piece = teammatePending.piece
+          if (!piece || piece === 'unknown') {
+            try {
+              const boardPiece = (g as any).board.get(teammatePending.from)
+              piece = boardPiece?.type || 'p'
+            } catch {
+              piece = 'p'
+            }
+          }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black' }
+        }
+      }
     }
     
-    // Determine showResolution: show when there's comparison data
-    // Only show when turn is BLACK or when comparison exists from previous resolution
-    const showResolution = comparison !== null
-    
-    // Get pendingOverlay for online mode - show teammate's pending move
-    const pendingOverlay = isOnline ? (g as any).pendingOverlay : null
+    // Get my pending overlay - show my own pending move as secondary animation
+    // FIX: Only show if I have a pending move that is NOT locked (still selecting)
+    // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
+    let myPendingOverlay: PendingOverlay | null = null
+    if (isOnline && playerId) {
+      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const myPending = allMoves.get(playerId)
+      // Only show myPendingOverlay if I have a move AND it's not locked yet
+      if (myPending && !myPending.locked && myPending.from && myPending.to) {
+        let piece = myPending.piece
+        if (!piece || piece === 'unknown') {
+          try {
+            const boardPiece = (g as any).board.get(myPending.from)
+            piece = boardPiece?.type || 'p'
+          } catch {
+            piece = 'p'
+          }
+        }
+        myPendingOverlay = { from: myPending.from, to: myPending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+      }
+    }
     
     setGameState(prev => {
       const newState = {
@@ -354,16 +527,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracy: 100,
         moveAccuracyP2: 100,
         totalMoves: 0,
-        moveComparison: comparison,
-        // Store WHITE team comparison separately - only update when WHITE has resolved (turn is WHITE)
-        whiteTeamComparison: currentTurn === Team.WHITE && comparison ? comparison : prev.whiteTeamComparison,
-        showResolution: showResolution,
         timerSeconds: g.getTeamTimer(),
         timerActive: g.isTimerActive(),
-        pendingOverlay: pendingOverlay || prev.pendingOverlay
+        pendingOverlay,
+        myPendingOverlay,
+        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+        isBotThinking: currentTurn === Team.BLACK ? prev.isBotThinking : false,
+        highlightSquares: null as HighlightSquares | null
       }
       return newState
     })
+    
+    // Accuracy transition detection (for coordinator who uses updateStateRef)
+    const prevTurn = prevTurnRef.current
+    if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
+      const comp = g.lastMoveComparison as MoveComparison | null
+      if (comp) {
+        console.log('[ACCURACY-TRANSITION] (updateState) WHITE→BLACK detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
+        setAccuracyComparison(comp)
+      }
+    }
+    prevTurnRef.current = currentTurn
   }, [isOnline, game])
 
   const updateStateRef = useRef(updateState)
@@ -389,11 +573,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return false
     }
 
-    if (isOnline) {
-      await g.resolvePendingMoves()
-    } else {
-      await g.resolvePendingMoves()
-    }
+    await g.resolvePendingMoves()
 
     const comparison = g.lastMoveComparison
 
@@ -425,8 +605,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       setGameState(prev => ({
         ...prev,
-        highlightSquares,
-        showResolution: true
+        highlightSquares
       }))
 
       updateStateRef.current()
@@ -503,6 +682,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         return
       }
 
+      // Block if player already submitted a move this turn
+      const allPending = (g as any).getAllPendingMoves() as Map<string, any>
+      if (allPending && allPending.has(playerId)) {
+        console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
+        return
+      }
+
+      // Clear accuracy panel when player starts new WHITE move
+      setAccuracyComparison(null)
+      console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
+
       console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
 
       try {
@@ -520,151 +710,115 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
-            pendingOverlay: null,
-            showResolution: false,
             highlightSquares: null
           }))
         }
 
         g.lockPendingMove(playerId as any)
         g.broadcastLocked()
+        playLockSound()
 
-        console.log(`[RESOLVE] Waiting for teammate to lock move...`)
+        console.log(`[STATE] Setting turn state to waiting_for_teammate`)
+        g.setTurnState('waiting_for_teammate' as any)
         
-        // Poll until both moves are locked (max 10 seconds) or turn changes
-        const startTurn = g.currentTurn
-        let attempts = 0
-        while (g.currentTurn === startTurn && !g.isBothPendingLocked() && attempts < 20) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          attempts++
-          console.log(`[RESOLVE] Waiting... ${attempts}/20, turn: ${g.currentTurn}, both locked: ${g.isBothPendingLocked()}`)
-        }
+        // Event-based waiting - no polling, no timeouts
+        // Wait for teammate lock event (or if already locked, resolve immediately)
+        console.log(`[STATE] Waiting for teammate to lock move...`)
+        await g.waitForTeammateLock()
         
-        // If turn already changed (another client resolved), exit
-        if (g.currentTurn !== startTurn) {
-          console.log(`[RESOLVE] Turn changed during polling, another client resolved`)
+        console.log(`[STATE] Teammate locked or already locked, checking state...`)
+
+        // Check if turn already changed (another client resolved)
+        if (g.currentTurn !== Team.WHITE) {
+          console.log(`[STATE] Turn changed, another client resolved`)
+          g.setTurnState('selecting' as any)
           return
         }
 
         if (g.isBothPendingLocked()) {
-          // Try to resolve - will fail gracefully if already resolved by other client
-          console.log(`[RESOLVE] Both locked, attempting resolve...`)
-          const comparison = g.lastMoveComparison
-          
-          // Validate chess square format (e.g., "e2", "d4")
-          const isValidSquare = (sq: string | undefined): sq is string => 
-            !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
-
-          // Set highlight squares for winner/loser moves
-          if (comparison) {
-            const highlightSquares: HighlightSquares = {}
-            const winnerId = comparison.winnerId
-            
-            if (winnerId === 'player1' && comparison.player1Move) {
-              const wf = comparison.winningMove.substring(0, 2)
-              const wt = comparison.winningMove.substring(2, 4)
-              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-              if (!comparison.isSync && comparison.loserId === 'player2') {
-                const lf = comparison.player2Move?.substring(0, 2)
-                const lt = comparison.player2Move?.substring(2, 4)
-                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
-                if (isValidSquare(lt)) highlightSquares.loserTo = lt
-              }
-            } else if (winnerId === 'player2' && comparison.player2Move) {
-              const wf = comparison.winningMove.substring(0, 2)
-              const wt = comparison.winningMove.substring(2, 4)
-              if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-              if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-              if (!comparison.isSync && comparison.loserId === 'player1') {
-                const lf = comparison.player1Move?.substring(0, 2)
-                const lt = comparison.player1Move?.substring(2, 4)
-                if (isValidSquare(lf)) highlightSquares.loserFrom = lf
-                if (isValidSquare(lt)) highlightSquares.loserTo = lt
-              }
-            }
-            
-            setGameState(prev => ({ ...prev, highlightSquares, showResolution: true }))
-          }
+          console.log(`[RESOLVE] Both locked, my role:`, { 
+            playerId, 
+            isCoordinator: g.isCoordinator(), 
+            coordinatorId: (g as any).getCoordinatorId?.() 
+          })
+          console.log(`[RESOLVE] Attempting resolve...`)
           
           try {
             await g.resolvePendingMoves()
             updateStateRef.current()
             console.log(`[RESOLVE] Resolve succeeded`)
-          } catch (e) {
-            console.log(`[RESOLVE] Resolve failed (already resolved by other client):`, e)
-          }
-          
-          const newTurn = g.currentTurn
-          console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
-          
-          // In online mode, after WHITE resolves, BLACK (bots) need to move
-          // Only one client should handle bot moves - use playerId to coordinate
-          if (newTurn === Team.BLACK && bot && playerId) {
-            // Get both players from game state to determine coordinator
-            const players = g.getPlayers(Team.WHITE)
-            console.log(`[RESOLVE] BLACK handling check - players:`, players, 'playerId:', playerId, 'bot:', !!bot)
-            const sortedPlayers = [...players].sort()
-            const isCoordinator = playerId === sortedPlayers[0]
-            console.log(`[RESOLVE] isCoordinator:`, isCoordinator, 'sortedPlayers:', sortedPlayers)
             
-            if (isCoordinator) {
-              console.log(`[RESOLVE] Handling BLACK bot moves (coordinator)...`)
-              setGameState(prev => ({ ...prev, isBotThinking: true }))
+            // Set highlight squares after resolve (comparison now available)
+            const comparison = g.lastMoveComparison
+            if (comparison) {
+              const isValidSquare = (sq: string): sq is string => 
+                !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
-              const currentFen = g.board.fen()
-              const botUciMove = await bot.selectMoveAsync(currentFen)
-              console.log(`[RESOLVE] Bot selected move:`, botUciMove)
+              const highlightSquares: HighlightSquares = {}
+              const isPlayer1 = playerId === (g as any).player1Id
               
-              if (botUciMove) {
-                const sanMove = uciToSan(botUciMove, currentFen)
-                const moveInfo = getMoveFromUci(botUciMove, currentFen)
-                
-                if (moveInfo) {
-                  g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                  g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                  g.lockPendingMove('bot_opponent_1' as any)
-                  g.lockPendingMove('bot_opponent_2' as any)
-                  
-                  console.log(`[RESOLVE] Bot moves set and locked, pending moves:`, g.getAllPendingMoves())
-                  setGameState(prev => ({ ...prev, pendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'black' } }))
+              if (comparison.winningMove && comparison.player1Move) {
+                const wf = comparison.winningMove.substring(0, 2)
+                const wt = comparison.winningMove.substring(2, 4)
+                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
+                if (!comparison.isSync) {
+                  const loserMove = comparison.winningMove === comparison.player1Move ? comparison.player2Move : comparison.player1Move
+                  const lf = loserMove?.substring(0, 2)
+                  const lt = loserMove?.substring(2, 4)
+                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
+                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
                 }
               }
               
-              // Skip the isBothPendingLocked check - we just set and locked the moves, just resolve
-              console.log(`[RESOLVE] Attempting BLACK resolve directly...`)
-              try {
-                await g.resolvePendingMoves()
-                console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
-                updateStateRef.current()
-              } catch (e) {
-                console.log(`[RESOLVE] BLACK resolve failed:`, e)
-                // Force advance to WHITE if resolve fails
-                g.startPendingTurn()
-              }
+              setGameState(prev => ({ ...prev, highlightSquares }))
+            }
+            
+            const newTurn = g.currentTurn as Team
+            console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
+            playResolutionSound()
+            
+            // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
+            if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
+              console.log(`[RESOLVE] Coordinator handling BLACK bot moves...`)
+              setGameState(prev => ({ ...prev, isBotThinking: true }))
               
-              setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+              const currentFen = g.board.fen()
               
-              // Start next WHITE turn
-              g.startPendingTurn()
-              updateStateRef.current()
-              startTimer()
+              ;(async () => {
+                const botUciMove = await bot.selectMoveAsync(currentFen)
+                console.log(`[RESOLVE] Bot selected move:`, botUciMove)
+                
+                if (botUciMove) {
+                  const sanMove = uciToSan(botUciMove, currentFen)
+                  const moveInfo = getMoveFromUci(botUciMove, currentFen)
+                  
+                  if (moveInfo) {
+                    g.setPendingMove('bot_opponent_1' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                    g.setPendingMove('bot_opponent_2' as any, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                    g.lockPendingMove('bot_opponent_1' as any)
+                    g.lockPendingMove('bot_opponent_2' as any)
+                  }
+                }
+                
+                try {
+                  await g.resolvePendingMoves()
+                  console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
+                  g.setTurnState('selecting' as any)
+                  console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
+                  updateStateRef.current()
+                } catch (e) {
+                  console.log(`[RESOLVE] BLACK resolve failed:`, e)
+                }
+                
+                startTimer()
+              })()
+            }
+          } catch (e: any) {
+            if (e?.message === 'NOT_COORDINATOR') {
+              console.log(`[RESOLVE] Not coordinator — waiting for broadcast`)
             } else {
-              console.log(`[RESOLVE] Non-coordinator waiting for BLACK to complete...`)
-              // Wait for turn to change to WHITE
-              let attempts = 0
-              while (g.currentTurn !== Team.WHITE && attempts < 30) {
-                await new Promise(resolve => setTimeout(resolve, 500))
-                attempts++
-                console.log(`[RESOLVE] Waiting for WHITE... ${attempts}/30, turn: ${g.currentTurn}`)
-              }
-              console.log(`[RESOLVE] Turn changed to: ${g.currentTurn}`)
-              
-              // Clear the resolution UI
-              setGameState(prev => ({ ...prev, highlightSquares: null }))
-              
-              // Start timer for next WHITE turn
-              startTimer()
+              console.log(`[RESOLVE] Resolve failed:`, e)
             }
           }
         } else {
@@ -695,7 +849,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         setGameState(prev => ({
           ...prev,
-          showResolution: false,
           highlightSquares: null
         }))
 
@@ -712,7 +865,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
-            pendingOverlay: null
+            pendingOverlay: null,
+            myPendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'white' }
           }))
         }
 
@@ -824,7 +978,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       pendingOpponentTurnRef.current = false
       setGameState(prev => ({ ...prev, isBotThinking: true }))
       await executeBotMove()
-      setGameState(prev => ({ ...prev, isBotThinking: false, highlightSquares: null, pendingOverlay: null }))
+// FIX: Reset resolution state when BLACK completes and WHITE turn starts
+              console.log('[RESOLVE-CLEANUP] Clearing resolution state for new WHITE turn')
+              setGameState(prev => ({ 
+                ...prev, 
+                isBotThinking: false, 
+                highlightSquares: null, 
+                pendingOverlay: null, 
+                myPendingOverlay: null
+              }))
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
@@ -833,14 +995,60 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove, startTimer])
 
+  // Show loading state while game initializes
+  if (gameState.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <GameLoading 
+          message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
+      
+      {gameState.status === GameStatus.GAME_OVER && (
+        <GameOverModal 
+          winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
+          onPlayAgain={() => window.location.reload()}
+          gameResult={game?.getResult()}
+          gameOverReason={game?.getGameOverReason() || null}
+          stats={!isOnline && game ? {
+            whiteMovesPlayed: game.getStats().whiteMovesPlayed,
+            whiteSyncRate: game.getStats().whiteSyncRate,
+            whiteConflicts: game.getStats().whiteConflicts,
+            player1Accuracy: game.getStats().player1Accuracy,
+            player2Accuracy: game.getStats().player2Accuracy,
+            totalMoves: game.getStats().movesPlayed,
+          } : undefined}
+        />
+      )}
         
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-4">ClashMate</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">ClashMate</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOverlayMode('profile')}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              title="Profile"
+            >
+              👤
+            </button>
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+          </div>
+        </div>
 
         {roomCode && (
           <div className="mb-4 p-3 bg-gray-700 rounded text-center">
@@ -875,10 +1083,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        <div className="flex items-start justify-center gap-6 mb-4">
+        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
           {/* Left side - WHITE team (Timer + Captured) */}
-          <div className="w-40 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 flex items-center justify-center">
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
                 seconds={gameState.timerSeconds}
                 isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
@@ -889,37 +1097,44 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Chess Board */}
-          <div className="w-[500px] h-[500px] flex-shrink-0 relative">
+          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
             <ChessBoard 
-              fen={gameState.fen}
+              fen={playbackFen || gameState.fen}
               onMove={handleMove}
-              enabled={gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion}
+              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
               orientation="white"
               lastMove={gameState.lastMove}
               pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.myPendingOverlay}
               highlightSquares={gameState.highlightSquares}
               onAnimationComplete={handleResolutionComplete}
             />
           </div>
           
+{/* Accuracy Panel - below board as bottom sheet */}
+          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
+            {(() => {
+              const g = isOnline ? onlineGameRef.current : gameRef.current
+              return (
+                <AccuracyBottomSheet 
+                  comparison={accuracyComparison}
+                  isVisible={!!accuracyComparison}
+                  playerId={playerId}
+                  player1Id={isOnline ? (g as any)?.player1Id : null}
+                />
+              )
+            })()}
+          </div>
+          
           {/* Right side - BLACK team (Timer + Resolution + Captured) */}
-          <div className="w-40 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 flex items-center justify-center">
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
                 seconds={gameState.timerSeconds}
                 isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
                 currentTeam={Team.BLACK}
               />
             </div>
-            <AnimatePresence>
-              {gameState.showResolution && gameState.whiteTeamComparison && (
-                <MoveComparisonPanel 
-                  comparison={gameState.whiteTeamComparison}
-                  isVisible={gameState.showResolution}
-                  onAnimationComplete={handleResolutionComplete}
-                />
-              )}
-            </AnimatePresence>
             <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
           </div>
         </div>
@@ -936,6 +1151,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           {gameState.isBotThinking && (
             <p className="text-blue-400">Bot is making a move...</p>
           )}
+        </div>
+
+        <div className="mt-6 max-w-[500px] mx-auto">
+          <MovePlayback
+            moves={moveHistoryRef.current}
+            currentIndex={playbackIndex}
+            onSelectMove={(index, fen) => {
+              setPlaybackIndex(index)
+              setPlaybackFen(fen)
+            }}
+            onReset={() => {
+              setPlaybackIndex(null)
+              setPlaybackFen(null)
+            }}
+          />
         </div>
 
         <div className="mt-8 p-4 bg-gray-800 rounded">
@@ -958,6 +1188,33 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
       </div>
+
+      <SlideOver
+        open={overlayMode === 'profile'}
+        onClose={() => setOverlayMode('none')}
+        title="Profile"
+      >
+        {playerId ? (
+          <ProfilePanel
+            playerId={playerId}
+            onViewHistory={() => setOverlayMode('history')}
+          />
+        ) : (
+          <p className="text-gray-400 text-center py-4">Sign in to view your profile</p>
+        )}
+      </SlideOver>
+
+      <SlideOver
+        open={overlayMode === 'history'}
+        onClose={() => setOverlayMode('none')}
+        title="Match History"
+      >
+        {playerId ? (
+          <HistoryPanel playerId={playerId} />
+        ) : (
+          <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
+        )}
+      </SlideOver>
     </div>
   )
 }
