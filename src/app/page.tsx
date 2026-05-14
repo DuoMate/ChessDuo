@@ -6,11 +6,12 @@ import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
 import { RoomManager } from '@/components/Room'
+import { MatchmakingQueue } from '@/components/MatchmakingQueue'
 import { Room } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-type GameMode = 'offline' | 'online' | null
+type GameMode = 'offline' | 'online' | 'quickmatch' | null
 
 export default function SetupPage() {
   const router = useRouter()
@@ -114,6 +115,20 @@ export default function SetupPage() {
                 <div className="text-[11px] text-gray-500 mt-0.5">with a friend</div>
               </div>
               <span className="text-base text-yellow-400 group-hover:opacity-100 transition-opacity">{"\u25B8"}</span>
+            </button>
+
+            <button
+              onClick={() => setGameMode('quickmatch')}
+              className="flex items-center gap-3.5 p-[18px] rounded-2xl border border-white/8 bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04] transition-all duration-200 text-left group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-yellow-500/8 border border-yellow-500/12 flex items-center justify-center flex-shrink-0 text-[28px] drop-shadow-[0_0_8px_rgba(250,204,21,0.15)]">
+                {"\u26A1"}
+              </div>
+              <div className="flex-1">
+                <div className="font-bold text-[15px] text-gray-100 group-hover:text-yellow-400 transition-colors">Quick Match</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">auto-find teammate</div>
+              </div>
+              <span className="text-base text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
             </button>
           </div>
 
@@ -236,6 +251,33 @@ export default function SetupPage() {
           </button>
         </div>
       </div>
+    )
+  }
+
+  if (gameMode === 'quickmatch') {
+    if (!playerId) {
+      return (
+        <div className="min-h-screen bg-[#0f1119] text-white">
+          <div className="absolute top-4 left-4 z-10">
+            <button
+              onClick={() => setGameMode(null)}
+              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+            >
+              {"\u2190"} Back
+            </button>
+          </div>
+          <Auth onAuthComplete={handleAuthComplete} />
+        </div>
+      )
+    }
+
+    return (
+      <MatchmakingQueue
+        playerId={playerId}
+        username={username}
+        onRoomJoined={handleRoomJoined}
+        onCancel={() => setGameMode(null)}
+      />
     )
   }
 
