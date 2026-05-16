@@ -38,7 +38,7 @@ export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: Mov
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden w-full">
       <div className="p-2 border-b border-gray-700 flex items-center justify-between">
         <h3 className="text-xs font-bold text-gray-400">Moves</h3>
         <div className="flex items-center gap-1">

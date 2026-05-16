@@ -1007,7 +1007,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-gray-900 text-white p-2 md:p-4 overflow-x-hidden">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1031,7 +1031,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">ClashMate</h1>
+          <h1 className="text-xl md:text-3xl font-bold">ChessDuo</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOverlayMode('profile')}
@@ -1051,16 +1051,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
 
         {roomCode && (
-          <div className="mb-4 p-3 bg-gray-700 rounded text-center">
-            <p className="text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
-            <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
+          <div className="mb-3 md:mb-4 p-2 md:p-3 bg-gray-700 rounded text-center">
+            <p className="text-gray-400 text-xs md:text-sm mb-1">Share this room code with your teammate:</p>
+            <p className="text-lg md:text-2xl font-bold text-yellow-400 tracking-wider md:tracking-widest font-mono break-all">
               {roomCode}
             </p>
           </div>
         )}
         
-        <div className="flex justify-between items-center mb-2">
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+        <div className="flex justify-between items-center mb-2 flex-wrap gap-1">
+          <div className={`px-2 md:px-4 py-1 md:py-2 rounded text-xs md:text-sm ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             White Team (You)
           </div>
           
@@ -1078,12 +1078,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             </div>
           </div>
           
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+          <div className={`px-2 md:px-4 py-1 md:py-2 rounded text-xs md:text-sm ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             Black Team (Bot)
           </div>
         </div>
 
-        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-3 md:gap-6 mb-3 md:mb-4">
           {/* Left side - WHITE team (Timer + Captured) */}
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
             <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
@@ -1097,7 +1097,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Chess Board */}
-          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
+          <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] aspect-square flex-shrink-0 relative">
             <ChessBoard 
               fen={playbackFen || gameState.fen}
               onMove={handleMove}
@@ -1112,7 +1112,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
 {/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
+          <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] px-2">
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
               return (
@@ -1153,7 +1153,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           )}
         </div>
 
-        <div className="mt-6 max-w-[500px] mx-auto">
+        <div className="mt-4 md:mt-6 w-full max-w-[500px] mx-auto">
           <MovePlayback
             moves={moveHistoryRef.current}
             currentIndex={playbackIndex}
@@ -1168,7 +1168,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
-        <div className="mt-8 p-4 bg-gray-800 rounded">
+        <div className="mt-4 md:mt-8 p-3 md:p-4 bg-gray-800 rounded">
           <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {!isOnline && game ? (
