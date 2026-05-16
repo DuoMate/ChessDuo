@@ -156,10 +156,17 @@ export default function SetupPage() {
               {"\uD83D\uDC64"} Profile
             </button>
             <button
-              onClick={async () => { await supabase.auth.signOut(); window.location.reload() }}
+              onClick={async () => { 
+                if (playerId) {
+                  await supabase.auth.signOut()
+                  window.location.reload()
+                } else {
+                  setGameMode('online')
+                }
+              }}
               className="text-gray-500 hover:text-red-400 transition-colors"
             >
-              {"\uD83D\uDEAA"} Sign Out
+              {"\uD83D\uDEAA"} {playerId ? 'Sign Out' : 'Sign In'}
             </button>
           </div>
         </div>
