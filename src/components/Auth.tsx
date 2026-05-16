@@ -113,8 +113,8 @@ export function Auth({ onAuthComplete }: AuthProps) {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
         onAuthComplete(result.userId, result.email?.split('@')[0] || 'Player')
-      } else {
-        setError(result.error || 'Google sign-in failed')
+      } else if (result.error) {
+        setError(result.error)
         setGoogleLoading(false)
       }
     } catch (err) {
