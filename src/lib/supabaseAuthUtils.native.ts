@@ -1,4 +1,3 @@
-import { SocialLogin } from '@capgo/capacitor-social-login'
 import { supabase } from './supabase'
 
 function getUrlSafeNonce(): string {
@@ -17,6 +16,10 @@ async function sha256Hash(message: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+function getCapgoPlugin(): any {
+  return (globalThis as any).Capacitor?.Plugins?.SocialLogin
+}
+
 export async function authenticateWithGoogleNative(): Promise<{
   success: boolean
   userId?: string
@@ -24,6 +27,11 @@ export async function authenticateWithGoogleNative(): Promise<{
   error?: string
 }> {
   try {
+    const SocialLogin = getCapgoPlugin()
+    if (!SocialLogin) {
+      return { success: false, error: 'Native plugin not available' }
+    }
+
     const webClientId = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
     if (!webClientId) {
       return { success: false, error: 'Google Web Client ID not configured' }
@@ -47,7 +55,7 @@ export async function authenticateWithGoogleNative(): Promise<{
       },
     })
 
-    if (!loginResult.result || loginResult.result.responseType !== 'online') {
+    if (!loginResult?.result || loginResult.result.responseType !== 'online') {
       return { success: false, error: 'Expected online response mode from Google' }
     }
 
