@@ -44,6 +44,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Agent tooling (auto-generated, not needed in repo)
+.agents/
+.superpowers/
+__pycache__/
+
 # Capacitor / Android
 /android
 chessduo.keystore
