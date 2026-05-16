@@ -15,13 +15,15 @@ export default function Loading() {
         overflow: 'hidden',
       }}
     >
-      <img
-        src="/loading/logo.png"
-        alt="ChessDuo"
+      <div
         style={{
           width: 'min(280px, 60vw)',
           height: 'auto',
-          objectFit: 'contain',
+          aspectRatio: '1/1',
+          backgroundImage: 'url(/loading/logo.png)',
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
           animation: 'logoPulse 2.4s ease-in-out infinite',
         }}
       />

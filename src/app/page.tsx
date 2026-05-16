@@ -26,6 +26,7 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername(session.user.email?.split('@')[0] || 'Player')
+        setGameMode('online')
       }
     })
 
@@ -33,6 +34,7 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername(session.user.email?.split('@')[0] || 'Player')
+        setGameMode('online')
       }
     })
 

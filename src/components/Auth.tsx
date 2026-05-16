@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
+import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 
 interface AuthProps {
   onAuthComplete: (userId: string, username: string) => void
@@ -110,13 +110,13 @@ export function Auth({ onAuthComplete }: AuthProps) {
     setGoogleLoading(true)
     setError(null)
     try {
-      const { error: googleError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      })
-      if (googleError) throw googleError
+      const result = await authenticateWithGoogle()
+      if (result.success && result.userId) {
+        onAuthComplete(result.userId, result.email?.split('@')[0] || 'Player')
+      } else {
+        setError(result.error || 'Google sign-in failed')
+        setGoogleLoading(false)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed')
       setGoogleLoading(false)

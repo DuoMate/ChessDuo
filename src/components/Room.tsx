@@ -241,12 +241,12 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
                value={joinCode}
                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                maxLength={36}
-               className="flex-1 p-4 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-xl tracking-widest font-mono"
+               className="flex-1 p-2 md:p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-base md:text-lg tracking-wide md:tracking-widest font-mono"
              />
             <button
               onClick={joinRoom}
               disabled={loading || joinCode.length < 6}
-              className="p-4 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50"
+              className="p-2 md:p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50 text-sm md:text-base"
             >
               Join
             </button>

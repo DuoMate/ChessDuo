@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
   },
+  plugins: {
+    SocialLogin: {
+      logLevel: 1,
+    },
+  },
 }
 
 export default config
