@@ -37,9 +37,12 @@ export async function authenticateWithGoogle(): Promise<{
   email?: string
   error?: string
 }> {
-  try {
-    const result = await authenticateWithGoogleNative()
-    if (result.success) return result
-  } catch {}
+  const isNative = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()
+  if (isNative) {
+    try {
+      const result = await authenticateWithGoogleNative()
+      if (result.success) return result
+    } catch {}
+  }
   return authenticateWithGoogleWeb()
 }

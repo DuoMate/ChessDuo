@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
@@ -19,8 +19,10 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
+    "@capgo/capacitor-social-login": "^8.3.22",
     "@supabase/supabase-js": "^2.103.3",
     "chess.js": "^1.4.0",
     "cm-chessboard": "^8.11.5",
