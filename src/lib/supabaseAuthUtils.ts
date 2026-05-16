@@ -38,8 +38,8 @@ export async function authenticateWithGoogle(): Promise<{
   error?: string
 }> {
   try {
-    return await authenticateWithGoogleNative()
-  } catch {
-    return authenticateWithGoogleWeb()
-  }
+    const result = await authenticateWithGoogleNative()
+    if (result.success) return result
+  } catch {}
+  return authenticateWithGoogleWeb()
 }
