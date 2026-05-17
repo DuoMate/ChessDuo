@@ -1001,6 +1001,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <GameLoading 
           message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
+          roomCode={roomCode}
         />
       </div>
     )

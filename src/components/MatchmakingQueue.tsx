@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { findAvailableRoom, createQuickMatchRoom, joinQuickMatchRoom } from '@/lib/matchmaking'
+import { findAvailableRoom, createQuickMatchRoom, joinQuickMatchRoom, checkMyRoomJoined, deleteRoom } from '@/lib/matchmaking'
+import { supabase } from '@/lib/supabase'
 import { Room } from '@/lib/supabase'
 
 type Status = 'searching' | 'creating' | 'waiting' | 'joining' | 'error'
@@ -19,6 +20,7 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [retries, setRetries] = useState(0)
+  const roomIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -52,6 +54,7 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
 
         if (room) {
           setRoomCode(room.code)
+          roomIdRef.current = room.id
           setStatus('waiting')
           return
         }
@@ -67,10 +70,15 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
     }
 
     attemptMatch()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (roomIdRef.current) {
+        deleteRoom(roomIdRef.current)
+      }
+    }
   }, [playerId, retries])
 
-  // Poll for match while waiting
+  // Poll for match while waiting — check both external rooms and your own room
   useEffect(() => {
     if (status !== 'waiting') return
 
@@ -80,6 +88,22 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
         const joined = await joinQuickMatchRoom(match.room.id, playerId, match.team, match.slot)
         if (joined) {
           onRoomJoined(match.room, match.team, playerId)
+        }
+        return
+      }
+
+      // Also check if opponent joined the room we created
+      if (roomIdRef.current) {
+        const joined = await checkMyRoomJoined(roomIdRef.current)
+        if (joined) {
+          const { data: roomData } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('id', roomIdRef.current)
+            .single()
+          if (roomData) {
+            onRoomJoined(roomData as Room, 'WHITE', playerId)
+          }
         }
       }
     }, 3000)

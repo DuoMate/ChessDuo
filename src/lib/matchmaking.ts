@@ -40,6 +40,15 @@ export async function findAvailableRoom(playerId: string): Promise<QuickMatchRes
   return null
 }
 
+export async function checkMyRoomJoined(roomId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('room_players')
+    .select('*')
+    .eq('room_id', roomId)
+  if (error || !data) return false
+  return data.length >= 2
+}
+
 export async function joinQuickMatchRoom(
   roomId: string,
   playerId: string,
@@ -67,38 +76,58 @@ export async function joinQuickMatchRoom(
   return true
 }
 
-export async function createQuickMatchRoom(playerId: string): Promise<Room | null> {
+function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let code = ''
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length))
   }
+  return code
+}
 
-  const { data: room, error } = await supabase
-    .from('rooms')
-    .insert({ code, status: 'waiting', created_by: playerId })
-    .select()
-    .single()
+export async function createQuickMatchRoom(playerId: string): Promise<Room | null> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateCode()
 
-  if (error || !room) {
-    console.warn('[Matchmaking] Failed to create room:', error?.message)
-    return null
+    const { data: room, error } = await supabase
+      .from('rooms')
+      .insert({ code, status: 'waiting', created_by: playerId })
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505' || error.message?.includes('duplicate')) {
+        continue
+      }
+      console.warn('[Matchmaking] Failed to create room:', error.message)
+      return null
+    }
+
+    if (!room) return null
+
+    const { error: playerError } = await supabase
+      .from('room_players')
+      .insert({
+        room_id: room.id,
+        player_id: playerId,
+        team: 'WHITE',
+        slot: 0,
+        status: 'waiting'
+      })
+
+    if (playerError) {
+      console.warn('[Matchmaking] Failed to join own room:', playerError.message)
+      return null
+    }
+
+    return room as Room
   }
 
-  const { error: playerError } = await supabase
-    .from('room_players')
-    .insert({
-      room_id: room.id,
-      player_id: playerId,
-      team: 'WHITE',
-      slot: 0,
-      status: 'waiting'
-    })
+  console.warn('[Matchmaking] Failed to create room after 5 attempts')
+  return null
+}
 
-  if (playerError) {
-    console.warn('[Matchmaking] Failed to join own room:', playerError.message)
-    return null
-  }
-
-  return room as Room
+export async function deleteRoom(roomId: string): Promise<void> {
+  await supabase.from('room_players').delete().eq('room_id', roomId)
+  await supabase.from('rooms').delete().eq('id', roomId)
 }

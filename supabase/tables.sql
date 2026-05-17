@@ -68,11 +68,18 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
                                                                             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                                                                             );
 
-                                                                            -- Create indexes
-                                                                            CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
-                                                                            CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
-                                                                            CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
-                                                                            CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
+CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
+CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
+CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
+
+-- Constraints (idempotent for existing tables)
+ALTER TABLE rooms ADD CONSTRAINT IF NOT EXISTS rooms_code_unique UNIQUE (code);
+ALTER TABLE room_players ADD CONSTRAINT IF NOT EXISTS room_players_pkey PRIMARY KEY (room_id, player_id);
+ALTER TABLE room_players ADD CONSTRAINT IF NOT EXISTS room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+ALTER TABLE games ADD CONSTRAINT IF NOT EXISTS games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+
 
                                                                             -- Enable Row Level Security (RLS)
                                                                             ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;

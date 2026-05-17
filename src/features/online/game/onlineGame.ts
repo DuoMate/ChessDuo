@@ -65,6 +65,7 @@ export class OnlineGame {
   private evaluator: ServerMoveEvaluator
   private _broadcastThrottle: Map<string, number> = new Map()
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
+  private _pollingInterval: ReturnType<typeof setInterval> | null = null
 
   constructor() {
     this.gameState = new GameState()
@@ -260,6 +261,10 @@ export class OnlineGame {
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         console.log('[ONLINE] Player joined:', newPresences)
+        const state = this._channel?.presenceState() || {}
+        if (Object.keys(state).length >= 2 && this._status !== GameStatus.PLAYING) {
+          this.startGameWhenReady()
+        }
       })
       .on('broadcast', { event: 'player_move' }, ({ payload }) => {
         this.handleTeammateMove(payload as MovePayload)
@@ -285,6 +290,32 @@ export class OnlineGame {
         }
       })
 
+    // Fallback polling: if presence events are delayed, poll room_players directly.
+    // Only counts REAL human players (bots are never in room_players table).
+    const fallbackInterval = setInterval(async () => {
+      if (this._status === GameStatus.PLAYING) {
+        clearInterval(fallbackInterval)
+        return
+      }
+      const { data, error } = await supabase
+        .from('room_players')
+        .select('*')
+        .eq('room_id', this._room!.id)
+      if (error) return
+      const humanPlayers = (data || []).filter(p => !p.player_id.startsWith('bot_'))
+      if (humanPlayers.length >= 2) {
+        console.log('[ONLINE] Polling fallback: game start triggered from DB')
+        this.startGameWhenReady()
+        clearInterval(fallbackInterval)
+      }
+    }, 3000)
+
+    setTimeout(() => {
+      clearInterval(fallbackInterval)
+    }, 60000)
+
+    this._pollingInterval = fallbackInterval
+
     this._status = GameStatus.READY
     console.log('[ONLINE] joinRoom completed, status:', this._status)
   }
@@ -307,8 +338,8 @@ export class OnlineGame {
       // Check if a game already exists for this room (e.g., started by another player)
       if (this._room) {
         const existing = await loadGameState(this._room.id)
-        if (existing && existing.status === 'PLAYING') {
-          console.log('[ONLINE] Game already exists in DB, syncing as late joiner')
+        if (existing) {
+          console.log('[ONLINE] Game already exists in DB, syncing as late joiner (status:', existing.status, ')')
           this.starting = false
           await this.syncGameState()
           return
@@ -427,23 +458,26 @@ export class OnlineGame {
       // Recover game state from DB (survives refresh/OS kill)
       if (this._room) {
         const saved = await loadGameState(this._room.id)
-        if (saved && saved.moveHistory.length > 0) {
-          console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
-          try {
-            this.gameState.resetBoard(saved.fen)
-          } catch (e) {
-            console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
-            this.gameState.startMatch()
-            for (const entry of saved.moveHistory) {
-              try {
-                this.gameState.board.move(entry.move)
-              } catch (me) {
-                console.warn('[ONLINE] Could not replay move:', entry.move, me)
+        if (saved) {
+          this._status = saved.status as GameStatus
+          this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          if (saved.moveHistory.length > 0) {
+            console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
+            try {
+              this.gameState.resetBoard(saved.fen)
+            } catch (e) {
+              console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
+              this.gameState.startMatch()
+              for (const entry of saved.moveHistory) {
+                try {
+                  this.gameState.board.move(entry.move)
+                } catch (me) {
+                  console.warn('[ONLINE] Could not replay move:', entry.move, me)
+                }
               }
             }
           }
-          this._status = saved.status as GameStatus
-          this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          this.gameState.startMatch()
           this.startPendingTurn()
           this.notifyStateChange()
         }
@@ -872,6 +906,10 @@ export class OnlineGame {
   }
 
   async leaveRoom(): Promise<void> {
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval)
+      this._pollingInterval = null
+    }
     if (this._channel) {
       await supabase.removeChannel(this._channel)
       this._channel = null
