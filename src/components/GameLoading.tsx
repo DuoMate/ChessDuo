@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
+import { Timeline } from 'animejs'
 import { Team } from '@/features/game-engine/gameState'
 
 interface GameLoadingProps {
@@ -13,18 +15,44 @@ export function GameLoading({
   showChessIcon = true,
   roomCode,
 }: GameLoadingProps) {
+  const iconRef = useRef<HTMLSpanElement>(null)
+  const dot1Ref = useRef<HTMLDivElement>(null)
+  const dot2Ref = useRef<HTMLDivElement>(null)
+  const dot3Ref = useRef<HTMLDivElement>(null)
+  const timelineRef = useRef<Timeline | null>(null)
+
+  useEffect(() => {
+    const tl = new Timeline({ loop: true, autoplay: true })
+    timelineRef.current = tl
+
+    tl.add(iconRef.current!, { scale: [1, 1.08, 1], duration: 2000, easing: 'spring(1, 80, 10, 0)' }, 0)
+    tl.add(dot1Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 0)
+    tl.add(dot2Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 150)
+    tl.add(dot3Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 300)
+
+    return () => {
+      tl.pause()
+      tl.seek(0)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] p-8">
       {showChessIcon && (
         <div className="relative mb-8">
-          <span className="text-8xl filter drop-shadow-lg animate-pulse">♟️</span>
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-yellow-500 rounded-full animate-pulse" />
+          <span
+            ref={iconRef}
+            className="text-8xl filter drop-shadow-lg inline-block"
+          >
+            &#9823;&#65039;
+          </span>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-yellow-500 rounded-full" />
         </div>
       )}
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-3 h-3 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div ref={dot1Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
+        <div ref={dot2Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
+        <div ref={dot3Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
       </div>
       <p className="text-gray-400 text-lg">{message}</p>
       {roomCode && (
@@ -35,7 +63,7 @@ export function GameLoading({
             onClick={() => navigator.clipboard.writeText(roomCode)}
             className="mt-2 text-xs text-gray-500 hover:text-yellow-400 transition-colors"
           >
-            📋 Copy code
+            &#x1F4CB; Copy code
           </button>
         </div>
       )}
@@ -50,10 +78,10 @@ interface ConnectionStatusProps {
 
 export function ConnectionStatus({ status, onRetry }: ConnectionStatusProps) {
   const statusConfig = {
-    connecting: { color: 'text-yellow-400', bg: 'bg-yellow-900/30', icon: '⏳', message: 'Connecting...' },
-    connected: { color: 'text-green-400', bg: 'bg-green-900/30', icon: '✓', message: 'Connected' },
-    disconnected: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '✕', message: 'Disconnected' },
-    error: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '⚠️', message: 'Connection Error' },
+    connecting: { color: 'text-yellow-400', bg: 'bg-yellow-900/30', icon: '\u23F3', message: 'Connecting...' },
+    connected: { color: 'text-green-400', bg: 'bg-green-900/30', icon: '\u2713', message: 'Connected' },
+    disconnected: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '\u2715', message: 'Disconnected' },
+    error: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '\u26A0\uFE0F', message: 'Connection Error' },
   }
 
   const config = statusConfig[status]

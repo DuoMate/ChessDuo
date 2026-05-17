@@ -728,6 +728,7 @@ export class OnlineGame {
     
     this.turnState = 'resolving'
     console.log('[STATE] Resolving, set turnState to resolving')
+    this.notifyStateChange()
     
     const allPendingMoves = this.gameState.getAllPendingMoves()
     const pendingMovesArray = Array.from(allPendingMoves.entries())

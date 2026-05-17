@@ -16,6 +16,7 @@ import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
+import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
@@ -181,6 +182,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+  const [turnState, setTurnState] = useState<string>('selecting')
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -342,6 +344,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           myPendingOverlay
         }))
         
+        // Track turn state for "evaluating" loader visibility
+        const ts = (g as any).turnState
+        if (ts) setTurnState(ts)
+
         // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
@@ -1117,12 +1123,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
               return (
-                <AccuracyBottomSheet 
-                  comparison={accuracyComparison}
-                  isVisible={!!accuracyComparison}
-                  playerId={playerId}
-                  player1Id={isOnline ? (g as any)?.player1Id : null}
-                />
+                <>
+                  {!accuracyComparison && turnState === 'resolving' && (
+                    <EvaluatingLoader />
+                  )}
+                  <AccuracyBottomSheet 
+                    comparison={accuracyComparison}
+                    isVisible={!!accuracyComparison}
+                    playerId={playerId}
+                    player1Id={isOnline ? (g as any)?.player1Id : null}
+                  />
+                </>
               )
             })()}
           </div>

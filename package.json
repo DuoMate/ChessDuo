@@ -24,6 +24,7 @@
     "@capacitor/core": "^8.3.4",
     "@capgo/capacitor-social-login": "^8.3.22",
     "@supabase/supabase-js": "^2.103.3",
+    "animejs": "^4.4.1",
     "chess.js": "^1.4.0",
     "cm-chessboard": "^8.11.5",
     "framer-motion": "^12.38.0",
