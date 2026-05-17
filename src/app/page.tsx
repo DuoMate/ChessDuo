@@ -27,7 +27,6 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername(session.user.email?.split('@')[0] || 'Player')
-        setGameMode('online')
       }
       setSessionChecked(true)
     }).catch(() => {
@@ -38,7 +37,6 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername(session.user.email?.split('@')[0] || 'Player')
-        setGameMode('online')
       }
     })
 
