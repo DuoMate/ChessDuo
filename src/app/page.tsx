@@ -19,6 +19,7 @@ export default function SetupPage() {
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
+  const [sessionChecked, setSessionChecked] = useState(false)
   const skillLevels = getAvailableSkillLevels()
 
   useEffect(() => {
@@ -28,6 +29,9 @@ export default function SetupPage() {
         setUsername(session.user.email?.split('@')[0] || 'Player')
         setGameMode('online')
       }
+      setSessionChecked(true)
+    }).catch(() => {
+      setSessionChecked(true)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -54,6 +58,8 @@ export default function SetupPage() {
   const handleStartOffline = () => {
     router.push(`/game?level=${selectedLevel}`)
   }
+
+  if (!sessionChecked) return null
 
   if (!gameMode) {
     return (
