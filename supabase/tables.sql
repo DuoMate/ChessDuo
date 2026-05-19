@@ -74,15 +74,27 @@ CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
 CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
 CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
 
--- Constraints (idempotent: drop first, then add)
-ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_code_unique;
-ALTER TABLE rooms ADD CONSTRAINT rooms_code_unique UNIQUE (code);
-ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_pkey;
-ALTER TABLE room_players ADD CONSTRAINT room_players_pkey PRIMARY KEY (room_id, player_id);
-ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_room_fk;
-ALTER TABLE room_players ADD CONSTRAINT room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
-ALTER TABLE games DROP CONSTRAINT IF EXISTS games_room_fk;
-ALTER TABLE games ADD CONSTRAINT games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+-- Constraints (idempotent: safe for CI/CD re-runs)
+-- Wrap in DO block to handle missing tables gracefully
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'rooms') THEN
+    ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_code_unique;
+    ALTER TABLE rooms ADD CONSTRAINT rooms_code_unique UNIQUE (code);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'room_players') THEN
+    ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_pkey;
+    ALTER TABLE room_players ADD CONSTRAINT room_players_pkey PRIMARY KEY (room_id, player_id);
+    ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_room_fk;
+    ALTER TABLE room_players ADD CONSTRAINT room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'games') THEN
+    ALTER TABLE games DROP CONSTRAINT IF EXISTS games_room_fk;
+    ALTER TABLE games ADD CONSTRAINT games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 
                                                                             -- Enable Row Level Security (RLS)
