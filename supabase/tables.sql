@@ -74,11 +74,15 @@ CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
 CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
 CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
 
--- Constraints (idempotent for existing tables)
-ALTER TABLE rooms ADD CONSTRAINT IF NOT EXISTS rooms_code_unique UNIQUE (code);
-ALTER TABLE room_players ADD CONSTRAINT IF NOT EXISTS room_players_pkey PRIMARY KEY (room_id, player_id);
-ALTER TABLE room_players ADD CONSTRAINT IF NOT EXISTS room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
-ALTER TABLE games ADD CONSTRAINT IF NOT EXISTS games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+-- Constraints (idempotent: drop first, then add)
+ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_code_unique;
+ALTER TABLE rooms ADD CONSTRAINT rooms_code_unique UNIQUE (code);
+ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_pkey;
+ALTER TABLE room_players ADD CONSTRAINT room_players_pkey PRIMARY KEY (room_id, player_id);
+ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_room_fk;
+ALTER TABLE room_players ADD CONSTRAINT room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+ALTER TABLE games DROP CONSTRAINT IF EXISTS games_room_fk;
+ALTER TABLE games ADD CONSTRAINT games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
 
 
                                                                             -- Enable Row Level Security (RLS)
