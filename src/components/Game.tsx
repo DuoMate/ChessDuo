@@ -11,6 +11,7 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { TeamTimer } from './TeamTimer'
+import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
@@ -33,6 +34,7 @@ interface GameProps {
   roomId?: string
   team?: 'WHITE' | 'BLACK'
   playerId?: string
+  timeLimitSeconds?: number
 }
 
 interface GameState {
@@ -50,8 +52,8 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
-  timerSeconds: number
-  timerActive: boolean
+  matchTimeRemaining: number
+  matchTimerActive: boolean
   pendingOverlay: PendingOverlay | null
   myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
@@ -124,13 +126,15 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps }: GameProps) {
-  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
+  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds })
   
-  const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
+  const timeLimit = timeLimitSeconds || 600
+
+  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimit) : null)
   const [onlineGame] = useState(() => {
     console.log('[Game] Creating OnlineGame, mode:', mode)
-    return mode === 'online' ? new OnlineGame() : null
+    return mode === 'online' ? new OnlineGame(timeLimit) : null
   })
   const isOnline = mode === 'online'
   console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
@@ -172,8 +176,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    timerSeconds: 10,
-    timerActive: false,
+    matchTimeRemaining: 600,
+    matchTimerActive: false,
     pendingOverlay: null,
     myPendingOverlay: null,
     highlightSquares: null,
@@ -337,8 +341,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByWhite: captured.white,
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
-          timerSeconds: g.getTeamTimer(),
-          timerActive: g.isTimerActive(),
+          matchTimeRemaining: g.getMatchTimeRemaining(),
+          matchTimerActive: g.isMatchTimerActive(),
           isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
           pendingOverlay,
           myPendingOverlay
@@ -415,7 +419,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [mode, onlineGame, playerId, roomId, team])
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const matchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const matchTimeoutFlagRef = useRef(false)
   const gameRef = useRef(game)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
@@ -424,44 +429,122 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameRef.current = game
   }, [game])
 
-  const startTimer = useCallback(() => {
+  const tickMatchTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    
-    g.setTeamTimer(10)
-    
-    timerRef.current = setInterval(() => {
-      const currentTimer = g.getTeamTimer()
-      if (currentTimer <= 0) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
-        g.setTimerActive(false)
-        setGameState(prev => ({ ...prev, timerSeconds: 0, timerActive: false }))
-        return
+
+    const remaining = g.getMatchTimeRemaining()
+    if (remaining <= 0) {
+      if (matchTimerRef.current) {
+        clearInterval(matchTimerRef.current)
+        matchTimerRef.current = null
       }
-      
-      g.setTeamTimer(currentTimer - 1)
-      setGameState(prev => ({ ...prev, timerSeconds: currentTimer - 1 }))
-    }, 1000)
+      if (matchTimeoutFlagRef.current) return
+      matchTimeoutFlagRef.current = true
+      g.setMatchTimerActive(false)
+      g.setMatchTimeRemaining(0)
+      setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
+
+      handleMatchTimeout(g)
+      return
+    }
+
+    g.setMatchTimeRemaining(remaining - 1)
+    setGameState(prev => ({ ...prev, matchTimeRemaining: remaining - 1 }))
   }, [isOnline])
 
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+  const handleMatchTimeout = useCallback(async (g: any) => {
+    try {
+      const evaluator = g.getEvaluator()
+      if (!evaluator) {
+        g.setGameOverTimeup('Draw by timeout', 'timeout')
+        setGameState(prev => ({ ...prev, status: 3 as any }))
+        updateStateRef.current?.()
+        return
+      }
+
+      const fen = g.board.fen()
+      const score = await evaluator.evaluatePosition(fen)
+      let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
+      let result = ''
+
+      if (score > 0) {
+        winner = 'WHITE'
+        result = 'White wins by timeout — material advantage'
+      } else if (score < 0) {
+        winner = 'BLACK'
+        result = 'Black wins by timeout — material advantage'
+      } else {
+        winner = 'DRAW'
+        result = "Draw by timeout — equal position"
+      }
+
+      g.setGameOverTimeup(result, 'timeout')
+      setGameState(prev => ({ ...prev, status: 3 as any }))
+      updateStateRef.current?.()
+    } catch (e) {
+      console.error('[TIMEOUT] Evaluation failed:', e)
+      const g2 = isOnline ? onlineGameRef.current : gameRef.current
+      if (g2) {
+        g2.setGameOverTimeup('Draw by timeout', 'timeout')
+        setGameState(prev => ({ ...prev, status: 3 as any }))
+        updateStateRef.current?.()
+      }
+    }
+  }, [isOnline])
+
+  const startMatchTimer = useCallback(() => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    if (!g) return
+
+    if (matchTimerRef.current) {
+      clearInterval(matchTimerRef.current)
+      matchTimerRef.current = null
+    }
+
+    matchTimeoutFlagRef.current = false
+    g.setMatchTimerActive(true)
+    g.setMatchTimeRemaining(timeLimit)
+
+    setGameState(prev => ({
+      ...prev,
+      matchTimeRemaining: timeLimit,
+      matchTimerActive: true
+    }))
+
+    matchTimerRef.current = setInterval(() => {
+      tickMatchTimer()
+    }, 1000)
+  }, [isOnline, timeLimit, tickMatchTimer])
+
+  const stopMatchTimer = useCallback(() => {
+    if (matchTimerRef.current) {
+      clearInterval(matchTimerRef.current)
+      matchTimerRef.current = null
     }
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (g) {
-      g.setTimerActive(false)
+      g.setMatchTimerActive(false)
     }
-    setGameState(prev => ({ ...prev, timerActive: false }))
+    setGameState(prev => ({ ...prev, matchTimerActive: false }))
   }, [isOnline])
+
+  // Start match timer when game transitions to PLAYING
+  useEffect(() => {
+    if (gameState.status === GameStatus.PLAYING && !gameState.matchTimerActive) {
+      startMatchTimer()
+    }
+  }, [gameState.status, gameState.matchTimerActive, startMatchTimer])
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (matchTimerRef.current) {
+        clearInterval(matchTimerRef.current)
+        matchTimerRef.current = null
+      }
+    }
+  }, [])
 
   const updateState = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -533,8 +616,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracy: 100,
         moveAccuracyP2: 100,
         totalMoves: 0,
-        timerSeconds: g.getTeamTimer(),
-        timerActive: g.isTimerActive(),
+        matchTimeRemaining: g.getMatchTimeRemaining(),
+        matchTimerActive: g.isMatchTimerActive(),
         pendingOverlay,
         myPendingOverlay,
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
@@ -568,8 +651,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (!g.isBothPendingLocked()) {
       return false
     }
-
-    stopTimer()
 
     const pending = g.getPendingMoves()
     const humanMove = pending.human
@@ -816,8 +897,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 } catch (e) {
                   console.log(`[RESOLVE] BLACK resolve failed:`, e)
                 }
-                
-                startTimer()
               })()
             }
           } catch (e: any) {
@@ -851,7 +930,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       try {
         g.startPendingTurn()
-        startTimer()
 
         setGameState(prev => ({
           ...prev,
@@ -936,7 +1014,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (!pendingOpponentTurnRef.current) {
           console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
           g.startPendingTurn()
-          startTimer()
         } else {
           console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
           await handleResolutionComplete()
@@ -945,7 +1022,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
     }
-  }, [isOnline, onlineGame, game, playerId, teammateBot, startTimer, checkAndResolve])
+  }, [isOnline, onlineGame, game, playerId, teammateBot, checkAndResolve])
 
   useEffect(() => {
     if (!isOnline && game && game.status === GameStatus.WAITING) {
@@ -996,10 +1073,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
-        startTimer()
       }
     }
-  }, [executeBotMove, startTimer])
+  }, [executeBotMove])
 
   // Show loading state while game initializes
   if (gameState.isLoading) {
@@ -1091,64 +1167,57 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
 
         <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-3 md:gap-6 mb-3 md:mb-4">
-          {/* Left side - WHITE team (Timer + Captured) */}
+          {/* Left side - WHITE team (Captured) */}
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
-                currentTeam={Team.WHITE}
-              />
-            </div>
             <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
           </div>
           
-          {/* Chess Board */}
-          <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] aspect-square flex-shrink-0 relative">
-            <ChessBoard 
-              fen={playbackFen || gameState.fen}
-              onMove={handleMove}
-              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-              orientation="white"
-              lastMove={gameState.lastMove}
-              pendingOverlay={gameState.pendingOverlay}
-              myPendingOverlay={gameState.myPendingOverlay}
-              highlightSquares={gameState.highlightSquares}
-              onAnimationComplete={handleResolutionComplete}
+          {/* Chess Board + Match Timer */}
+          <div className="flex flex-col items-center gap-2">
+            <MatchTimer
+              seconds={gameState.matchTimeRemaining}
+              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+              totalSeconds={timeLimit}
             />
-          </div>
-          
-{/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] px-2">
-            {(() => {
-              const g = isOnline ? onlineGameRef.current : gameRef.current
-              return (
-                <>
-                  {!accuracyComparison && turnState === 'resolving' && (
-                    <EvaluatingLoader />
-                  )}
-                  <AccuracyBottomSheet 
-                    comparison={accuracyComparison}
-                    isVisible={!!accuracyComparison}
-                    playerId={playerId}
-                    player1Id={isOnline ? (g as any)?.player1Id : null}
-                  />
-                </>
-              )
-            })()}
-          </div>
-          
-          {/* Right side - BLACK team (Timer + Resolution + Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
-                currentTeam={Team.BLACK}
+            <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] aspect-square flex-shrink-0 relative">
+              <ChessBoard 
+                fen={playbackFen || gameState.fen}
+                onMove={handleMove}
+                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                orientation="white"
+                lastMove={gameState.lastMove}
+                pendingOverlay={gameState.pendingOverlay}
+                myPendingOverlay={gameState.myPendingOverlay}
+                highlightSquares={gameState.highlightSquares}
+                onAnimationComplete={handleResolutionComplete}
               />
             </div>
+          </div>
+          
+          {/* Right side - BLACK team (Captured) */}
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
             <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
           </div>
+        </div>
+
+        {/* Accuracy Panel - below board as bottom sheet */}
+        <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] mx-auto px-2 mb-4">
+          {(() => {
+            const g = isOnline ? onlineGameRef.current : gameRef.current
+            return (
+              <>
+                {!accuracyComparison && turnState === 'resolving' && (
+                  <EvaluatingLoader />
+                )}
+                <AccuracyBottomSheet 
+                  comparison={accuracyComparison}
+                  isVisible={!!accuracyComparison}
+                  playerId={playerId}
+                  player1Id={isOnline ? (g as any)?.player1Id : null}
+                />
+              </>
+            )
+          })()}
         </div>
 
         <div className="mt-4 text-center">

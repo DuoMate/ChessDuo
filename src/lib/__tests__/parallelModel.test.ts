@@ -98,33 +98,40 @@ describe('Parallel Model - Team Timer', () => {
     game.start()
   }
 
-  describe('Timer Initialization', () => {
-    test('timer starts with 10 seconds after startPendingTurn', () => {
-      setupFullGame()
-      game.startPendingTurn()
-      expect(game.getTeamTimer()).toBe(10)
+  describe('Match Timer Initialization', () => {
+    test('timer starts with configured time after construction', () => {
+      const g = new LocalGame(300)
+      g.addPlayer('player1', Team.WHITE)
+      g.addPlayer('player2', Team.WHITE)
+      g.addPlayer('player3', Team.BLACK)
+      g.addPlayer('player4', Team.BLACK)
+      g.start()
+      expect(g.getMatchTimeRemaining()).toBe(300)
     })
 
-    test('timer is active after startPendingTurn', () => {
+    test('match timer is not active by default', () => {
       setupFullGame()
-      game.startPendingTurn()
-      expect(game.isTimerActive()).toBe(true)
+      expect(game.isMatchTimerActive()).toBe(false)
     })
 
-    test('timer can be decremented', () => {
+    test('match timer can be set and retrieved', () => {
       setupFullGame()
-      game.startPendingTurn()
-      game.setTeamTimer(8)
-      expect(game.getTeamTimer()).toBe(8)
+      game.setMatchTimeRemaining(120)
+      expect(game.getMatchTimeRemaining()).toBe(120)
     })
   })
 
-  describe('Timer Expiration', () => {
-    test('timer can be deactivated', () => {
+  describe('Match Timer Active State', () => {
+    test('match timer can be activated', () => {
       setupFullGame()
-      game.startPendingTurn()
-      game.setTimerActive(false)
-      expect(game.isTimerActive()).toBe(false)
+      game.setMatchTimerActive(true)
+      expect(game.isMatchTimerActive()).toBe(true)
+    })
+
+    test('match timer can be deactivated', () => {
+      setupFullGame()
+      game.setMatchTimerActive(false)
+      expect(game.isMatchTimerActive()).toBe(false)
     })
   })
 })

@@ -13,9 +13,24 @@ export const dynamic = 'force-dynamic'
 
 type GameMode = 'offline' | 'online' | 'quickmatch' | null
 
+interface TimeOption {
+  seconds: number
+  label: string
+  icon: string
+  description: string
+}
+
+const TIME_OPTIONS: TimeOption[] = [
+  { seconds: 300, label: '5 min', icon: '⚡', description: 'Blitz' },
+  { seconds: 600, label: '10 min', icon: '⏱', description: 'Rapid' },
+  { seconds: 900, label: '15 min', icon: '🕐', description: 'Rapid' },
+  { seconds: 1800, label: '30 min', icon: '🕒', description: 'Classical' },
+]
+
 export default function SetupPage() {
   const router = useRouter()
   const [gameMode, setGameMode] = useState<GameMode>(null)
+  const [selectedTime, setSelectedTime] = useState<number | null>(null)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
@@ -46,18 +61,72 @@ export default function SetupPage() {
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
-    setGameMode('online')
+    // Preserve current gameMode - don't override to 'online'
   }
 
   const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
-    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}`)
+    const time = selectedTime || 600
+    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
   }
 
   const handleStartOffline = () => {
-    router.push(`/game?level=${selectedLevel}`)
+    const time = selectedTime || 600
+    router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
   if (!sessionChecked) return null
+
+  // Time selection screen - show for any selected game mode before next step
+  if (gameMode && selectedTime === null) {
+    return (
+      <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-6">
+            <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
+              {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B' : '\u26A1'}
+            </div>
+            <h1 className="text-2xl font-black text-yellow-400 tracking-wider">
+              {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'ONLINE' : 'QUICK MATCH'}
+            </h1>
+            <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select game duration</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {TIME_OPTIONS.map((option: TimeOption) => (
+              <button
+                key={option.seconds}
+                onClick={() => setSelectedTime(option.seconds)}
+                className={`
+                  p-5 rounded-xl border transition-all duration-200 text-center
+                  ${selectedTime === option.seconds
+                    ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
+                    : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
+                  }
+                `}
+              >
+                <div className="text-[28px] mb-1.5">{option.icon}</div>
+                <div className="text-lg font-bold mb-0.5">{option.label}</div>
+                <div className="text-[11px] text-gray-400">{option.description}</div>
+              </button>
+            ))}
+          </div>
+
+          <div className="text-center mb-4">
+            <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={() => setGameMode(null)}
+              className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
+            >
+              {'\u2190'} Back to game mode
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!gameMode) {
     return (
@@ -220,10 +289,10 @@ export default function SetupPage() {
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => setGameMode(null)}
+              onClick={() => setSelectedTime(null)}
               className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
             >
-              {"\u2190"} Back to game mode
+              {"\u2190"} Back to time
             </button>
           </div>
         </div>
@@ -237,7 +306,7 @@ export default function SetupPage() {
         <div className="min-h-screen bg-[#0f1119] text-white">
           <div className="absolute top-4 left-4 z-10">
             <button
-              onClick={() => setGameMode(null)}
+              onClick={() => setSelectedTime(null)}
               className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
             >
               {"\u2190"} Back
@@ -257,10 +326,10 @@ export default function SetupPage() {
         />
         <div className="mt-8 text-center pb-8">
           <button
-            onClick={() => setGameMode(null)}
+            onClick={() => setSelectedTime(null)}
             className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
           >
-            {"\u2190"} Back to game mode
+            {"\u2190"} Back to time
           </button>
         </div>
       </div>
@@ -273,7 +342,7 @@ export default function SetupPage() {
         <div className="min-h-screen bg-[#0f1119] text-white">
           <div className="absolute top-4 left-4 z-10">
             <button
-              onClick={() => setGameMode(null)}
+              onClick={() => setSelectedTime(null)}
               className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
             >
               {"\u2190"} Back

@@ -61,8 +61,8 @@ export class LocalGame {
   private _lastMoveComparison: MoveComparison | null = null
   private initialized = false
 
-  constructor() {
-    this.gameState = new GameState()
+  constructor(timeLimitSeconds: number = 600) {
+    this.gameState = new GameState(timeLimitSeconds)
     
     if (SERVER_URL) {
       console.log(`[LocalGame] Using server evaluator: ${SERVER_URL}`)
@@ -176,20 +176,41 @@ export class LocalGame {
     return this.gameState.getTurnStartFen()
   }
 
-  getTeamTimer(): number {
-    return this.gameState.getTeamTimer()
+  getMatchTimeRemaining(): number {
+    return this.gameState.getMatchTimeRemaining()
   }
 
-  setTeamTimer(seconds: number): void {
-    this.gameState.setTeamTimer(seconds)
+  setMatchTimeRemaining(seconds: number): void {
+    this.gameState.setMatchTimeRemaining(seconds)
   }
 
-  isTimerActive(): boolean {
-    return this.gameState.isTimerActive()
+  isMatchTimerActive(): boolean {
+    return this.gameState.isMatchTimerActive()
   }
 
-  setTimerActive(active: boolean): void {
-    this.gameState.setTimerActive(active)
+  setMatchTimerActive(active: boolean): void {
+    this.gameState.setMatchTimerActive(active)
+  }
+
+  getEvaluator(): ServerMoveEvaluator {
+    return this.evaluator
+  }
+
+  setGameOverTimeup(result: string, reason: string): void {
+    this._status = GameStatus.GAME_OVER
+    this._gameOverResult = result
+    this._gameOverReason = reason
+  }
+
+  private _gameOverResult: string = ''
+  private _gameOverReason: string = ''
+
+  setGameOverResult(result: string): void {
+    this._gameOverResult = result
+  }
+
+  setGameOverReason(reason: string): void {
+    this._gameOverReason = reason
   }
 
   selectMove(player: Player, move: string): void {
@@ -533,6 +554,7 @@ export class LocalGame {
   }
 
   getResult(): string {
+    if (this._gameOverResult) return this._gameOverResult
     const board = this.gameState.board
     if (board.isCheckmate()) {
       return board.turn() === 'w' ? 'Black wins by checkmate' : 'White wins by checkmate'
@@ -553,6 +575,7 @@ export class LocalGame {
   }
 
   getGameOverReason(): string | null {
+    if (this._gameOverReason) return this._gameOverReason
     const board = this.gameState.board
     if (board.isCheckmate()) {
       return 'checkmate'

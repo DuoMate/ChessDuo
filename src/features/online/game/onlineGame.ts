@@ -67,13 +67,6 @@ export class OnlineGame {
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
 
-  constructor() {
-    this.gameState = new GameState()
-    this._status = GameStatus.WAITING
-    console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
-    this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
-  }
-
   get highlightSquares() {
     return null
   }
@@ -95,6 +88,7 @@ export class OnlineGame {
   }
 
   getResult(): string {
+    if (this._gameOverResult) return this._gameOverResult
     const board = this.gameState.board
     if (board.isCheckmate()) {
       return board.turn() === 'w' ? 'Black wins by checkmate' : 'White wins by checkmate'
@@ -107,6 +101,7 @@ export class OnlineGame {
   }
 
   getGameOverReason(): string | null {
+    if (this._gameOverReason) return this._gameOverReason
     const board = this.gameState.board
     if (board.isCheckmate()) return 'checkmate'
     if (board.isStalemate()) return 'stalemate'
@@ -354,7 +349,7 @@ export class OnlineGame {
         .order('player_id', { ascending: true })
 
       // Reset game state - ensures clean state
-      this.gameState = new GameState()
+      this.gameState = new GameState(this._timeLimitSeconds)
       this._status = GameStatus.READY
 
       // Add human players to their respective teams
@@ -683,24 +678,50 @@ export class OnlineGame {
     return this.gameState.getTurnStartFen()
   }
 
-  getTeamTimer(): number {
-    return this.gameState.getTeamTimer()
+  getMatchTimeRemaining(): number {
+    return this.gameState.getMatchTimeRemaining()
   }
 
-  setTeamTimer(seconds: number): void {
-    this.gameState.setTeamTimer(seconds)
+  setMatchTimeRemaining(seconds: number): void {
+    this.gameState.setMatchTimeRemaining(seconds)
   }
 
-  isTimerActive(): boolean {
-    return this.gameState.isTimerActive()
+  isMatchTimerActive(): boolean {
+    return this.gameState.isMatchTimerActive()
   }
 
-  setTimerActive(active: boolean): void {
-    this.gameState.setTimerActive(active)
+  setMatchTimerActive(active: boolean): void {
+    this.gameState.setMatchTimerActive(active)
   }
 
-  selectMove(player: Player, move: string): void {
-    this.gameState.selectMove(player, move)
+  getEvaluator(): ServerMoveEvaluator {
+    return this.evaluator
+  }
+
+  setGameOverTimeup(result: string, reason: string): void {
+    this._status = GameStatus.GAME_OVER
+    this._gameOverResult = result
+    this._gameOverReason = reason
+  }
+
+  setGameOverResult(result: string): void {
+    this._gameOverResult = result
+  }
+
+  setGameOverReason(reason: string): void {
+    this._gameOverReason = reason
+  }
+
+  private _gameOverResult: string = ''
+  private _gameOverReason: string = ''
+  private _timeLimitSeconds: number
+
+  constructor(timeLimitSeconds: number = 600) {
+    this.gameState = new GameState(timeLimitSeconds)
+    this._timeLimitSeconds = timeLimitSeconds
+    this._status = GameStatus.WAITING
+    console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
+    this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
   }
 
   getPlayers(team: Team): Player[] {

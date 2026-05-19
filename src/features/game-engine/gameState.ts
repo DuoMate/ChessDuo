@@ -48,10 +48,10 @@ export class GameState {
 
   private turnStartFen: string
   private pendingMoves: Map<Player, PendingMoveInfo>
-  private teamTimer: number
-  private timerActive: boolean
+  private _matchTimeRemaining: number
+  private _matchTimerActive: boolean
 
-  constructor() {
+  constructor(timeLimitSeconds: number = 600) {
     this.chess = new Chess()
     this._phase = GamePhase.WAITING
     this._currentTeam = Team.WHITE
@@ -64,8 +64,8 @@ export class GameState {
 
     this.turnStartFen = ''
     this.pendingMoves = new Map()
-    this.teamTimer = 10
-    this.timerActive = false
+    this._matchTimeRemaining = timeLimitSeconds
+    this._matchTimerActive = false
   }
 
   get phase(): GamePhase {
@@ -113,8 +113,6 @@ export class GameState {
   startPendingTurn(fen: string): void {
     this.turnStartFen = fen
     this.pendingMoves.clear()
-    this.teamTimer = 10
-    this.timerActive = true
   }
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
@@ -184,12 +182,20 @@ export class GameState {
     return this.turnStartFen
   }
 
-  getTeamTimer(): number {
-    return this.teamTimer
+  getMatchTimeRemaining(): number {
+    return this._matchTimeRemaining
   }
 
-  setTeamTimer(seconds: number): void {
-    this.teamTimer = seconds
+  setMatchTimeRemaining(seconds: number): void {
+    this._matchTimeRemaining = seconds
+  }
+
+  isMatchTimerActive(): boolean {
+    return this._matchTimerActive
+  }
+
+  setMatchTimerActive(active: boolean): void {
+    this._matchTimerActive = active
   }
 
   setCurrentTeam(team: Team): void {
@@ -202,14 +208,6 @@ export class GameState {
     this.board.load(fen)
     const fenParts = fen.split(' ')
     this._currentTeam = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
-  }
-
-  isTimerActive(): boolean {
-    return this.timerActive
-  }
-
-  setTimerActive(active: boolean): void {
-    this.timerActive = active
   }
 
   selectMove(player: Player, move: string): void {
@@ -301,7 +299,6 @@ export class GameState {
     this.pendingMoves.clear()
     this._currentTeam = this._currentTeam === Team.WHITE ? Team.BLACK : Team.WHITE
     this._phase = GamePhase.SELECTING
-    this.timerActive = false
 
     return result
   }

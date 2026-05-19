@@ -26,6 +26,7 @@ const reasonLabels: Record<string, string> = {
   threefoldRepetition: 'Draw by Repetition',
   insufficientMaterial: 'Draw by Insufficient Material',
   draw: 'Draw',
+  timeout: "Time's Up",
 }
 
 export function MatchSummary({ winner, gameResult, gameOverReason, stats, isOnline }: MatchSummaryProps) {

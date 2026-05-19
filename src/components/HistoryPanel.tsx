@@ -14,6 +14,7 @@ const reasonLabels: Record<string, string> = {
   threefoldRepetition: 'Repetition',
   insufficientMaterial: 'Insufficient Material',
   draw: 'Draw',
+  timeout: "Time's Up",
 }
 
 export function HistoryPanel({ playerId }: HistoryPanelProps) {

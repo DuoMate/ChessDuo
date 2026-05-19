@@ -177,16 +177,16 @@ describe('OnlineGame', () => {
     })
   })
 
-  describe('getTeamTimer', () => {
-    it('should return a number for team timer', () => {
-      const timer = game.getTeamTimer()
-      expect(typeof timer).toBe('number')
+  describe('getMatchTimeRemaining', () => {
+    it('should return a number for match time remaining', () => {
+      const time = game.getMatchTimeRemaining()
+      expect(typeof time).toBe('number')
     })
   })
 
-  describe('isTimerActive', () => {
-    it('should return boolean for timer active state', () => {
-      const active = game.isTimerActive()
+  describe('isMatchTimerActive', () => {
+    it('should return boolean for match timer active state', () => {
+      const active = game.isMatchTimerActive()
       expect(typeof active).toBe('boolean')
     })
   })
