@@ -853,7 +853,10 @@ export class OnlineGame {
       winnerId,
       loserId,
       loserFrom,
-      loserTo
+      loserTo,
+      alternatives: evalResults.slice(0, 5).filter(r => r.move !== bestMoveUci),
+      youMatchedEngine: player1Uci === bestMoveUci,
+      teammateMatchedEngine: player2Uci === bestMoveUci,
     }
 
     // FIX: Store comparison for the correct team based on currentTeam

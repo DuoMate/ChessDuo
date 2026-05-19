@@ -47,6 +47,9 @@ export interface MoveComparison {
   loserId: 'player1' | 'player2' | null
   loserFrom: string
   loserTo: string
+  alternatives: { move: string; score: number }[]
+  youMatchedEngine: boolean
+  teammateMatchedEngine: boolean
 }
 
 export class LocalGame {
@@ -316,7 +319,10 @@ export class LocalGame {
       winnerId: winnerId as 'player1' | 'player2',
       loserId,
       loserFrom,
-      loserTo
+      loserTo,
+      alternatives: evalResults.slice(0, 5).filter(r => r.move !== bestMoveUci),
+      youMatchedEngine: player1Uci === bestMoveUci,
+      teammateMatchedEngine: player2Uci === bestMoveUci,
     }
 
     if (!skipStatsUpdate) {
@@ -449,7 +455,10 @@ export class LocalGame {
       winnerId: winnerId as 'player1' | 'player2',
       loserId: winnerId === player1Id ? player2Id as 'player1' | 'player2' : player1Id as 'player1' | 'player2',
       loserFrom: '',
-      loserTo: ''
+      loserTo: '',
+      alternatives: evalResults.slice(0, 5).filter(r => r.move !== bestMoveUci),
+      youMatchedEngine: player1Uci === bestMoveUci,
+      teammateMatchedEngine: player2Uci === bestMoveUci,
     }
 
     if (!skipStatsUpdate) {
