@@ -250,11 +250,16 @@ AS $$
                                                                                                                     AND is_room_member(room_id)
                                                                                                                       );
 
-                                                                                                                      CREATE POLICY "Authenticated users can join rooms" ON room_players
-                                                                                                                        FOR INSERT WITH CHECK (
-                                                                                                                            auth.role() = 'authenticated'
-                                                                                                                                AND auth.uid()::text = player_id
-                                                                                                                                  );
+CREATE POLICY "Authenticated users can join rooms" ON room_players
+  FOR INSERT WITH CHECK (
+      auth.role() = 'authenticated'
+        AND auth.uid()::text = player_id
+          );
+
+          -- Allow guest players (no auth session) to join rooms too
+          DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
+          CREATE POLICY "Anyone can join rooms" ON room_players
+            FOR INSERT WITH CHECK (true);
 
                                                                                                                                   CREATE POLICY "Players can leave rooms" ON room_players
                                                                                                                                     FOR DELETE USING (
@@ -265,20 +270,14 @@ AS $$
                                                                                                                                             FOR UPDATE USING (auth.uid()::text = player_id);
 
                                                                                                                                             -- games: must be room member for all operations
-                                                                                                                                            CREATE POLICY "Room members can view game" ON games
-                                                                                                                                              FOR SELECT USING (
-                                                                                                                                                  auth.uid() IS NOT NULL AND is_room_member(room_id)
-                                                                                                                                                    );
+CREATE POLICY "Room members can view game" ON games
+  FOR SELECT USING (is_room_member(room_id));
 
-                                                                                                                                                    CREATE POLICY "Room members can insert game" ON games
-                                                                                                                                                      FOR INSERT WITH CHECK (
-                                                                                                                                                          auth.uid() IS NOT NULL AND is_room_member(room_id)
-                                                                                                                                                            );
+CREATE POLICY "Room members can insert game" ON games
+  FOR INSERT WITH CHECK (is_room_member(room_id));
 
-                                                                                                                                                            CREATE POLICY "Room members can update game" ON games
-                                                                                                                                                              FOR UPDATE USING (
-                                                                                                                                                                  auth.uid() IS NOT NULL AND is_room_member(room_id)
-                                                                                                                                                                    );
+CREATE POLICY "Room members can update game" ON games
+  FOR UPDATE USING (is_room_member(room_id));
 
                                                                                                                                                                     -- completed_games: authenticated users can view and insert
                                                                                                                                                                     CREATE POLICY "Authenticated users can view completed games" ON completed_games

@@ -254,6 +254,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
+  const lastOnlineStateRef = useRef<string>('')
   useEffect(() => {
     console.log('[Game] setOnStateChange useEffect, onlineGame:', !!onlineGame)
     if (!onlineGame) {
@@ -264,11 +265,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     onlineGameRef.current = onlineGame
     console.log('[Game] Setting up setOnStateChange callback')
     onlineGame.setOnStateChange(() => {
-      console.log('[Game] 🔥 State change callback triggered!')
-      if (onlineGameRef.current) {
-        const g = onlineGameRef.current
-        const captured = g.getCapturedPieces()
-        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
+      if (!onlineGameRef.current) return
+      const g = onlineGameRef.current
+
+      // Skip if state hasn't meaningfully changed (prevents re-render loops)
+      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${g.getMatchTimeRemaining()}`
+      if (stateKey === lastOnlineStateRef.current) return
+      lastOnlineStateRef.current = stateKey
+
+      const captured = g.getCapturedPieces()
         
         // Get pendingOverlay for online mode - show teammate's pending move
         // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
@@ -380,7 +385,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       moveHistoryRef.current = [...moveHistoryRef.current, entry]
     }
         console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
-      }
     })
     console.log('[Game] setOnStateChange callback set up complete')
   }, [onlineGame, playerId])

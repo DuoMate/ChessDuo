@@ -154,6 +154,7 @@ export default function SetupPage() {
         room_id: room.id,
         player_id: pid,
         team,
+        slot: 0,
         status: 'ready'
       }, { onConflict: 'room_id,player_id' })
 

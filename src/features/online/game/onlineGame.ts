@@ -236,6 +236,7 @@ export class OnlineGame {
         room_id: room.id,
         player_id: playerId,
         team,
+        slot: 0,
         status: 'ready'
       }, { onConflict: 'room_id,player_id' })
       if (error) {
