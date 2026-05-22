@@ -44,6 +44,7 @@ export default function SetupPage() {
   const [joinError, setJoinError] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const skillLevels = getAvailableSkillLevels()
 
@@ -84,16 +85,23 @@ export default function SetupPage() {
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
+    setShowAuthOverlay(false)
   }
 
-  const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
-    const time = selectedTime || 600
-    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
-  }
-
-  const handleStartOffline = () => {
-    const time = selectedTime || 600
-    router.push(`/game?level=${selectedLevel}&time=${time}`)
+  const ensurePlayerId = async (): Promise<string> => {
+    if (playerId) return playerId
+    try {
+      const { data } = await supabase.auth.signInAnonymously()
+      if (data.user) {
+        setPlayerId(data.user.id)
+        setUsername(`Player${data.user.id.substring(0, 8)}`)
+        return data.user.id
+      }
+    } catch {}
+    const fallbackId = `anon_${Math.random().toString(36).substring(2, 10)}`
+    setPlayerId(fallbackId)
+    setUsername(`Player${fallbackId.substring(0, 8)}`)
+    return fallbackId
   }
 
   const handleJoinByCode = async () => {
@@ -111,18 +119,17 @@ export default function SetupPage() {
 
       if (roomError || !room) {
         setJoinError('Room not found — check the code')
+        setJoinLoading(false)
         return
       }
 
       if (room.status !== 'waiting') {
         setJoinError('Room is no longer available')
+        setJoinLoading(false)
         return
       }
 
-      if (!playerId) {
-        setJoinError('Sign in required — please sign in below')
-        return
-      }
+      const pid = await ensurePlayerId()
 
       const { data: existingPlayers } = await supabase
         .from('room_players')
@@ -139,28 +146,73 @@ export default function SetupPage() {
         team = 'BLACK'
       } else {
         setJoinError('Room is full')
+        setJoinLoading(false)
         return
       }
 
       await supabase.from('room_players').upsert({
         room_id: room.id,
-        player_id: playerId,
+        player_id: pid,
         team,
         status: 'ready'
       }, { onConflict: 'room_id,player_id' })
 
       setJoinLoading(false)
-      handleRoomJoined(room, team, playerId)
-    } catch (e) {
+      handleRoomJoined(room, team, pid)
+    } catch {
       setJoinError('Something went wrong — try again')
-    } finally {
       setJoinLoading(false)
     }
+  }
+
+  const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
+    const time = selectedTime || 600
+    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
+  }
+
+  const handleStartOffline = () => {
+    const time = selectedTime || 600
+    router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
   if (!sessionChecked) return null
 
   const showTopBar = !gameMode || (gameMode && selectedTime === null)
+
+  const topBar = showTopBar && (
+    <TopBar
+      playerId={playerId}
+      unreadMessages={unreadMessages}
+      onProfile={() => setProfileOpen(true)}
+      onFriends={() => setFriendsOpen(true)}
+      onSignIn={() => setShowAuthOverlay(true)}
+    />
+  )
+
+  const slideOvers = playerId && (
+    <>
+      <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
+        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
+      </SlideOver>
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
+        <FriendsPanel playerId={playerId} />
+      </SlideOver>
+    </>
+  )
+
+  const authOverlay = showAuthOverlay && (
+    <div className="fixed inset-0 z-[70]">
+      <div className="absolute top-4 left-4 z-10">
+        <button
+          onClick={() => setShowAuthOverlay(false)}
+          className="text-gray-400 hover:text-white text-sm transition-colors min-h-[44px] px-3"
+        >
+          {'\u2190'} Back
+        </button>
+      </div>
+      <Auth onAuthComplete={handleAuthComplete} />
+    </div>
+  )
 
   // ============================================
   // Time selection screen
@@ -168,8 +220,7 @@ export default function SetupPage() {
   if (gameMode && selectedTime === null) {
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col">
-        {showTopBar && <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />}
-
+        {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
@@ -187,13 +238,11 @@ export default function SetupPage() {
                 <button
                   key={option.seconds}
                   onClick={() => setSelectedTime(option.seconds)}
-                  className={`
-                    p-5 rounded-xl border transition-all duration-200 text-center
-                    ${selectedTime === option.seconds
+                  className={`p-5 rounded-xl border transition-all duration-200 text-center ${
+                    selectedTime === option.seconds
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
                       : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
-                    }
-                  `}
+                  }`}
                 >
                   <div className="text-[28px] mb-1.5">{option.icon}</div>
                   <div className="text-lg font-bold mb-0.5">{option.label}</div>
@@ -206,79 +255,54 @@ export default function SetupPage() {
               <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
             </div>
 
-          <div className="text-center">
-            <button
-              onClick={() => setGameMode(null)}
-              className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
-            >
-              {'\u2190'} Back to game mode
-            </button>
-          </div>
+            <div className="text-center">
+              <button onClick={() => setGameMode(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
+                {'\u2190'} Back to game mode
+              </button>
+            </div>
 
-          {gameMode === 'online' && (
-            <>
-              <div className="flex items-center gap-3 mb-4 mt-6">
-                <div className="flex-1 h-px bg-white/8" />
-                <span className="text-[10px] text-gray-600 uppercase tracking-wider">or</span>
-                <div className="flex-1 h-px bg-white/8" />
-              </div>
-
-              <div className="mb-4">
-                <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
-                  Have a room code?
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] 
-                               text-white text-base placeholder:text-gray-600 
-                               focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08]
-                               disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 
-                               text-yellow-400 font-semibold text-sm
-                               hover:bg-yellow-500/25 active:bg-yellow-500/35
-                               disabled:opacity-30 disabled:cursor-not-allowed
-                               transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
+            {gameMode === 'online' && (
+              <>
+                <div className="flex items-center gap-3 mb-4 mt-6">
+                  <div className="flex-1 h-px bg-white/8" />
+                  <span className="text-[10px] text-gray-600 uppercase tracking-wider">or</span>
+                  <div className="flex-1 h-px bg-white/8" />
                 </div>
-                {joinError && (
-                  <p className="text-red-400 text-[11px] mt-1.5">{joinError}</p>
-                )}
-              </div>
-            </>
-          )}
+                <div className="mb-4">
+                  <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">Have a room code?</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={joinCode}
+                      onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                      placeholder="ABC123"
+                      maxLength={6}
+                      inputMode="text"
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      disabled={joinLoading}
+                      className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] text-white text-base placeholder:text-gray-600 focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08] disabled:opacity-40 transition-all"
+                      style={{ minHeight: '44px' }}
+                    />
+                    <button
+                      onClick={handleJoinByCode}
+                      disabled={joinLoading || !joinCode.trim()}
+                      className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/25 active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                      style={{ minHeight: '44px' }}
+                    >
+                      {joinLoading ? 'Joining...' : 'Join'}
+                    </button>
+                  </div>
+                  {joinError && <p className="text-red-400 text-[11px] mt-1.5">{joinError}</p>}
+                </div>
+              </>
+            )}
+          </div>
         </div>
+        {slideOvers}
+        {authOverlay}
       </div>
-
-      {playerId && (
-        <>
-          <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-            <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
-          </SlideOver>
-
-          <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
-            <FriendsPanel playerId={playerId} />
-          </SlideOver>
-        </>
-      )}
-    </div>
-  )
+    )
   }
 
   // ============================================
@@ -287,86 +311,32 @@ export default function SetupPage() {
   if (!gameMode) {
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col relative overflow-hidden">
-        <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />
-
-        {/* Giant knight background */}
+        {topBar}
         <div className="absolute top-16 left-1/2 -translate-x-1/2 text-[340px] leading-none opacity-[0.025] text-yellow-400 select-none pointer-events-none">
           {"\u265E"}
         </div>
-
-        {/* Board pattern overlay */}
         <div className="absolute inset-0 opacity-[0.015] pointer-events-none"
           style={{
             backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(255,255,255,0.4) 44px, rgba(255,255,255,0.4) 45px),
                               repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(255,255,255,0.4) 44px, rgba(255,255,255,0.4) 45px)`
           }}
         />
-
-        {/* Radial glow */}
         <div className="absolute top-5 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.05) 0%, transparent 70%)' }}
         />
-
         <div className="flex-1 flex items-center justify-center">
           <div className="max-w-md w-full relative z-10 px-4">
-            {/* Brand */}
             <div className="text-center mb-6">
-              <div className="text-[42px] mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.2)]">
-                {"\u2654"}
-              </div>
+              <div className="text-[42px] mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.2)]">{"\u2654"}</div>
               <h1 className="text-[30px] font-black text-yellow-400 tracking-wider">ChessDuo</h1>
               <p className="text-[9px] text-gray-500 tracking-[0.2em] uppercase mt-0.5">Play Smarter, Together</p>
             </div>
-
-            {/* Prompt */}
             <p className="text-sm text-gray-400 text-center font-medium mb-4">Choose your game mode</p>
-
-            {/* Mode cards */}
             <div className="flex flex-col gap-3 mb-5">
-              <button
-                onClick={() => setGameMode('offline')}
-                className="flex items-center gap-3.5 p-[18px] rounded-2xl border border-white/8 bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04] transition-all duration-200 text-left group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/8 border border-yellow-500/12 flex items-center justify-center flex-shrink-0 text-[28px] drop-shadow-[0_0_8px_rgba(250,204,21,0.15)]">
-                  {"\u265E"}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-[15px] text-gray-100 group-hover:text-yellow-400 transition-colors">Play Offline</div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">vs Bot teammate</div>
-                </div>
-                <span className="text-base text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
-              </button>
-
-              <button
-                onClick={() => setGameMode('online')}
-                className="flex items-center gap-3.5 p-[18px] rounded-2xl border border-yellow-500/15 bg-yellow-500/[0.03] hover:border-yellow-500/40 hover:bg-yellow-500/[0.06] transition-all duration-200 text-left group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center flex-shrink-0 text-[28px] drop-shadow-[0_0_8px_rgba(250,204,21,0.2)]">
-                  {"\u265B"}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-[15px] text-yellow-400 group-hover:brightness-110 transition-all">Play Online</div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">with a friend</div>
-                </div>
-                <span className="text-base text-yellow-400 group-hover:opacity-100 transition-opacity">{"\u25B8"}</span>
-              </button>
-
-              <button
-                onClick={() => setGameMode('quickmatch')}
-                className="flex items-center gap-3.5 p-[18px] rounded-2xl border border-white/8 bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04] transition-all duration-200 text-left group"
-              >
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/8 border border-yellow-500/12 flex items-center justify-center flex-shrink-0 text-[28px] drop-shadow-[0_0_8px_rgba(250,204,21,0.15)]">
-                  {"\u26A1"}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-[15px] text-gray-100 group-hover:text-yellow-400 transition-colors">Quick Match</div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">auto-find teammate</div>
-                </div>
-                <span className="text-base text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
-              </button>
+              <ModeButton icon={'\u265E'} title="Play Offline" desc="vs Bot teammate" onClick={() => setGameMode('offline')} />
+              <ModeButton icon={'\u265B'} title="Play Online" desc="with a friend" onClick={() => setGameMode('online')} highlight />
+              <ModeButton icon={'\u26A1'} title="Quick Match" desc="auto-find teammate" onClick={() => setGameMode('quickmatch')} />
             </div>
-
-            {/* King vs King divider */}
             <div className="text-center mb-5">
               <div className="flex items-center justify-center gap-2 text-2xl opacity-[0.12] text-yellow-400">
                 <span>{"\u2654"}</span>
@@ -375,8 +345,6 @@ export default function SetupPage() {
               </div>
               <p className="text-[10px] text-gray-600 mt-1">White team — You + Teammate (2v2 vs Black bots)</p>
             </div>
-
-            {/* Footer links */}
             <div className="flex justify-center gap-5 text-[11px]">
               <button onClick={() => router.push('/history')} className="text-gray-500 hover:text-yellow-400 transition-colors">
                 {"\uD83D\uDCCB"} History
@@ -385,26 +353,15 @@ export default function SetupPage() {
                 {"\u2728"} Premium
               </button>
               {!playerId && (
-                <button onClick={() => setGameMode('online')} className="text-gray-500 hover:text-red-400 transition-colors">
+                <button onClick={() => setShowAuthOverlay(true)} className="text-gray-500 hover:text-red-400 transition-colors">
                   {"\uD83D\uDEAA"} Sign In
                 </button>
               )}
             </div>
           </div>
         </div>
-
-        {/* Slide-over panels for authenticated users */}
-        {playerId && (
-          <>
-            <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-              <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
-            </SlideOver>
-
-            <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
-              <FriendsPanel playerId={playerId} />
-            </SlideOver>
-          </>
-        )}
+        {slideOvers}
+        {authOverlay}
       </div>
     )
   }
@@ -415,37 +372,30 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col">
-        {showTopBar && <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />}
-
+        {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
-              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
-                {"\u265E"}
-              </div>
+              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
               <h1 className="text-2xl font-black text-yellow-400 tracking-wider">OFFLINE</h1>
               <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select opponent skill level</p>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
               {skillLevels.map((level: SkillLevel) => (
                 <button
                   key={level.level}
                   onClick={() => setSelectedLevel(level.level)}
-                  className={`
-                    p-5 rounded-xl border transition-all duration-200 text-center
-                    ${selectedLevel === level.level
+                  className={`p-5 rounded-xl border transition-all duration-200 text-center ${
+                    selectedLevel === level.level
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
                       : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
-                    }
-                  `}
+                  }`}
                 >
                   <div className="text-base font-bold mb-1">{level.label}</div>
                   <div className="text-[11px] text-gray-400">{level.description}</div>
                 </button>
               ))}
             </div>
-
             <div className="text-center">
               <button
                 onClick={handleStartOffline}
@@ -454,29 +404,15 @@ export default function SetupPage() {
                 Start Game
               </button>
             </div>
-
             <div className="mt-8 text-center">
-              <button
-                onClick={() => setSelectedTime(null)}
-                className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
-              >
+              <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
                 {"\u2190"} Back to time
               </button>
             </div>
           </div>
         </div>
-
-        {playerId && (
-          <>
-            <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-              <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
-            </SlideOver>
-
-            <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
-              <FriendsPanel playerId={playerId} />
-            </SlideOver>
-          </>
-        )}
+        {slideOvers}
+        {authOverlay}
       </div>
     )
   }
@@ -488,12 +424,9 @@ export default function SetupPage() {
     if (!playerId) {
       return (
         <div className="min-h-screen bg-[#0f1119] text-white">
-          <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />
+          {topBar}
           <div className="absolute top-4 left-4 z-10">
-            <button
-              onClick={() => setSelectedTime(null)}
-              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-            >
+            <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
               {"\u2190"} Back
             </button>
           </div>
@@ -504,32 +437,15 @@ export default function SetupPage() {
 
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col">
-        <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />
-        <RoomManager
-          playerId={playerId}
-          username={username}
-          onRoomJoined={handleRoomJoined}
-        />
+        {topBar}
+        <RoomManager playerId={playerId} username={username} onRoomJoined={handleRoomJoined} />
         <div className="mt-8 text-center pb-8">
-          <button
-            onClick={() => setSelectedTime(null)}
-            className="text-gray-500 hover:text-gray-400 text-sm transition-colors"
-          >
+          <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
             {"\u2190"} Back to time
           </button>
         </div>
-
-        {playerId && (
-          <>
-            <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-              <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
-            </SlideOver>
-
-            <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
-              <FriendsPanel playerId={playerId} />
-            </SlideOver>
-          </>
-        )}
+        {slideOvers}
+        {authOverlay}
       </div>
     )
   }
@@ -541,12 +457,9 @@ export default function SetupPage() {
     if (!playerId) {
       return (
         <div className="min-h-screen bg-[#0f1119] text-white">
-          <TopBar playerId={playerId} unreadMessages={unreadMessages} onProfile={() => setProfileOpen(true)} onFriends={() => setFriendsOpen(true)} />
+          {topBar}
           <div className="absolute top-4 left-4 z-10">
-            <button
-              onClick={() => setSelectedTime(null)}
-              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-            >
+            <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
               {"\u2190"} Back
             </button>
           </div>
@@ -569,45 +482,65 @@ export default function SetupPage() {
 }
 
 // ============================================
+// Mode Button Component
+// ============================================
+function ModeButton({ icon, title, desc, onClick, highlight }: {
+  icon: string; title: string; desc: string; onClick: () => void; highlight?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-3.5 p-[18px] rounded-2xl border transition-all duration-200 text-left group ${
+        highlight
+          ? 'border-yellow-500/15 bg-yellow-500/[0.03] hover:border-yellow-500/40 hover:bg-yellow-500/[0.06]'
+          : 'border-white/8 bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04]'
+      }`}
+    >
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-[28px] ${
+        highlight ? 'bg-yellow-500/10 border border-yellow-500/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'bg-yellow-500/8 border border-yellow-500/12 drop-shadow-[0_0_8px_rgba(250,204,21,0.15)]'
+      }`}>
+        {icon}
+      </div>
+      <div className="flex-1">
+        <div className={`font-bold text-[15px] ${highlight ? 'text-yellow-400 group-hover:brightness-110' : 'text-gray-100 group-hover:text-yellow-400'} transition-all`}>
+          {title}
+        </div>
+        <div className="text-[11px] text-gray-500 mt-0.5">{desc}</div>
+      </div>
+      <span className="text-base text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
+    </button>
+  )
+}
+
+// ============================================
 // Top Bar Component
 // ============================================
 function TopBar({
-  playerId,
-  unreadMessages,
-  onProfile,
-  onFriends,
+  playerId, unreadMessages, onProfile, onFriends, onSignIn,
 }: {
   playerId: string | null
   unreadMessages: number
   onProfile: () => void
   onFriends: () => void
+  onSignIn: () => void
 }) {
   return (
     <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-2 bg-[#0f1119]/80 backdrop-blur-md border-b border-white/5">
-      {/* Left: Profile */}
       <button
-        onClick={() => playerId ? onProfile() : onFriends()}
+        onClick={() => playerId ? onProfile() : onSignIn()}
         className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
       >
         <span className="text-xl">{playerId ? '👤' : '🚪'}</span>
         <span className="text-sm hidden sm:inline">{playerId ? 'Profile' : 'Sign In'}</span>
       </button>
 
-      {/* Center: Brand (small) */}
       <div className="flex items-center gap-1 text-yellow-400/60 text-sm font-bold">
         <span>♔</span>
         <span className="hidden sm:inline">ChessDuo</span>
       </div>
 
-      {/* Right: Friends */}
       <button
-        onClick={() => {
-          if (playerId) {
-            onFriends()
-          } else {
-            onProfile()
-          }
-        }}
+        onClick={() => playerId ? onFriends() : onSignIn()}
         className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
       >
         <span className="text-xl">{playerId ? '👥' : '🚪'}</span>
