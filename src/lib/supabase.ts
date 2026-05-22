@@ -95,6 +95,7 @@ export type Database = {
           total_moves: number
           is_online: boolean
           move_comparisons: unknown
+          challenge_id: string | null
           played_at: string
           created_at: string
         }
@@ -112,7 +113,70 @@ export type Database = {
           total_moves?: number
           is_online?: boolean
           move_comparisons?: unknown
+          challenge_id?: string | null
           played_at?: string
+        }
+      }
+      friendships: {
+        Row: {
+          sender_id: string
+          receiver_id: string
+          status: 'pending' | 'accepted' | 'blocked'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          sender_id: string
+          receiver_id: string
+          status?: 'pending' | 'accepted' | 'blocked'
+        }
+        Update: {
+          status?: 'pending' | 'accepted' | 'blocked'
+          updated_at?: string
+        }
+      }
+      messages: {
+        Row: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          receiver_id: string
+          content: string
+          read?: boolean
+        }
+        Update: {
+          read?: boolean
+        }
+      }
+      challenge_links: {
+        Row: {
+          id: string
+          creator_id: string
+          game_mode: string
+          time_seconds: number
+          code: string
+          created_at: string
+          expires_at: string
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          creator_id: string
+          game_mode: string
+          time_seconds: number
+          code: string
+          expires_at: string
+          is_active?: boolean
+        }
+        Update: {
+          is_active?: boolean
         }
       }
     }
@@ -122,3 +186,6 @@ export type Database = {
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Room = Database['public']['Tables']['rooms']['Row']
 export type RoomPlayer = Database['public']['Tables']['room_players']['Row']
+export type Friendship = Database['public']['Tables']['friendships']['Row']
+export type Message = Database['public']['Tables']['messages']['Row']
+export type ChallengeLink = Database['public']['Tables']['challenge_links']['Row']

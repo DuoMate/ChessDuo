@@ -74,11 +74,53 @@ ALTER TABLE games ADD COLUMN IF NOT EXISTS match_time_limit_seconds INTEGER;
                                                                             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                                                                             );
 
+-- Friendships table
+CREATE TABLE IF NOT EXISTS friendships (
+  sender_id TEXT NOT NULL,
+  receiver_id TEXT NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (sender_id, receiver_id)
+);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id TEXT NOT NULL,
+  receiver_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Challenge links table
+CREATE TABLE IF NOT EXISTS challenge_links (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  creator_id TEXT NOT NULL,
+  game_mode TEXT NOT NULL,
+  time_seconds INTEGER NOT NULL,
+  code TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Add challenge_id to completed_games
+ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS challenge_id UUID REFERENCES challenge_links(id) ON DELETE SET NULL;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
 CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
 CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
 CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_friendships_sender ON friendships(sender_id);
+CREATE INDEX IF NOT EXISTS idx_friendships_receiver ON friendships(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_challenge_links_code ON challenge_links(code);
+CREATE INDEX IF NOT EXISTS idx_challenge_links_creator ON challenge_links(creator_id);
 
 -- Constraints (idempotent: safe for CI/CD re-runs)
 -- Wrap in DO block to handle missing tables gracefully
@@ -103,12 +145,15 @@ BEGIN
 END $$;
 
 
-                                                                            -- Enable Row Level Security (RLS)
-                                                                            ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-                                                                            ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
-                                                                            ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
-                                                                            ALTER TABLE games ENABLE ROW LEVEL SECURITY;
-                                                                            ALTER TABLE completed_games ENABLE ROW LEVEL SECURITY;
+                                                                             -- Enable Row Level Security (RLS)
+                                                                             ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE room_players ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE games ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE completed_games ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+                                                                             ALTER TABLE challenge_links ENABLE ROW LEVEL SECURITY;
 
                                                                             -- RLS Policies (idempotent: drops old policies first)
                                                                             -- profiles
@@ -137,9 +182,22 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
                                                                             DROP POLICY IF EXISTS "Room members can insert game" ON games;
                                                                             DROP POLICY IF EXISTS "Anyone can update game state" ON games;
                                                                             DROP POLICY IF EXISTS "Room members can update game" ON games;
-                                                                            -- completed_games
-                                                                            DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
-                                                                            DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
+                                                                             -- completed_games
+                                                                             DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
+                                                                             DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
+                                                                             -- friendships
+                                                                             DROP POLICY IF EXISTS "Users can view own friendships" ON friendships;
+                                                                             DROP POLICY IF EXISTS "Users can send friend requests" ON friendships;
+                                                                             DROP POLICY IF EXISTS "Users can update received requests" ON friendships;
+                                                                             DROP POLICY IF EXISTS "Users can delete own friendships" ON friendships;
+                                                                             -- messages
+                                                                             DROP POLICY IF EXISTS "Users can view own messages" ON messages;
+                                                                             DROP POLICY IF EXISTS "Users can send messages" ON messages;
+                                                                             DROP POLICY IF EXISTS "Users can mark messages read" ON messages;
+                                                                             -- challenge_links
+                                                                             DROP POLICY IF EXISTS "Challenge links are viewable by everyone" ON challenge_links;
+                                                                             DROP POLICY IF EXISTS "Authenticated users can create challenge links" ON challenge_links;
+                                                                             DROP POLICY IF EXISTS "Creator can deactivate challenge links" ON challenge_links;
                                                                             -- function
                                                                             DROP FUNCTION IF EXISTS public.is_room_member(UUID);
 
@@ -248,9 +306,75 @@ CREATE POLICY "Anyone can insert completed games" ON completed_games
                                                                                                                                                                                 END;
                                                                                                                                                                                 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-                                                                                                                                                                                -- Trigger for new user signup
-                                                                                                                                                                                DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-                                                                                                                                                                                CREATE TRIGGER on_auth_user_created
-                                                                                                                                                                                  AFTER INSERT ON auth.users
-                                                                                                                                                                                    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+                                                                                                                                                                         -- Trigger for new user signup
+                                                                                                                                                                         DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+                                                                                                                                                                         CREATE TRIGGER on_auth_user_created
+                                                                                                                                                                           AFTER INSERT ON auth.users
+                                                                                                                                                                             FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================
+-- friendships RLS
+-- ============================================
+
+CREATE POLICY "Users can view own friendships" ON friendships
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND (
+      auth.uid()::text = sender_id OR auth.uid()::text = receiver_id
+    )
+  );
+
+CREATE POLICY "Users can send friend requests" ON friendships
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND auth.uid()::text = sender_id
+  );
+
+CREATE POLICY "Users can update received requests" ON friendships
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND auth.uid()::text = receiver_id
+  );
+
+CREATE POLICY "Users can delete own friendships" ON friendships
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL AND (
+      auth.uid()::text = sender_id OR auth.uid()::text = receiver_id
+    )
+  );
+
+-- ============================================
+-- messages RLS
+-- ============================================
+
+CREATE POLICY "Users can view own messages" ON messages
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND (
+      auth.uid()::text = sender_id OR auth.uid()::text = receiver_id
+    )
+  );
+
+CREATE POLICY "Users can send messages" ON messages
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND auth.uid()::text = sender_id
+  );
+
+CREATE POLICY "Users can mark messages read" ON messages
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND auth.uid()::text = receiver_id
+  );
+
+-- ============================================
+-- challenge_links RLS
+-- ============================================
+
+CREATE POLICY "Challenge links are viewable by everyone" ON challenge_links
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can create challenge links" ON challenge_links
+  FOR INSERT WITH CHECK (
+    auth.role() = 'authenticated' AND auth.uid()::text = creator_id
+  );
+
+CREATE POLICY "Creator can deactivate challenge links" ON challenge_links
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL AND auth.uid()::text = creator_id
+  );
                                                                                                                                                                                     

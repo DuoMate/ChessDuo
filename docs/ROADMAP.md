@@ -318,7 +318,64 @@ interface MoveComparison {
 - Tournament mode
 - Ranked matchmaking (ELO)
 - Multiple game formats (blitz, rapid)
-- Social features (friend lists, clans)
+
+---
+
+### Phase 7: Social Features (Week 15-18)
+**Goal**: Full social system — friends, messaging, challenges, responsive web+mobile
+
+- [ ] 7.1 Database schema — `friendships`, `messages`, `challenge_links` tables + RLS policies
+- [ ] 7.2 Top bar redesign — profile icon top-left, friends icon top-right with unread badge
+- [ ] 7.3 Profile panel — show profile details + recent matches section on home page
+- [ ] 7.4 Friends panel — friend list, search by name/username, online status (green dot via Supabase Presence), invite link
+- [ ] 7.5 Friend requests — send via invite link, accept/reject in friends panel
+- [ ] 7.6 Friend actions menu — three-dots per friend: Delete friend / Send message / Challenge
+- [ ] 7.7 In-app chat — real-time messaging between friends via Supabase Broadcast
+- [ ] 7.8 Challenge links — create link encoding game mode + timer; auto-creates room on click, navigates to /game
+- [ ] 7.9 Challenge history — track past challenges between friends (mode, result, date)
+- [ ] 7.10 Share profile — "Copy profile link" button in profile panel
+- [ ] 7.11 Block/unblock — blocked users can't message, challenge, or friend-request
+- [ ] 7.12 Responsive design — all social components work on web + Capacitor mobile (touch targets, screen sizes)
+
+**Database Changes**:
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `friendships` | Friend connections | `sender_id`, `receiver_id`, `status` (pending/accepted/blocked), `created_at`, `updated_at` |
+| `messages` | In-app chat | `id`, `sender_id`, `receiver_id`, `content`, `created_at`, `read` |
+| `challenge_links` | Challenge URLs | `id`, `creator_id`, `game_mode`, `time_seconds`, `code`, `created_at`, `expires_at`, `is_active` |
+
+**Key UX Flows**:
+
+```
+Invite Friend Link
+├── Someone clicks invite link → sign-in prompt if not authenticated
+├── After sign-in → sends friend request (NOT auto-add)
+├── Recipient sees request in friends panel → Accept/Reject
+└── Accepted → both appear in each other's friends list
+
+Challenge Flow
+├── Click "Challenge" from three-dots menu
+├── Pick game mode + timer → challenge link generated
+├── Link sent via chat/share
+├── Recipient clicks link → auto-creates room (WHITE=challenger, BLACK=recipient)
+└── Navigates directly to /game — no room code needed
+
+Message Flow
+├── Click "Send message" from three-dots menu → opens chat panel
+├── Real-time messages via Supabase Broadcast channel
+├── Unread count badge on friends icon
+└── Messages persist in database for history
+```
+
+**Responsive Requirements**:
+- Touch-friendly tap targets (min 44px) for Capacitor
+- Friends panel: web = slide-over from right; mobile = full-screen overlay
+- Profile panel: web = slide-over from left; mobile = full-screen overlay
+- Chat panel adapts to available screen height; keyboard-aware on mobile
+- Search input keyboard-aware on mobile
+
+**Deliverable**: ✅ All social features live with responsive web + mobile support
 
 ---
 

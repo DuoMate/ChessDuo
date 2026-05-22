@@ -51,6 +51,7 @@ function makeLocalGameEntry(data: MatchSummaryData): CompletedGame {
     total_moves: data.stats.totalMoves,
     is_online: data.isOnline,
     move_comparisons: data.moveComparisons || [],
+    challenge_id: null,
     played_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
   }
@@ -80,6 +81,7 @@ export async function saveCompletedGame(data: MatchSummaryData): Promise<void> {
         is_online: data.isOnline,
         room_id: data.roomId || null,
         move_comparisons: data.moveComparisons || [],
+        challenge_id: null,
         played_at: new Date().toISOString(),
       })
 

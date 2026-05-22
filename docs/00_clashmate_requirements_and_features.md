@@ -213,3 +213,131 @@ Key Differentiators:
 - Esports-ready ranked ladder
 
 ---
+
+### 14. 👥 Friend System
+
+- **Friend Requests**: Send via invite link, accept/reject in friends panel
+- **Friend List**: Shows all accepted friends with online status (green dot via Supabase Presence)
+- **Search**: Find friends by name or username in friends panel
+- **Block/Unblock**: Blocked users cannot message, challenge, or send friend requests
+- **Invite Link**: Shareable URL that prompts sign-in, then sends friend request
+- **Share Profile**: Copy profile link button to share with others
+
+#### Database: `friendships`
+| Column | Type | Description |
+|--------|------|-------------|
+| `sender_id` | TEXT | User who sent the request |
+| `receiver_id` | TEXT | User who receives the request |
+| `status` | ENUM | `pending` / `accepted` / `blocked` |
+| `created_at` | TIMESTAMPTZ | When request was sent |
+| `updated_at` | TIMESTAMPTZ | When status last changed |
+
+#### RLS Policies
+- Users can only see friendships where they are sender or receiver
+- Users can create friend requests (sender_id = auth.uid())
+- Users can update requests sent to them (receiver_id = auth.uid())
+- Users can delete their own friendships
+
+---
+
+### 15. 💬 In-App Messaging
+
+- **Real-time**: Messages delivered via Supabase Broadcast channel `messages:{user_id}`
+- **Persistence**: All messages stored in `messages` table
+- **Unread tracking**: `read` boolean column; badge count on friends icon
+- **Access**: Only between accepted friends; blocked users cannot send messages
+
+#### Database: `messages`
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `sender_id` | TEXT | Message sender |
+| `receiver_id` | TEXT | Message recipient |
+| `content` | TEXT | Message body |
+| `read` | BOOLEAN | Whether recipient has read it |
+| `created_at` | TIMESTAMPTZ | When message was sent |
+
+#### Chat Panel
+- Opens from three-dots menu on a friend → "Send message"
+- Real-time subscription to `messages:{user_id}` for live updates
+- Auto-scrolls to latest message
+- Responsive: adapts to available height; keyboard-aware on mobile
+
+---
+
+### 16. ⚡ Challenge Link System
+
+- **Creation**: From three-dots menu on a friend → "Challenge" → pick mode + timer
+- **Challenge Link**: Encodes game mode and time settings in a short shareable code
+- **Auto-Create Room**: When recipient clicks link, room is auto-created:
+  - Challenger = WHITE team
+  - Recipient = BLACK team
+- **Zero Friction**: Navigates directly to `/game` — no room code needed
+- **Expiry**: Challenge links expire after 24 hours
+
+#### Database: `challenge_links`
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `creator_id` | TEXT | User who created the challenge |
+| `game_mode` | TEXT | `offline` / `online` / `quickmatch` |
+| `time_seconds` | INTEGER | Game duration in seconds |
+| `code` | TEXT | 8-char shareable code |
+| `created_at` | TIMESTAMPTZ | When challenge was created |
+| `expires_at` | TIMESTAMPTZ | 24h after creation |
+| `is_active` | BOOLEAN | Whether challenge is still valid |
+
+#### Challenge History
+- Track past challenges between friend pairs
+- Stored by linking `completed_games.challenge_id` to `challenge_links.id`
+- Shows: challenger, recipient, game mode, time, result, date
+
+---
+
+### 17. 🏠 Home Page Layout Redesign
+
+#### Top Bar (always visible on home page)
+| Position | Element | Action |
+|----------|---------|--------|
+| **Top-Left** | Profile icon (👤) | Opens profile panel (slide-over from left) |
+| **Top-Right** | Friends icon (👥) + badge | Opens friends panel (slide-over from right) |
+
+#### Profile Panel (left slide-over)
+- Profile details (username, player ID, member since)
+- "Share Profile" button (copies profile link)
+- Recent matches section (last 5 games from history)
+- "View All History" link → navigates to /history
+
+#### Friends Panel (right slide-over)
+- Search bar ("Search by name or username")
+- Invite friend link + copy button at top
+- Friend requests section (pending incoming/outgoing)
+- Friend list with:
+  - Online status indicator (🟢 green dot)
+  - Username
+  - Three-dots menu per friend
+- Three-dots menu options:
+  - **Delete Friend** — removes friendship
+  - **Send Message** — opens chat panel
+  - **Challenge** — opens challenge creation flow
+
+#### Responsive Behavior
+| Screen | Profile Panel | Friends Panel |
+|--------|---------------|---------------|
+| Web (>768px) | Slide-over from left, max-w-sm | Slide-over from right, max-w-sm |
+| Mobile (≤768px) | Full-screen overlay | Full-screen overlay |
+
+---
+
+### 18. 📱 Responsive Design Requirements
+
+All social components must work on both web and Capacitor mobile:
+- **Touch Targets**: Minimum 44×44px for all interactive elements
+- **Font Sizes**: Legible on small screens (min 14px for body text)
+- **Panels**: Full-screen overlays on mobile, slide-overs on desktop
+- **Chat**: Keyboard-aware height adjustment on mobile
+- **Search**: Input fields support mobile keyboard focus/blur
+- **Challenge Picker**: Modal with large mode selection buttons for touch
+- **Badge**: Friends icon badge visible and tappable on mobile
+
+---
