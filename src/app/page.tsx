@@ -35,6 +35,9 @@ export default function SetupPage() {
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
   const [sessionChecked, setSessionChecked] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [joinLoading, setJoinLoading] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
   const skillLevels = getAvailableSkillLevels()
 
   useEffect(() => {
@@ -74,6 +77,68 @@ export default function SetupPage() {
     router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
+  const handleJoinByCode = async () => {
+    const code = joinCode.trim().toUpperCase()
+    if (!code) return
+    setJoinLoading(true)
+    setJoinError(null)
+
+    try {
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('code', code)
+        .single()
+
+      if (roomError || !room) {
+        setJoinError('Room not found — check the code')
+        return
+      }
+
+      if (room.status !== 'waiting') {
+        setJoinError('Room is no longer available')
+        return
+      }
+
+      if (!playerId) {
+        setJoinError('Sign in required — please sign in below')
+        return
+      }
+
+      const { data: existingPlayers } = await supabase
+        .from('room_players')
+        .select('*')
+        .eq('room_id', room.id)
+
+      const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
+      const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
+
+      let team: 'WHITE' | 'BLACK' = 'WHITE'
+      if (whiteSlots.length < 2) {
+        team = 'WHITE'
+      } else if (blackSlots.length < 2) {
+        team = 'BLACK'
+      } else {
+        setJoinError('Room is full')
+        return
+      }
+
+      await supabase.from('room_players').upsert({
+        room_id: room.id,
+        player_id: playerId,
+        team,
+        status: 'ready'
+      }, { onConflict: 'room_id,player_id' })
+
+      setJoinLoading(false)
+      handleRoomJoined(room, team, playerId)
+    } catch (e) {
+      setJoinError('Something went wrong — try again')
+    } finally {
+      setJoinLoading(false)
+    }
+  }
+
   if (!sessionChecked) return null
 
   // Time selection screen - show for any selected game mode before next step
@@ -110,6 +175,55 @@ export default function SetupPage() {
               </button>
             ))}
           </div>
+
+          {gameMode === 'online' && (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-white/8" />
+                <span className="text-[10px] text-gray-600 uppercase tracking-wider">or</span>
+                <div className="flex-1 h-px bg-white/8" />
+              </div>
+
+              <div className="mb-4">
+                <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+                  Have a room code?
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                    placeholder="ABC123"
+                    maxLength={6}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    disabled={joinLoading}
+                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] 
+                               text-white text-base placeholder:text-gray-600 
+                               focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08]
+                               disabled:opacity-40 transition-all"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    onClick={handleJoinByCode}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 
+                               text-yellow-400 font-semibold text-sm
+                               hover:bg-yellow-500/25 active:bg-yellow-500/35
+                               disabled:opacity-30 disabled:cursor-not-allowed
+                               transition-all whitespace-nowrap"
+                    style={{ minHeight: '44px' }}
+                  >
+                    {joinLoading ? 'Joining...' : 'Join'}
+                  </button>
+                </div>
+                {joinError && (
+                  <p className="text-red-400 text-[11px] mt-1.5">{joinError}</p>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="text-center mb-4">
             <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
