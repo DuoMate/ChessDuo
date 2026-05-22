@@ -75,31 +75,18 @@ const PROMOTION_PIECES: { piece: PromotionPiece; symbol: string; label: string }
   { piece: 'n', symbol: '♞', label: 'Knight' }
 ]
 
-function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: string }) {
+function CapturedPiecesRow({ pieces }: { pieces: string[] }) {
+  if (pieces.length === 0) return <span className="text-[10px] text-gray-600">—</span>
   const sortedPieces = [...pieces].sort((a, b) => {
     const order = ['q', 'r', 'b', 'n', 'p']
     return order.indexOf(a) - order.indexOf(b)
   })
-  
   return (
-    <div className="flex flex-col items-center w-full">
-      <span className="text-[10px] text-gray-400 mb-1 truncate">{label}</span>
-      <div className="flex flex-wrap gap-0.5 p-1.5 bg-gray-800 rounded border border-gray-600 min-h-[60px] max-h-[120px] w-full justify-center content-start overflow-y-auto">
-        {sortedPieces.length === 0 ? (
-          <span className="text-gray-600 text-[10px]">None</span>
-        ) : (
-          sortedPieces.map((piece, index) => (
-            <span 
-              key={`${piece}-${index}`} 
-              className="text-lg bg-gray-700 rounded px-0.5 text-white border border-gray-500 leading-tight"
-              style={{ textShadow: '0 0 2px rgba(255,255,255,0.5)' }}
-            >
-              {PIECE_SYMBOLS[piece] || piece}
-            </span>
-          ))
-        )}
-      </div>
-    </div>
+    <span className="text-base md:text-lg leading-none">
+      {sortedPieces.map((piece, i) => (
+        <span key={`${piece}-${i}`}>{PIECE_SYMBOLS[piece] || piece}</span>
+      ))}
+    </span>
   )
 }
 
@@ -1111,20 +1098,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         />
       )}
         
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl md:text-3xl font-bold">ChessDuo</h1>
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-3 md:mb-4">
+          <h1 className="text-lg md:text-2xl font-bold">ChessDuo</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOverlayMode('profile')}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm flex items-center justify-center"
               title="Profile"
             >
               👤
             </button>
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
               title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
             >
               {soundEnabled ? '🔊' : '🔇'}
@@ -1133,74 +1120,72 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
 
         {roomCode && (
-          <div className="mb-3 md:mb-4 p-2 md:p-3 bg-gray-700 rounded text-center">
-            <p className="text-gray-400 text-xs md:text-sm mb-1">Share this room code with your teammate:</p>
-            <p className="text-lg md:text-2xl font-bold text-yellow-400 tracking-wider md:tracking-widest font-mono break-all">
+          <div className="mb-3 p-2 bg-gray-700 rounded text-center">
+            <p className="text-gray-400 text-xs mb-1">Share this room code:</p>
+            <p className="text-lg font-bold text-yellow-400 tracking-wider font-mono">
               {roomCode}
             </p>
           </div>
         )}
         
         <div className="flex justify-between items-center mb-2 flex-wrap gap-1">
-          <div className={`px-2 md:px-4 py-1 md:py-2 rounded text-xs md:text-sm ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+          <div className={`px-3 py-1 rounded text-xs md:text-sm ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             White Team (You)
           </div>
           
           <div className="flex flex-col items-center gap-1">
-            <div className="text-lg font-mono">
+            <div className="text-base font-mono">
               {gameState.status === GameStatus.GAME_OVER ? (
                 <span className="text-yellow-400 font-bold">Game Over!</span>
               ) : gameState.isBotThinking ? (
                 <span className="text-blue-300">Your turn</span>
               ) : (
-                <span className="text-gray-400">
+                <span className="text-gray-400 text-sm">
                   {gameState.status === GameStatus.PLAYING ? 'Waiting...' : 'Waiting...'}
                 </span>
               )}
             </div>
           </div>
           
-          <div className={`px-2 md:px-4 py-1 md:py-2 rounded text-xs md:text-sm ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+          <div className={`px-3 py-1 rounded text-xs md:text-sm ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
             Black Team (Bot)
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-2 md:gap-4 mb-3 md:mb-4">
-          {/* Left side - WHITE team (Captured) */}
-          <div className="hidden md:flex w-20 lg:w-28 flex-col items-center gap-4">
-            <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
-          </div>
-          
-          {/* Chess Board + Match Timer */}
-          <div className="flex flex-col items-center gap-2">
-            <MatchTimer
-              seconds={gameState.matchTimeRemaining}
-              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-              totalSeconds={timeLimit}
+        <div className="flex flex-col items-center gap-2 mb-3">
+          <MatchTimer
+            seconds={gameState.matchTimeRemaining}
+            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+            totalSeconds={timeLimit}
+          />
+          <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative">
+            <ChessBoard 
+              fen={playbackFen || gameState.fen}
+              onMove={handleMove}
+              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+              orientation="white"
+              lastMove={gameState.lastMove}
+              pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.myPendingOverlay}
+              highlightSquares={gameState.highlightSquares}
+              onAnimationComplete={handleResolutionComplete}
             />
-            <div className="w-full max-w-[340px] md:max-w-[420px] lg:max-w-[560px] aspect-square flex-shrink-0 relative">
-              <ChessBoard 
-                fen={playbackFen || gameState.fen}
-                onMove={handleMove}
-                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                orientation="white"
-                lastMove={gameState.lastMove}
-                pendingOverlay={gameState.pendingOverlay}
-                myPendingOverlay={gameState.myPendingOverlay}
-                highlightSquares={gameState.highlightSquares}
-                onAnimationComplete={handleResolutionComplete}
-              />
-            </div>
           </div>
-          
-          {/* Right side - BLACK team (Captured) */}
-          <div className="hidden md:flex w-20 lg:w-28 flex-col items-center gap-4">
-            <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
+          {/* Captured pieces - compact row below board */}
+          <div className="flex items-center justify-center gap-4 md:gap-8 mt-1 w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px]">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-500">White:</span>
+              <CapturedPiecesRow pieces={gameState.capturedByWhite} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-500">Black:</span>
+              <CapturedPiecesRow pieces={gameState.capturedByBlack} />
+            </div>
           </div>
         </div>
 
         {/* Accuracy Panel - below board as bottom sheet */}
-        <div className="w-full max-w-[340px] md:max-w-[420px] lg:max-w-[560px] mx-auto px-2 mb-4">
+        <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] mx-auto mb-4">
           {(() => {
             const g = isOnline ? onlineGameRef.current : gameRef.current
             return (
