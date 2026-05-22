@@ -82,16 +82,16 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
   })
   
   return (
-    <div className="flex flex-col items-center w-[100px]">
-      <span className="text-xs text-gray-400 mb-1">{label}</span>
-      <div className="flex flex-wrap gap-1 p-2 bg-gray-800 rounded border border-gray-600 h-[80px] w-full justify-center content-start">
+    <div className="flex flex-col items-center w-full">
+      <span className="text-[10px] text-gray-400 mb-1 truncate">{label}</span>
+      <div className="flex flex-wrap gap-0.5 p-1.5 bg-gray-800 rounded border border-gray-600 min-h-[60px] max-h-[120px] w-full justify-center content-start overflow-y-auto">
         {sortedPieces.length === 0 ? (
-          <span className="text-gray-600 text-xs">No captures</span>
+          <span className="text-gray-600 text-[10px]">None</span>
         ) : (
           sortedPieces.map((piece, index) => (
             <span 
               key={`${piece}-${index}`} 
-              className="text-2xl bg-gray-700 rounded px-1 text-white border border-gray-500"
+              className="text-lg bg-gray-700 rounded px-0.5 text-white border border-gray-500 leading-tight"
               style={{ textShadow: '0 0 2px rgba(255,255,255,0.5)' }}
             >
               {PIECE_SYMBOLS[piece] || piece}
@@ -1165,9 +1165,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-3 md:gap-6 mb-3 md:mb-4">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-2 md:gap-4 mb-3 md:mb-4">
           {/* Left side - WHITE team (Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+          <div className="hidden md:flex w-20 lg:w-28 flex-col items-center gap-4">
             <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
           </div>
           
@@ -1178,7 +1178,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
               totalSeconds={timeLimit}
             />
-            <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] aspect-square flex-shrink-0 relative">
+            <div className="w-full max-w-[340px] md:max-w-[420px] lg:max-w-[560px] aspect-square flex-shrink-0 relative">
               <ChessBoard 
                 fen={playbackFen || gameState.fen}
                 onMove={handleMove}
@@ -1194,13 +1194,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Right side - BLACK team (Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+          <div className="hidden md:flex w-20 lg:w-28 flex-col items-center gap-4">
             <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
           </div>
         </div>
 
         {/* Accuracy Panel - below board as bottom sheet */}
-        <div className="w-full max-w-[280px] md:max-w-[360px] lg:max-w-[500px] mx-auto px-2 mb-4">
+        <div className="w-full max-w-[340px] md:max-w-[420px] lg:max-w-[560px] mx-auto px-2 mb-4">
           {(() => {
             const g = isOnline ? onlineGameRef.current : gameRef.current
             return (

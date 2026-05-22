@@ -25,6 +25,7 @@ interface ResolvedPayload {
   winningMove: string
   comparison?: MoveComparison | null
   coordinatorId?: string
+  matchTimeRemaining?: number
 }
 
 export interface OnlineGameState {
@@ -554,12 +555,13 @@ export class OnlineGame {
     }
   }
 
-  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string }) {
+  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
     console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,
       hasComparison: !!payload.comparison,
       coordinatorId: payload.coordinatorId,
+      matchTimeRemaining: payload.matchTimeRemaining,
       amCoordinator: this.isCoordinator(),
       myId: this._playerId,
       currentTurn: this.gameState.currentTeam,
@@ -591,6 +593,16 @@ export class OnlineGame {
     }
     
     if (!isOwnBroadcast) {
+      // Sync timer from coordinator to keep both players in sync
+      if (payload.matchTimeRemaining !== undefined) {
+        const localTime = this.gameState.getMatchTimeRemaining()
+        const diff = Math.abs(localTime - payload.matchTimeRemaining)
+        if (diff > 2) {
+          console.log('[TURN-RESOLVED] Timer sync — local:', localTime, 'remote:', payload.matchTimeRemaining, 'diff:', diff)
+          this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining - 1)
+        }
+      }
+
       // Try to apply the move through normal resolve flow
       const result = this.gameState.resolve(payload.winningMove)
       
@@ -949,7 +961,8 @@ export class OnlineGame {
           winningTeam: currentTeam, 
           winningMove,
           comparison: this._lastMoveComparison,
-          coordinatorId: this._playerId
+          coordinatorId: this._playerId,
+          matchTimeRemaining: this.gameState.getMatchTimeRemaining()
         }
       })
     }

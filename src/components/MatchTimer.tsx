@@ -19,13 +19,13 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
   const progress = isActive ? (seconds / totalSeconds) * circumference : 0
 
   return (
-    <div className="flex items-center justify-center gap-3">
+    <div className="flex items-center justify-center">
       <motion.div
-        className="relative w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18"
+        className="relative w-11 h-11 md:w-[52px] md:h-[52px] lg:w-14 lg:h-14"
         animate={isCritical ? { scale: [1, 1.05, 1] } : { scale: 1 }}
         transition={{ duration: 0.8, repeat: isCritical ? Infinity : 0 }}
       >
-        <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
+        <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
           <circle
             cx="40" cy="40" r="34"
             stroke="currentColor"
@@ -46,7 +46,7 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.span
-            className={`text-xs md:text-sm font-bold font-mono ${
+            className={`text-[10px] md:text-xs font-bold font-mono ${
               !isActive ? 'text-gray-500' :
               isCritical ? 'text-red-400' :
               isWarning ? 'text-yellow-400' :
