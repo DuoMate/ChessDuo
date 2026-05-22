@@ -10,7 +10,6 @@ import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
-import { TeamTimer } from './TeamTimer'
 import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
@@ -1238,6 +1237,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <MovePlayback
             moves={moveHistoryRef.current}
             currentIndex={playbackIndex}
+            initialFen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             onSelectMove={(index, fen) => {
               setPlaybackIndex(index)
               setPlaybackFen(fen)

@@ -18,11 +18,12 @@ export interface MoveEntry {
 interface MovePlaybackProps {
   moves: MoveEntry[]
   currentIndex: number | null
+  initialFen: string
   onSelectMove: (index: number, fen: string) => void
   onReset: () => void
 }
 
-export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: MovePlaybackProps) {
+export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, onReset }: MovePlaybackProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showAll, setShowAll] = useState(false)
 
@@ -32,7 +33,11 @@ export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: Mov
   const isLive = currentIndex === null
 
   const goTo = (index: number) => {
-    const clamped = Math.max(0, Math.min(moves.length - 1, index))
+    if (index < 0) {
+      onSelectMove(-1, initialFen)
+      return
+    }
+    const clamped = Math.min(moves.length - 1, index)
     const move = moves[clamped]
     if (move) onSelectMove(clamped, move.fenAfter)
   }
@@ -101,7 +106,7 @@ export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: Mov
       ) : (
         <div className="border-b border-gray-700/50">
           <p className="px-2 pt-1.5 text-[10px] text-gray-500">
-            {isLive ? `${moves.length} moves` : `${activeIndex + 1}/${moves.length}`}
+            {isLive ? `${moves.length} moves` : activeIndex === -1 ? 'Start' : `${activeIndex + 1}/${moves.length}`}
           </p>
           <div
             ref={scrollRef}
@@ -136,7 +141,7 @@ export function MovePlayback({ moves, currentIndex, onSelectMove, onReset }: Mov
       <div className="flex items-center justify-center gap-3 p-2">
         <button
           onClick={() => goTo(activeIndex - 1)}
-          disabled={activeIndex === 0}
+          disabled={activeIndex === -1}
           className="w-7 h-7 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors"
         >
           ←

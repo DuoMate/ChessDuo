@@ -547,5 +547,32 @@ describe('OnlineGame', () => {
         expect(overlay).toBeNull()
       })
     })
+
+    describe('resolvePendingMoves - turnState for non-coordinator', () => {
+      it('should set turnState to resolving before throwing NOT_COORDINATOR for non-coordinator WHITE player', async () => {
+        const nonCoord = new OnlineGame()
+        testG(nonCoord).gameState.addPlayer('player2' as any, Team.WHITE)
+        testG(nonCoord).gameState.addPlayer('player1' as any, Team.WHITE)
+        testG(nonCoord).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+        testG(nonCoord).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+        testG(nonCoord).gameState.startMatch()
+        ;(nonCoord as any)._playerId = 'player2' // not the coordinator (coordinator is sorted first = player1)
+
+        nonCoord.startPendingTurn()
+        testG(nonCoord).gameState.setPendingMove('player2' as any, 'e2e4', 'e2', 'e4', 'p')
+        testG(nonCoord).gameState.lockPendingMove('player2' as any)
+        testG(nonCoord).gameState.setPendingMove('player1' as any, 'd2d4', 'd2', 'd4', 'p')
+        testG(nonCoord).gameState.lockPendingMove('player1' as any)
+
+        try {
+          await nonCoord.resolvePendingMoves()
+          fail('Expected NOT_COORDINATOR error')
+        } catch (e: any) {
+          expect(e.message).toBe('NOT_COORDINATOR')
+          // turnState should be 'resolving' so EvaluatingLoader shows
+          expect((nonCoord as any).turnState).toBe('resolving')
+        }
+      })
+    })
   })
 })

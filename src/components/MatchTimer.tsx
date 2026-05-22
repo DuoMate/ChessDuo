@@ -15,28 +15,28 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
   const isWarning = isActive && seconds <= 60
   const isCritical = isActive && seconds <= 10
 
-  const circumference = 2 * Math.PI * 44
+  const circumference = 2 * Math.PI * 34
   const progress = isActive ? (seconds / totalSeconds) * circumference : 0
 
   return (
     <div className="flex items-center justify-center gap-3">
       <motion.div
-        className="relative"
+        className="relative w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18"
         animate={isCritical ? { scale: [1, 1.05, 1] } : { scale: 1 }}
         transition={{ duration: 0.8, repeat: isCritical ? Infinity : 0 }}
       >
-        <svg width="104" height="104" className="transform -rotate-90">
+        <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
           <circle
-            cx="52" cy="52" r="44"
+            cx="40" cy="40" r="34"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth="3"
             fill="none"
             className="text-gray-700 opacity-40"
           />
           <circle
-            cx="52" cy="52" r="44"
+            cx="40" cy="40" r="34"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth="3"
             fill="none"
             strokeDasharray={circumference}
             strokeDashoffset={circumference - progress}
@@ -46,7 +46,7 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.span
-            className={`text-xl font-bold font-mono ${
+            className={`text-xs md:text-sm font-bold font-mono ${
               !isActive ? 'text-gray-500' :
               isCritical ? 'text-red-400' :
               isWarning ? 'text-yellow-400' :

@@ -46,8 +46,14 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
                                         current_turn TEXT NOT NULL CHECK (current_turn IN ('WHITE', 'BLACK')),
                                           move_history JSONB DEFAULT '[]'::jsonb,
                                             status TEXT DEFAULT 'PLAYING' CHECK (status IN ('PLAYING', 'GAME_OVER')),
-                                              updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                                              );
+                                              match_started_at TIMESTAMP WITH TIME ZONE,
+                                                match_time_limit_seconds INTEGER,
+                                                  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                                                  );
+
+-- Idempotent: add timer columns if they don't exist on existing games table
+ALTER TABLE games ADD COLUMN IF NOT EXISTS match_started_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS match_time_limit_seconds INTEGER;
 
                                               -- Create completed_games table for match history/stats
                                               CREATE TABLE IF NOT EXISTS completed_games (

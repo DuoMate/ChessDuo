@@ -229,7 +229,22 @@ export class OnlineGame {
     this._playerId = playerId
     this._team = team
 
-    // Don't add player here - wait for startGameWhenReady to add all players from room_players
+    // Re-register in room_players on reconnect (ensures auth.uid() matches for RLS)
+    try {
+      const { error } = await supabase.from('room_players').upsert({
+        room_id: room.id,
+        player_id: playerId,
+        team,
+        status: 'ready'
+      }, { onConflict: 'room_id,player_id' })
+      if (error) {
+        console.warn('[ONLINE] Failed to register in room_players:', error.message)
+      } else {
+        console.log('[ONLINE] Registered in room_players')
+      }
+    } catch (e) {
+      console.warn('[ONLINE] Could not register in room_players:', e)
+    }
 
     this._channel = supabase.channel(`room:${room.id}`, {
       config: {
@@ -331,8 +346,17 @@ export class OnlineGame {
     
     try {
       // Check if a game already exists for this room (e.g., started by another player)
+      // Retry up to 3 times with 1s delay — handles transient RLS/auth propagation delays
+      let existing = null
       if (this._room) {
-        const existing = await loadGameState(this._room.id)
+        for (let attempt = 0; attempt < 3; attempt++) {
+          existing = await loadGameState(this._room.id)
+          if (existing) break
+          if (attempt < 2) {
+            console.log(`[ONLINE] loadGameState returned null, retrying (${attempt + 1}/3)...`)
+            await new Promise(r => setTimeout(r, 1000))
+          }
+        }
         if (existing) {
           console.log('[ONLINE] Game already exists in DB, syncing as late joiner (status:', existing.status, ')')
           this.starting = false
@@ -394,9 +418,10 @@ export class OnlineGame {
       console.log('[ONLINE] Game started successfully')
       console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
       
-      // Persist initial game state
+      // Persist initial game state with timer
       if (this._room) {
-        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status)
+        const startedAt = new Date().toISOString()
+        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds)
       }
     } catch (e) {
       console.error('[ONLINE] Failed to start game:', e)
@@ -456,6 +481,20 @@ export class OnlineGame {
         if (saved) {
           this._status = saved.status as GameStatus
           this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          
+          // Restore match timer from persisted timestamps
+          if (saved.matchStartedAt && saved.matchTimeLimitSeconds) {
+            const startedAt = new Date(saved.matchStartedAt).getTime()
+            const elapsed = Math.max(0, (Date.now() - startedAt) / 1000)
+            const remaining = Math.max(0, saved.matchTimeLimitSeconds - elapsed)
+            this.gameState.setMatchTimeRemaining(Math.floor(remaining))
+            console.log('[ONLINE] Restored match timer:', { 
+              elapsed: Math.floor(elapsed), 
+              remaining: Math.floor(remaining), 
+              total: saved.matchTimeLimitSeconds 
+            })
+          }
+          
           if (saved.moveHistory.length > 0) {
             console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
             try {
@@ -744,6 +783,10 @@ export class OnlineGame {
     
     if (currentTeam === Team.WHITE && !this.isCoordinator()) {
       console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
+      if (this.turnState !== 'resolving') {
+        this.turnState = 'resolving'
+        this.notifyStateChange()
+      }
       throw new Error('NOT_COORDINATOR')
     }
     
