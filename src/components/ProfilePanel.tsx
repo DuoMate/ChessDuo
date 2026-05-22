@@ -69,9 +69,11 @@ export function ProfilePanel({ playerId, onViewHistory }: ProfilePanelProps) {
         📋 {profileCopied ? 'Link copied!' : 'Share Profile'}
       </button>
 
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-        <RecentMatches games={recentGames} />
-      </div>
+      {recentGames.length > 0 && (
+        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+          <RecentMatches games={recentGames} />
+        </div>
+      )}
 
       <button
         onClick={onViewHistory}
