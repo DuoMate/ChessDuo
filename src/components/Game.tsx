@@ -497,14 +497,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
 
     matchTimeoutFlagRef.current = false
-    g.setMatchTimerActive(true)
-    g.setMatchTimeRemaining(timeLimit)
-
-    setGameState(prev => ({
-      ...prev,
-      matchTimeRemaining: timeLimit,
-      matchTimerActive: true
-    }))
+    const currentRemaining = g.getMatchTimeRemaining()
+    if (currentRemaining > 0 && currentRemaining < timeLimit) {
+      g.setMatchTimerActive(true)
+      setGameState(prev => ({
+        ...prev,
+        matchTimeRemaining: currentRemaining,
+        matchTimerActive: true
+      }))
+    } else {
+      g.setMatchTimerActive(true)
+      g.setMatchTimeRemaining(timeLimit)
+      setGameState(prev => ({
+        ...prev,
+        matchTimeRemaining: timeLimit,
+        matchTimerActive: true
+      }))
+    }
 
     matchTimerRef.current = setInterval(() => {
       tickMatchTimer()

@@ -67,6 +67,7 @@ export class OnlineGame {
   private _broadcastThrottle: Map<string, number> = new Map()
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
+  private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
 
   get highlightSquares() {
     return null
@@ -226,6 +227,19 @@ export class OnlineGame {
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
     console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
     
+    if (this._channel) {
+      await supabase.removeChannel(this._channel)
+      this._channel = null
+    }
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval)
+      this._pollingInterval = null
+    }
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+
     this._room = room
     this._playerId = playerId
     this._team = team
@@ -286,6 +300,9 @@ export class OnlineGame {
       })
       .on('broadcast', { event: 'turn_resolved' }, ({ payload }) => {
         this.handleTurnResolved(payload as ResolvedPayload)
+      })
+      .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+        this.handleTimerSync(payload as { matchTimeRemaining: number })
       })
       .subscribe(async (status: string) => {
         console.log('[ONLINE] Channel subscription status:', status)
@@ -425,6 +442,8 @@ export class OnlineGame {
         const startedAt = new Date().toISOString()
         saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds)
       }
+      
+      this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
     } catch (e) {
       console.error('[ONLINE] Failed to start game:', e)
     } finally {
@@ -490,6 +509,8 @@ export class OnlineGame {
             const elapsed = Math.max(0, (Date.now() - startedAt) / 1000)
             const remaining = Math.max(0, saved.matchTimeLimitSeconds - elapsed)
             this.gameState.setMatchTimeRemaining(Math.floor(remaining))
+            this.gameState.setMatchTimerActive(true)
+            this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
             console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
               remaining: Math.floor(remaining), 
@@ -520,6 +541,22 @@ export class OnlineGame {
       }
     } catch (e) {
       console.error('[ONLINE] Failed to sync game state:', e)
+    }
+  }
+
+  private broadcastTimerSync(): void {
+    if (!this._channel || !this.isCoordinator()) return
+    const remaining = this.gameState.getMatchTimeRemaining()
+    this._channel.send({
+      type: 'broadcast',
+      event: 'timer_sync',
+      payload: { matchTimeRemaining: remaining }
+    })
+  }
+
+  private handleTimerSync(payload: { matchTimeRemaining: number }): void {
+    if (payload.matchTimeRemaining !== undefined) {
+      this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
     }
   }
 
@@ -594,14 +631,9 @@ export class OnlineGame {
     }
     
     if (!isOwnBroadcast) {
-      // Sync timer from coordinator to keep both players in sync
+      // Always sync timer from coordinator (single source of truth)
       if (payload.matchTimeRemaining !== undefined) {
-        const localTime = this.gameState.getMatchTimeRemaining()
-        const diff = Math.abs(localTime - payload.matchTimeRemaining)
-        if (diff > 2) {
-          console.log('[TURN-RESOLVED] Timer sync — local:', localTime, 'remote:', payload.matchTimeRemaining, 'diff:', diff)
-          this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining - 1)
-        }
+        this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
       }
 
       // Try to apply the move through normal resolve flow
@@ -1001,6 +1033,10 @@ export class OnlineGame {
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval)
       this._pollingInterval = null
+    }
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
     }
     if (this._channel) {
       await supabase.removeChannel(this._channel)
