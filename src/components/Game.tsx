@@ -183,6 +183,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
+  const teammateLabelShownRef = useRef(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
@@ -365,7 +366,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   piece = 'p'
                 }
               }
-              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: moveHistoryRef.current.length + 1 === 1 }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && g.currentTurn === Team.WHITE }
             }
           }
         }
@@ -408,6 +409,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           myPendingOverlay
         }))
         
+        if (pendingOverlay?.showTeammateLabel) {
+          teammateLabelShownRef.current = true
+        }
+
         // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
@@ -667,7 +672,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               piece = 'p'
             }
           }
-          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: moveHistoryRef.current.length + 1 === 1 }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && currentTurn === Team.WHITE }
         }
       }
     }
@@ -720,6 +725,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return newState
     })
     
+    if (pendingOverlay?.showTeammateLabel) {
+      teammateLabelShownRef.current = true
+    }
+
     // Accuracy transition detection (for coordinator who uses updateStateRef)
     const prevTurn = prevTurnRef.current
     if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
@@ -1097,8 +1106,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: moveHistoryRef.current.length + 1 === 1 }
+              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: !teammateLabelShownRef.current }
             }))
+            teammateLabelShownRef.current = true
           }
 
           console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)

@@ -399,8 +399,8 @@ export default function SetupPage() {
             </div>
             <p className="text-sm text-gray-400 text-center font-medium mb-4">Choose your game mode</p>
             <div className="flex flex-col gap-3 mb-5">
+              <ModeButton icon={'\u265B'} title="Play Together" desc="with a friend" onClick={() => setGameMode('online')} highlight />
               <ModeButton icon={'\u265E'} title="Play Offline" desc="vs Bot teammate" onClick={() => setGameMode('offline')} />
-              <ModeButton icon={'\u265B'} title="Play Online" desc="with a friend" onClick={() => setGameMode('online')} highlight />
               <ModeButton icon={'\u26A1'} title="Quick Match" desc="auto-find teammate" onClick={() => setGameMode('quickmatch')} />
             </div>
             <div className="text-center mb-5">
