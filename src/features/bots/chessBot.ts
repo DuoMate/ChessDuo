@@ -465,6 +465,10 @@ export class ChessBot {
   getSkillDescription(): string {
     return DESCRIPTIONS[this.config.skillLevel] || 'Unknown'
   }
+
+  setSkillLevel(level: number): void {
+    this.config.skillLevel = Math.max(1, Math.min(6, level))
+  }
 }
 
 export function createBot(config?: Partial<BotConfig>): ChessBot {

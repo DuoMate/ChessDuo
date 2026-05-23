@@ -185,6 +185,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const isMobile = useIsMobile()
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [leavingConfirmed, setLeavingConfirmed] = useState(false)
+  const alreadyReassessedRef = useRef(false)
 
   // Update sound engine when setting changes
 
@@ -389,6 +390,30 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         fenAfter: g.board.fen(),
       }
       moveHistoryRef.current = [...moveHistoryRef.current, entry]
+    }
+
+    if (!alreadyReassessedRef.current && bot && moveHistoryRef.current.length > 0) {
+      const whiteMoves = moveHistoryRef.current.filter(e => e.team === 'WHITE')
+      if (whiteMoves.length >= 4) {
+        const recentMoves = whiteMoves.slice(-4)
+        const avgAccuracy = recentMoves.reduce((sum, e) =>
+          sum + (e.player1Accuracy + e.player2Accuracy) / 2, 0
+        ) / 4
+
+        let newLevel = 4
+        if (avgAccuracy >= 92) newLevel = 6
+        else if (avgAccuracy >= 85) newLevel = 5
+
+        const oldLevel = bot.getConfig().skillLevel
+        if (newLevel > oldLevel) {
+          console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across 4 WHITE turns → upgrading bot from Level ${oldLevel} to Level ${newLevel}`)
+          bot.setSkillLevel(newLevel)
+          if (teammateBot) teammateBot.setSkillLevel(newLevel)
+        } else {
+          console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across 4 WHITE turns → keeping bot at Level ${oldLevel}`)
+        }
+        alreadyReassessedRef.current = true
+      }
     }
         console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
     })
@@ -1082,6 +1107,28 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
+      }
+
+      if (!isOnline && !alreadyReassessedRef.current && bot && teammateBot && gameRef.current) {
+        const g = gameRef.current
+        const stats = g.getStats()
+        if (stats.whiteMovesPlayed >= 4) {
+          const avgAccuracy = (stats.player1Accuracy + stats.player2Accuracy) / 2
+
+          let newLevel = 4
+          if (avgAccuracy >= 92) newLevel = 6
+          else if (avgAccuracy >= 85) newLevel = 5
+
+          const oldLevel = bot.getConfig().skillLevel
+          if (newLevel > oldLevel) {
+            console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across ${stats.whiteMovesPlayed} WHITE turns → upgrading bots from Level ${oldLevel} to Level ${newLevel}`)
+            bot.setSkillLevel(newLevel)
+            teammateBot.setSkillLevel(newLevel)
+          } else {
+            console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across ${stats.whiteMovesPlayed} WHITE turns → keeping bots at Level ${oldLevel}`)
+          }
+          alreadyReassessedRef.current = true
+        }
       }
     }
   }, [executeBotMove])
