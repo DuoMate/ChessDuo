@@ -365,6 +365,12 @@ export class OnlineGame {
     
     this.starting = true
     
+    // Create fresh game state BEFORE any async operations — broadcast events
+    // (handleTeammateMove/handleTeammateLocked) can arrive during Supabase queries
+    // and must survive into the active game state
+    this.gameState = new GameState(this._timeLimitSeconds)
+    this._status = GameStatus.READY
+    
     try {
       // Check if a game already exists for this room (e.g., started by another player)
       // Retry up to 3 times with 1s delay — handles transient RLS/auth propagation delays
@@ -392,10 +398,6 @@ export class OnlineGame {
         .select('*')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
-
-      // Reset game state - ensures clean state
-      this.gameState = new GameState(this._timeLimitSeconds)
-      this._status = GameStatus.READY
 
       // Add human players to their respective teams
       const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
