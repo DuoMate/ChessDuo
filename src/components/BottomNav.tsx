@@ -8,7 +8,6 @@ interface BottomNavProps {
   onHistoryClick: () => void
   onSoundToggle: () => void
   soundEnabled: boolean
-  hasPlayerId: boolean
 }
 
 export function BottomNav({
@@ -17,7 +16,6 @@ export function BottomNav({
   onHistoryClick,
   onSoundToggle,
   soundEnabled,
-  hasPlayerId,
 }: BottomNavProps) {
   return (
     <motion.nav
@@ -33,14 +31,12 @@ export function BottomNav({
           icon="👤"
           active={activeOverlay === 'profile'}
           onClick={onProfileClick}
-          disabled={!hasPlayerId}
         />
         <NavButton
           label="History"
           icon="📋"
           active={activeOverlay === 'history'}
           onClick={onHistoryClick}
-          disabled={!hasPlayerId}
         />
         <NavButton
           label={soundEnabled ? 'Mute' : 'Sound'}

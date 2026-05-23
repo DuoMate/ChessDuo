@@ -115,10 +115,10 @@ export function Auth({ onAuthComplete }: AuthProps) {
         onAuthComplete(result.userId, result.email?.split('@')[0] || 'Player')
       } else if (result.error) {
         setError(result.error)
-        setGoogleLoading(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed')
+    } finally {
       setGoogleLoading(false)
     }
   }

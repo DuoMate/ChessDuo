@@ -12,6 +12,7 @@ import { ProfilePanel } from '@/components/ProfilePanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts } from '@/lib/messages'
+import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,12 @@ export default function SetupPage() {
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
+    }
+    return false
+  })
   const skillLevels = getAvailableSkillLevels()
 
   useEffect(() => {
@@ -439,7 +446,11 @@ export default function SetupPage() {
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col">
         {topBar}
-        <RoomManager playerId={playerId} username={username} onRoomJoined={handleRoomJoined} />
+        {showWelcome ? (
+          <WelcomeDisclaimer open={true} onDismiss={() => setShowWelcome(false)} />
+        ) : (
+          <RoomManager playerId={playerId} username={username} onRoomJoined={handleRoomJoined} />
+        )}
         <div className="mt-8 text-center pb-8">
           <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
             {"\u2190"} Back to time
@@ -531,8 +542,12 @@ function TopBar({
         onClick={() => playerId ? onProfile() : onSignIn()}
         className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
       >
-        <span className="text-xl">{playerId ? '👤' : '🚪'}</span>
-        <span className="text-sm hidden sm:inline">{playerId ? 'Profile' : 'Sign In'}</span>
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        <span className="text-sm">{playerId ? 'Profile' : 'Sign In'}</span>
       </button>
 
       <div className="flex items-center gap-1 text-yellow-400/60 text-sm font-bold">

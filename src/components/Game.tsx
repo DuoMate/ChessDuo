@@ -729,6 +729,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         highlightSquares
       }))
 
+      const wm = comparison.winningMove
+      if (wm.includes('#')) playCheckmateSound()
+      else if (wm.includes('+')) playCheckSound()
+      else if (wm.includes('x')) playCaptureSound()
+      else playMoveSound()
+
       updateStateRef.current()
       return true
     }
@@ -779,6 +785,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     g.lockMove('player4')
     
     await g.resolveLegacy(true)
+    if (sanMove.includes('#')) playCheckmateSound()
+    else if (sanMove.includes('+')) playCheckSound()
+    else if (sanMove.includes('x')) playCaptureSound()
+    else playMoveSound()
     updateStateRef.current()
     
     console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
@@ -898,6 +908,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             const newTurn = g.currentTurn as Team
             console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
             playResolutionSound()
+            if (comparison) {
+              const wm = comparison.winningMove
+              if (wm.includes('#')) playCheckmateSound()
+              else if (wm.includes('+')) playCheckSound()
+              else if (wm.includes('x')) playCaptureSound()
+              else playMoveSound()
+            }
             
             // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
             if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
@@ -1398,8 +1415,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {isMobile && (
         <BottomNav
           activeOverlay={overlayMode}
-          onProfileClick={() => setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')}
-          onHistoryClick={() => setOverlayMode(overlayMode === 'history' ? 'none' : 'history')}
+          onProfileClick={() => {
+            if (!playerId) {
+              setOverlayMode('profile')
+              return
+            }
+            setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')
+          }}
+          onHistoryClick={() => {
+            if (!playerId) {
+              setOverlayMode('profile')
+              return
+            }
+            setOverlayMode(overlayMode === 'history' ? 'none' : 'history')
+          }}
           onSoundToggle={() => setSoundEnabled(!soundEnabled)}
           soundEnabled={soundEnabled}
           hasPlayerId={!!playerId}

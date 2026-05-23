@@ -9,7 +9,6 @@ describe('BottomNav', () => {
     onHistoryClick: jest.fn(),
     onSoundToggle: jest.fn(),
     soundEnabled: true,
-    hasPlayerId: true,
   }
 
   it('renders all navigation buttons', () => {
@@ -60,15 +59,13 @@ describe('BottomNav', () => {
     expect(historyButton?.className).toContain('text-yellow-400')
   })
 
-  it('disables profile and history when hasPlayerId is false', () => {
-    render(<BottomNav {...defaultProps} hasPlayerId={false} />)
+  it('profile button is always enabled (guests can tap to see sign-in prompt)', () => {
+    render(<BottomNav {...defaultProps} />)
     const profileButton = screen.getByText('Profile').closest('button')
-    const historyButton = screen.getByText('History').closest('button')
-    expect(profileButton).toBeDisabled()
-    expect(historyButton).toBeDisabled()
+    expect(profileButton).not.toBeDisabled()
   })
 
-  it('home button is clickable', () => {
+  it('home button is always clickable', () => {
     render(<BottomNav {...defaultProps} />)
     const homeButton = screen.getByText('Home')
     expect(homeButton).toBeDefined()
