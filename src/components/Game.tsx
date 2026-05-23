@@ -1431,7 +1431,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }}
           onSoundToggle={() => setSoundEnabled(!soundEnabled)}
           soundEnabled={soundEnabled}
-          hasPlayerId={!!playerId}
         />
       )}
 
