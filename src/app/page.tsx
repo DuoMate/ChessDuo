@@ -540,18 +540,22 @@ function TopBar({
         <span className="hidden sm:inline">ChessDuo</span>
       </div>
 
-      <button
-        onClick={() => playerId ? onFriends() : onSignIn()}
-        className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
-      >
-        <span className="text-xl">{playerId ? '👥' : '🚪'}</span>
-        <span className="text-sm hidden sm:inline">{playerId ? 'Friends' : 'Sign In'}</span>
-        {unreadMessages > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
-            {unreadMessages > 99 ? '99+' : unreadMessages}
-          </span>
-        )}
-      </button>
+      {playerId ? (
+        <button
+          onClick={onFriends}
+          className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
+        >
+          <span className="text-xl">👥</span>
+          <span className="text-sm hidden sm:inline">Friends</span>
+          {unreadMessages > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+              {unreadMessages > 99 ? '99+' : unreadMessages}
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="min-w-[44px]" />
+      )}
     </div>
   )
 }
