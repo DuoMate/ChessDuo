@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { Trophy, Handshake, RotateCcw } from 'lucide-react'
 import { MatchSummary, MatchStats } from './MatchSummary'
 
 interface GameOverModalProps {
@@ -12,6 +13,36 @@ interface GameOverModalProps {
   stats?: MatchStats
   isOnline?: boolean
   roomId?: string
+}
+
+function Particles() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {[...Array(8)].map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{
+            opacity: 1,
+            x: '50%',
+            y: '45%',
+            scale: 0,
+          }}
+          animate={{
+            opacity: 0,
+            x: `${50 + (Math.random() - 0.5) * 60}%`,
+            y: `${45 + (Math.random() - 0.5) * 40}%`,
+            scale: [0, 1.5, 0],
+          }}
+          transition={{
+            duration: 1.2 + Math.random() * 0.8,
+            delay: 0.3 + Math.random() * 0.5,
+            ease: 'easeOut',
+          }}
+          className="absolute w-2 h-2 rounded-full bg-amber-400/60"
+        />
+      ))}
+    </div>
+  )
 }
 
 export function GameOverModal({
@@ -26,41 +57,51 @@ export function GameOverModal({
   const [showStats, setShowStats] = useState(true)
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
+    <motion.div
+      initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 overflow-y-auto"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.5, y: 50 }}
         animate={{ scale: 1, y: 0 }}
-        transition={{ type: "spring", duration: 0.5 }}
-        className="bg-gray-800 p-6 rounded-2xl text-center border-2 border-yellow-400 shadow-2xl w-full max-w-sm"
+        transition={{ type: 'spring', damping: 20, stiffness: 250 }}
+        className="bg-game-surface p-6 rounded-2xl text-center border border-white/10 shadow-2xl w-full max-w-sm relative overflow-hidden"
       >
+        {winner !== 'DRAW' && <Particles />}
+
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring" }}
-          className="text-6xl mb-4"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+          className="relative z-10"
         >
-          {winner === 'WHITE' && '🏆'}
-          {winner === 'BLACK' && '🏆'}
-          {winner === 'DRAW' && '🤝'}
+          {winner === 'WHITE' && (
+            <Trophy size={72} className="mx-auto text-amber-400" strokeWidth={1.5} />
+          )}
+          {winner === 'BLACK' && (
+            <Trophy size={72} className="mx-auto text-gray-400" strokeWidth={1.5} />
+          )}
+          {winner === 'DRAW' && (
+            <Handshake size={72} className="mx-auto text-gray-400" strokeWidth={1.5} />
+          )}
         </motion.div>
-        
-        <h2 className="text-3xl font-bold mb-2">
-          {winner === 'WHITE' && <span className="text-white">White Team Wins!</span>}
-          {winner === 'BLACK' && <span className="text-gray-300">Black Team Wins!</span>}
-          {winner === 'DRAW' && <span className="text-gray-400">It's a Draw!</span>}
+
+        <h2 className={`text-2xl font-bold mt-4 mb-1 relative z-10 ${
+          winner === 'WHITE' ? 'text-white' : 'text-gray-300'
+        } font-game`}>
+          {winner === 'WHITE' && 'White Team Wins!'}
+          {winner === 'BLACK' && 'Black Team Wins!'}
+          {winner === 'DRAW' && "It's a Draw!"}
         </h2>
-        
-        <p className="text-gray-400 mb-2">Great game!</p>
+
+        <p className="text-gray-500 mb-2 relative z-10">Great game!</p>
 
         {stats && gameResult && showStats && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="mb-4 mt-4"
+            className="mb-4 mt-4 relative z-10"
           >
             <MatchSummary
               winner={winner}
@@ -81,18 +122,19 @@ export function GameOverModal({
         {stats && gameResult && !showStats && (
           <button
             onClick={() => setShowStats(true)}
-            className="text-yellow-400 hover:text-yellow-300 text-sm mb-3 block w-full"
+            className="text-amber-400 hover:text-amber-300 text-sm mb-3 block w-full relative z-10"
           >
             Show stats
           </button>
         )}
-        
-        <motion.button 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           onClick={onPlayAgain}
-          className="bg-yellow-400 text-gray-900 px-8 py-3 rounded-lg font-bold hover:bg-yellow-300 transition-colors"
+          className="relative z-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 px-8 py-3.5 rounded-xl font-bold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 inline-flex items-center gap-2 min-h-[44px]"
         >
+          <RotateCcw size={18} />
           Play Again
         </motion.button>
       </motion.div>

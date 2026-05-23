@@ -6,6 +6,7 @@ import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { MatchTimer } from './MatchTimer'
 import { GameOverModal } from './GameOverModal'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Swords } from 'lucide-react'
 
 interface DuelGameProps {
   roomId: string
@@ -112,7 +113,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     return (
       <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4">
-          <div className="animate-pulse text-5xl">⚔️</div>
+          <div className="animate-pulse text-5xl flex justify-center">
+            <Swords size={48} className="text-amber-400" />
+          </div>
           <h1 className="text-2xl font-bold text-yellow-400">Waiting for opponent...</h1>
           <p className="text-gray-400">Share this room code with your friend:</p>
           <div className="bg-gray-800 border border-white/10 rounded-xl p-4">
@@ -134,7 +137,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     <div className="min-h-screen bg-[#0f1119] text-white flex flex-col p-4">
       <div className="max-w-xl mx-auto w-full">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold">⚔️ Duel</h1>
+          <h1 className="text-lg font-bold flex items-center gap-1.5">
+            <Swords size={18} className="text-amber-400" /> Duel
+          </h1>
           <span className="text-xs text-gray-500 font-mono">{roomCode}</span>
         </div>
 

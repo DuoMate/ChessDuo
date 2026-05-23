@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Target, PartyPopper, Zap, CheckCircle2, XCircle, AlertTriangle, Sparkles, Lightbulb, Crown, Swords } from 'lucide-react'
 import { MoveComparison } from '@/features/offline/game/localGame'
 import { InsightsGate } from './InsightsGate'
 
@@ -34,10 +35,17 @@ function getMoveImpact(move: string): string {
   return ''
 }
 
-function getBlunderWarning(loss: number): { emoji: string; label: string; color: string } | null {
-  if (loss >= 500) return { emoji: '\u274C', label: 'Critical blunder — lost a piece!', color: '#ef4444' }
-  if (loss >= 200) return { emoji: '\u26A0\uFE0F', label: 'Blunder — costly mistake', color: '#f59e0b' }
-  if (loss >= 100) return { emoji: '\u2757', label: 'Inaccuracy — missed a better move', color: '#eab308' }
+function getBlunderWarning(loss: number): { label: string; color: string } | null {
+  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', color: '#ef4444' }
+  if (loss >= 200) return { label: 'Blunder — costly mistake', color: '#f59e0b' }
+  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', color: '#eab308' }
+  return null
+}
+
+function BlunderIcon({ loss }: { loss: number }) {
+  if (loss >= 500) return <XCircle size={12} />
+  if (loss >= 200) return <AlertTriangle size={12} />
+  if (loss >= 100) return null
   return null
 }
 
@@ -91,7 +99,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
         <div className="w-10 md:w-12 h-1 md:h-1.5 bg-gray-600 rounded-full" />
       </div>
 
-      <div className="bg-gray-800/95 backdrop-blur-sm rounded-2xl p-3 md:p-4 shadow-2xl border border-gray-600">
+      <div className="bg-game-surface/95 backdrop-blur-sm rounded-2xl p-3 md:p-4 shadow-2xl border border-white/10">
 
         {/* Header */}
         <div className="text-center mb-3 md:mb-4">
@@ -99,9 +107,15 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 500, delay: 0.1 }}
-            className="text-yellow-400 font-bold text-base md:text-lg uppercase tracking-wide"
+            className="text-amber-400 font-bold text-base md:text-lg uppercase tracking-wider font-game flex items-center justify-center gap-2"
           >
-            {isSync ? '\uD83C\uDFAF Synchronized!' : humanWon ? '\uD83C\uDF89 You Won This Turn!' : '\uD83D\uDCAA Teammate Won!'}
+            {isSync ? (
+              <><Target size={18} className="text-amber-400" /> Synchronized!</>
+            ) : humanWon ? (
+              <><Crown size={18} className="text-emerald-400" /> You Won This Turn!</>
+            ) : (
+              <><Zap size={18} className="text-blue-400" /> Teammate Won!</>
+            )}
           </motion.h3>
         </div>
 
@@ -114,9 +128,9 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
         >
           <div className="flex items-center gap-2 md:gap-3">
             <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px] text-right">Black</span>
-            <div className="flex-1 h-2.5 md:h-3 bg-gradient-to-r from-gray-900 via-gray-600 to-white rounded-full overflow-hidden relative">
+            <div className="flex-1 h-3 md:h-4 bg-gradient-to-r from-gray-900 via-gray-600 to-white rounded-full overflow-hidden relative shadow-inner">
               <motion.div
-                className="absolute top-0 h-full w-0.5 md:w-1 bg-yellow-400 rounded"
+                className="absolute top-0 h-full w-1.5 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.6)]"
                 initial={{ left: '50%' }}
                 animate={{ left: `${evalBarPct}%` }}
                 transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
@@ -141,23 +155,23 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ x: -50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.15 }}
-            className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl ${
-              humanWon && !isSync ? 'bg-green-900/40 border border-green-500/50'
-                : !humanWon && !isSync ? 'bg-red-900/40 border border-red-500/50'
-                : 'bg-gray-700/50'
+            className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl border ${
+              humanWon && !isSync ? 'bg-emerald-500/10 border-emerald-500/40'
+                : !humanWon && !isSync ? 'bg-rose-500/10 border-rose-500/40'
+                : 'bg-white/5 border-white/10'
             }`}
           >
             <div className="flex flex-col min-w-0 flex-1 mr-2">
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <span className="text-white font-bold text-xs md:text-sm">You</span>
                 {humanWon && !isSync && (
-                  <span className="text-[10px] md:text-xs bg-green-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold">WINNER</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
                 {!humanWon && !isSync && (
-                  <span className="text-[10px] md:text-xs bg-red-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold">LOSER</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {youMatchedEngine && (
-                  <span className="text-[10px] md:text-xs bg-yellow-500/20 text-yellow-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium">\uD83C\uDFAF Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
@@ -173,23 +187,29 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">{yourMoveImpact}</p>
               )}
               {yourBlunder && (
-                <p className="text-[10px] md:text-xs mt-0.5 font-medium" style={{ color: yourBlunder.color }}>
-                  {yourBlunder.emoji} {yourBlunder.label}
+                <p className="text-[10px] md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: yourBlunder.color }}>
+                  <BlunderIcon loss={yourLoss} />{' '}{yourBlunder.label}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <div className="w-12 md:w-20 h-1.5 md:h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ backgroundColor: yourAccuracy >= 90 ? '#22c55e' : yourAccuracy >= 70 ? '#eab308' : '#ef4444' }}
+                  style={{
+                    background: yourAccuracy >= 90
+                      ? 'linear-gradient(90deg, #34d399, #22c55e)'
+                      : yourAccuracy >= 70
+                      ? 'linear-gradient(90deg, #fbbf24, #eab308)'
+                      : 'linear-gradient(90deg, #f87171, #ef4444)'
+                  }}
                   initial={{ width: 0 }}
                   animate={{ width: `${yourAccuracy}%` }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 />
               </div>
-              <span className={`font-bold text-sm md:text-xl ${humanWon ? 'text-green-400' : 'text-gray-400'}`}>
-                {yourAccuracy.toFixed(0)}%
+              <span className={`font-bold text-sm md:text-xl font-game ${humanWon ? 'text-emerald-400' : 'text-gray-500'}`}>
+                {yourAccuracy.toFixed(0)}
               </span>
             </div>
           </motion.div>
@@ -199,23 +219,23 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ x: 50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl ${
-              !humanWon && !isSync ? 'bg-green-900/40 border border-green-500/50'
-                : humanWon && !isSync ? 'bg-red-900/40 border border-red-500/50'
-                : 'bg-gray-700/50'
+            className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl border ${
+              !humanWon && !isSync ? 'bg-emerald-500/10 border-emerald-500/40'
+                : humanWon && !isSync ? 'bg-rose-500/10 border-rose-500/40'
+                : 'bg-white/5 border-white/10'
             }`}
           >
             <div className="flex flex-col min-w-0 flex-1 mr-2">
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <span className="text-gray-300 font-bold text-xs md:text-sm">Teammate</span>
                 {!humanWon && !isSync && (
-                  <span className="text-[10px] md:text-xs bg-green-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold">WINNER</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
                 {humanWon && !isSync && (
-                  <span className="text-[10px] md:text-xs bg-red-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold">LOSER</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {teammateMatchedEngine && (
-                  <span className="text-[10px] md:text-xs bg-yellow-500/20 text-yellow-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium">\uD83C\uDFAF Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
@@ -231,23 +251,29 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">{teammateMoveImpact}</p>
               )}
               {mateBlunder && (
-                <p className="text-[10px] md:text-xs mt-0.5 font-medium" style={{ color: mateBlunder.color }}>
-                  {mateBlunder.emoji} {mateBlunder.label}
+                <p className="text-[10px] md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: mateBlunder.color }}>
+                  <BlunderIcon loss={teammateLoss} />{' '}{mateBlunder.label}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <div className="w-12 md:w-20 h-1.5 md:h-2 bg-gray-700 rounded-full overflow-hidden">
+              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
-                  style={{ backgroundColor: teammateAccuracy >= 90 ? '#22c55e' : teammateAccuracy >= 70 ? '#eab308' : '#ef4444' }}
+                  style={{
+                    background: teammateAccuracy >= 90
+                      ? 'linear-gradient(90deg, #34d399, #22c55e)'
+                      : teammateAccuracy >= 70
+                      ? 'linear-gradient(90deg, #fbbf24, #eab308)'
+                      : 'linear-gradient(90deg, #f87171, #ef4444)'
+                  }}
                   initial={{ width: 0 }}
                   animate={{ width: `${teammateAccuracy}%` }}
                   transition={{ delay: 0.35, duration: 0.5 }}
                 />
               </div>
-              <span className={`font-bold text-sm md:text-xl ${!humanWon ? 'text-green-400' : 'text-gray-400'}`}>
-                {teammateAccuracy.toFixed(0)}%
+              <span className={`font-bold text-sm md:text-xl font-game ${!humanWon ? 'text-emerald-400' : 'text-gray-500'}`}>
+                {teammateAccuracy.toFixed(0)}
               </span>
             </div>
           </motion.div>
@@ -261,16 +287,16 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           className="mt-2 md:mt-3 text-center"
         >
           {isSync && (
-            <p className="text-yellow-400 text-xs md:text-sm font-medium">\u2728 Both played exactly the same move!</p>
+            <p className="text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Both played exactly the same move!</p>
           )}
           {!isSync && bothMatched && (
-            <p className="text-yellow-400 text-xs md:text-sm font-medium">\uD83C\uDF1F Perfect — both matched the engine&apos;s best move!</p>
+            <p className="text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Perfect — both matched the engine&apos;s best move!</p>
           )}
           {!isSync && youMatchedEngine && !teammateMatchedEngine && (
-            <p className="text-green-400 text-xs md:text-sm font-medium">\uD83C\uDFAF You found the engine&apos;s top move!</p>
+            <p className="text-emerald-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Target size={14} /> You found the engine&apos;s top move!</p>
           )}
           {!isSync && !youMatchedEngine && teammateMatchedEngine && (
-            <p className="text-blue-400 text-xs md:text-sm font-medium">\uD83D\uDCA1 Teammate found the engine&apos;s best move</p>
+            <p className="text-blue-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Lightbulb size={14} /> Teammate found the engine&apos;s best move</p>
           )}
         </motion.div>
 
@@ -280,17 +306,17 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
-            className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-600"
+            className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-white/10"
           >
             <p className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">Other good moves:</p>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
               {alternatives.map((alt, i) => (
                 <span
                   key={i}
-                  className="text-[10px] md:text-xs bg-gray-700/60 text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
+                  className="text-[10px] md:text-xs bg-white/5 text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
                 >
                   {alt.move.replace(/(\w{2})(\w{2})/, '$1\u2192$2')}
-                  <span className={alt.score >= 0 ? 'text-green-400 ml-1' : 'text-red-400 ml-1'}>
+                  <span className={alt.score >= 0 ? 'text-emerald-400 ml-1' : 'text-rose-400 ml-1'}>
                     {alt.score >= 0 ? '+' : ''}{alt.score}cp
                   </span>
                 </span>
@@ -304,7 +330,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="mt-2 md:mt-4 pt-2 md:pt-3 border-t border-gray-600"
+          className="mt-2 md:mt-4 pt-2 md:pt-3 border-t border-white/10"
         >
           <div className="flex justify-between text-xs md:text-sm">
             <span className="text-gray-500">Centipawn Loss</span>

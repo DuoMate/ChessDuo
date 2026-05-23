@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { Crown, XCircle, Swords } from 'lucide-react'
 import { MoveComparison } from '@/features/offline/game/localGame'
 import { InsightsGate } from './InsightsGate'
 
@@ -21,123 +22,175 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
   const teammateCategory = comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' }
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={onAnimationComplete}>
       {isVisible && comparison && (
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 16, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -16, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           className="w-full"
         >
-          <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 shadow-xl border border-gray-600 w-full">
-            <div className="text-center mb-3">
-              <h3 className="text-yellow-400 font-semibold text-sm uppercase tracking-wide">
-                {isSync ? 'Synchronized!' : humanWon ? 'You Won This Turn!' : 'Teammate Won!'}
-              </h3>
-            </div>
+          <div className="bg-game-surface/90 backdrop-blur-sm rounded-xl p-4 shadow-xl border border-white/10 w-full">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 500, delay: 0.1 }}
+              className="text-center mb-3"
+            >
+              {isSync ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Swords size={18} className="text-amber-400" />
+                  <h3 className="text-amber-400 font-semibold text-sm uppercase tracking-wider">
+                    Synchronized!
+                  </h3>
+                </div>
+              ) : humanWon ? (
+                <div className="flex items-center justify-center gap-2">
+                  <motion.div
+                    animate={{ rotate: [0, -10, 10, -5, 0] }}
+                    transition={{ delay: 0.2, duration: 0.6 }}
+                  >
+                    <Crown size={20} className="text-amber-400" />
+                  </motion.div>
+                  <h3 className="text-emerald-400 font-semibold text-sm uppercase tracking-wider">
+                    You Won This Turn!
+                  </h3>
+                </div>
+              ) : (
+                <h3 className="text-blue-400 font-semibold text-sm uppercase tracking-wider">
+                  Teammate Won This Turn!
+                </h3>
+              )}
+            </motion.div>
 
-            <div className="space-y-2">
-              <div className={`flex items-center justify-between p-2 rounded-lg ${humanWon && !isSync ? 'bg-green-900/30 border border-green-500/50' : !humanWon && !isSync ? 'bg-red-900/30 border border-red-500/50' : 'bg-gray-700/50'}`}>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-medium text-sm">You</span>
-                    {!humanWon && !isSync && (
+            <div className="space-y-2.5">
+              <motion.div
+                initial={{ x: -40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                  humanWon && !isSync
+                    ? 'bg-emerald-500/10 border-emerald-500/40'
+                    : !humanWon && !isSync
+                    ? 'bg-rose-500/10 border-rose-500/40'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-white font-bold text-sm">You</span>
+                    {isSync ? null : humanWon ? (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded"
+                        transition={{ delay: 0.3 }}
+                        className="inline-flex items-center gap-1 text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold"
                       >
-                        LOSER
+                        <Crown size={10} /> WINNER
                       </motion.span>
-                    )}
-                    {humanWon && !isSync && (
+                    ) : (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded"
+                        transition={{ delay: 0.3 }}
+                        className="inline-flex items-center gap-1 text-xs bg-rose-500 text-white px-2 py-0.5 rounded-full font-bold"
                       >
-                        WINNER
+                        <XCircle size={10} /> LOSER
                       </motion.span>
                     )}
                   </div>
-                  <span 
-                    className="text-xs px-1.5 py-0.5 rounded font-medium w-fit"
-                    style={{ backgroundColor: `${humanCategory.color}30`, color: humanCategory.color }}
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-md font-medium w-fit"
+                    style={{ backgroundColor: `${humanCategory.color}25`, color: humanCategory.color }}
                   >
                     {humanCategory.emoji} {humanCategory.label}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-white text-sm font-bold">{comparison.player1Move}</span>
-                  <motion.span 
-                    className={`font-bold text-lg ${humanWon ? 'text-green-400' : 'text-gray-400'}`}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-white text-base font-bold font-mono">{comparison.player1Move}</span>
+                  <motion.span
+                    className={`font-bold text-xl font-game ${humanWon ? 'text-emerald-400' : 'text-gray-500'}`}
                     key={humanAccuracy}
-                    initial={{ scale: 1.2, color: humanWon ? '#22c55e' : '#9ca3af' }}
-                    animate={{ scale: 1, color: humanWon ? '#22c55e' : '#9ca3af' }}
+                    initial={{ scale: 1.3 }}
+                    animate={{ scale: 1 }}
                   >
-                    {humanAccuracy.toFixed(0)}%
+                    {humanAccuracy.toFixed(0)}
                   </motion.span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className={`flex items-center justify-between p-2 rounded-lg ${!humanWon && !isSync ? 'bg-green-900/30 border border-green-500/50' : humanWon && !isSync ? 'bg-red-900/30 border border-red-500/50' : 'bg-gray-700/50'}`}>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-300 font-medium text-sm">Teammate</span>
-                    {humanWon && !isSync && (
+              <motion.div
+                initial={{ x: 40, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                  !humanWon && !isSync
+                    ? 'bg-emerald-500/10 border-emerald-500/40'
+                    : humanWon && !isSync
+                    ? 'bg-rose-500/10 border-rose-500/40'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-gray-300 font-bold text-sm">Teammate</span>
+                    {isSync ? null : !humanWon ? (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded"
+                        transition={{ delay: 0.3 }}
+                        className="inline-flex items-center gap-1 text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold"
                       >
-                        LOSER
+                        <Crown size={10} /> WINNER
                       </motion.span>
-                    )}
-                    {!humanWon && !isSync && (
+                    ) : (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded"
+                        transition={{ delay: 0.3 }}
+                        className="inline-flex items-center gap-1 text-xs bg-rose-500 text-white px-2 py-0.5 rounded-full font-bold"
                       >
-                        WINNER
+                        <XCircle size={10} /> LOSER
                       </motion.span>
                     )}
                   </div>
-                  <span 
-                    className="text-xs px-1.5 py-0.5 rounded font-medium w-fit"
-                    style={{ backgroundColor: `${teammateCategory.color}30`, color: teammateCategory.color }}
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded-md font-medium w-fit"
+                    style={{ backgroundColor: `${teammateCategory.color}25`, color: teammateCategory.color }}
                   >
                     {teammateCategory.emoji} {teammateCategory.label}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-300 text-sm font-bold">{comparison.player2Move}</span>
-                  <motion.span 
-                    className={`font-bold text-lg ${!humanWon ? 'text-green-400' : 'text-gray-400'}`}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-gray-300 text-base font-bold font-mono">{comparison.player2Move}</span>
+                  <motion.span
+                    className={`font-bold text-xl font-game ${!humanWon ? 'text-emerald-400' : 'text-gray-500'}`}
                     key={teammateAccuracy}
-                    initial={{ scale: 1.2, color: !humanWon ? '#22c55e' : '#9ca3af' }}
-                    animate={{ scale: 1, color: !humanWon ? '#22c55e' : '#9ca3af' }}
+                    initial={{ scale: 1.3 }}
+                    animate={{ scale: 1 }}
                   >
-                    {teammateAccuracy.toFixed(0)}%
+                    {teammateAccuracy.toFixed(0)}
                   </motion.span>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {isSync && (
               <div className="mt-3 text-center">
-                <span className="text-yellow-400 text-sm font-medium">
+                <span className="text-amber-400 text-sm font-medium">
                   Both chose the same move!
                 </span>
               </div>
             )}
 
-            <div className="mt-3 pt-2 border-t border-gray-600">
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>Centipawn Loss</span>
-                <span>You: {comparison.player1Loss}cp | Teammate: {comparison.player2Loss}cp</span>
-              </div>
+            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-center gap-2">
+              <span className="text-xs text-gray-500">Centipawn Loss</span>
+              <span className="text-xs text-gray-400">
+                You: <span className="text-white font-medium">{comparison.player1Loss}cp</span>
+                {' \u00B7 '}
+                Teammate: <span className="text-white font-medium">{comparison.player2Loss}cp</span>
+              </span>
             </div>
 
             {playerId && (

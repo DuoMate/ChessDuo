@@ -47,12 +47,13 @@ describe('WelcomeDisclaimer', () => {
   it('shows rules about two players and bot', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
     expect(screen.getByText(/you & your teammate/i)).toBeDefined()
-    expect(screen.getByText(/each player picks a move independently/i)).toBeDefined()
+    expect(screen.getByText(/pick your move/i)).toBeDefined()
+    expect(screen.getByText(/better move wins/i)).toBeDefined()
   })
 
   it('shows winner/loser indicators', () => {
-    const { container } = render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
-    expect(container.querySelector('.bg-green-500')).toBeTruthy()
-    expect(container.querySelector('.bg-red-500')).toBeTruthy()
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
+    expect(screen.getByText('Winner')).toBeDefined()
+    expect(screen.getByText('Loser')).toBeDefined()
   })
 })

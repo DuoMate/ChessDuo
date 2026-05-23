@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { Timeline } from 'animejs'
 import { Team } from '@/features/game-engine/gameState'
+import { Crown, Copy, Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 
 interface GameLoadingProps {
   message?: string
@@ -10,12 +11,12 @@ interface GameLoadingProps {
   roomCode?: string
 }
 
-export function GameLoading({ 
-  message = 'Loading game...', 
+export function GameLoading({
+  message = 'Loading game...',
   showChessIcon = true,
   roomCode,
 }: GameLoadingProps) {
-  const iconRef = useRef<HTMLSpanElement>(null)
+  const iconRef = useRef<HTMLDivElement>(null)
   const dot1Ref = useRef<HTMLDivElement>(null)
   const dot2Ref = useRef<HTMLDivElement>(null)
   const dot3Ref = useRef<HTMLDivElement>(null)
@@ -40,30 +41,27 @@ export function GameLoading({
     <div className="flex flex-col items-center justify-center min-h-[600px] p-8">
       {showChessIcon && (
         <div className="relative mb-8">
-          <span
-            ref={iconRef}
-            className="text-8xl filter drop-shadow-lg inline-block"
-          >
-            &#9823;&#65039;
-          </span>
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-yellow-500 rounded-full" />
+          <div ref={iconRef} className="inline-block">
+            <Crown size={80} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
+          </div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-amber-500 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.4)]" />
         </div>
       )}
       <div className="flex items-center gap-3 mb-4">
-        <div ref={dot1Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
-        <div ref={dot2Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
-        <div ref={dot3Ref} className="w-3 h-3 bg-yellow-500 rounded-full" />
+        <div ref={dot1Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
+        <div ref={dot2Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
+        <div ref={dot3Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
       </div>
       <p className="text-gray-400 text-lg">{message}</p>
       {roomCode && (
-        <div className="mt-6 px-5 py-3 bg-gray-800/60 rounded-xl border border-gray-700/50 text-center">
+        <div className="mt-6 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Room code</p>
-          <p className="text-xl font-mono font-bold text-yellow-400 tracking-widest select-all">{roomCode}</p>
+          <p className="text-xl font-mono font-bold text-amber-400 tracking-widest select-all">{roomCode}</p>
           <button
             onClick={() => navigator.clipboard.writeText(roomCode)}
-            className="mt-2 text-xs text-gray-500 hover:text-yellow-400 transition-colors"
+            className="mt-2 text-xs text-gray-500 hover:text-amber-400 transition-colors inline-flex items-center gap-1 min-h-[44px]"
           >
-            &#x1F4CB; Copy code
+            <Copy size={12} /> Copy code
           </button>
         </div>
       )}
@@ -78,20 +76,20 @@ interface ConnectionStatusProps {
 
 export function ConnectionStatus({ status, onRetry }: ConnectionStatusProps) {
   const statusConfig = {
-    connecting: { color: 'text-yellow-400', bg: 'bg-yellow-900/30', icon: '\u23F3', message: 'Connecting...' },
-    connected: { color: 'text-green-400', bg: 'bg-green-900/30', icon: '\u2713', message: 'Connected' },
-    disconnected: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '\u2715', message: 'Disconnected' },
-    error: { color: 'text-red-400', bg: 'bg-red-900/30', icon: '\u26A0\uFE0F', message: 'Connection Error' },
+    connecting: { color: 'text-amber-400', bg: 'bg-amber-500/15', Icon: Loader2, iconAnim: 'animate-spin', message: 'Connecting...' },
+    connected: { color: 'text-emerald-400', bg: 'bg-emerald-500/15', Icon: CheckCircle2, iconAnim: '', message: 'Connected' },
+    disconnected: { color: 'text-rose-400', bg: 'bg-rose-500/15', Icon: XCircle, iconAnim: '', message: 'Disconnected' },
+    error: { color: 'text-rose-400', bg: 'bg-rose-500/15', Icon: AlertTriangle, iconAnim: '', message: 'Connection Error' },
   }
 
   const config = statusConfig[status]
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bg} border border-gray-700`}>
-      <span className={config.color}>{config.icon}</span>
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bg} border border-white/10`}>
+      <config.Icon size={14} className={`${config.color} ${config.iconAnim}`} />
       <span className={`text-sm ${config.color}`}>{config.message}</span>
       {status === 'disconnected' && onRetry && (
-        <button 
+        <button
           onClick={onRetry}
           className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline"
         >
@@ -105,8 +103,8 @@ export function ConnectionStatus({ status, onRetry }: ConnectionStatusProps) {
 export function TeamTurnIndicator({ currentTurn }: { currentTurn: Team }) {
   return (
     <div className="flex items-center gap-3">
-      <div className={`w-3 h-3 rounded-full ${currentTurn === Team.WHITE ? 'bg-white' : 'bg-black'} border-2 border-gray-500`} />
-      <span className="text-sm font-medium text-gray-300">
+      <div className={`w-3 h-3 rounded-full border-2 border-white/20 shadow-[0_0_6px_rgba(255,255,255,0.3)] ${currentTurn === Team.WHITE ? 'bg-white' : 'bg-gray-800'}`} />
+      <span className="text-sm font-medium text-gray-300 font-game">
         {currentTurn === Team.WHITE ? "White's Turn" : "Black's Turn"}
       </span>
     </div>

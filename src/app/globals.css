@@ -10,6 +10,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-game: var(--font-chakra-petch), var(--font-geist-sans);
+  --color-game-gold: #fbbf24;
+  --color-game-winner: #34d399;
+  --color-game-loser: #f43f5e;
+  --color-game-bg: #0a0a0a;
+  --color-game-card: #16191f;
+  --color-game-surface: #1f2230;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -59,7 +59,7 @@ describe('ChallengePicker', () => {
     fireEvent.click(screen.getByText('15 min'))
     const buttons = screen.getAllByRole('button')
     const selectedButton = buttons.find(b => b.textContent?.includes('15 min'))
-    expect(selectedButton?.className).toContain('border-yellow-500')
+    expect(selectedButton?.className).toContain('border-amber-400')
   })
 
   it('shows result screen after creating challenge', async () => {

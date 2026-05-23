@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createChallenge } from '@/lib/challenges'
 import { sendMessage } from '@/lib/messages'
+import { Zap, Timer } from 'lucide-react'
 
 interface ChallengePickerProps {
   currentUserId: string
@@ -15,14 +16,13 @@ interface ChallengePickerProps {
 interface TimeOption {
   seconds: number
   label: string
-  icon: string
 }
 
 const TIME_OPTIONS: TimeOption[] = [
-  { seconds: 300, label: '5 min', icon: '⚡' },
-  { seconds: 600, label: '10 min', icon: '⏱' },
-  { seconds: 900, label: '15 min', icon: '🕐' },
-  { seconds: 1800, label: '30 min', icon: '🕒' },
+  { seconds: 300, label: '5 min' },
+  { seconds: 600, label: '10 min' },
+  { seconds: 900, label: '15 min' },
+  { seconds: 1800, label: '30 min' },
 ]
 
 export function ChallengePicker({ currentUserId, friendId, friendName, onClose }: ChallengePickerProps) {
@@ -47,7 +47,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-sm bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm bg-game-surface border border-white/10 rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-white mb-1">Challenge {friendName}</h3>
         <p className="text-gray-400 text-sm mb-4">Select game duration</p>
 
@@ -58,11 +58,17 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
               onClick={() => setSelectedTime(opt.seconds)}
               className={`min-h-[60px] p-4 rounded-xl border text-center transition-all ${
                 selectedTime === opt.seconds
-                  ? 'border-yellow-500 bg-yellow-500/10'
+                  ? 'border-amber-400 bg-amber-500/10'
                   : 'border-white/8 bg-white/[0.03] hover:border-white/15'
               }`}
             >
-              <div className="text-2xl mb-1">{opt.icon}</div>
+              <div className="mb-1 flex justify-center">
+                {opt.seconds <= 600 ? (
+                  <Zap size={24} className={selectedTime === opt.seconds ? 'text-amber-400' : 'text-gray-500'} />
+                ) : (
+                  <Timer size={24} className={selectedTime === opt.seconds ? 'text-amber-400' : 'text-gray-500'} />
+                )}
+              </div>
               <div className="text-sm font-bold text-white">{opt.label}</div>
             </button>
           ))}
@@ -72,13 +78,13 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="flex-1 min-h-[44px] px-4 py-2 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
+            className="flex-1 min-h-[44px] px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-yellow-300 disabled:opacity-50 transition-all text-sm"
           >
             {creating ? 'Creating...' : 'Send Challenge'}
           </button>
           <button
             onClick={onClose}
-            className="min-h-[44px] px-4 py-2 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-colors text-sm"
+            className="min-h-[44px] px-4 py-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 transition-colors text-sm"
           >
             Cancel
           </button>

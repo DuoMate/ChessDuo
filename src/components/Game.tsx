@@ -24,6 +24,8 @@ import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
 import { BottomNav } from './BottomNav'
+import { TeamIndicator } from './TeamIndicator'
+import { User, Volume2, VolumeX } from 'lucide-react'
 import { MobileStatusBar } from './MobileStatusBar'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -1224,56 +1226,42 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex items-center justify-between mb-3 md:mb-4">
           <h1 className="text-lg md:text-2xl font-bold">ChessDuo</h1>
           {!isMobile && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setOverlayMode('profile')}
-                className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm flex items-center justify-center"
-                title="Profile"
-              >
-                👤
-              </button>
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
-                title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-              >
-                {soundEnabled ? '🔊' : '🔇'}
-              </button>
-            </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setOverlayMode('profile')}
+                  className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                  title="Profile"
+                >
+                  <User size={18} className="text-gray-300" />
+                </button>
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                  title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+                >
+                  {soundEnabled ? <Volume2 size={18} className="text-gray-300" /> : <VolumeX size={18} className="text-gray-400" />}
+                </button>
+              </div>
           )}
         </div>
 
         {roomCode && (
-          <div className={`mb-3 p-2 bg-gray-700 rounded text-center ${isMobile ? 'mx-1' : ''}`}>
-            <p className="text-gray-400 text-xs mb-1">Share this room code:</p>
-            <p className={`font-bold text-yellow-400 tracking-wider font-mono ${isMobile ? 'text-base' : 'text-lg'}`}>
+          <div className={`mb-3 p-2 bg-game-surface rounded-xl text-center border border-white/10 ${isMobile ? 'mx-1' : ''}`}>
+            <p className="text-gray-500 text-xs mb-1">Share this room code:</p>
+            <p className={`font-bold text-amber-400 tracking-wider font-mono ${isMobile ? 'text-base' : 'text-lg'}`}>
               {roomCode}
             </p>
           </div>
         )}
-        
-        <div className="flex justify-between items-center mb-2 flex-wrap gap-1">
-          <div className={`px-3 py-1 rounded text-xs md:text-sm ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
-            White Team (You)
-          </div>
-          
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-base font-mono">
-              {gameState.status === GameStatus.GAME_OVER ? (
-                <span className="text-yellow-400 font-bold">Game Over!</span>
-              ) : gameState.isBotThinking ? (
-                <span className="text-blue-300">Your turn</span>
-              ) : (
-                <span className="text-gray-400 text-sm">
-                  {gameState.status === GameStatus.PLAYING ? 'Waiting...' : 'Waiting...'}
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div className={`px-3 py-1 rounded text-xs md:text-sm ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
-            Black Team (Bot)
-          </div>
+
+        <div className="relative flex justify-center mb-2 pb-6">
+          <TeamIndicator
+            whiteLabel="White Team (You)"
+            blackLabel="Black Team (Bot)"
+            activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
+            isGameOver={gameState.status === GameStatus.GAME_OVER}
+            isBotThinking={gameState.isBotThinking ?? false}
+          />
         </div>
 
         <div className="flex flex-col items-center gap-2 mb-3">
