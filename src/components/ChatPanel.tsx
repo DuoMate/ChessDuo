@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { sendMessage, getConversation, markMessagesAsRead, subscribeToMessages } from '@/lib/messages'
 import { Message } from '@/lib/supabase'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface ChatPanelProps {
   currentUserId: string
@@ -12,6 +13,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ currentUserId, friendId, friendName, onClose }: ChatPanelProps) {
+  const isMobile = useIsMobile()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -67,7 +69,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
   }
 
   return (
-    <div className="flex flex-col bg-gray-900 border border-white/8 rounded-xl overflow-hidden" style={{ minHeight: '320px', maxHeight: '60vh' }}>
+    <div className={`flex flex-col bg-gray-900 border border-white/8 rounded-xl overflow-hidden ${isMobile ? 'fixed inset-0 z-[70] rounded-none' : ''}`} style={isMobile ? undefined : { minHeight: '320px', maxHeight: '60vh' }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 bg-white/[0.03]">
         <h3 className="text-sm font-semibold text-white truncate">{friendName}</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-white text-base min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -75,7 +77,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ maxHeight: 'calc(60vh - 110px)' }}>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={isMobile ? undefined : { maxHeight: 'calc(60vh - 110px)' }}>
         {loading ? (
           <p className="text-gray-500 text-xs text-center py-4">Loading messages...</p>
         ) : messages.length === 0 ? (

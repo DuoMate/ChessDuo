@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createChallenge } from '@/lib/challenges'
 import { sendMessage } from '@/lib/messages'
 import { Zap, Timer } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface ChallengePickerProps {
   currentUserId: string
@@ -27,6 +28,7 @@ const TIME_OPTIONS: TimeOption[] = [
 
 export function ChallengePicker({ currentUserId, friendId, friendName, onClose }: ChallengePickerProps) {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [selectedTime, setSelectedTime] = useState(600)
   const [creating, setCreating] = useState(false)
 
@@ -46,8 +48,8 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-sm bg-game-surface border border-white/10 rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className={`fixed inset-0 z-[60] bg-black/60 flex ${isMobile ? 'items-end' : 'items-center justify-center'} p-4`} onClick={onClose}>
+      <div className={`w-full ${isMobile ? 'max-w-full rounded-t-2xl' : 'max-w-sm rounded-2xl'} bg-game-surface border border-white/10 p-6 shadow-2xl`} onClick={(e) => e.stopPropagation()} style={isMobile ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}>
         <h3 className="text-lg font-bold text-white mb-1">Challenge {friendName}</h3>
         <p className="text-gray-400 text-sm mb-4">Select game duration</p>
 

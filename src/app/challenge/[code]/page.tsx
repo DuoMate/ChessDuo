@@ -16,6 +16,7 @@ export default function ChallengePage() {
   const [status, setStatus] = useState<'loading' | 'need_auth' | 'invalid' | 'expired' | 'joining' | 'error'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
   const [challengeInfo, setChallengeInfo] = useState<{
+    id: string
     game_mode: string
     time_seconds: number
     creator_id: string
@@ -41,6 +42,7 @@ export default function ChallengePage() {
       }
 
       setChallengeInfo({
+        id: challenge.id,
         game_mode: challenge.game_mode,
         time_seconds: challenge.time_seconds,
         creator_id: challenge.creator_id,
@@ -80,7 +82,7 @@ export default function ChallengePage() {
       await deactivateChallenge(challengeCode)
 
       router.push(
-        `/game?mode=online&room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}`
+        `/game?mode=online&room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}&challengeId=${challengeInfo.id}`
       )
     } catch (err) {
       setStatus('error')

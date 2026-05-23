@@ -11,6 +11,7 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   deleteFriendship,
+  blockUser,
   unblockUser,
   getInviteLink,
 } from '@/lib/friends'
@@ -40,6 +41,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
   const [challengeFriend, setChallengeFriend] = useState<{ id: string; name: string } | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [pendingChallenges, setPendingChallenges] = useState<Map<string, { roomId: string; roomCode: string; time: number }>>(new Map())
+  const [onlineFriends, setOnlineFriends] = useState<Set<string>>(new Set())
 
   const loadChallenges = useCallback(async () => {
     const challenges = await getUnreadChallenges(playerId)
@@ -78,6 +80,30 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { mountedRef.current = false }
   }, [loadData])
+
+  useEffect(() => {
+    if (!playerId) return
+
+    const channel = supabase.channel('global-presence', {
+      config: { presence: { key: playerId } },
+    })
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const online = new Set(Object.keys(state))
+        setOnlineFriends(online)
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: playerId, online_at: new Date().toISOString() })
+        }
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [playerId])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -136,6 +162,11 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
 
   const handleUnblock = async (userId: string) => {
     await unblockUser(playerId, userId)
+    loadData()
+  }
+
+  const handleBlock = async (friendId: string) => {
+    await blockUser(playerId, friendId)
     loadData()
   }
 
@@ -210,9 +241,11 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
                 friends={friends}
                 unreadBySender={unreadBySender}
                 pendingChallenges={pendingChallenges}
+                onlineFriends={onlineFriends}
                 onMessage={(f) => setChatFriend({ id: f.friend_id, name: f.friend_username })}
                 onChallenge={(f) => setChallengeFriend({ id: f.friend_id, name: f.friend_username })}
                 onDelete={(f) => handleDelete(f.friend_id)}
+                onBlock={(f) => handleBlock(f.friend_id)}
                 onAcceptChallenge={(f) => {
                   const ch = pendingChallenges.get(f.friend_id)
                   if (ch) handleAcceptChallenge(ch, f.friend_id, f.friend_username)
@@ -319,17 +352,21 @@ function FriendList({
   friends,
   unreadBySender = {},
   pendingChallenges,
+  onlineFriends,
   onMessage,
   onChallenge,
   onDelete,
+  onBlock,
   onAcceptChallenge,
 }: {
   friends: FriendWithProfile[]
   unreadBySender: Record<string, number>
   pendingChallenges?: Map<string, { roomId: string; roomCode: string; time: number }>
+  onlineFriends: Set<string>
   onMessage: (f: FriendWithProfile) => void
   onChallenge: (f: FriendWithProfile) => void
   onDelete: (f: FriendWithProfile) => void
+  onBlock: (f: FriendWithProfile) => void
   onAcceptChallenge?: (f: FriendWithProfile) => void
 }) {
   if (friends.length === 0) {
@@ -352,7 +389,7 @@ function FriendList({
           <div className="flex items-center gap-2 min-w-0">
             <div className="relative flex-shrink-0">
               <span className="text-xl">👤</span>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-gray-900 ${onlineFriends.has(friend.friend_id) ? 'bg-green-500' : 'bg-gray-600'}`} />
             </div>
             <span className="text-gray-200 text-sm truncate">{friend.friend_username}</span>
             {unreadBySender[friend.friend_id] && (
@@ -374,6 +411,7 @@ function FriendList({
               onDelete={() => onDelete(friend)}
               onMessage={() => onMessage(friend)}
               onChallenge={() => onChallenge(friend)}
+              onBlock={() => onBlock(friend)}
             />
           </div>
         </div>

@@ -14,6 +14,10 @@ const mockSupabase = {
   removeChannel: jest.fn(),
 }
 
+jest.mock('../../hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
+}))
+
 jest.mock('../../lib/supabase', () => ({
   supabase: mockSupabase,
 }))

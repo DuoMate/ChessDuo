@@ -42,6 +42,7 @@ interface GameProps {
   team?: 'WHITE' | 'BLACK'
   playerId?: string
   timeLimitSeconds?: number
+  challengeId?: string
 }
 
 interface GameState {
@@ -120,7 +121,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, challengeId }: GameProps) {
   const timeLimit = timeLimitSeconds || 600
 
   const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimit) : null)
@@ -252,6 +253,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       },
       isOnline: !!isOnline,
       moveComparisons: moveHistoryRef.current,
+      challengeId: challengeId || undefined,
     })
 
     gameSavedRef.current = true

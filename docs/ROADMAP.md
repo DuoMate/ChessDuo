@@ -324,18 +324,18 @@ interface MoveComparison {
 ### Phase 7: Social Features (Week 15-18)
 **Goal**: Full social system — friends, messaging, challenges, responsive web+mobile
 
-- [ ] 7.1 Database schema — `friendships`, `messages`, `challenge_links` tables + RLS policies
-- [ ] 7.2 Top bar redesign — profile icon top-left, friends icon top-right with unread badge
-- [ ] 7.3 Profile panel — show profile details + recent matches section on home page
-- [ ] 7.4 Friends panel — friend list, search by name/username, online status (green dot via Supabase Presence), invite link
-- [ ] 7.5 Friend requests — send via invite link, accept/reject in friends panel
-- [ ] 7.6 Friend actions menu — three-dots per friend: Delete friend / Send message / Challenge
-- [ ] 7.7 In-app chat — real-time messaging between friends via Supabase Broadcast
-- [ ] 7.8 Challenge links — create link encoding game mode + timer; auto-creates room on click, navigates to /game
-- [ ] 7.9 Challenge history — track past challenges between friends (mode, result, date)
-- [ ] 7.10 Share profile — "Copy profile link" button in profile panel
-- [ ] 7.11 Block/unblock — blocked users can't message, challenge, or friend-request
-- [ ] 7.12 Responsive design — all social components work on web + Capacitor mobile (touch targets, screen sizes)
+- [x] 7.1 Database schema — `friendships`, `messages`, `challenge_links` tables + RLS policies
+- [x] 7.2 Top bar redesign — profile icon top-left, friends icon top-right with unread badge
+- [x] 7.3 Profile panel — show profile details + recent matches section on home page
+- [x] 7.4 Friends panel — friend list, search by name/username, real-time online status (green dot via Supabase Presence), invite link
+- [x] 7.5 Friend requests — send via invite link, accept/reject in friends panel
+- [x] 7.6 Friend actions menu — three-dots per friend: Delete friend / Send message / Challenge / Block
+- [x] 7.7 In-app chat — real-time messaging between friends via Supabase Broadcast
+- [x] 7.8 Challenge links — create link encoding game mode + timer; auto-creates room on click, navigates to /game
+- [x] 7.9 Challenge history — track past challenges between friends (mode, result, date); challenge_id linked on completed_games
+- [x] 7.10 Share profile — "Copy profile link" button in profile panel
+- [x] 7.11 Block/unblock — blocked users can't message, challenge, or friend-request
+- [x] 7.12 Responsive design — all social components work on web + Capacitor mobile (touch targets, screen sizes)
 
 **Database Changes**:
 
@@ -415,7 +415,7 @@ Message Flow
 | M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
 | M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
 | M5 | Week 10 | ✅ Complete — Matchmaking queue + matchmaking improvements |
-| M6 | Week 14 | 🔄 In Progress — Mobile board + responsive UI complete (6.2-6.3), APK build ready |
+| M6 | Week 14 | ✅ Complete — Mobile board + responsive UI + Phase 7 social features |
 
 ---
 
@@ -489,4 +489,4 @@ Key files:
 
 ---
 
-*Last Updated: 2026-05-23 — Mobile board + responsive UI + matchmaking complete*
+*Last Updated: 2026-05-23 — Phase 7 social features complete, invite links fixed*
