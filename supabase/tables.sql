@@ -305,17 +305,15 @@ CREATE POLICY "Anyone can insert completed games" ON completed_games
                                                                                                                                                                         -- Function to auto-create profile on signup
                                                                                                          CREATE OR REPLACE FUNCTION public.handle_new_user()
                                                                                                          RETURNS TRIGGER AS $$
-                                                                                                         DECLARE
-                                                                                                           base_username TEXT;
-                                                                                                           final_username TEXT;
-                                                                                                           counter INT := 0;
-                                                                                                         BEGIN
-                                                                                                           base_username := COALESCE(NEW.raw_user_meta_data->>'username', 'Player');
-                                                                                                           final_username := base_username;
-                                                                                                           WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
-                                                                                                             counter := counter + 1;
-                                                                                                             final_username := base_username || '_' || counter;
-                                                                                                           END LOOP;
+                                                                                                          DECLARE
+                                                                                                            base_username TEXT;
+                                                                                                            final_username TEXT;
+                                                                                                          BEGIN
+                                                                                                          base_username := COALESCE(NEW.raw_user_meta_data->>'username', 'Player');
+                                                                                                            final_username := base_username;
+                                                                                                            WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
+                                                                                                              final_username := base_username || '_' || substr(md5(random()::text), 1, 6);
+                                                                                                            END LOOP;
                                                                                                            INSERT INTO public.profiles (id, username)
                                                                                                                VALUES (NEW.id, final_username);
                                                                                                                  RETURN NEW;
