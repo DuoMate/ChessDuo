@@ -136,7 +136,7 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
             <div className="mt-3 pt-2 border-t border-gray-600">
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Centipawn Loss</span>
-                <span>You: {comparison.player1Loss}cp | Bot: {comparison.player2Loss}cp</span>
+                <span>You: {comparison.player1Loss}cp | Teammate: {comparison.player2Loss}cp</span>
               </div>
             </div>
 

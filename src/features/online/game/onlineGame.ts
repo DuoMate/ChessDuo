@@ -546,8 +546,8 @@ export class OnlineGame {
       
       // Resolve the waitForTeammateLock Promise
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
-        console.log('[STATE] Teammate locked, transitioning to locked state')
-        this.turnState = 'locked'
+        console.log('[STATE] Teammate locked, transitioning to resolving state')
+        this.turnState = 'resolving'
         this.resolveTeammateLocked()
         this.resolveTeammateLocked = null
       }
@@ -951,6 +951,16 @@ export class OnlineGame {
     if (moveParts) {
       this._lastMove = moveParts
     }
+
+    this.stats.movesPlayed++
+    if (isSync) {
+      this.stats.syncRate = ((this.stats.syncRate * (this.stats.movesPlayed - 1)) + 1) / this.stats.movesPlayed
+    } else {
+      this.stats.conflicts++
+      this.stats.syncRate = (this.stats.syncRate * (this.stats.movesPlayed - 1)) / this.stats.movesPlayed
+    }
+    this.stats.player1Accuracy = ((this.stats.player1Accuracy * (this.stats.movesPlayed - 1)) + player1Accuracy) / this.stats.movesPlayed
+    this.stats.player2Accuracy = ((this.stats.player2Accuracy * (this.stats.movesPlayed - 1)) + player2Accuracy) / this.stats.movesPlayed
 
     this.gameState.resolve(winningMove)
 

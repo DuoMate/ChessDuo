@@ -113,7 +113,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           className="mb-3 md:mb-4"
         >
           <div className="flex items-center gap-2 md:gap-3">
-            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px] text-right">\u265F</span>
+            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px] text-right">Black</span>
             <div className="flex-1 h-2.5 md:h-3 bg-gradient-to-r from-gray-900 via-gray-600 to-white rounded-full overflow-hidden relative">
               <motion.div
                 className="absolute top-0 h-full w-0.5 md:w-1 bg-yellow-400 rounded"
@@ -122,14 +122,14 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
               />
             </div>
-            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px]">\u2659</span>
+            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px]">White</span>
           </div>
           <div className="flex items-center justify-center gap-1 md:gap-1.5 mt-1 md:mt-1.5">
             <span
               className="text-[10px] md:text-xs px-2 py-0.5 rounded-full font-medium"
               style={{ backgroundColor: `${posLabel.color}20`, color: posLabel.color }}
             >
-              \u2696\uFE0F {posLabel.label}
+              {posLabel.label}
             </span>
           </div>
         </motion.div>
@@ -311,7 +311,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             <span className="text-gray-400">
               You: <span className={yourLoss <= teammateLoss ? 'text-green-400' : 'text-gray-300'}>{yourLoss}cp</span>
               {' \u00B7 '}
-              Mate: <span className={teammateLoss <= yourLoss ? 'text-green-400' : 'text-gray-300'}>{teammateLoss}cp</span>
+              Teammate: <span className={teammateLoss <= yourLoss ? 'text-green-400' : 'text-gray-300'}>{teammateLoss}cp</span>
             </span>
           </div>
         </motion.div>

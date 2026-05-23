@@ -1267,8 +1267,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               </>
             ) : (
               <>
-                <div>Game Mode: Online (Human vs Human)</div>
-                <div>Stats not available in online mode</div>
+                <div>Game Mode: Co-op vs Computer</div>
+                <div>White Moves: {onlineGameRef.current?.getStats()?.movesPlayed ?? 0}</div>
+                <div>Sync Rate: {Math.round((onlineGameRef.current?.getStats()?.syncRate ?? 0) * 100)}%</div>
+                <div>Conflicts: {onlineGameRef.current?.getStats()?.conflicts ?? 0}</div>
+                <div>P1 Accuracy: {Math.round(onlineGameRef.current?.getStats()?.player1Accuracy ?? 0)}%</div>
+                <div>P2 Accuracy: {Math.round(onlineGameRef.current?.getStats()?.player2Accuracy ?? 0)}%</div>
               </>
             )}
           </div>
