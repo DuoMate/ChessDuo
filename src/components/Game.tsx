@@ -25,7 +25,9 @@ import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
 import { BottomNav } from './BottomNav'
 import { MobileStatusBar } from './MobileStatusBar'
+import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -181,6 +183,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
   const isMobile = useIsMobile()
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const [leavingConfirmed, setLeavingConfirmed] = useState(false)
 
   // Update sound engine when setting changes
 
@@ -1082,6 +1086,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove])
 
+  const handleLeaveConfirm = useCallback(async () => {
+    setShowLeaveModal(false)
+    setLeavingConfirmed(true)
+    if (isOnline && onlineGameRef.current) {
+      await onlineGameRef.current.abandonMatch()
+    }
+    window.location.href = '/'
+  }, [isOnline])
+
+  const handleLeaveCancel = useCallback(() => {
+    setShowLeaveModal(false)
+  }, [])
+
+  const { confirmLeave } = useNavigationGuard({
+    enabled: isOnline && gameState.status === GameStatus.PLAYING,
+    onAttemptLeave: () => setShowLeaveModal(true),
+  })
+
+  const handleLeaveModalConfirm = useCallback(() => {
+    setShowLeaveModal(false)
+    if (isOnline && onlineGameRef.current) {
+      onlineGameRef.current.abandonMatch()
+    }
+    confirmLeave()
+  }, [isOnline, confirmLeave])
+
   // Show loading state while game initializes
   if (gameState.isLoading) {
     return (
@@ -1328,6 +1358,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           hasPlayerId={!!playerId}
         />
       )}
+
+      <LeaveConfirmModal
+        open={showLeaveModal}
+        onCancel={handleLeaveCancel}
+        onConfirm={handleLeaveModalConfirm}
+      />
     </div>
   )
 }

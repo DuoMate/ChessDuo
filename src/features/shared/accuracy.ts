@@ -16,11 +16,11 @@ export function calculateAccuracy(lossInCentipawns: number): number {
 }
 
 export function getAccuracyCategory(lossInCentipawns: number): AccuracyCategory {
-  if (lossInCentipawns <= 10) return { label: 'Perfect', color: '#22c55e', emoji: '✓' }
-  if (lossInCentipawns <= 30) return { label: 'Great', color: '#22c55e', emoji: '!' }
-  if (lossInCentipawns <= 70) return { label: 'Good', color: '#84cc16', emoji: '?' }
-  if (lossInCentipawns <= 150) return { label: 'Inaccuracy', color: '#eab308', emoji: '??' }
-  return { label: 'Mistake', color: '#ef4444', emoji: '!!!' }
+  if (lossInCentipawns <= 10) return { label: 'Perfect', color: '#22c55e', emoji: '' }
+  if (lossInCentipawns <= 30) return { label: 'Great', color: '#22c55e', emoji: '' }
+  if (lossInCentipawns <= 70) return { label: 'Good', color: '#84cc16', emoji: '' }
+  if (lossInCentipawns <= 150) return { label: 'Inaccuracy', color: '#eab308', emoji: '⚠ ' }
+  return { label: 'Mistake', color: '#ef4444', emoji: '✗ ' }
 }
 
 export function calculateSyncRate(sameMoveCount: number, totalMoves: number): number {

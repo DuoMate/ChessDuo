@@ -68,6 +68,7 @@ export class OnlineGame {
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
+  private onAbandonCallback: (() => void) | null = null
 
   get highlightSquares() {
     return null
@@ -301,6 +302,9 @@ export class OnlineGame {
       })
       .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
         this.handleTimerSync(payload as { matchTimeRemaining: number })
+      })
+      .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
+        this.handleMatchAbandoned(payload as { playerId: string })
       })
       .subscribe(async (status: string) => {
         console.log('[ONLINE] Channel subscription status:', status)
@@ -1051,6 +1055,44 @@ export class OnlineGame {
       this._channel = null
     }
     this._room = null
+  }
+
+  async abandonMatch(): Promise<void> {
+    if (this._channel) {
+      await this._channel.send({
+        type: 'broadcast',
+        event: 'match_abandoned',
+        payload: { playerId: this._playerId }
+      })
+    }
+    if (this._room) {
+      await supabase
+        .from('rooms')
+        .update({ status: 'finished' })
+        .eq('id', this._room.id)
+    }
+    await this.leaveRoom()
+    this._status = GameStatus.GAME_OVER
+    this.onAbandonCallback?.()
+  }
+
+  setOnAbandonCallback(callback: () => void): void {
+    this.onAbandonCallback = callback
+  }
+
+  private handleMatchAbandoned(_payload: { playerId: string }): void {
+    this._status = GameStatus.GAME_OVER
+    this._gameOverResult = 'Match abandoned by teammate'
+    this._gameOverReason = 'abandoned'
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval)
+      this._pollingInterval = null
+    }
+    this.notifyStateChange()
   }
 
   setOnStateChange(callback: () => void): void {
