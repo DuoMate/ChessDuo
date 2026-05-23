@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
@@ -34,6 +34,7 @@ const TIME_OPTIONS: TimeOption[] = [
 
 export default function SetupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
   const [selectedTime, setSelectedTime] = useState<number | null>(null)
   const [playerId, setPlayerId] = useState<string | null>(null)
@@ -79,6 +80,36 @@ export default function SetupPage() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    const signupParam = searchParams.get('signup')
+    const codeParam = searchParams.get('code')
+
+    if (signupParam === '1' && sessionChecked) {
+      setShowAuthOverlay(true)
+    }
+
+    if (codeParam && sessionChecked && playerId) {
+      setJoinCode(codeParam)
+      const doAutoJoin = async () => {
+        setJoinLoading(true)
+        const { data: room } = await supabase
+          .from('rooms')
+          .select('*')
+          .eq('code', codeParam)
+          .eq('status', 'waiting')
+          .single()
+
+        if (room) {
+          router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=600`)
+        } else {
+          setJoinError('Room not found or already started')
+        }
+        setJoinLoading(false)
+      }
+      doAutoJoin()
+    }
+  }, [searchParams, sessionChecked, playerId, router])
 
   useEffect(() => {
     if (playerId) {
@@ -245,7 +276,7 @@ export default function SetupPage() {
           {'\u2190'} Back
         </button>
       </div>
-      <Auth onAuthComplete={handleAuthComplete} />
+      <Auth onAuthComplete={handleAuthComplete} defaultSignup={searchParams.get('signup') === '1'} />
     </div>
   )
 

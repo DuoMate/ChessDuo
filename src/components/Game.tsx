@@ -257,9 +257,62 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [gameState.status, isOnline, game])
 
   // Player ID from URL props (passed from Room component)
-  // No need to get session - use the playerId directly from URL
-  const playerId = playerIdFromProps || null
-  console.log('[Game] Using playerId from props:', playerId)
+  // Auto-detect from auth session if missing (join-link flow)
+  const [autoPlayerId, setAutoPlayerId] = useState<string | null>(null)
+  const [autoTeam, setAutoTeam] = useState<'WHITE' | 'BLACK' | null>(null)
+  const [isGuest, setIsGuest] = useState(false)
+  const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
+
+  useEffect(() => {
+    if (playerIdFromProps || autoJoinAttempted) return
+
+    async function detectPlayer() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setAutoPlayerId(session.user.id)
+        setIsGuest(session.user.is_anonymous ?? false)
+      } else {
+        const { data: { user } } = await supabase.auth.signInAnonymously()
+        if (user) {
+          setAutoPlayerId(user.id)
+          setIsGuest(true)
+        }
+      }
+    }
+    detectPlayer()
+  }, [playerIdFromProps, autoJoinAttempted])
+
+  useEffect(() => {
+    if (!isOnline || !roomId || !autoPlayerId || autoTeam || autoJoinAttempted) return
+
+    async function detectTeam() {
+      const { data: roomPlayers } = await supabase
+        .from('room_players')
+        .select('team')
+        .eq('room_id', roomId)
+
+      const whiteCount = roomPlayers?.filter(p => p.team === 'WHITE').length ?? 0
+      const blackCount = roomPlayers?.filter(p => p.team === 'BLACK').length ?? 0
+
+      setAutoTeam(whiteCount <= blackCount ? 'WHITE' : 'BLACK')
+    }
+    detectTeam()
+  }, [isOnline, roomId, autoPlayerId, autoTeam, autoJoinAttempted])
+
+  const playerId = playerIdFromProps || autoPlayerId
+  const effectiveTeam = team || autoTeam
+
+  const inviteUrl = useMemo(() => {
+    if (!isOnline || !roomId || !roomCode) return undefined
+    const base = typeof window !== 'undefined' ? window.location.origin : ''
+    const params = new URLSearchParams({
+      mode: 'online',
+      room: roomId,
+      code: roomCode,
+      time: String(timeLimit),
+    })
+    return `${base}/game?${params.toString()}`
+  }, [isOnline, roomId, roomCode, timeLimit])
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
@@ -430,17 +483,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       hasOnlineGame: !!onlineGame,
       playerId,
       roomId,
-      team,
-      conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!team
+      effectiveTeam,
+      conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!effectiveTeam
     })
     
-    if (mode === 'online' && onlineGame && playerId && roomId && team) {
-      console.log('[Game] ✅ Calling joinRoom with:', { roomId, playerId, team })
-      onlineGame.joinRoom({ id: roomId } as any, playerId, team)
+    if (mode === 'online' && onlineGame && playerId && roomId && effectiveTeam) {
+      console.log('[Game] [OK] Calling joinRoom with:', { roomId, playerId, team: effectiveTeam })
+      onlineGame.joinRoom({ id: roomId } as any, playerId, effectiveTeam)
+      if (!team) setAutoJoinAttempted(true)
     } else {
-      console.log('[Game] ❌ joinRoom NOT called - conditions not met')
+      console.log('[Game] [NO] joinRoom NOT called - conditions not met')
     }
-  }, [mode, onlineGame, playerId, roomId, team])
+  }, [mode, onlineGame, playerId, roomId, effectiveTeam, team])
 
   const matchTimerRef = useRef<NodeJS.Timeout | null>(null)
   const matchTimeoutFlagRef = useRef(false)
@@ -1187,6 +1241,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameLoading 
           message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
           roomCode={roomCode}
+          inviteUrl={inviteUrl}
         />
       </div>
     )
@@ -1228,6 +1283,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             player2Accuracy: game.getStats().player2Accuracy,
             totalMoves: game.getStats().movesPlayed,
           } : undefined}
+          showSignupPrompt={isGuest}
+          onSignup={() => window.location.href = '/?signup=1'}
         />
       )}
         

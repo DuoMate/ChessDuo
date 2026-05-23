@@ -3,18 +3,20 @@
 import { useEffect, useRef } from 'react'
 import { Timeline } from 'animejs'
 import { Team } from '@/features/game-engine/gameState'
-import { Crown, Copy, Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { Crown, Copy, Loader2, CheckCircle2, XCircle, AlertTriangle, Link } from 'lucide-react'
 
 interface GameLoadingProps {
   message?: string
   showChessIcon?: boolean
   roomCode?: string
+  inviteUrl?: string
 }
 
 export function GameLoading({
   message = 'Loading game...',
   showChessIcon = true,
   roomCode,
+  inviteUrl,
 }: GameLoadingProps) {
   const iconRef = useRef<HTMLDivElement>(null)
   const dot1Ref = useRef<HTMLDivElement>(null)
@@ -62,6 +64,18 @@ export function GameLoading({
             className="mt-2 text-xs text-gray-500 hover:text-amber-400 transition-colors inline-flex items-center gap-1 min-h-[44px]"
           >
             <Copy size={12} /> Copy code
+          </button>
+        </div>
+      )}
+      {inviteUrl && (
+        <div className="mt-3 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Invite link</p>
+          <p className="text-xs font-mono text-gray-300 break-all select-all mb-2">{inviteUrl}</p>
+          <button
+            onClick={() => navigator.clipboard.writeText(inviteUrl)}
+            className="text-xs text-amber-400 hover:text-amber-300 transition-colors inline-flex items-center gap-1 min-h-[44px]"
+          >
+            <Link size={12} /> Copy invite link
           </button>
         </div>
       )}

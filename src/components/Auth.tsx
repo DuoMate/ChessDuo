@@ -6,13 +6,14 @@ import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 
 interface AuthProps {
   onAuthComplete: (userId: string, username: string) => void
+  defaultSignup?: boolean
 }
 
-export function Auth({ onAuthComplete }: AuthProps) {
+export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
-  const [isLogin, setIsLogin] = useState(true)
+  const [isLogin, setIsLogin] = useState(!defaultSignup)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
