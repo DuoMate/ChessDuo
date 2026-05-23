@@ -116,8 +116,6 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 }
 
 export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
-  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds })
-  
   const timeLimit = timeLimitSeconds || 600
 
   const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimit) : null)
@@ -272,6 +270,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (!onlineGameRef.current) return
       const g = onlineGameRef.current
 
+      // Track turn state for "evaluating" loader visibility — MUST run before stateKey guard
+      const ts = (g as any).turnState
+      if (ts) setTurnState(ts)
+
       // Skip if state hasn't meaningfully changed (prevents re-render loops)
       const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${g.getMatchTimeRemaining()}`
       if (stateKey === lastOnlineStateRef.current) return
@@ -343,10 +345,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           myPendingOverlay
         }))
         
-        // Track turn state for "evaluating" loader visibility
-        const ts = (g as any).turnState
-        if (ts) setTurnState(ts)
-
         // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn

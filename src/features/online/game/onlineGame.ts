@@ -122,9 +122,7 @@ export class OnlineGame {
       const players = this.gameState.getPlayers(Team.WHITE)
       if (players.length === 0) return true
       const sorted = [...players].sort()
-      const result = this._playerId === sorted[0]
-      console.log('[COORDINATOR] Decision:', { myId: this._playerId, players, sorted, isCoordinator: result })
-      return result
+      return this._playerId === sorted[0]
     } catch {
       return true
     }
