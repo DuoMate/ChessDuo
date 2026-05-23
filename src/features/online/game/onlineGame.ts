@@ -589,6 +589,7 @@ export class OnlineGame {
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
         console.log('[STATE] Teammate locked, transitioning to resolving state')
         this.turnState = 'resolving'
+        this.notifyStateChange()
         this.resolveTeammateLocked()
         this.resolveTeammateLocked = null
       }
@@ -669,10 +670,6 @@ export class OnlineGame {
     // Ensure we're in correct phase for next turn
     this.startPendingTurn()
     
-    // Reset turn state to selecting for next turn
-    this.turnState = 'selecting'
-    console.log('[STATE] Turn resolved, reset to selecting')
-    
     // Resolve any turn change waiters
     if (this.resolveTurnChange) {
       this.resolveTurnChange()
@@ -684,6 +681,8 @@ export class OnlineGame {
       this._status = GameStatus.GAME_OVER
     }
     this.notifyStateChange()
+    this.turnState = 'selecting'
+    console.log('[STATE] Turn resolved, reset to selecting')
   }
 
   private canBroadcast(event: string): boolean {

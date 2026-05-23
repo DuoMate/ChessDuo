@@ -881,8 +881,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         return
       }
 
-      // Clear accuracy panel when player starts new WHITE move
-      setAccuracyComparison(null)
+      // Clear accuracy panel when player starts new WHITE move (skip if resolving)
+      if ((g as any).turnState !== 'resolving') {
+        setAccuracyComparison(null)
+      }
       console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
 
       console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)

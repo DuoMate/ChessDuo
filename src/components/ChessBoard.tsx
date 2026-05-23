@@ -357,35 +357,27 @@ export function ChessBoard({
                   scale: 0.5
                 }}
                 animate={{
-                  y: getSquarePosition(pendingOverlay.to).y - 22,
+                  y: getSquarePosition(pendingOverlay.to).y - 26,
                   opacity: 1,
                   scale: 1
                 }}
                 exit={{
-                  x: getSquarePosition(pendingOverlay.to).x + 60,
-                  y: getSquarePosition(pendingOverlay.to).y - 40,
                   opacity: 0,
-                  rotate: 15,
-                  scale: 0.4
+                  scale: 0.7
                 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+                transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 className="absolute pointer-events-none select-none z-20 whitespace-nowrap"
                 style={{ transform: 'translateX(-50%)' }}
               >
-                <span
-                  className="text-[11px] font-extrabold tracking-wide text-yellow-300"
-                  style={{
-                    textShadow: `
-                      0 1px 0 #b8860b,
-                      0 2px 0 #a0760a,
-                      0 3px 0 #8b6908,
-                      0 4px 6px rgba(0,0,0,0.6),
-                      0 0 10px rgba(255,215,0,0.25)
-                    `
-                  }}
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                    bg-gradient-to-r from-amber-500/90 to-amber-400/90
+                    shadow-[0_0_12px_rgba(251,191,36,0.4)] backdrop-blur-sm
+                    border border-amber-300/30"
                 >
-                  TeamMate
-                </span>
+                  <span className="text-[11px] leading-none">{'\u265E'}</span>
+                  <span className="text-[10px] font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
