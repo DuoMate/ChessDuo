@@ -109,6 +109,30 @@ CREATE TABLE IF NOT EXISTS challenge_links (
 -- Add room_id to challenge_links (for instant room creation in duel feature)
 ALTER TABLE challenge_links ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL;
 
+-- De-duplicate existing 'Player' usernames before adding unique constraint
+-- This handles rows inserted before the trigger was concurrency-safe
+DO $$
+DECLARE
+  dup RECORD;
+  new_name TEXT;
+BEGIN
+  FOR dup IN
+    SELECT id FROM profiles WHERE username = 'Player'
+    ORDER BY created_at
+    OFFSET 1  -- keep the oldest profile as 'Player', rename the rest
+  LOOP
+    LOOP
+      new_name := 'Player_' || substr(md5(random()::text), 1, 6);
+      BEGIN
+        UPDATE profiles SET username = new_name WHERE id = dup.id;
+        EXIT;
+      EXCEPTION WHEN unique_violation THEN
+        -- collision on random suffix, try again
+      END;
+    END LOOP;
+  END LOOP;
+END $$;
+
 -- Unique constraint on username
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_unique;
 ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
