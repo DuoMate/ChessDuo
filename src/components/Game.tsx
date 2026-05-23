@@ -728,7 +728,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       setGameState(prev => ({
         ...prev,
-        highlightSquares
+        highlightSquares,
+        pendingOverlay: null,
+        myPendingOverlay: null
       }))
 
       const wm = comparison.winningMove
@@ -904,7 +906,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 }
               }
               
-              setGameState(prev => ({ ...prev, highlightSquares }))
+              setGameState(prev => ({ ...prev, highlightSquares, pendingOverlay: null, myPendingOverlay: null }))
             }
             
             const newTurn = g.currentTurn as Team
@@ -1208,9 +1210,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
-          onPlayAgain={() => window.location.reload()}
-          gameResult={game?.getResult()}
-          gameOverReason={game?.getGameOverReason() || null}
+          onPlayAgain={() => {
+            const og = onlineGameRef.current
+            if (og && og.getGameOverReason() === 'abandoned') {
+              window.location.href = '/'
+            } else {
+              window.location.reload()
+            }
+          }}
+          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
+          gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
           stats={!isOnline && game ? {
             whiteMovesPlayed: game.getStats().whiteMovesPlayed,
             whiteSyncRate: game.getStats().whiteSyncRate,
