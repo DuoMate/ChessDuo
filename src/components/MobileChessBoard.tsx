@@ -16,7 +16,7 @@ interface MobileChessBoardProps {
 
 export function MobileChessBoard(props: MobileChessBoardProps) {
   return (
-    <div className="w-full aspect-square max-w-full touch-manipulation select-none">
+    <div className="touch-manipulation select-none">
       <ChessBoard {...props} />
     </div>
   )

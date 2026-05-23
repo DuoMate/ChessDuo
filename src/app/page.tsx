@@ -542,6 +542,7 @@ export default function SetupPage() {
       <MatchmakingQueue
         playerId={playerId}
         username={username}
+        timeSeconds={selectedTime || 600}
         onRoomJoined={handleRoomJoined}
         onCancel={() => setGameMode(null)}
       />

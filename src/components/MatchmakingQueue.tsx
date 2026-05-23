@@ -11,11 +11,12 @@ type Status = 'searching' | 'creating' | 'waiting' | 'joining' | 'error'
 interface MatchmakingQueueProps {
   playerId: string
   username: string
+  timeSeconds: number
   onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => void
   onCancel: () => void
 }
 
-export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }: MatchmakingQueueProps) {
+export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined, onCancel }: MatchmakingQueueProps) {
   const [status, setStatus] = useState<Status>('searching')
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +31,7 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
       setError(null)
 
       try {
-        const match = await findAvailableRoom(playerId)
+        const match = await findAvailableRoom(playerId, timeSeconds)
         if (cancelled) return
 
         if (match) {
@@ -49,7 +50,7 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
 
         // No rooms available — create one
         setStatus('creating')
-        const room = await createQuickMatchRoom(playerId)
+        const room = await createQuickMatchRoom(playerId, timeSeconds)
         if (cancelled) return
 
         if (room) {
@@ -83,7 +84,7 @@ export function MatchmakingQueue({ playerId, username, onRoomJoined, onCancel }:
     if (status !== 'waiting') return
 
     const interval = setInterval(async () => {
-      const match = await findAvailableRoom(playerId)
+      const match = await findAvailableRoom(playerId, timeSeconds)
       if (match) {
         const joined = await joinQuickMatchRoom(match.room.id, playerId, match.team, match.slot)
         if (joined) {

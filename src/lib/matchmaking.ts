@@ -1,16 +1,27 @@
 import { supabase, Room } from './supabase'
 
+const ROOM_EXPIRY_MS = 60_000 // 60 seconds — stale rooms auto-cleanup
+
 export interface QuickMatchResult {
   room: Room
   team: 'WHITE' | 'BLACK'
   slot: number
 }
 
-export async function findAvailableRoom(playerId: string): Promise<QuickMatchResult | null> {
-  const { data: rooms, error } = await supabase
+export async function findAvailableRoom(playerId: string, timeSeconds?: number): Promise<QuickMatchResult | null> {
+  const now = new Date().toISOString()
+
+  let query = supabase
     .from('rooms')
     .select('*')
     .eq('status', 'waiting')
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
+
+  if (timeSeconds) {
+    query = query.eq('time_seconds', timeSeconds)
+  }
+
+  const { data: rooms, error } = await query
 
   if (error || !rooms || rooms.length === 0) return null
 
@@ -85,13 +96,15 @@ function generateCode(): string {
   return code
 }
 
-export async function createQuickMatchRoom(playerId: string): Promise<Room | null> {
+export async function createQuickMatchRoom(playerId: string, timeSeconds: number = 600): Promise<Room | null> {
+  const expiresAt = new Date(Date.now() + ROOM_EXPIRY_MS).toISOString()
+
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = generateCode()
 
     const { data: room, error } = await supabase
       .from('rooms')
-      .insert({ code, status: 'waiting', created_by: playerId })
+      .insert({ code, status: 'waiting', created_by: playerId, time_seconds: timeSeconds, expires_at: expiresAt })
       .select()
       .single()
 

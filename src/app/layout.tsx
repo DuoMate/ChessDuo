@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Chakra_Petch } from "next/font/google";
 import { Suspense } from "react";
@@ -9,6 +9,13 @@ import Loading from "./loading";
 export const metadata: Metadata = {
   title: "ChessDuo",
   description: "Play Smarter, Together — 2v2 chess with your teammate and AI",
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 const geistSans = Geist({

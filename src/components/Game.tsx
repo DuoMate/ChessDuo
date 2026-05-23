@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
+import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import { Team } from '@/features/game-engine/gameState'
@@ -1337,17 +1338,31 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             totalSeconds={timeLimit}
           />
           <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative">
-            <ChessBoard 
-              fen={playbackFen || gameState.fen}
-              onMove={handleMove}
-              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-              orientation="white"
-              lastMove={gameState.lastMove}
-              pendingOverlay={gameState.pendingOverlay}
-              myPendingOverlay={gameState.myPendingOverlay}
-              highlightSquares={gameState.highlightSquares}
-              onAnimationComplete={handleResolutionComplete}
-            />
+            {isMobile ? (
+              <MobileChessBoard
+                fen={playbackFen || gameState.fen}
+                onMove={handleMove}
+                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                orientation="white"
+                lastMove={gameState.lastMove}
+                pendingOverlay={gameState.pendingOverlay}
+                myPendingOverlay={gameState.myPendingOverlay}
+                highlightSquares={gameState.highlightSquares}
+                onAnimationComplete={handleResolutionComplete}
+              />
+            ) : (
+              <ChessBoard 
+                fen={playbackFen || gameState.fen}
+                onMove={handleMove}
+                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                orientation="white"
+                lastMove={gameState.lastMove}
+                pendingOverlay={gameState.pendingOverlay}
+                myPendingOverlay={gameState.myPendingOverlay}
+                highlightSquares={gameState.highlightSquares}
+                onAnimationComplete={handleResolutionComplete}
+              />
+            )}
           </div>
           {/* Captured pieces - compact row below board */}
           <div className="flex items-center justify-center gap-4 md:gap-8 mt-1 w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px]">

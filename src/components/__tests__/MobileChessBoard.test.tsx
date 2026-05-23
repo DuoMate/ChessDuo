@@ -25,11 +25,16 @@ describe('MobileChessBoard', () => {
     orientation: 'white' as const,
   }
 
-  it('renders the board container with touch-manipulation class', () => {
+  it('renders with touch-manipulation class', () => {
     const { container } = render(<MobileChessBoard {...defaultProps} />)
-    const wrapper = container.querySelector('.w-full.aspect-square')
+    const wrapper = container.querySelector('.touch-manipulation')
     expect(wrapper).toBeTruthy()
-    expect(wrapper?.className).toContain('touch-manipulation')
+  })
+
+  it('renders with select-none class', () => {
+    const { container } = render(<MobileChessBoard {...defaultProps} />)
+    const wrapper = container.querySelector('.select-none')
+    expect(wrapper).toBeTruthy()
   })
 
   it('passes fen to ChessBoard', () => {
@@ -51,17 +56,5 @@ describe('MobileChessBoard', () => {
     )
     const board = container.querySelector('[data-testid="chess-board"]')
     expect(board?.getAttribute('data-orientation')).toBe('black')
-  })
-
-  it('renders without layout shift (select-none)', () => {
-    const { container } = render(<MobileChessBoard {...defaultProps} />)
-    const wrapper = container.querySelector('.w-full.aspect-square')
-    expect(wrapper?.className).toContain('select-none')
-  })
-
-  it('renders with max-w-full for responsive sizing', () => {
-    const { container } = render(<MobileChessBoard {...defaultProps} />)
-    const wrapper = container.querySelector('.w-full.aspect-square')
-    expect(wrapper?.className).toContain('max-w-full')
   })
 })

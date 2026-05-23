@@ -145,7 +145,7 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 5.1 Match history and persistence (completed_games table, /history page, W/L/D stats)
 - [x] 5.2 User profiles UI (/profile page, ProfileEditor, username editing)
 - [x] 5.3 Match summary and stats screen (enhanced GameOverModal with sync rate, accuracy cards)
-- [ ] 5.4 Basic matchmaking queue (from Phase 4.8)
+- [x] 5.4 Basic matchmaking queue — time-control filtering, 60s room expiry, auto-cleanup
 - [x] 5.5 Production hardening (RLS per-room, rate limiting, auth guard middleware, logout)
 - [x] 5.6 Room codes (shareable game links)
 - [x] 5.7 Error handling and edge cases (ErrorBoundary, Toast, rate limiting)
@@ -153,7 +153,7 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 5.9 Move playback (MovePlayback component, click-to-replay with shadow moves)
 - [x] 5.10 Move insights (InsightsGate with 3 free reveals, move classification, premium upsell)
 
-**Deliverable**: Production-ready MVP with freemium insights
+**Deliverable**: ✅ Production-ready MVP with freemium insights and matchmaking
 
 ---
 
@@ -161,8 +161,8 @@ Uses Docker to build Stockfish from `/server` directory.
 **Goal**: Native iOS + Android apps
 
 - [x] 6.1 Setup Capacitor project (config, scripts, runbook)
-- [ ] 6.2 Create mobile-compatible chess board component
-- [ ] 6.3 Build mobile UI (responsive design)
+- [x] 6.2 Create mobile-compatible chess board component — MobileChessBoard integrated in Game.tsx + DuelGame.tsx with touch-manipulation
+- [x] 6.3 Build mobile UI (responsive design) — DuelGame mobile pass, MobileStatusBar safe-area, viewport meta, MobileChessBoard integration
 - [ ] 6.4 Server-side Stockfish API hardening (mobile performance)
 - [ ] 6.5 Compile Android APK (sideload + Play Store)
 - [ ] 6.6 Compile iOS IPA (TestFlight + App Store)
@@ -414,8 +414,8 @@ Message Flow
 | M2 | Week 4 | ✅ Complete - Supabase real-time infra |
 | M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
 | M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
-| M5 | Week 10 | ✅ Complete — Matchmaking queue + home screen redesign |
-| M6 | Week 14 | 🔄 In Progress — Capacitor Android setup complete, APK build ready |
+| M5 | Week 10 | ✅ Complete — Matchmaking queue + matchmaking improvements |
+| M6 | Week 14 | 🔄 In Progress — Mobile board + responsive UI complete (6.2-6.3), APK build ready |
 
 ---
 
@@ -489,4 +489,4 @@ Key files:
 
 ---
 
-*Last Updated: 2026-05-14 — Capacitor setup + matchmaking queue complete*
+*Last Updated: 2026-05-23 — Mobile board + responsive UI + matchmaking complete*

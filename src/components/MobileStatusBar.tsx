@@ -41,6 +41,7 @@ export function MobileStatusBar({
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       className="fixed top-0 left-0 right-0 z-40 bg-gray-800/95 backdrop-blur-sm border-b border-gray-700"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="flex items-center justify-between px-4 py-2">
         {/* White Team */}

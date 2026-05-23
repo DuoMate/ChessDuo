@@ -160,6 +160,8 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'rooms') THEN
     ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_code_unique;
     ALTER TABLE rooms ADD CONSTRAINT rooms_code_unique UNIQUE (code);
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS time_seconds INTEGER DEFAULT 600;
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'room_players') THEN
