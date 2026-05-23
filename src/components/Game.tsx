@@ -23,6 +23,9 @@ import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
+import { BottomNav } from './BottomNav'
+import { MobileStatusBar } from './MobileStatusBar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -179,6 +182,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
+  const isMobile = useIsMobile()
 
   // Update sound engine when setting changes
 
@@ -1080,7 +1084,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-2 md:p-4 overflow-x-hidden">
+    <div className={`min-h-screen bg-gray-900 text-white p-2 md:p-4 overflow-x-hidden ${isMobile ? 'pb-16 pt-14' : ''}`}>
+      {isMobile && (
+        <MobileStatusBar
+          currentTurn={gameState.currentTurn}
+          timerSeconds={gameState.matchTimeRemaining}
+          timerActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+          whiteCaptured={gameState.capturedByWhite}
+          blackCaptured={gameState.capturedByBlack}
+        />
+      )}
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1105,28 +1118,30 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       <div className="w-full">
         <div className="flex items-center justify-between mb-3 md:mb-4">
           <h1 className="text-lg md:text-2xl font-bold">ChessDuo</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setOverlayMode('profile')}
-              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm flex items-center justify-center"
-              title="Profile"
-            >
-              👤
-            </button>
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
-              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-            >
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setOverlayMode('profile')}
+                className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm flex items-center justify-center"
+                title="Profile"
+              >
+                👤
+              </button>
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors flex items-center justify-center"
+                title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+              >
+                {soundEnabled ? '🔊' : '🔇'}
+              </button>
+            </div>
+          )}
         </div>
 
         {roomCode && (
-          <div className="mb-3 p-2 bg-gray-700 rounded text-center">
+          <div className={`mb-3 p-2 bg-gray-700 rounded text-center ${isMobile ? 'mx-1' : ''}`}>
             <p className="text-gray-400 text-xs mb-1">Share this room code:</p>
-            <p className="text-lg font-bold text-yellow-400 tracking-wider font-mono">
+            <p className={`font-bold text-yellow-400 tracking-wider font-mono ${isMobile ? 'text-base' : 'text-lg'}`}>
               {roomCode}
             </p>
           </div>
@@ -1238,6 +1253,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
+        {!isMobile && (
         <div className="mt-4 md:mt-8 p-3 md:p-4 bg-gray-800 rounded">
           <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -1257,6 +1273,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             )}
           </div>
         </div>
+        )}
       </div>
 
       <SlideOver
@@ -1285,6 +1302,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
+
+      {isMobile && (
+        <BottomNav
+          activeOverlay={overlayMode}
+          onProfileClick={() => setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')}
+          onHistoryClick={() => setOverlayMode(overlayMode === 'history' ? 'none' : 'history')}
+          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
+          soundEnabled={soundEnabled}
+          hasPlayerId={!!playerId}
+        />
+      )}
     </div>
   )
 }

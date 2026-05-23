@@ -7,7 +7,7 @@ import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const SERVER_URL = process.env.NEXT_PUBLIC_EVALUATOR_URL || ''
+const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
 interface MovePayload {
   playerId: string
