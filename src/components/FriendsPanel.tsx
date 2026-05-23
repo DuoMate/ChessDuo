@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   getFriendsList,
   getPendingRequests,
@@ -17,12 +18,16 @@ import { FriendWithProfile } from '@/lib/friends'
 import { FriendActionsMenu } from './FriendActionsMenu'
 import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
+import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
+import { supabase } from '@/lib/supabase'
 
 interface FriendsPanelProps {
   playerId: string
+  unreadBySender?: Record<string, number>
 }
 
-export function FriendsPanel({ playerId }: FriendsPanelProps) {
+export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProps) {
+  const router = useRouter()
   const [friends, setFriends] = useState<FriendWithProfile[]>([])
   const [pending, setPending] = useState<{ incoming: FriendWithProfile[]; outgoing: FriendWithProfile[] }>({ incoming: [], outgoing: [] })
   const [blocked, setBlocked] = useState<FriendWithProfile[]>([])
@@ -34,6 +39,21 @@ export function FriendsPanel({ playerId }: FriendsPanelProps) {
   const [chatFriend, setChatFriend] = useState<{ id: string; name: string } | null>(null)
   const [challengeFriend, setChallengeFriend] = useState<{ id: string; name: string } | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
+  const [pendingChallenges, setPendingChallenges] = useState<Map<string, { roomId: string; roomCode: string; time: number }>>(new Map())
+
+  const loadChallenges = useCallback(async () => {
+    const challenges = await getUnreadChallenges(playerId)
+    const map = new Map<string, { roomId: string; roomCode: string; time: number }>()
+    for (const c of challenges) {
+      try {
+        const parsed = JSON.parse(c.content)
+        if (parsed.type === 'challenge' && parsed.roomId) {
+          map.set(c.senderId, { roomId: parsed.roomId, roomCode: parsed.roomCode, time: parsed.time || 600 })
+        }
+      } catch {}
+    }
+    setPendingChallenges(map)
+  }, [playerId])
 
   const mountedRef = useRef(true)
 
@@ -48,7 +68,8 @@ export function FriendsPanel({ playerId }: FriendsPanelProps) {
     setPending(p)
     setBlocked(b)
     setLoading(false)
-  }, [playerId])
+    loadChallenges()
+  }, [playerId, loadChallenges])
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -99,6 +120,18 @@ export function FriendsPanel({ playerId }: FriendsPanelProps) {
   const handleDelete = async (friendId: string) => {
     await deleteFriendship(playerId, friendId)
     loadData()
+  }
+
+  const handleAcceptChallenge = async (challenge: { roomId: string; roomCode: string; time: number }, senderId: string, senderName: string) => {
+    await supabase
+      .from('room_players')
+      .upsert({ room_id: challenge.roomId, player_id: playerId, team: 'BLACK', slot: 0, status: 'ready' }, { onConflict: 'room_id,player_id' })
+    await supabase
+      .from('duel_games')
+      .update({ player_black: playerId })
+      .eq('room_id', challenge.roomId)
+    await markChallengeAsRead(playerId, senderId)
+    router.push(`/duel?room=${challenge.roomId}&code=${challenge.roomCode}&team=BLACK&playerId=${playerId}&time=${challenge.time}`)
   }
 
   const handleUnblock = async (userId: string) => {
@@ -175,9 +208,15 @@ export function FriendsPanel({ playerId }: FriendsPanelProps) {
             {tab === 'friends' && (
               <FriendList
                 friends={friends}
+                unreadBySender={unreadBySender}
+                pendingChallenges={pendingChallenges}
                 onMessage={(f) => setChatFriend({ id: f.friend_id, name: f.friend_username })}
                 onChallenge={(f) => setChallengeFriend({ id: f.friend_id, name: f.friend_username })}
                 onDelete={(f) => handleDelete(f.friend_id)}
+                onAcceptChallenge={(f) => {
+                  const ch = pendingChallenges.get(f.friend_id)
+                  if (ch) handleAcceptChallenge(ch, f.friend_id, f.friend_username)
+                }}
               />
             )}
 
@@ -278,14 +317,20 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 
 function FriendList({
   friends,
+  unreadBySender = {},
+  pendingChallenges,
   onMessage,
   onChallenge,
   onDelete,
+  onAcceptChallenge,
 }: {
   friends: FriendWithProfile[]
+  unreadBySender: Record<string, number>
+  pendingChallenges?: Map<string, { roomId: string; roomCode: string; time: number }>
   onMessage: (f: FriendWithProfile) => void
   onChallenge: (f: FriendWithProfile) => void
   onDelete: (f: FriendWithProfile) => void
+  onAcceptChallenge?: (f: FriendWithProfile) => void
 }) {
   if (friends.length === 0) {
     return (
@@ -304,18 +349,33 @@ function FriendList({
           key={friend.friend_id}
           className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <div className="relative flex-shrink-0">
               <span className="text-xl">👤</span>
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
             </div>
             <span className="text-gray-200 text-sm truncate">{friend.friend_username}</span>
+            {unreadBySender[friend.friend_id] && (
+              <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                {unreadBySender[friend.friend_id]}
+              </span>
+            )}
           </div>
-          <FriendActionsMenu
-            onDelete={() => onDelete(friend)}
-            onMessage={() => onMessage(friend)}
-            onChallenge={() => onChallenge(friend)}
-          />
+          <div className="flex items-center gap-1">
+            {pendingChallenges?.has(friend.friend_id) && onAcceptChallenge && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAcceptChallenge(friend) }}
+                className="min-h-[36px] px-3 py-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-xs font-semibold rounded-lg hover:bg-yellow-500/25 transition-colors whitespace-nowrap"
+              >
+                ⚡ Accept
+              </button>
+            )}
+            <FriendActionsMenu
+              onDelete={() => onDelete(friend)}
+              onMessage={() => onMessage(friend)}
+              onChallenge={() => onChallenge(friend)}
+            />
+          </div>
         </div>
       ))}
     </div>

@@ -28,6 +28,21 @@ export function Auth({ onAuthComplete }: AuthProps) {
     return () => subscription.unsubscribe()
   }, [onAuthComplete])
 
+  const findAvailableUsername = async (desired: string): Promise<string> => {
+    let finalName = desired
+    let counter = 0
+    while (true) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', finalName)
+        .maybeSingle()
+      if (!data) return finalName
+      counter++
+      finalName = desired + '_' + counter
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -48,11 +63,13 @@ export function Auth({ onAuthComplete }: AuthProps) {
         }
       } else {
         const redirectTo = `${window.location.origin}`
+        const finalUsername = await findAvailableUsername(username || email.split('@')[0])
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            data: { username: finalUsername },
             emailRedirectTo: redirectTo,
           }
         })
@@ -62,10 +79,10 @@ export function Auth({ onAuthComplete }: AuthProps) {
         if (authData.user) {
           const { error: profileError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: authData.user.id,
-              username: username || email.split('@')[0]
-            })
+              username: finalUsername
+            }, { onConflict: 'id' })
 
           if (profileError) {
             console.warn('Profile creation skipped:', profileError.message)
@@ -91,10 +108,7 @@ export function Auth({ onAuthComplete }: AuthProps) {
       const { data, error } = await supabase.auth.signInAnonymously()
 
       if (error) {
-        console.warn('[Auth] Anonymous sign-in failed, using fallback:', error.message)
-        const randomId = Math.random().toString(36).substring(2, 15)
-        const anonymousUsername = `Player${randomId}`
-        onAuthComplete(`anon_${randomId}`, anonymousUsername)
+        setError('Guest sign-in unavailable. Please sign in with email or Google.')
         return
       }
 

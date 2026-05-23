@@ -8,6 +8,7 @@ import { getProfileLink } from '@/lib/friends'
 interface ProfilePanelProps {
   playerId: string
   onViewHistory: () => void
+  onSignOut?: () => void
 }
 
 function RecentMatches({ games }: { games: CompletedGame[] }) {
@@ -42,7 +43,7 @@ function RecentMatches({ games }: { games: CompletedGame[] }) {
   )
 }
 
-export function ProfilePanel({ playerId, onViewHistory }: ProfilePanelProps) {
+export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePanelProps) {
   const [recentGames, setRecentGames] = useState<CompletedGame[]>([])
   const [profileCopied, setProfileCopied] = useState(false)
 
@@ -81,6 +82,15 @@ export function ProfilePanel({ playerId, onViewHistory }: ProfilePanelProps) {
       >
         📋 View All Match History →
       </button>
+
+      {onSignOut && (
+        <button
+          onClick={onSignOut}
+          className="w-full min-h-[44px] p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/20 text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          🚪 Sign Out
+        </button>
+      )}
     </div>
   )
 }

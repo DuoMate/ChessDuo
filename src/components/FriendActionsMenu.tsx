@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 
 interface FriendActionsMenuProps {
   onDelete: () => void
@@ -10,22 +10,16 @@ interface FriendActionsMenuProps {
 
 export function FriendActionsMenu({ onDelete, onMessage, onChallenge }: FriendActionsMenuProps) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    if (open) document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [open])
+  const handleAction = (action: () => void) => {
+    setOpen(false)
+    action()
+  }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.05]"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -36,27 +30,32 @@ export function FriendActionsMenu({ onDelete, onMessage, onChallenge }: FriendAc
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-gray-800 border border-white/10 rounded-xl shadow-2xl z-50 py-1 overflow-hidden">
-          <button
-            onClick={(e) => { e.stopPropagation(); setOpen(false); onDelete() }}
-            className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
+        <div className="fixed inset-0 z-[70] bg-black/50" onClick={() => setOpen(false)}>
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 bg-gray-800 border border-white/10 rounded-2xl shadow-2xl py-2"
+            onClick={(e) => e.stopPropagation()}
           >
-            🗑 Delete Friend
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setOpen(false); onMessage() }}
-            className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/[0.05] transition-colors flex items-center gap-2 min-h-[44px]"
-          >
-            💬 Send Message
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setOpen(false); onChallenge() }}
-            className="w-full text-left px-4 py-3 text-sm text-yellow-400 hover:bg-yellow-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
-          >
-            ⚡ Challenge
-          </button>
+            <button
+              onClick={() => handleAction(onDelete)}
+              className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
+            >
+              🗑 Delete Friend
+            </button>
+            <button
+              onClick={() => handleAction(onMessage)}
+              className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/[0.05] transition-colors flex items-center gap-2 min-h-[44px]"
+            >
+              💬 Send Message
+            </button>
+            <button
+              onClick={() => handleAction(onChallenge)}
+              className="w-full text-left px-4 py-3 text-sm text-yellow-400 hover:bg-yellow-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
+            >
+              ⚡ Challenge
+            </button>
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

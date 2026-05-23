@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createChallenge, getChallengeUrl } from '@/lib/challenges'
+import { useRouter } from 'next/navigation'
+import { createChallenge } from '@/lib/challenges'
 import { sendMessage } from '@/lib/messages'
 
 interface ChallengePickerProps {
@@ -25,60 +26,23 @@ const TIME_OPTIONS: TimeOption[] = [
 ]
 
 export function ChallengePicker({ currentUserId, friendId, friendName, onClose }: ChallengePickerProps) {
+  const router = useRouter()
   const [selectedTime, setSelectedTime] = useState(600)
   const [creating, setCreating] = useState(false)
-  const [link, setLink] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   const handleCreate = async () => {
     setCreating(true)
-    const { data } = await createChallenge(currentUserId, 'online', selectedTime)
-    if (data) {
-      const url = getChallengeUrl(data.code)
-      setLink(url)
+    const { data, roomId, roomCode, error } = await createChallenge(currentUserId, 'online', selectedTime, friendId)
+    if (data && roomId && roomCode) {
       await sendMessage(
         currentUserId,
         friendId,
-        `⚡ Chess challenge! Game mode: Online, Time: ${Math.floor(selectedTime / 60)} min\nChallenge link: ${url}`
+        JSON.stringify({ type: 'challenge', roomId, roomCode, time: selectedTime }),
+        'challenge'
       )
+      router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${currentUserId}&time=${selectedTime}`)
     }
     setCreating(false)
-  }
-
-  const copyLink = () => {
-    if (link) {
-      navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  if (link) {
-    return (
-      <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-        <div className="w-full max-w-sm bg-gray-800 border border-white/10 rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-lg font-bold text-white mb-1">Challenge Created!</h3>
-          <p className="text-gray-400 text-sm mb-4">Link sent to {friendName}</p>
-          <div className="bg-gray-900 rounded-lg p-3 mb-4 border border-white/8">
-            <p className="text-gray-300 text-xs break-all font-mono">{link}</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={copyLink}
-              className="flex-1 min-h-[44px] px-4 py-2 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 transition-colors text-sm"
-            >
-              {copied ? 'Copied!' : 'Copy link'}
-            </button>
-            <button
-              onClick={onClose}
-              className="min-h-[44px] px-4 py-2 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-colors text-sm"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -110,7 +74,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
             disabled={creating}
             className="flex-1 min-h-[44px] px-4 py-2 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
           >
-            {creating ? 'Creating...' : 'Create Challenge'}
+            {creating ? 'Creating...' : 'Send Challenge'}
           </button>
           <button
             onClick={onClose}

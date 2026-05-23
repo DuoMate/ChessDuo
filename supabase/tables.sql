@@ -106,6 +106,13 @@ CREATE TABLE IF NOT EXISTS challenge_links (
   is_active BOOLEAN DEFAULT true
 );
 
+-- Add room_id to challenge_links (for instant room creation in duel feature)
+ALTER TABLE challenge_links ADD COLUMN IF NOT EXISTS room_id UUID REFERENCES rooms(id) ON DELETE SET NULL;
+
+-- Unique constraint on username
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_unique;
+ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
+
 -- Add challenge_id to completed_games
 ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS challenge_id UUID REFERENCES challenge_links(id) ON DELETE SET NULL;
 
@@ -296,14 +303,24 @@ CREATE POLICY "Anyone can insert completed games" ON completed_games
   FOR INSERT WITH CHECK (true);
 
                                                                                                                                                                         -- Function to auto-create profile on signup
-                                                                                                                                                                        CREATE OR REPLACE FUNCTION public.handle_new_user()
-                                                                                                                                                                        RETURNS TRIGGER AS $$
-                                                                                                                                                                        BEGIN
-                                                                                                                                                                          INSERT INTO public.profiles (id, username)
-                                                                                                                                                                              VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'username', 'Player'));
-                                                                                                                                                                                RETURN NEW;
-                                                                                                                                                                                END;
-                                                                                                                                                                                $$ LANGUAGE plpgsql SECURITY DEFINER;
+                                                                                                         CREATE OR REPLACE FUNCTION public.handle_new_user()
+                                                                                                         RETURNS TRIGGER AS $$
+                                                                                                         DECLARE
+                                                                                                           base_username TEXT;
+                                                                                                           final_username TEXT;
+                                                                                                           counter INT := 0;
+                                                                                                         BEGIN
+                                                                                                           base_username := COALESCE(NEW.raw_user_meta_data->>'username', 'Player');
+                                                                                                           final_username := base_username;
+                                                                                                           WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
+                                                                                                             counter := counter + 1;
+                                                                                                             final_username := base_username || '_' || counter;
+                                                                                                           END LOOP;
+                                                                                                           INSERT INTO public.profiles (id, username)
+                                                                                                               VALUES (NEW.id, final_username);
+                                                                                                                 RETURN NEW;
+                                                                                                                 END;
+                                                                                                                 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
                                                                                                                                                                          -- Trigger for new user signup
                                                                                                                                                                          DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -376,4 +393,44 @@ CREATE POLICY "Creator can deactivate challenge links" ON challenge_links
   FOR UPDATE USING (
     auth.uid() IS NOT NULL AND auth.uid()::text = creator_id
   );
+
+-- ============================================
+-- duel_games table for 1v1 challenge feature
+-- ============================================
+CREATE TABLE IF NOT EXISTS duel_games (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  room_id UUID REFERENCES rooms(id) ON DELETE CASCADE UNIQUE,
+  player_white TEXT NOT NULL,
+  player_black TEXT,
+  fen TEXT NOT NULL DEFAULT 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'game_over')),
+  winner TEXT CHECK (winner IN ('white', 'black', 'draw')),
+  game_result TEXT,
+  game_over_reason TEXT,
+  time_limit_seconds INTEGER DEFAULT 600,
+  white_time_remaining INTEGER,
+  black_time_remaining INTEGER,
+  move_history JSONB DEFAULT '[]'::jsonb,
+  player1_accuracy REAL DEFAULT 0,
+  player2_accuracy REAL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE duel_games ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Participants can view duel games" ON duel_games;
+CREATE POLICY "Participants can view duel games" ON duel_games
+  FOR SELECT USING (auth.uid()::text IN (player_white, player_black));
+
+DROP POLICY IF EXISTS "Participants can insert duel games" ON duel_games;
+CREATE POLICY "Participants can insert duel games" ON duel_games
+  FOR INSERT WITH CHECK (auth.uid()::text = player_white);
+
+DROP POLICY IF EXISTS "Participants can update duel games" ON duel_games;
+CREATE POLICY "Participants can update duel games" ON duel_games
+  FOR UPDATE USING (auth.uid()::text IN (player_white, player_black));
+
+-- Add message_type to messages for challenge vs chat distinction
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type TEXT DEFAULT 'chat' CHECK (message_type IN ('chat', 'challenge'));
                                                                                                                                                                                     

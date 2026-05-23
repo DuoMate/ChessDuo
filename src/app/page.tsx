@@ -11,7 +11,7 @@ import { SlideOver } from '@/components/SlideOver'
 import { ProfilePanel } from '@/components/ProfilePanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
-import { getUnreadCounts } from '@/lib/messages'
+import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 
 export const dynamic = 'force-dynamic'
@@ -47,6 +47,7 @@ export default function SetupPage() {
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const [showWelcome, setShowWelcome] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
@@ -59,7 +60,7 @@ export default function SetupPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setPlayerId(session.user.id)
-        setUsername(session.user.email?.split('@')[0] || 'Player')
+        fetchUsername(session.user.id).then(setUsername)
       }
       setSessionChecked(true)
     }).catch(() => {
@@ -69,7 +70,7 @@ export default function SetupPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setPlayerId(session.user.id)
-        setUsername(session.user.email?.split('@')[0] || 'Player')
+        fetchUsername(session.user.id).then(setUsername)
       } else {
         setPlayerId(null)
         setUsername('')
@@ -81,18 +82,44 @@ export default function SetupPage() {
 
   useEffect(() => {
     if (playerId) {
-      getUnreadCounts(playerId).then(({ total }) => setUnreadMessages(total))
-      const interval = setInterval(() => {
-        getUnreadCounts(playerId).then(({ total }) => setUnreadMessages(total))
-      }, 10000)
-      return () => clearInterval(interval)
+      const update = () => getUnreadCounts(playerId).then(({ total, bySender }) => {
+        setUnreadMessages(total)
+        setUnreadBySender(bySender)
+      })
+      update()
+      const interval = setInterval(update, 10000)
+      const unsub = subscribeToMessages(playerId, () => {
+        getUnreadCounts(playerId).then(({ total, bySender }) => {
+          setUnreadMessages(total)
+          setUnreadBySender(bySender)
+        })
+      })
+      return () => { clearInterval(interval); unsub() }
     }
   }, [playerId])
+
+  const fetchUsername = async (userId: string): Promise<string> => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', userId)
+      .maybeSingle()
+    const { data: { session } } = await supabase.auth.getSession()
+    return data?.username || session?.user?.email?.split('@')[0] || 'Player'
+  }
 
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
     setShowAuthOverlay(false)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    setPlayerId(null)
+    setUsername('')
+    setProfileOpen(false)
+    setFriendsOpen(false)
   }
 
   const ensurePlayerId = async (): Promise<string> => {
@@ -200,10 +227,10 @@ export default function SetupPage() {
   const slideOvers = playerId && (
     <>
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} />
+        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} onSignOut={handleSignOut} />
       </SlideOver>
-      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total }) => setUnreadMessages(total)) }} title="Friends">
-        <FriendsPanel playerId={playerId} />
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { setUnreadMessages(total); setUnreadBySender(bySender) }) }} title="Friends">
+        <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
       </SlideOver>
     </>
   )

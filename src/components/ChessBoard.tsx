@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess } from 'chess.js'
@@ -18,6 +18,7 @@ export interface PendingOverlay {
   to: string
   piece: string
   color: 'white' | 'black'
+  showTeammateLabel?: boolean
 }
 
 export interface HighlightSquares {
@@ -63,6 +64,15 @@ export function ChessBoard({
   const lastMoveRef = useRef(lastMove)
   const [showRetraction, setShowRetraction] = useState(false)
   const [retractionData, setRetractionData] = useState<{ from: string; to: string; piece: string; color: string } | null>(null)
+  const [teammateLabelVisible, setTeammateLabelVisible] = useState(false)
+  const labelTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const clearLabelTimer = useCallback(() => {
+    if (labelTimerRef.current) {
+      clearTimeout(labelTimerRef.current)
+      labelTimerRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     onMoveRef.current = onMove
@@ -239,6 +249,17 @@ export function ChessBoard({
     }
   }, [highlightSquares, pendingOverlay])
 
+  useEffect(() => {
+    if (pendingOverlay?.showTeammateLabel) {
+      setTeammateLabelVisible(true)
+      clearLabelTimer()
+      labelTimerRef.current = setTimeout(() => {
+        setTeammateLabelVisible(false)
+      }, 2500)
+    }
+    return () => clearLabelTimer()
+  }, [pendingOverlay, clearLabelTimer])
+
   const handleRetractionComplete = () => {
     setShowRetraction(false)
     setRetractionData(null)
@@ -323,6 +344,52 @@ export function ChessBoard({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {pendingOverlay && (
+          <AnimatePresence>
+            {teammateLabelVisible && (
+              <motion.div
+                key="teammate-label"
+                initial={{
+                  x: getSquarePosition(pendingOverlay.to).x,
+                  y: getSquarePosition(pendingOverlay.to).y,
+                  opacity: 0,
+                  scale: 0.5
+                }}
+                animate={{
+                  y: getSquarePosition(pendingOverlay.to).y - 22,
+                  opacity: 1,
+                  scale: 1
+                }}
+                exit={{
+                  x: getSquarePosition(pendingOverlay.to).x + 60,
+                  y: getSquarePosition(pendingOverlay.to).y - 40,
+                  opacity: 0,
+                  rotate: 15,
+                  scale: 0.4
+                }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="absolute pointer-events-none select-none z-20 whitespace-nowrap"
+                style={{ transform: 'translateX(-50%)' }}
+              >
+                <span
+                  className="text-[11px] font-extrabold tracking-wide text-yellow-300"
+                  style={{
+                    textShadow: `
+                      0 1px 0 #b8860b,
+                      0 2px 0 #a0760a,
+                      0 3px 0 #8b6908,
+                      0 4px 6px rgba(0,0,0,0.6),
+                      0 0 10px rgba(255,215,0,0.25)
+                    `
+                  }}
+                >
+                  TeamMate
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
         <AnimatePresence>
           {showRetraction && retractionData && (
