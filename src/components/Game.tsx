@@ -439,6 +439,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       g.setMatchTimeRemaining(0)
       setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
 
+      if (isOnline && (g as any).isCoordinator && !(g as any).isCoordinator()) {
+        return
+      }
+
       handleMatchTimeout(g)
       return
     }

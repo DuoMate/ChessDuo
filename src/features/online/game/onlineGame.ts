@@ -510,7 +510,9 @@ export class OnlineGame {
             const remaining = Math.max(0, saved.matchTimeLimitSeconds - elapsed)
             this.gameState.setMatchTimeRemaining(Math.floor(remaining))
             this.gameState.setMatchTimerActive(true)
-            this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+            if (this.isCoordinator()) {
+              this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+            }
             console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
               remaining: Math.floor(remaining), 
@@ -1024,6 +1026,14 @@ export class OnlineGame {
 
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
+      if (this._timerSyncInterval) {
+        clearInterval(this._timerSyncInterval)
+        this._timerSyncInterval = null
+      }
+      if (this._pollingInterval) {
+        clearInterval(this._pollingInterval)
+        this._pollingInterval = null
+      }
     }
 
     return { winnerId, winningMove }
