@@ -103,6 +103,24 @@ export class GameState {
     players.push(player)
   }
 
+  removePlayer(player: Player, team: Team): void {
+    const players = team === Team.WHITE ? this.whitePlayers : this.blackPlayers
+    const idx = players.indexOf(player)
+    if (idx !== -1) {
+      players.splice(idx, 1)
+    }
+  }
+
+  replacePlayer(oldPlayer: Player, newPlayer: Player, team: Team): void {
+    const players = team === Team.WHITE ? this.whitePlayers : this.blackPlayers
+    const idx = players.indexOf(oldPlayer)
+    if (idx !== -1) {
+      players[idx] = newPlayer
+    } else {
+      players.push(newPlayer)
+    }
+  }
+
   startMatch(): void {
     if (this.whitePlayers.length !== 2 || this.blackPlayers.length !== 2) {
       throw new Error('Both teams must have 2 players to start')
@@ -111,19 +129,12 @@ export class GameState {
   }
 
   startPendingTurn(fen: string): void {
-    const clearing = this.pendingMoves.size > 0
-      ? Array.from(this.pendingMoves.entries()).map(([k, v]) => ({ key: k, move: v.move, locked: v.locked }))
-      : null
-    if (clearing) {
-      console.warn('[DEBUG-startPendingTurn] CLEARING pendingMoves that had entries:', clearing, new Error().stack)
-    }
     this.turnStartFen = fen
     this.pendingMoves.clear()
   }
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
     if (this._phase !== GamePhase.SELECTING && this._phase !== GamePhase.LOCKED) {
-      console.warn('[DEBUG-setPendingMove] BLOCKED by phase guard. phase:', this._phase, 'expected SELECTING or LOCKED')
       return
     }
 
@@ -148,8 +159,6 @@ export class GameState {
     if (pending) {
       pending.locked = true
       this.locked.add(player)
-    } else {
-      console.warn('[DEBUG-lockPendingMove] No pending move found for player:', player, 'pendingMoves keys:', Array.from(this.pendingMoves.keys()))
     }
 
     if (this.areBothTeamPlayersLocked()) {
@@ -166,22 +175,10 @@ export class GameState {
     const currentPlayers = this._currentTeam === Team.WHITE
       ? this.whitePlayers
       : this.blackPlayers
-    const result = currentPlayers.every(p => {
+    return currentPlayers.every(p => {
       const pending = this.pendingMoves.get(p)
       return pending && pending.locked
     })
-    if (!result) {
-      console.log('[DEBUG-isBothPendingLocked] RETURNING FALSE', {
-        _currentTeam: this._currentTeam,
-        _phase: this._phase,
-        whitePlayers: this.whitePlayers,
-        blackPlayers: this.blackPlayers,
-        currentPlayers,
-        pendingMovesKeys: Array.from(this.pendingMoves.keys()),
-        pendingMovesEntries: Array.from(this.pendingMoves.entries()).map(([k, v]) => ({ key: k, move: v.move, locked: v.locked }))
-      })
-    }
-    return result
   }
 
   getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {

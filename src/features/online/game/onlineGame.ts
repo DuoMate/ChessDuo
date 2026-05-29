@@ -436,9 +436,7 @@ export class OnlineGame {
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
-      console.log('[DEBUG-startGameWhenReady] About to call startPendingTurn, pendingMoves size:', this.gameState.getAllPendingMoves().size)
       this.startPendingTurn()
-      console.log('[DEBUG-startGameWhenReady] After startPendingTurn, pendingMoves size:', this.gameState.getAllPendingMoves().size)
       this.notifyStateChange()
       console.log('[ONLINE] Game started successfully')
       console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
@@ -468,33 +466,48 @@ export class OnlineGame {
         .order('player_id', { ascending: true })
 
       // Add players to both teams if not already present
-      const whitePlayers = (players || []).filter(p => p.team === 'WHITE')
-      const blackPlayers = (players || []).filter(p => p.team === 'BLACK')
+      const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
+      const blackHumans = (players || []).filter(p => p.team === 'BLACK')
 
-      for (const p of whitePlayers) {
-        try {
-          this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
-        } catch (e) {
-          // Already exists
+      // Remove any bot placeholders from teams so humans can fill their slots
+      // (bots may have been added during startGameWhenReady before this human joined)
+      const existingWhite = this.gameState.getPlayers(Team.WHITE)
+      const existingBlack = this.gameState.getPlayers(Team.BLACK)
+      for (const p of existingWhite) {
+        if (p.startsWith('bot_')) {
+          this.gameState.removePlayer(p, Team.WHITE)
+        }
+      }
+      for (const p of existingBlack) {
+        if (p.startsWith('bot_')) {
+          this.gameState.removePlayer(p, Team.BLACK)
         }
       }
 
-      for (const p of blackPlayers) {
+      for (const p of whiteHumans) {
+        try {
+          this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
+        } catch (e) {
+          // Already exists or team full (shouldn't happen after bot removal)
+        }
+      }
+
+      for (const p of blackHumans) {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
         } catch (e) {
-          // Already exists
+          // Already exists or team full
         }
       }
 
       // Fill remaining slots with bots on both teams
       // Must match IDs used in Game.tsx resolve flow: bot_opponent_1/2 for BLACK team
-      for (let i = whitePlayers.length; i < 2; i++) {
+      for (let i = whiteHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
         } catch (e) {}
       }
-      for (let i = blackPlayers.length; i < 2; i++) {
+      for (let i = blackHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
         } catch (e) {}
@@ -572,11 +585,6 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
-      console.log('[DEBUG-handleTeammateMove] After setPendingMove, pendingMoves:', {
-        size: this.gameState.getAllPendingMoves().size,
-        keys: Array.from(this.gameState.getAllPendingMoves().keys()),
-        locked: Array.from(this.gameState.getAllPendingMoves().entries()).map(([k, v]) => ({ k, locked: v.locked }))
-      })
       
       // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
       // This ensures pendingOverlay shows the teammate's move
@@ -593,11 +601,6 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.lockPendingMove(payload.playerId as Player)
-      console.log('[DEBUG-handleTeammateLocked] After lockPendingMove, pendingMoves:', {
-        size: this.gameState.getAllPendingMoves().size,
-        keys: Array.from(this.gameState.getAllPendingMoves().keys()),
-        locked: Array.from(this.gameState.getAllPendingMoves().entries()).map(([k, v]) => ({ k, locked: v.locked }))
-      })
       
       // Resolve the waitForTeammateLock Promise
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
@@ -696,6 +699,10 @@ export class OnlineGame {
     }
     this.notifyStateChange()
     this.turnState = 'selecting'
+    // Fire a second notifyStateChange so the UI callback picks up
+    // turnState='selecting' (runs before stateKey guard so turnState
+    // always updates in React even if stateKey hasn't changed)
+    this.notifyStateChange()
     console.log('[STATE] Turn resolved, reset to selecting')
   }
 
