@@ -276,11 +276,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         setAutoPlayerId(session.user.id)
         setIsGuest(session.user.is_anonymous ?? false)
       } else {
-        const { data: { user } } = await supabase.auth.signInAnonymously()
-        if (user) {
-          setAutoPlayerId(user.id)
-          setIsGuest(true)
+        let id: string | null = null
+        try {
+          const { data: { user } } = await supabase.auth.signInAnonymously()
+          if (user) id = user.id
+        } catch (e) {
+          console.warn('[Game] Anonymous sign-in failed, using fallback ID:', e)
         }
+        if (!id) {
+          id = `anon_${Math.random().toString(36).substring(2, 10)}`
+        }
+        setAutoPlayerId(id)
+        setIsGuest(true)
       }
     }
     detectPlayer()
