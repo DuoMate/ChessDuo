@@ -945,6 +945,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           return
         }
 
+        console.log('[DEBUG-executeMove] Before isBothPendingLocked:', {
+          currentTurn: g.currentTurn,
+          myPlayerId: playerId,
+          otherPlayerId: (g as any).getOtherPlayerId?.(),
+          pendingMoves: (() => {
+            const all = (g as any).gameState?.getAllPendingMoves?.() as Map<any, any> | undefined
+            if (!all) return 'N/A'
+            const entries: { key: any; move: any; locked: any }[] = []
+            all.forEach((v: any, k: any) => entries.push({ key: k, move: v.move, locked: v.locked }))
+            return entries
+          })(),
+          whitePlayers: (g as any).gameState?.getPlayers?.(Team.WHITE),
+          isBothPendingLocked: g.isBothPendingLocked()
+        })
+
         if (g.isBothPendingLocked()) {
           console.log(`[RESOLVE] Both locked, my role:`, { 
             playerId, 
@@ -1288,12 +1303,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
           onPlayAgain={() => {
-            const og = onlineGameRef.current
-            if (og && og.getGameOverReason() === 'abandoned') {
-              window.location.href = '/'
-            } else {
-              window.location.reload()
-            }
+            window.location.href = '/'
           }}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}

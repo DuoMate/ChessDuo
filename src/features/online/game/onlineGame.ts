@@ -436,7 +436,9 @@ export class OnlineGame {
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
+      console.log('[DEBUG-startGameWhenReady] About to call startPendingTurn, pendingMoves size:', this.gameState.getAllPendingMoves().size)
       this.startPendingTurn()
+      console.log('[DEBUG-startGameWhenReady] After startPendingTurn, pendingMoves size:', this.gameState.getAllPendingMoves().size)
       this.notifyStateChange()
       console.log('[ONLINE] Game started successfully')
       console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
@@ -570,6 +572,11 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
+      console.log('[DEBUG-handleTeammateMove] After setPendingMove, pendingMoves:', {
+        size: this.gameState.getAllPendingMoves().size,
+        keys: Array.from(this.gameState.getAllPendingMoves().keys()),
+        locked: Array.from(this.gameState.getAllPendingMoves().entries()).map(([k, v]) => ({ k, locked: v.locked }))
+      })
       
       // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
       // This ensures pendingOverlay shows the teammate's move
@@ -586,6 +593,11 @@ export class OnlineGame {
     console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
       this.gameState.lockPendingMove(payload.playerId as Player)
+      console.log('[DEBUG-handleTeammateLocked] After lockPendingMove, pendingMoves:', {
+        size: this.gameState.getAllPendingMoves().size,
+        keys: Array.from(this.gameState.getAllPendingMoves().keys()),
+        locked: Array.from(this.gameState.getAllPendingMoves().entries()).map(([k, v]) => ({ k, locked: v.locked }))
+      })
       
       // Resolve the waitForTeammateLock Promise
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
