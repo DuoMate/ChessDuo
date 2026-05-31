@@ -97,26 +97,50 @@ describe.skip('Local Game Flow (Stockfish-dependent)', () => {
     const stats = game.getStats()
     expect(stats.syncRate).toBe(1)
   })
+})
 
-  test('tracks conflict rate when players disagree', async () => {
-    setupGame(game)
-    
-    game.selectMove('w1', 'e4')
-    game.selectMove('w2', 'd4')
-    await game.lockAndResolve()
-    
-    const stats = game.getStats()
-    expect(stats.conflicts).toBe(1)
+// Unit tests for move evaluation selection logic (no Stockfish needed)
+describe('Move evaluation selection', () => {
+  function buildMovesToEvaluate(
+    player1Uci: string,
+    player2Uci: string,
+    allLegalUci: string[],
+    limit = 6
+  ): string[] {
+    const playerMoves = [player1Uci, player2Uci].filter(Boolean)
+    const supplementalMoves = allLegalUci
+      .filter(uci => !playerMoves.includes(uci))
+      .slice(0, limit - playerMoves.length)
+    return [...playerMoves, ...supplementalMoves]
+  }
+
+  test('includes both player moves in evaluation set', () => {
+    const legalMoves = ['a2a3', 'a2a4', 'b1a3', 'b1c3', 'c2c3', 'c2c4', 'd1c5', 'e1e5', 'h5f7']
+    const result = buildMovesToEvaluate('h5f7', 'b1c3', legalMoves)
+    expect(result).toContain('h5f7')
+    expect(result).toContain('b1c3')
+    expect(result.length).toBe(6)
   })
 
-  test('tracks move accuracy', async () => {
-    setupGame(game)
-    
-    game.selectMove('w1', 'e4')
-    game.selectMove('w2', 'd4')
-    await game.lockAndResolve()
-    
-    const stats = game.getStats()
-    expect(stats.movesPlayed).toBe(1)
+  test('handles both players picking same move (isSync)', () => {
+    const legalMoves = ['a2a3', 'a2a4', 'b1a3', 'b1c3', 'c2c3', 'c2c4']
+    const result = buildMovesToEvaluate('e4e5', 'e4e5', legalMoves)
+    expect(result).toContain('e4e5')
+    expect(result.length).toBeLessThanOrEqual(6)
+  })
+
+  test('works with fewer than 6 legal moves (endgame)', () => {
+    const legalMoves = ['e1e2', 'e1f1', 'e1g1']
+    const result = buildMovesToEvaluate('e1g1', 'e1e2', legalMoves)
+    expect(result).toContain('e1g1')
+    expect(result).toContain('e1e2')
+    expect(result.length).toBeLessThanOrEqual(3)
+  })
+
+  test('promotion move from late-alphabet square is included', () => {
+    const legalMoves = ['a7a8q', 'a7a8r', 'b7b8q', 'c7c8q', 'd7d8q', 'e7e8q', 'f7f8q', 'g7g8q', 'h7h8q']
+    const result = buildMovesToEvaluate('h7h8q', 'a7a8q', legalMoves)
+    expect(result).toContain('h7h8q')
+    expect(result).toContain('a7a8q')
   })
 })

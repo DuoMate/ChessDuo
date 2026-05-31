@@ -985,7 +985,14 @@ export class OnlineGame {
     
     const chess = new Chess(turnStartFen)
     const verboseMoves = chess.moves({ verbose: true })
-    const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
+
+    const playerMoves = [player1Uci, player2Uci].filter(Boolean)
+    const supplementalMoves = verboseMoves
+      .map(m => m.from + m.to + (m.promotion || ''))
+      .filter(uci => !playerMoves.includes(uci))
+      .slice(0, 6 - playerMoves.length)
+    const topMovesUci = [...playerMoves, ...supplementalMoves]
+
     const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
     
     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))

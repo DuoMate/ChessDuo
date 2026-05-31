@@ -271,11 +271,18 @@ export class LocalGame {
      const player1Uci = player1From + player1To
      const player2Uci = player2From + player2To
      
-     const Chess = (await import('chess.js')).Chess
-     const chess = new Chess(turnStartFen)
-     const verboseMoves = chess.moves({ verbose: true })
-     const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
-     const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+      const Chess = (await import('chess.js')).Chess
+      const chess = new Chess(turnStartFen)
+      const verboseMoves = chess.moves({ verbose: true })
+
+      const playerMoves = [player1Uci, player2Uci].filter(Boolean)
+      const supplementalMoves = verboseMoves
+        .map(m => m.from + m.to + (m.promotion || ''))
+        .filter(uci => !playerMoves.includes(uci))
+        .slice(0, 6 - playerMoves.length)
+      const topMovesUci = [...playerMoves, ...supplementalMoves]
+
+      const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
      
      const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
      
@@ -410,11 +417,18 @@ export class LocalGame {
      const player1Uci = sanToUci(player1Move, turnStartFen)
      const player2Uci = sanToUci(player2Move, turnStartFen)
      
-     const ChessLib = (await import('chess.js')).Chess
-     const chess = new ChessLib(turnStartFen)
-     const verboseMoves = chess.moves({ verbose: true })
-     const topMovesUci = verboseMoves.slice(0, 6).map(m => m.from + m.to + (m.promotion || ''))
-     const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+      const ChessLib = (await import('chess.js')).Chess
+      const chess = new ChessLib(turnStartFen)
+      const verboseMoves = chess.moves({ verbose: true })
+
+      const playerMoves = [player1Uci, player2Uci].filter(Boolean)
+      const supplementalMoves = verboseMoves
+        .map(m => m.from + m.to + (m.promotion || ''))
+        .filter(uci => !playerMoves.includes(uci))
+        .slice(0, 6 - playerMoves.length)
+      const topMovesUci = [...playerMoves, ...supplementalMoves]
+
+      const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
      
      const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
      
