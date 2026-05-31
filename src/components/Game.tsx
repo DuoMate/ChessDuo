@@ -192,6 +192,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [leavingConfirmed, setLeavingConfirmed] = useState(false)
   const alreadyReassessedRef = useRef(false)
+  const matchTimerStartedRef = useRef(false)
 
   // Update sound engine when setting changes
 
@@ -637,12 +638,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     setGameState(prev => ({ ...prev, matchTimerActive: false }))
   }, [isOnline])
 
-  // Start match timer when game transitions to PLAYING
+  // Start match timer when game transitions to PLAYING — all clients
   useEffect(() => {
-    if (gameState.status === GameStatus.PLAYING && !gameState.matchTimerActive) {
+    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current) {
       startMatchTimer()
+      matchTimerStartedRef.current = true
     }
-  }, [gameState.status, gameState.matchTimerActive, startMatchTimer])
+    if (gameState.status === GameStatus.GAME_OVER && matchTimerStartedRef.current) {
+      stopMatchTimer()
+      matchTimerStartedRef.current = false
+    }
+  }, [gameState.status, startMatchTimer, stopMatchTimer])
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -1306,14 +1312,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
-          stats={!isOnline && game ? {
-            whiteMovesPlayed: game.getStats().whiteMovesPlayed,
-            whiteSyncRate: game.getStats().whiteSyncRate,
-            whiteConflicts: game.getStats().whiteConflicts,
-            player1Accuracy: game.getStats().player1Accuracy,
-            player2Accuracy: game.getStats().player2Accuracy,
-            totalMoves: game.getStats().movesPlayed,
-          } : undefined}
           showSignupPrompt={isGuest}
           onSignup={() => window.location.href = '/?signup=1'}
         />
@@ -1482,6 +1480,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
         )}
+
       </div>
 
       <SlideOver

@@ -581,6 +581,7 @@ export class OnlineGame {
   private handleTimerSync(payload: { matchTimeRemaining: number }): void {
     if (payload.matchTimeRemaining !== undefined) {
       this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
+      this.notifyStateChange()
     }
   }
 
