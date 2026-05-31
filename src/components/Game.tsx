@@ -346,7 +346,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (ts) setTurnState(ts)
 
       // Skip if state hasn't meaningfully changed (prevents re-render loops)
-      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${g.getMatchTimeRemaining()}`
+      // Include pending moves size so new/locked pending moves trigger re-renders
+      const pendingSize = (g as any).getAllPendingMoves?.()?.size ?? 0
+      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${g.getMatchTimeRemaining()}:${pendingSize}`
       if (stateKey === lastOnlineStateRef.current) return
       lastOnlineStateRef.current = stateKey
 
