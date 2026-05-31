@@ -10,6 +10,10 @@ jest.mock('animejs', () => ({
   })),
 }))
 
+jest.mock('@/hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
+}))
+
 describe('GameLobby Component', () => {
   it('renders connecting state when isLoading is true', () => {
     render(<GameLobby isLoading={true} />)
@@ -22,12 +26,17 @@ describe('GameLobby Component', () => {
     expect(screen.getByText('Waiting for teammate')).toBeDefined()
   })
 
-  it('renders room code when provided', () => {
-    render(<GameLobby isLoading={false} roomCode="ABC123" />)
+  it('renders room code in both joining and waiting phases', () => {
+    render(<GameLobby isLoading={true} roomCode="ABC123" />)
     expect(screen.getByText('ABC123')).toBeDefined()
   })
 
-  it('renders copy code button in waiting state', () => {
+  it('renders instruction text above room code', () => {
+    render(<GameLobby isLoading={false} roomCode="ABC123" />)
+    expect(screen.getByText(/Send this code/i)).toBeDefined()
+  })
+
+  it('renders copy code button when roomCode is provided', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" />)
     expect(screen.getByText('Copy code')).toBeDefined()
   })
@@ -35,10 +44,12 @@ describe('GameLobby Component', () => {
   it('renders share button when inviteUrl is provided', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" inviteUrl="https://example.com/game" />)
     expect(screen.getByText('Share link')).toBeDefined()
+    expect(screen.getByText(/Or share the invite link/i)).toBeDefined()
   })
 
   it('does not render share section when inviteUrl is missing', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" />)
+    expect(screen.queryByText(/Or share the invite link/i)).toBeNull()
     expect(screen.queryByText('Share link')).toBeNull()
   })
 
@@ -49,6 +60,6 @@ describe('GameLobby Component', () => {
 
   it('does not render room code section when roomCode is missing', () => {
     render(<GameLobby isLoading={false} />)
-    expect(screen.queryByText('Room code')).toBeNull()
+    expect(screen.queryByText(/Send this code/i)).toBeNull()
   })
 })

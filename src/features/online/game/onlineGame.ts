@@ -349,6 +349,7 @@ export class OnlineGame {
     this._pollingInterval = fallbackInterval
 
     this._status = GameStatus.READY
+    this.notifyStateChange()
     console.log('[ONLINE] joinRoom completed, status:', this._status)
   }
 

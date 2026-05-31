@@ -43,7 +43,6 @@ export default function SetupPage() {
   const [joinCode, setJoinCode] = useState('')
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const [creatingRoom, setCreatingRoom] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
@@ -231,7 +230,6 @@ export default function SetupPage() {
   }
 
   const handleStartOnline = async (timeSeconds: number) => {
-    setCreatingRoom(true)
     setJoinError(null)
     try {
       const pid = await ensurePlayerId()
@@ -239,7 +237,6 @@ export default function SetupPage() {
       router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
-      setCreatingRoom(false)
     }
   }
 
@@ -317,7 +314,6 @@ export default function SetupPage() {
                       setSelectedTime(option.seconds)
                     }
                   }}
-                  disabled={creatingRoom}
                   className={`p-5 rounded-xl border transition-all duration-200 text-center ${
                     selectedTime === option.seconds
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
@@ -332,11 +328,7 @@ export default function SetupPage() {
             </div>
 
             <div className="text-center mb-4">
-              {creatingRoom ? (
-                <p className="text-amber-400 text-sm animate-pulse">Creating room...</p>
-              ) : (
-                <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
-              )}
+              <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
             </div>
 
             <div className="text-center">

@@ -414,7 +414,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           lastMove: g.lastMove,
           matchTimeRemaining: g.getMatchTimeRemaining(),
           matchTimerActive: g.isMatchTimerActive(),
-          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+          isLoading: (g.status === GameStatus.PLAYING || g.status === GameStatus.READY) ? false : prev.isLoading,
           pendingOverlay,
           myPendingOverlay
         }))
@@ -728,7 +728,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         matchTimerActive: g.isMatchTimerActive(),
         pendingOverlay,
         myPendingOverlay,
-        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+        isLoading: (g.status === GameStatus.PLAYING || g.status === GameStatus.READY) ? false : prev.isLoading,
         isBotThinking: currentTurn === Team.BLACK ? prev.isBotThinking : false,
         highlightSquares: null as HighlightSquares | null
       }

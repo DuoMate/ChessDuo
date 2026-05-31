@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Timeline } from 'animejs'
 import { Crown, Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface GameLobbyProps {
   roomCode?: string
@@ -18,6 +19,13 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
   const timelineRef = useRef<Timeline | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const isMobile = useIsMobile()
+
+  const crownSize = isMobile ? 64 : 80
+  const crownMb = isMobile ? 'mb-4' : 'mb-6'
+  const glowWidth = isMobile ? 'w-12' : 'w-16'
+  const statusTextSize = isMobile ? 'text-base' : 'text-lg'
+  const codeTextSize = isMobile ? 'text-xl' : 'text-2xl'
 
   useEffect(() => {
     const tl = new Timeline({ loop: true, autoplay: true })
@@ -52,7 +60,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
     if (!inviteUrl || !roomCode) return
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
-        title: 'ChessDuo — Join my game!',
+        title: 'ChessDuo \u2014 Join my game!',
         text: `Join my ChessDuo game! Room code: ${roomCode}`,
         url: inviteUrl,
       }).catch(() => {})
@@ -61,50 +69,49 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
     }
   }
 
-  // 3-phase animation: joining → waiting (when !isLoading) → nothing (when PLAYING)
   const phase = isLoading ? 'joining' : 'waiting'
 
   return (
     <div className="min-h-screen bg-[#0f1119] flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="flex flex-col items-center">
-          {/* Crown icon — always pulsing */}
-          <div className="relative mb-6">
+
+          {/* Crown icon */}
+          <div className={`relative ${crownMb}`}>
             <div ref={iconRef} className="inline-block">
-              <Crown size={80} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
+              <Crown size={crownSize} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
             </div>
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-amber-500 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.4)]" />
+            <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${glowWidth} h-1 bg-amber-500 rounded-full shadow-[0_0_12px_rgba(251,191,36,0.4)]`} />
           </div>
 
-          {/* Animated dots for joining phase */}
+          {/* Joining phase */}
           {phase === 'joining' && (
             <>
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <div ref={dot1Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
                 <div ref={dot2Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
                 <div ref={dot3Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
               </div>
-              <p className="text-gray-400 text-lg mb-8">Connecting to room...</p>
+              <p className={`text-gray-400 ${statusTextSize} mb-4`}>Connecting to room...</p>
             </>
           )}
 
-          {/* Waiting phase — room code + invite */}
+          {/* Waiting phase */}
           {phase === 'waiting' && (
             <>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
                 <span className="text-emerald-400 text-sm font-medium">Connected</span>
               </div>
 
-              {/* Player status */}
-              <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-1.5">
                   <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
                     <User size={10} className="text-amber-400" />
                   </div>
                   <span className="text-sm text-gray-300">You</span>
                 </div>
-                <div className="text-gray-600 text-xs font-mono">{'→'}</div>
+                <div className="text-gray-600 text-xs font-mono">{'\u2192'}</div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-4 h-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
                     <Loader2 size={10} className="text-gray-500 animate-spin" />
@@ -112,54 +119,64 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                   <span className="text-sm text-gray-500">Waiting for teammate</span>
                 </div>
               </div>
+            </>
+          )}
 
-              {/* Room code card */}
-              {roomCode && (
-                <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center mb-3">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] mb-2">Room code</p>
-                  <p className="text-2xl font-mono font-bold text-amber-400 tracking-[0.25em] select-all mb-3">
-                    {roomCode}
-                  </p>
+          {/* Room code — always visible */}
+          {roomCode && (
+            <>
+              <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+                Send this code to your friend to join
+              </p>
+
+              <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center mb-3">
+                <p className={`font-mono font-bold text-amber-400 tracking-[0.2em] select-all mb-3 ${codeTextSize}`}>
+                  {roomCode}
+                </p>
+                <button
+                  onClick={handleCopyCode}
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-amber-400 transition-colors min-h-[44px] px-4 rounded-lg hover:bg-white/5"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle2 size={13} className="text-emerald-400" />
+                      <span className="text-emerald-400">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copy code</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Share link — always visible */}
+          {inviteUrl && (
+            <>
+              <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+                Or share the invite link
+              </p>
+
+              <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center">
+                <div className="flex gap-2">
                   <button
-                    onClick={handleCopyCode}
-                    className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-amber-400 transition-colors min-h-[36px] px-3 rounded-lg hover:bg-white/5"
+                    onClick={handleShare}
+                    className="flex-1 min-h-[44px] rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 font-medium text-sm transition-colors inline-flex items-center justify-center gap-1.5"
                   >
-                    {copied ? (
-                      <>
-                        <CheckCircle2 size={13} className="text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={13} />
-                        <span>Copy code</span>
-                      </>
-                    )}
+                    <Share2 size={15} /> Share link
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="min-h-[44px] min-w-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center"
+                    title={linkCopied ? 'Copied' : 'Copy link'}
+                  >
+                    {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}
                   </button>
                 </div>
-              )}
-
-              {/* Share link card */}
-              {inviteUrl && (
-                <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] mb-2">Share invite</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleShare}
-                      className="flex-1 min-h-[44px] rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 font-medium text-sm transition-colors inline-flex items-center justify-center gap-1.5"
-                    >
-                      <Share2 size={15} /> Share link
-                    </button>
-                    <button
-                      onClick={handleCopyLink}
-                      className="min-h-[44px] min-w-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center"
-                      title={linkCopied ? 'Copied' : 'Copy link'}
-                    >
-                      {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
