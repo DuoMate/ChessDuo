@@ -78,7 +78,10 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-lg font-semibold text-white mb-2">7. Children&apos;s Privacy</h2>
             <p>
-              ChessDuo is not directed at children under 13 years of age. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal data, please contact us.
+              ChessDuo is a family-friendly chess game accessible to all ages. Our chat and account features are designed for users 13 and older. If you are under 13, we encourage you to play using guest mode, which does not require account creation or collect personal data.
+            </p>
+            <p className="mt-2">
+              We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal data, please contact us and we will promptly delete it.
             </p>
           </div>
 
