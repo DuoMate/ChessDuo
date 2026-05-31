@@ -2,6 +2,10 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BottomNav } from '../BottomNav'
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}))
+
 describe('BottomNav', () => {
   const defaultProps = {
     activeOverlay: 'none' as const,

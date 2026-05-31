@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 interface BottomNavProps {
@@ -17,6 +18,8 @@ export function BottomNav({
   onSoundToggle,
   soundEnabled,
 }: BottomNavProps) {
+  const router = useRouter()
+
   return (
     <motion.nav
       initial={{ y: 100 }}
@@ -48,7 +51,7 @@ export function BottomNav({
           label="Home"
           icon="🏠"
           active={false}
-          onClick={() => (window.location.href = '/')}
+          onClick={() => router.push('/')}
         />
       </div>
     </motion.nav>

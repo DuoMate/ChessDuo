@@ -1,6 +1,7 @@
 'use client'
 
 import { Component, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -54,6 +55,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 }
 
 export function GameErrorFallback() {
+  const router = useRouter()
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] p-8">
       <div className="text-red-400 text-6xl mb-6">♟️</div>
@@ -63,7 +66,7 @@ export function GameErrorFallback() {
       </p>
       <div className="flex gap-4">
         <button
-          onClick={() => window.location.href = '/'}
+          onClick={() => router.push('/')}
           className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
         >
           Go Home

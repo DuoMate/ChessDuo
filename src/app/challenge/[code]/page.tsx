@@ -81,7 +81,7 @@ export default function ChallengePage() {
 
       await deactivateChallenge(challengeCode)
 
-      router.push(
+      router.replace(
         `/game?mode=online&room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}&challengeId=${challengeInfo.id}`
       )
     } catch (err) {

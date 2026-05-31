@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
@@ -123,6 +124,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 }
 
 export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, challengeId }: GameProps) {
+  const router = useRouter()
   const timeLimit = timeLimitSeconds || 600
 
   const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimit) : null)
@@ -1245,8 +1247,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (isOnline && onlineGameRef.current) {
       await onlineGameRef.current.abandonMatch()
     }
-    window.location.href = '/'
-  }, [isOnline])
+    router.push('/')
+  }, [isOnline, router])
 
   const handleLeaveCancel = useCallback(() => {
     setShowLeaveModal(false)
@@ -1308,12 +1310,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
           onPlayAgain={() => {
-            window.location.href = '/'
+            router.push('/')
           }}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
           showSignupPrompt={isGuest}
-          onSignup={() => window.location.href = '/?signup=1'}
+          onSignup={() => router.push('/?signup=1')}
         />
       )}
         
