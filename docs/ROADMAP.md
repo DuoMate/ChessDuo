@@ -17,7 +17,7 @@
 | Engine | Stockfish (server-side) |
 | Real-time | Supabase (Broadcast + Presence) |
 | Auth | Supabase Auth |
-| Mobile Bridge | Capacitor (future) |
+| Mobile Bridge | Capacitor |
 
 ---
 
@@ -130,12 +130,12 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 4.4 Timer system improvements (visual warnings)
 - [x] 4.5 Turn indicator and game status UI
 - [x] 4.6 Team dynamics tracking (sync rate, conflicts)
-- [~] 4.7 Match summary and stats screen → completed in Phase 5.3
-- [~] 4.8 Basic matchmaking queue → pending in Phase 5.4
+- [x] 4.7 Match summary and stats screen → completed in Phase 5.3 (later simplified to clean result screen)
+- [x] 4.8 Basic matchmaking queue → completed in Phase 5.4
 
 **Key Files**: `src/components/ChessBoard.tsx`, `src/components/AccuracyBottomSheet.tsx`, `src/components/MoveComparison.tsx`, `src/components/TeamTimer.tsx`, `src/components/GameOverModal.tsx`
 
-**Deliverable**: ✅ Core animations and polish complete (2 items deferred to Phase 5)
+**Deliverable**: ✅ Core animations and polish complete (all items resolved)
 
 ---
 
@@ -144,7 +144,7 @@ Uses Docker to build Stockfish from `/server` directory.
 
 - [x] 5.1 Match history and persistence (completed_games table, /history page, W/L/D stats)
 - [x] 5.2 User profiles UI (/profile page, ProfileEditor, username editing)
-- [x] 5.3 Match summary and stats screen (enhanced GameOverModal with sync rate, accuracy cards)
+- [x] 5.3 Match summary — enhanced GameOverModal built, then simplified (clean result + Play Again, stats tracked in history)
 - [x] 5.4 Basic matchmaking queue — time-control filtering, 60s room expiry, auto-cleanup
 - [x] 5.5 Production hardening (RLS per-room, rate limiting, auth guard middleware, logout)
 - [x] 5.6 Room codes (shareable game links)
@@ -163,12 +163,12 @@ Uses Docker to build Stockfish from `/server` directory.
 - [x] 6.1 Setup Capacitor project (config, scripts, runbook)
 - [x] 6.2 Create mobile-compatible chess board component — MobileChessBoard integrated in Game.tsx + DuelGame.tsx with touch-manipulation
 - [x] 6.3 Build mobile UI (responsive design) — DuelGame mobile pass, MobileStatusBar safe-area, viewport meta, MobileChessBoard integration
-- [ ] 6.4 Server-side Stockfish API hardening (mobile performance)
-- [ ] 6.5 Compile Android APK (sideload + Play Store)
-- [ ] 6.6 Compile iOS IPA (TestFlight + App Store)
-- [ ] 6.7 App store submission prep
+- [ ] 6.4 Server-side Stockfish API hardening (mobile performance) — not yet started
+- [ ] 6.5 Compile Android APK (sideload + Play Store) — build scripts exist, pending compilation
+- [ ] 6.6 Compile iOS IPA (TestFlight + App Store) — not yet started
+- [ ] 6.7 App store submission prep — not yet started
 
-**Deliverable**: Live iOS and Android apps
+**Deliverable**: Web MVP complete; native iOS and Android apps pending (6.4-6.7)
 
 **Capacitor Setup (6.1 — Complete):**
 - `capacitor.config.ts` — WebView wrapper loading from `https://chessduo-fe.onrender.com`
@@ -415,7 +415,7 @@ Message Flow
 | M3 | Week 6 | ✅ Complete - Human multiplayer (coordinator) |
 | M4 | Week 8 | ✅ Complete - Core polish, animations, accuracy display |
 | M5 | Week 10 | ✅ Complete — Matchmaking queue + matchmaking improvements |
-| M6 | Week 14 | ✅ Complete — Mobile board + responsive UI + Phase 7 social features |
+| M6 | Week 14 | ✅ Complete — Mobile board + responsive UI + Phase 7 social features (Phase 6.4-6.7: mobile app store deployment pending) |
 
 ---
 
@@ -482,11 +482,33 @@ Key files:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 19 | 16 pass, 0 fail, 3 skip |
-| Individual tests | 401 | 276 pass, 0 fail, 125 skip |
+| Test suites | 38 | 34 pass, 2 fail (unrelated pre-existing), 2 skip |
+| Individual tests | 550 | 426 pass, 5 fail (unrelated pre-existing), 119 skip |
 
-**Status**: ✅ All passing tests green (2026-05-14)
+**Status**: ✅ All passing tests green; 2 pre-existing suite failures in `messages.test.ts` and `ChallengePicker.test.tsx` (2026-05-31)
 
 ---
 
-*Last Updated: 2026-05-23 — Phase 7 social features complete, invite links fixed*
+*Last Updated: 2026-05-31 — Phase 7 social complete, mobile web ready, Phase 6 mobile app store deployment pending*
+
+---
+
+## Recent Polish & UX Refinements (May 2026)
+
+After all core phases shipped, the following refinements were applied based on real usage:
+
+### UI Simplification
+- **Removed inline stats panel** — "Your Team Stats (White)" box removed from gameplay screen (clutter, no one looked at it mid-game)
+- **Removed post-game MatchSummary** — Clean result screen: winner + reason + Play Again. Stats still tracked in history
+- **Removed room code from gameplay** — Room code only shown in pre-game lobby/waiting screens, not during active play
+
+### Visual Improvements
+- **Team icons replaced** — Custom rough knight SVGs replaced with lucide-react `Crown` (White) + `Bot` (Black)
+- **Black team glow fix** — Black team now gets matching `boxShadow` glow animation when active (was missing, White always looked permanently highlighted)
+
+### UX Flow
+- **Loading spinner on time picker** — Clicking a time button for online mode now shows inline spinner + "Creating..." while room is being created (previously no visual feedback)
+- **SPA navigation** — All `window.location.href` replaced with `router.push` for smooth single-page transitions
+- **Game-over flow fix** — GameOverModal renders correctly instead of showing lobby screen after game ends
+- **Online race condition fixes** — Prevented premature game start and double joinRoom in online flow
+- **Timer sync** — Match timer now syncs across all clients
