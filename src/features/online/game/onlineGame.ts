@@ -68,6 +68,7 @@ export class OnlineGame {
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
+  private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
   private onAbandonCallback: (() => void) | null = null
 
   get highlightSquares() {
@@ -531,6 +532,7 @@ export class OnlineGame {
             this.gameState.setMatchTimerActive(true)
             if (this.isCoordinator()) {
               this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+              this.startMatchTimer()
             }
             console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
@@ -579,6 +581,30 @@ export class OnlineGame {
     if (payload.matchTimeRemaining !== undefined) {
       this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
     }
+  }
+
+  private startMatchTimer(): void {
+    if (!this.isCoordinator()) return
+    this.gameState.setMatchTimerActive(true)
+    if (this._timerCountdownInterval) {
+      clearInterval(this._timerCountdownInterval)
+    }
+    this._timerCountdownInterval = setInterval(() => {
+      const remaining = this.gameState.getMatchTimeRemaining()
+      if (remaining <= 0) {
+        this.stopMatchTimer()
+        return
+      }
+      this.gameState.setMatchTimeRemaining(remaining - 1)
+    }, 1000)
+  }
+
+  private stopMatchTimer(): void {
+    if (this._timerCountdownInterval) {
+      clearInterval(this._timerCountdownInterval)
+      this._timerCountdownInterval = null
+    }
+    this.gameState.setMatchTimerActive(false)
   }
 
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
@@ -1048,14 +1074,16 @@ export class OnlineGame {
 
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
-      if (this._timerSyncInterval) {
-        clearInterval(this._timerSyncInterval)
-        this._timerSyncInterval = null
-      }
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    this.stopMatchTimer()
       if (this._pollingInterval) {
         clearInterval(this._pollingInterval)
         this._pollingInterval = null
       }
+      this.stopMatchTimer()
     }
 
     return { winnerId, winningMove }
@@ -1070,6 +1098,7 @@ export class OnlineGame {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
     }
+    this.stopMatchTimer()
     if (this._channel) {
       await supabase.removeChannel(this._channel)
       this._channel = null
