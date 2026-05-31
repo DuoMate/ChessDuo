@@ -256,6 +256,9 @@ export function ChessBoard({
       labelTimerRef.current = setTimeout(() => {
         setTeammateLabelVisible(false)
       }, 2500)
+    } else {
+      setTeammateLabelVisible(false)
+      clearLabelTimer()
     }
     return () => clearLabelTimer()
   }, [pendingOverlay, clearLabelTimer])
