@@ -1455,32 +1455,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
-        {!isMobile && (
-        <div className="mt-4 md:mt-8 p-3 md:p-4 bg-gray-800 rounded">
-          <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {!isOnline && game ? (
-              <>
-                <div>White Moves: {game.getStats().whiteMovesPlayed}</div>
-                <div>Sync Rate: {Math.round(game.getStats().whiteSyncRate * 100)}%</div>
-                <div>Conflicts: {game.getStats().whiteConflicts}</div>
-                <div>Player 1 Avg Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
-                <div>Player 2 Avg Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
-              </>
-            ) : (
-              <>
-                <div>Game Mode: Co-op vs Computer</div>
-                <div>White Moves: {onlineGameRef.current?.getStats()?.movesPlayed ?? 0}</div>
-                <div>Sync Rate: {Math.round((onlineGameRef.current?.getStats()?.syncRate ?? 0) * 100)}%</div>
-                <div>Conflicts: {onlineGameRef.current?.getStats()?.conflicts ?? 0}</div>
-                <div>P1 Accuracy: {Math.round(onlineGameRef.current?.getStats()?.player1Accuracy ?? 0)}%</div>
-                <div>P2 Accuracy: {Math.round(onlineGameRef.current?.getStats()?.player2Accuracy ?? 0)}%</div>
-              </>
-            )}
-          </div>
-        </div>
-        )}
-
       </div>
 
       <SlideOver

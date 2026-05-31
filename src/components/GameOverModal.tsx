@@ -1,16 +1,13 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, Handshake, RotateCcw, LogOut, UserPlus } from 'lucide-react'
-import { MatchSummary, MatchStats } from './MatchSummary'
 
 interface GameOverModalProps {
   winner: 'WHITE' | 'BLACK' | 'DRAW'
   onPlayAgain: () => void
   gameResult?: string
   gameOverReason?: string | null
-  stats?: MatchStats
   isOnline?: boolean
   roomId?: string
   showSignupPrompt?: boolean
@@ -52,13 +49,11 @@ export function GameOverModal({
   onPlayAgain,
   gameResult,
   gameOverReason,
-  stats,
   isOnline: _isOnline,
   roomId: _roomId,
   showSignupPrompt,
   onSignup,
 }: GameOverModalProps) {
-  const [showStats, setShowStats] = useState(true)
   const isAbandoned = gameOverReason === 'abandoned'
 
   return (
@@ -107,37 +102,6 @@ export function GameOverModal({
         <p className="text-gray-500 mb-2 relative z-10">
           {isAbandoned ? 'Your teammate left the match' : 'Great game!'}
         </p>
-
-        {stats && gameResult && showStats && !isAbandoned && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mb-4 mt-4 relative z-10"
-          >
-            <MatchSummary
-              winner={winner}
-              gameResult={gameResult}
-              gameOverReason={gameOverReason || null}
-              stats={stats}
-              isOnline={false}
-            />
-            <button
-              onClick={() => setShowStats(false)}
-              className="text-gray-500 hover:text-gray-400 text-xs mt-2"
-            >
-              Hide stats
-            </button>
-          </motion.div>
-        )}
-
-        {stats && gameResult && !showStats && !isAbandoned && (
-          <button
-            onClick={() => setShowStats(true)}
-            className="text-amber-400 hover:text-amber-300 text-sm mb-3 block w-full relative z-10"
-          >
-            Show stats
-          </button>
-        )}
 
         <motion.button
           whileHover={{ scale: 1.03 }}
