@@ -41,6 +41,7 @@ export default function SetupPage() {
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [joinCode, setJoinCode] = useState('')
+  const [creatingTime, setCreatingTime] = useState<number | null>(null)
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -230,12 +231,14 @@ export default function SetupPage() {
   }
 
   const handleStartOnline = async (timeSeconds: number) => {
+    setCreatingTime(timeSeconds)
     setJoinError(null)
     try {
       const pid = await ensurePlayerId()
       const result = await createOnlineRoom({ playerId: pid, timeSeconds })
       router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
     } catch (err) {
+      setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
     }
   }
@@ -314,15 +317,25 @@ export default function SetupPage() {
                       setSelectedTime(option.seconds)
                     }
                   }}
+                  disabled={creatingTime !== null}
                   className={`p-5 rounded-xl border transition-all duration-200 text-center ${
                     selectedTime === option.seconds
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
                       : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
-                  }`}
+                  } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
-                  <div className="text-[28px] mb-1.5">{option.icon}</div>
-                  <div className="text-lg font-bold mb-0.5">{option.label}</div>
-                  <div className="text-[11px] text-gray-400">{option.description}</div>
+                  {creatingTime === option.seconds ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm text-amber-400/80">Creating...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-[28px] mb-1.5">{option.icon}</div>
+                      <div className="text-lg font-bold mb-0.5">{option.label}</div>
+                      <div className="text-[11px] text-gray-400">{option.description}</div>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
