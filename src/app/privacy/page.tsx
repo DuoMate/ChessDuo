@@ -88,7 +88,7 @@ export default function PrivacyPage() {
               If you have questions about this privacy policy or your data, contact us at:
             </p>
             <p className="mt-2 text-yellow-400">
-              support@chessduo.app
+              chessdoubles27@gmail.com
             </p>
           </div>
         </section>
