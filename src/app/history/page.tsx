@@ -136,18 +136,29 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-gray-400">
-                  <span>{game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over'}</span>
-                  <span>·</span>
-                  <span>{game.white_moves} moves</span>
-                  <span>·</span>
-                  <span className="text-green-400">
-                    Sync {(game.white_sync_rate * 100).toFixed(0)}%
-                  </span>
-                  <span>·</span>
-                  <span>
-                    P1: {Math.round(game.player1_accuracy)}% | P2: {Math.round(game.player2_accuracy)}%
-                  </span>
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <div className="flex items-center gap-4">
+                    <span>{game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over'}</span>
+                    <span>·</span>
+                    <span>{game.white_moves} moves</span>
+                    <span>·</span>
+                    <span className="text-green-400">
+                      Sync {(game.white_sync_rate * 100).toFixed(0)}%
+                    </span>
+                    <span>·</span>
+                    <span>
+                      P1: {Math.round(game.player1_accuracy)}% | P2: {Math.round(game.player2_accuracy)}%
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      router.push(`/replay/${game.id}`)
+                    }}
+                    className="text-yellow-400 hover:text-yellow-300 text-xs font-medium transition-colors ml-3 flex-shrink-0"
+                  >
+                    Replay →
+                  </button>
                 </div>
               </motion.div>
             ))}

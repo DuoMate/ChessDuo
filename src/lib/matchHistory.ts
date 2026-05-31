@@ -121,6 +121,28 @@ export async function getMatchHistory(limit = 20): Promise<CompletedGame[]> {
   }
 }
 
+export async function getCompletedGame(gameId: string): Promise<CompletedGame | null> {
+  try {
+    const { data, error } = await supabase
+      .from('completed_games')
+      .select('*')
+      .eq('id', gameId)
+      .single()
+
+    if (error) {
+      const local = getLocalHistory().find(g => g.id === gameId)
+      if (local) return local
+      console.warn('[MatchHistory] Game not found:', error.message?.substring?.(0, 80) || error.code)
+      return null
+    }
+
+    return data
+  } catch (e) {
+    console.warn('[MatchHistory] Server error, trying local:', e)
+    return getLocalHistory().find(g => g.id === gameId) || null
+  }
+}
+
 export async function getPlayerStats(): Promise<{
   totalGames: number
   wins: number
