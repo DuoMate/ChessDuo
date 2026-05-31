@@ -1340,15 +1340,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           )}
         </div>
 
-        {roomCode && (
-          <div className={`mb-3 p-2 bg-game-surface rounded-xl text-center border border-white/10 ${isMobile ? 'mx-1' : ''}`}>
-            <p className="text-gray-500 text-xs mb-1">Share this room code:</p>
-            <p className={`font-bold text-amber-400 tracking-wider font-mono ${isMobile ? 'text-base' : 'text-lg'}`}>
-              {roomCode}
-            </p>
-          </div>
-        )}
-
         <div className="relative flex justify-center mb-2 pb-6">
           <TeamIndicator
             whiteLabel="White Team (You)"

@@ -163,7 +163,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <h1 className="text-lg font-bold flex items-center gap-1.5">
             <Swords size={18} className="text-amber-400" /> Duel
           </h1>
-          <span className="text-xs text-gray-500 font-mono">{roomCode}</span>
         </div>
 
         <div className="flex items-center justify-between mb-2">
