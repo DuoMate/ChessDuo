@@ -17,6 +17,7 @@ import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
+import { GameLobby } from './GameLobby'
 import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
@@ -1258,7 +1259,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     confirmLeave()
   }, [isOnline, confirmLeave])
 
-  // Show loading state while game initializes
+  // Show lobby for online mode while waiting for game to start
+  if (isOnline && gameState.status !== GameStatus.PLAYING) {
+    return (
+      <GameLobby
+        roomCode={roomCode}
+        inviteUrl={inviteUrl}
+        isLoading={gameState.isLoading}
+      />
+    )
+  }
+
+  // Show loading state for offline mode while game initializes
   if (gameState.isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">

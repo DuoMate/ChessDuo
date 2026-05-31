@@ -48,17 +48,23 @@ export type Database = {
           status: 'waiting' | 'playing' | 'finished'
           created_by: string
           created_at: string
+          time_seconds: number
+          expires_at: string | null
         }
         Insert: {
           id?: string
           code: string
           status?: 'waiting' | 'playing' | 'finished'
           created_by: string
+          time_seconds?: number
+          expires_at?: string | null
         }
         Update: {
           id?: string
           code?: string
           status?: 'waiting' | 'playing' | 'finished'
+          time_seconds?: number
+          expires_at?: string | null
         }
       }
       room_players: {

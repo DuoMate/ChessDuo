@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
-import { RoomManager } from '@/components/Room'
 import { MatchmakingQueue } from '@/components/MatchmakingQueue'
 import { SlideOver } from '@/components/SlideOver'
 import { ProfilePanel } from '@/components/ProfilePanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
-import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
+import { createOnlineRoom } from '@/lib/roomActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,17 +43,12 @@ export default function SetupPage() {
   const [joinCode, setJoinCode] = useState('')
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [creatingRoom, setCreatingRoom] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
-  const [showWelcome, setShowWelcome] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
-    }
-    return false
-  })
   const skillLevels = getAvailableSkillLevels()
 
   useEffect(() => {
@@ -236,6 +230,19 @@ export default function SetupPage() {
     router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
   }
 
+  const handleStartOnline = async (timeSeconds: number) => {
+    setCreatingRoom(true)
+    setJoinError(null)
+    try {
+      const pid = await ensurePlayerId()
+      const result = await createOnlineRoom({ playerId: pid, timeSeconds })
+      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
+    } catch (err) {
+      setJoinError(err instanceof Error ? err.message : 'Failed to create room')
+      setCreatingRoom(false)
+    }
+  }
+
   const handleStartOffline = () => {
     const time = selectedTime || 600
     router.push(`/game?level=${selectedLevel}&time=${time}`)
@@ -303,7 +310,14 @@ export default function SetupPage() {
               {TIME_OPTIONS.map((option: TimeOption) => (
                 <button
                   key={option.seconds}
-                  onClick={() => setSelectedTime(option.seconds)}
+                  onClick={() => {
+                    if (gameMode === 'online') {
+                      handleStartOnline(option.seconds)
+                    } else {
+                      setSelectedTime(option.seconds)
+                    }
+                  }}
+                  disabled={creatingRoom}
                   className={`p-5 rounded-xl border transition-all duration-200 text-center ${
                     selectedTime === option.seconds
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
@@ -318,7 +332,11 @@ export default function SetupPage() {
             </div>
 
             <div className="text-center mb-4">
-              <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
+              {creatingRoom ? (
+                <p className="text-amber-400 text-sm animate-pulse">Creating room...</p>
+              ) : (
+                <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
+              )}
             </div>
 
             <div className="text-center">
@@ -484,7 +502,8 @@ export default function SetupPage() {
   }
 
   // ============================================
-  // Online mode
+  // Online mode — auto-creates room from time selection
+  // This code path is a fallback if selectedTime is somehow set
   // ============================================
   if (gameMode === 'online') {
     if (!playerId) {
@@ -501,18 +520,13 @@ export default function SetupPage() {
       )
     }
 
+    // Auto-create room and navigate to game
     return (
-      <div className="min-h-screen bg-[#0f1119] text-white flex flex-col">
+      <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center">
         {topBar}
-        {showWelcome ? (
-          <WelcomeDisclaimer open={true} onDismiss={() => setShowWelcome(false)} />
-        ) : (
-          <RoomManager playerId={playerId} username={username} onRoomJoined={handleRoomJoined} />
-        )}
-        <div className="mt-8 text-center pb-8">
-          <button onClick={() => setSelectedTime(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
-            {"\u2190"} Back to time
-          </button>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-amber-400 text-sm">Creating room...</p>
         </div>
         {slideOvers}
         {authOverlay}

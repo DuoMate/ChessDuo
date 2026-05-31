@@ -2,20 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
+import { generateRoomCode } from '@/lib/roomActions'
+
+export { generateRoomCode }
 
 interface RoomProps {
   playerId: string
   username: string
   onRoomJoined: (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => void
-}
-
-export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
 }
 
 export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
