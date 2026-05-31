@@ -195,6 +195,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [leavingConfirmed, setLeavingConfirmed] = useState(false)
   const alreadyReassessedRef = useRef(false)
   const matchTimerStartedRef = useRef(false)
+  const joinRoomCalledRef = useRef(false)
 
   // Update sound engine when setting changes
 
@@ -508,7 +509,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!effectiveTeam
     })
     
-    if (mode === 'online' && onlineGame && playerId && roomId && effectiveTeam) {
+    if (mode === 'online' && onlineGame && playerId && roomId && effectiveTeam && !joinRoomCalledRef.current) {
+      joinRoomCalledRef.current = true
       console.log('[Game] [OK] Calling joinRoom with:', { roomId, playerId, team: effectiveTeam })
       onlineGame.joinRoom({ id: roomId } as any, playerId, effectiveTeam)
       if (!team) setAutoJoinAttempted(true)

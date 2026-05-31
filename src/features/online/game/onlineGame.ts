@@ -329,6 +329,15 @@ export class OnlineGame {
         clearInterval(fallbackInterval)
         return
       }
+
+      const existing = await loadGameState(this._room!.id)
+      if (existing) {
+        console.log('[ONLINE] Polling fallback: game already exists, syncing...')
+        await this.syncGameState()
+        clearInterval(fallbackInterval)
+        return
+      }
+
       const { data, error } = await supabase
         .from('room_players')
         .select('*')
@@ -557,7 +566,14 @@ export class OnlineGame {
                 }
               }
             }
+          } else {
+            this.gameState.startMatch()
           }
+          this.startPendingTurn()
+          this.notifyStateChange()
+        } else {
+          console.warn('[ONLINE] syncGameState: no saved game found')
+          this._status = GameStatus.PLAYING
           this.gameState.startMatch()
           this.startPendingTurn()
           this.notifyStateChange()
