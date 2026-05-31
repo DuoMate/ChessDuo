@@ -1093,7 +1093,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             ...prev,
             selectedMove: sanMove,
             pendingOverlay: null,
-            myPendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'white' }
+            myPendingOverlay: null
           }))
         }
 

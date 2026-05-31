@@ -7,6 +7,7 @@ import { Users, Brain, Zap, Crown, XCircle } from 'lucide-react'
 interface WelcomeDisclaimerProps {
   open: boolean
   onDismiss: () => void
+  storageKey?: string
 }
 
 const cards = [
@@ -32,12 +33,12 @@ const cards = [
   },
 ]
 
-export function WelcomeDisclaimer({ open, onDismiss }: WelcomeDisclaimerProps) {
+export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welcome_dismissed' }: WelcomeDisclaimerProps) {
   const [dontShow, setDontShow] = useState(false)
 
   const handleDismiss = () => {
     if (dontShow) {
-      localStorage.setItem('chessduo_welcome_dismissed', 'true')
+      localStorage.setItem(storageKey, 'true')
     }
     onDismiss()
   }

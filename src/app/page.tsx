@@ -12,6 +12,7 @@ import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
+import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,12 @@ export default function SetupPage() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
+  const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chessduo_offline_disclaimer_dismissed') !== 'true'
+    }
+    return false
+  })
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const skillLevels = getAvailableSkillLevels()
@@ -485,6 +492,11 @@ export default function SetupPage() {
                 </button>
               ))}
             </div>
+            <div className="text-center mb-4">
+              <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[10px] text-gray-500 hover:text-gray-400 transition-colors underline">
+                How to play?
+              </button>
+            </div>
             <div className="text-center">
               <button
                 onClick={handleStartOffline}
@@ -502,6 +514,13 @@ export default function SetupPage() {
         </div>
         {slideOvers}
         {authOverlay}
+        {showOfflineDisclaimer && (
+          <WelcomeDisclaimer
+            open={showOfflineDisclaimer}
+            onDismiss={() => setShowOfflineDisclaimer(false)}
+            storageKey="chessduo_offline_disclaimer_dismissed"
+          />
+        )}
       </div>
     )
   }

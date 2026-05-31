@@ -56,4 +56,33 @@ describe('WelcomeDisclaimer', () => {
     expect(screen.getByText('Winner')).toBeDefined()
     expect(screen.getByText('Loser')).toBeDefined()
   })
+
+  it('uses custom storageKey when provided', () => {
+    const onDismiss = jest.fn()
+    render(
+      <WelcomeDisclaimer
+        open={true}
+        onDismiss={onDismiss}
+        storageKey="chessduo_offline_disclaimer_dismissed"
+      />
+    )
+
+    const checkbox = screen.getByRole('checkbox')
+    fireEvent.click(checkbox)
+    fireEvent.click(screen.getByText('Got it!'))
+
+    expect(localStorage.getItem('chessduo_offline_disclaimer_dismissed')).toBe('true')
+    expect(localStorage.getItem('chessduo_welcome_dismissed')).toBeNull()
+  })
+
+  it('uses default storageKey when not provided', () => {
+    const onDismiss = jest.fn()
+    render(<WelcomeDisclaimer open={true} onDismiss={onDismiss} />)
+
+    const checkbox = screen.getByRole('checkbox')
+    fireEvent.click(checkbox)
+    fireEvent.click(screen.getByText('Got it!'))
+
+    expect(localStorage.getItem('chessduo_welcome_dismissed')).toBe('true')
+  })
 })
