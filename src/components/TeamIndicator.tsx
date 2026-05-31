@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Swords } from 'lucide-react'
+import { Crown, Bot, Swords } from 'lucide-react'
 
 interface TeamIndicatorProps {
   whiteLabel: string
@@ -9,30 +9,6 @@ interface TeamIndicatorProps {
   activeTeam: 'WHITE' | 'BLACK'
   isGameOver: boolean
   isBotThinking: boolean
-}
-
-function KnightWhite() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7 4.5C7 3 8.5 2 10 1.5C10.5 2 11 3 11 4V5L9 8V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M11 7H13.5C14.5 7 15 7.5 15 8.5V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M8.5 14L6.5 17C5.5 18.5 6 20 7.5 20.5C9 21 9.5 20 10 19L11 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 14L14 17C15 18.5 14.5 20 13 20.5C11.5 21 11 20 10 19L10 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="9" cy="12" r="1" fill="currentColor"/>
-    </svg>
-  )
-}
-
-function KnightBlack() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M7 4.5C7 3 8.5 2 10 1.5C10.5 2 11 3 11 4V5L9 8V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M11 7H13.5C14.5 7 15 7.5 15 8.5V11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M8.5 14L6.5 17C5.5 18.5 6 20 7.5 20.5C9 21 9.5 20 10 19L11 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 14L14 17C15 18.5 14.5 20 13 20.5C11.5 21 11 20 10 19L10 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="9" cy="12" r="1" fill="currentColor"/>
-    </svg>
-  )
 }
 
 export function TeamIndicator({
@@ -43,6 +19,7 @@ export function TeamIndicator({
   isBotThinking,
 }: TeamIndicatorProps) {
   const whiteActive = activeTeam === 'WHITE' && !isGameOver
+  const blackActive = activeTeam === 'BLACK' && !isGameOver
 
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
@@ -60,7 +37,7 @@ export function TeamIndicator({
             : 'bg-white/5 border-white/10'
         }`}
       >
-        <KnightWhite />
+        <Crown size={20} className={whiteActive ? 'text-amber-400' : 'text-gray-500'} />
         <span className="text-white font-semibold text-xs sm:text-sm truncate">{whiteLabel}</span>
       </motion.div>
 
@@ -71,16 +48,19 @@ export function TeamIndicator({
 
       <motion.div
         animate={{
-          scale: activeTeam === 'BLACK' && !isGameOver ? 1.02 : 1,
+          boxShadow: blackActive
+            ? '0 0 12px rgba(156,163,175,0.5), 0 0 24px rgba(156,163,175,0.2)'
+            : '0 0 0px rgba(156,163,175,0)',
+          scale: blackActive ? 1.02 : 1,
         }}
         transition={{ duration: 0.4, ease: 'easeInOut' }}
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border min-w-0 ${
-          activeTeam === 'BLACK' && !isGameOver
+          blackActive
             ? 'bg-gradient-to-r from-gray-700 to-gray-600/50 border-gray-400/40'
             : 'bg-white/5 border-white/10'
         }`}
       >
-        <KnightBlack />
+        <Bot size={20} className={blackActive ? 'text-gray-300' : 'text-gray-500'} />
         <span className="text-gray-300 font-semibold text-xs sm:text-sm truncate">{blackLabel}</span>
       </motion.div>
 
