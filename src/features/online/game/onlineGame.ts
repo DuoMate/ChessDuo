@@ -307,6 +307,9 @@ export class OnlineGame {
       .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
         this.handleMatchAbandoned(payload as { playerId: string })
       })
+      .on('broadcast', { event: 'match_timeout' }, ({ payload }) => {
+        this.handleMatchTimeoutBroadcast(payload as { result: string; reason: string })
+      })
       .subscribe(async (status: string) => {
         console.log('[ONLINE] Channel subscription status:', status)
         if (status === 'CHANNEL_ERROR') {
@@ -854,6 +857,18 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason
+    this.stopMatchTimer()
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    if (this._channel) {
+      this._channel.send({
+        type: 'broadcast',
+        event: 'match_timeout',
+        payload: { result, reason }
+      })
+    }
   }
 
   setGameOverResult(result: string): void {
@@ -1159,6 +1174,18 @@ export class OnlineGame {
       clearInterval(this._pollingInterval)
       this._pollingInterval = null
     }
+    this.notifyStateChange()
+  }
+
+  private handleMatchTimeoutBroadcast(payload: { result: string; reason: string }): void {
+    this._status = GameStatus.GAME_OVER
+    this._gameOverResult = payload.result
+    this._gameOverReason = payload.reason
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    this.stopMatchTimer()
     this.notifyStateChange()
   }
 

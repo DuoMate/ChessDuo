@@ -577,4 +577,67 @@ describe('OnlineGame', () => {
       })
     })
   })
+
+  describe('game-over broadcast', () => {
+    it('setGameOverTimeup sets status to GAME_OVER', () => {
+      const game = new OnlineGame(600)
+      game.setGameOverTimeup('White wins by timeout', 'timeout')
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+    })
+
+    it('setGameOverTimeup broadcasts match_timeout event', () => {
+      const game = new OnlineGame(600)
+      const sendSpy = jest.fn().mockResolvedValue(null)
+      ;(game as any)._channel = { send: sendSpy }
+
+      game.setGameOverTimeup('Draw by timeout', 'timeout')
+
+      expect(sendSpy).toHaveBeenCalledWith({
+        type: 'broadcast',
+        event: 'match_timeout',
+        payload: { result: 'Draw by timeout', reason: 'timeout' }
+      })
+    })
+
+    it('setGameOverTimeup stops timers', () => {
+      const game = new OnlineGame(600)
+      const stopSpy = jest.spyOn(game as any, 'stopMatchTimer')
+
+      game.setGameOverTimeup('White wins', 'timeout')
+
+      expect(stopSpy).toHaveBeenCalled()
+    })
+
+    it('handleMatchTimeoutBroadcast sets GAME_OVER and result', () => {
+      const game = new OnlineGame(600)
+      ;(game as any).handleMatchTimeoutBroadcast({
+        result: 'Black wins by timeout',
+        reason: 'timeout'
+      })
+
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+      expect(game.getResult()).toBe('Black wins by timeout')
+      expect(game.getGameOverReason()).toBe('timeout')
+    })
+
+    it('handleMatchTimeoutBroadcast stops timers and sync', () => {
+      const game = new OnlineGame(600)
+      const stopSpy = jest.spyOn(game as any, 'stopMatchTimer')
+
+      ;(game as any).handleMatchTimeoutBroadcast({
+        result: 'Draw',
+        reason: 'timeout'
+      })
+
+      expect(stopSpy).toHaveBeenCalled()
+    })
+
+    it('setGameOverTimeup gracefully handles missing channel', () => {
+      const game = new OnlineGame(600)
+      expect(() => {
+        game.setGameOverTimeup('White wins', 'timeout')
+      }).not.toThrow()
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+    })
+  })
 })

@@ -545,7 +545,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       g.setMatchTimeRemaining(0)
       setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
 
-      if (isOnline && (g as any).isCoordinator && !(g as any).isCoordinator()) {
+      if (isOnline && !(g as any).isCoordinator()) {
         return
       }
 
@@ -1270,7 +1270,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline, confirmLeave])
 
   // Show lobby for online mode while waiting for game to start
-  if (isOnline && gameState.status !== GameStatus.PLAYING) {
+  if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
     return (
       <GameLobby
         roomCode={roomCode}
