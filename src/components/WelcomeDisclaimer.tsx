@@ -8,9 +8,10 @@ interface WelcomeDisclaimerProps {
   open: boolean
   onDismiss: () => void
   storageKey?: string
+  mode?: 'online' | 'offline'
 }
 
-const cards = [
+const onlineCards = [
   {
     icon: Users,
     title: 'Team Up',
@@ -33,8 +34,33 @@ const cards = [
   },
 ]
 
-export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welcome_dismissed' }: WelcomeDisclaimerProps) {
+const offlineCards = [
+  {
+    icon: Users,
+    title: 'Team Up',
+    description: (
+      <>
+        <span className="text-amber-400/90 font-medium">You &amp; a bot teammate</span> play as{' '}
+        <span className="text-white font-semibold">WHITE</span> against two bot opponents. Your bot teammate plays at the{' '}
+        <span className="text-white font-semibold">ELO level</span> you select.
+      </>
+    ),
+  },
+  {
+    icon: Brain,
+    title: 'Pick Your Move',
+    description: 'Each turn, you and your bot teammate each pick a move independently. Think carefully!',
+  },
+  {
+    icon: Zap,
+    title: 'Better Move Wins',
+    description: 'Your moves are compared by the engine. The stronger move is played on the board.',
+  },
+]
+
+export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welcome_dismissed', mode = 'online' }: WelcomeDisclaimerProps) {
   const [dontShow, setDontShow] = useState(false)
+  const cards = mode === 'offline' ? offlineCards : onlineCards
 
   const handleDismiss = () => {
     if (dontShow) {

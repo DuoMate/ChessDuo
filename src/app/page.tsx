@@ -519,6 +519,7 @@ export default function SetupPage() {
             open={showOfflineDisclaimer}
             onDismiss={() => setShowOfflineDisclaimer(false)}
             storageKey="chessduo_offline_disclaimer_dismissed"
+            mode="offline"
           />
         )}
       </div>
