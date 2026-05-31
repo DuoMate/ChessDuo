@@ -10,11 +10,19 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
+    backgroundColor: '#0f1119',
+  },
+  ios: {
+    backgroundColor: '#0f1119',
   },
   plugins: {
-    SocialLogin: {
-      logLevel: 1,
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#0f1119',
+      splashFullScreen: true,
+      splashImmersive: true,
     },
   },
 }

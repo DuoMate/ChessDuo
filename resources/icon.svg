@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="goldShine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+
+  <!-- Chess board pattern (subtle background) -->
+  <g opacity="0.06">
+    <rect x="60" y="60" width="98" height="98" fill="#fff"/>
+    <rect x="256" y="60" width="98" height="98" fill="#fff"/>
+    <rect x="158" y="158" width="98" height="98" fill="#fff"/>
+    <rect x="354" y="158" width="98" height="98" fill="#fff"/>
+    <rect x="60" y="256" width="98" height="98" fill="#fff"/>
+    <rect x="256" y="256" width="98" height="98" fill="#fff"/>
+    <rect x="158" y="354" width="98" height="98" fill="#fff"/>
+    <rect x="354" y="354" width="98" height="98" fill="#fff"/>
+  </g>
+
+  <!-- Crown -->
+  <g transform="translate(256, 220)">
+    <!-- Base of crown -->
+    <rect x="-65" y="30" width="130" height="30" rx="6" fill="url(#gold)"/>
+
+    <!-- Crown points -->
+    <polygon points="-60,30 -50,-40 -30,-10 -15,-60 0,-20 15,-60 30,-10 50,-40 60,30" fill="url(#gold)"/>
+
+    <!-- Top ornaments (small circles on crown tips) -->
+    <circle cx="-50" cy="-40" r="6" fill="url(#goldShine)"/>
+    <circle cx="-15" cy="-60" r="6" fill="url(#goldShine)"/>
+    <circle cx="0" cy="-20" r="6" fill="url(#goldShine)"/>
+    <circle cx="15" cy="-60" r="6" fill="url(#goldShine)"/>
+    <circle cx="50" cy="-40" r="6" fill="url(#goldShine)"/>
+
+    <!-- Base band detail -->
+    <rect x="-65" y="50" width="130" height="8" rx="2" fill="#ca8a04"/>
+  </g>
+
+  <!-- Chess pieces (stylized) -->
+  <!-- Queen silhouette -->
+  <g transform="translate(256, 150)" opacity="0.15">
+    <ellipse cx="0" cy="0" rx="120" ry="80" fill="#facc15"/>
+  </g>
+
+  <!-- Simple queen symbol at bottom -->
+  <text x="256" y="420" font-family="serif" font-size="48" fill="url(#goldShine)" text-anchor="middle" font-weight="bold">&#9813; VS &#9813;</text>
+</svg>

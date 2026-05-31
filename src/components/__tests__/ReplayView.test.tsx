@@ -13,7 +13,7 @@ jest.mock('../../components/MobileChessBoard', () => ({
 
 jest.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: Record<string, unknown>) => React.createElement('div', props, children),
+    div: (props: { children?: React.ReactNode }) => React.createElement('div', null, props.children),
   },
 }))
 

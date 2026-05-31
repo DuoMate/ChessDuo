@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # ──────────────────────────────────────────────────
-# ChessDuo APK Builder
-# Builds a signed release APK ready for sideload
+# ChessDuo AAB Builder (Google Play Store)
+# Builds a signed release AAB for Play Console upload
 # Prerequisite: Run scripts/setup-capacitor.sh first
-# Run: bash scripts/build-apk.sh
+# Run: bash scripts/build-aab.sh
 # ──────────────────────────────────────────────────
 
 RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' NC='\033[0m'
@@ -16,18 +16,16 @@ err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# ─── Use Java 21 for Gradle compatibility ─────────
+# ─── Java ──────────────────────────────────────
 if [ -f /usr/lib/jvm/java-21-openjdk-amd64/bin/java ]; then
     export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-    export PATH="$JAVA_HOME/bin:$PATH"
-    ok "Using Java 21 for Gradle build"
 elif [ -f /usr/lib/jvm/java-17-openjdk-amd64/bin/java ]; then
     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-    export PATH="$JAVA_HOME/bin:$PATH"
-    ok "Using Java 17 for Gradle build"
 fi
+export PATH="$JAVA_HOME/bin:$PATH"
+ok "Java: $JAVA_HOME"
 
-# ─── Set Android SDK path ─────────────────────────
+# ─── Android SDK ───────────────────────────────
 if [ -z "${ANDROID_HOME:-}" ]; then
     if [ -d "$HOME/android-sdk" ]; then
         export ANDROID_HOME="$HOME/android-sdk"
@@ -36,35 +34,23 @@ if [ -z "${ANDROID_HOME:-}" ]; then
     fi
 fi
 if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
-    err "ANDROID_HOME not set and no SDK found at ~/android-sdk or ~/Android/Sdk. Run: npm run cap:setup"
+    err "ANDROID_HOME not set. Run: npm run cap:setup"
 fi
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 ok "ANDROID_HOME=$ANDROID_HOME"
 
-# ─── Verify prerequisites ────────────────────────
-if [ ! -d "android" ]; then
-    err "android/ directory not found. Run: bash scripts/setup-capacitor.sh"
-fi
+# ─── Prerequisites ─────────────────────────────
+[ -d "android" ]           || err "android/ not found. Run: npm run cap:setup"
+[ -f "chessduo.keystore" ] || err "Keystore not found. Run: npm run cap:setup"
+[ -f "android/keystore.properties" ] || err "Signing config not found. Run: npm run cap:setup"
 
-if [ ! -f "chessduo.keystore" ]; then
-    err "chessduo.keystore not found. Run: bash scripts/setup-capacitor.sh"
-fi
-
-if [ ! -f "android/keystore.properties" ]; then
-    err "android/keystore.properties not found. Run: bash scripts/setup-capacitor.sh"
-fi
-
-# Load properties
 source android/keystore.properties
 
-# ─── Sync web assets ─────────────────────────────
+# ─── Sync web assets ───────────────────────────
 log "Syncing Capacitor web assets..."
 mkdir -p out
 echo '<html><body>ChessDuo loads from server</body></html>' > out/index.html
-
-# Ensure Gradle can find Android SDK
 echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-
 npx cap sync android
 ok "Sync complete"
 
@@ -74,13 +60,37 @@ if [ -f "resources/proguard-rules.pro" ]; then
     ok "ProGuard rules copied"
 fi
 
-# ─── Inject signing config into build.gradle ─────
+# ─── Generate app icons ────────────────────────
+if [ -f "scripts/generate-icons.sh" ]; then
+    log "Generating app icons..."
+    bash scripts/generate-icons.sh
+fi
+
+# ─── Inject Android release config ──────────────
+# Build types tag
 BUILD_GRADLE="android/app/build.gradle"
+if ! grep -q "buildTypes" "$BUILD_GRADLE" 2>/dev/null; then
+    log "Injecting release build type into build.gradle..."
+    cat >> "$BUILD_GRADLE" << 'GRADLE'
+
+android {
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+GRADLE
+    ok "Release build type injected"
+fi
+
+# ─── Inject signing config ──────────────────────
 if ! grep -q "keystore.properties" "$BUILD_GRADLE" 2>/dev/null; then
     log "Injecting signing config into build.gradle..."
     cat >> "$BUILD_GRADLE" << 'GRADLE'
 
-// ChessDuo signing config
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
@@ -104,34 +114,32 @@ android {
 }
 GRADLE
     ok "Signing config injected"
-else
-    ok "Signing config already present"
 fi
 
-# ─── Build APK ──────────────────────────────────
-log "Building release APK (this may take 3-5 minutes on first run)..."
+# ─── Build AAB ──────────────────────────────────
+log "Building release AAB (this may take 3-5 minutes)..."
 cd android
-./gradlew assembleRelease
+./gradlew bundleRelease
 cd ..
 
-APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
-if [ -f "$APK_PATH" ]; then
-    APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
-    ok "APK built successfully!"
+AAB_PATH="android/app/build/outputs/bundle/release/app-release.aab"
+if [ -f "$AAB_PATH" ]; then
+    AAB_SIZE=$(du -h "$AAB_PATH" | cut -f1)
+    ok "AAB built successfully!"
     echo ""
     echo "  ────────────────────────────────────────"
-    echo -e "  ${GREEN}📦 APK Ready${NC}"
+    echo -e "  ${GREEN}📦 AAB Ready for Play Store${NC}"
     echo "  ────────────────────────────────────────"
     echo ""
-    echo "  Location: $APK_PATH"
-    echo "  Size:     $APK_SIZE"
+    echo "  Location: $AAB_PATH"
+    echo "  Size:     $AAB_SIZE"
     echo ""
-    echo "  To sideload to your phone:"
-    echo "    1. Download the APK file to your machine"
-    echo "    2. Transfer to your Android phone"
-    echo "    3. On phone: Settings → Security → Install from unknown sources"
-    echo "    4. Open the APK file → Install"
+    echo "  Next steps:"
+    echo "    1. Go to Google Play Console → Create release"
+    echo "    2. Upload app-release.aab"
+    echo "    3. Fill in store listing (see store/ directory)"
+    echo "    4. Submit for review"
     echo ""
 else
-    err "APK build failed. Check gradle output above for errors."
+    err "AAB build failed. Check gradle output above for errors."
 fi

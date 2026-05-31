@@ -15,7 +15,8 @@
     "cap:setup": "bash scripts/setup-capacitor.sh",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
-    "cap:build": "bash scripts/build-apk.sh"
+    "cap:build": "bash scripts/build-apk.sh",
+    "cap:bundle": "bash scripts/build-aab.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
