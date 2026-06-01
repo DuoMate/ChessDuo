@@ -1,4 +1,4 @@
-Welcome to ChessDuo — the first multiplayer chess app where teammates play together on the same side, making simultaneous hidden moves. Think you know chess? Try coordinating with a partner without talking.
+Welcome to ChessDuo by Navron — the first multiplayer chess app where teammates play together on the same side, making simultaneous hidden moves. Think you know chess? Try coordinating with a partner without talking.
 
 ═══ HOW IT WORKS ═══
 • You and your teammate each pick a move — in secret
