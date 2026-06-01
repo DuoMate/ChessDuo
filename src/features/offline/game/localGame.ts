@@ -268,11 +268,54 @@ export class LocalGame {
      
      const turnStartFen = this.gameState.getTurnStartFen()
      
-     const player1Uci = player1From + player1To
-     const player2Uci = player2From + player2To
-     
+      const player1Uci = player1From + player1To
+      const player2Uci = player2From + player2To
+      
       const Chess = (await import('chess.js')).Chess
       const chess = new Chess(turnStartFen)
+
+      // Checkmate short-circuit: skip Stockfish if either move is checkmate
+      try {
+        chess.move(player1Move)
+        if (chess.isCheckmate()) {
+          this._lastMove = { from: player1From, to: player1To }
+          this._lastMoveComparison = {
+            player1Move, player2Move, player1Score: 10000, player2Score: 0,
+            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: 10000,
+            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(10000),
+            winningMove: player1Move, winningScore: 10000, isSync: false,
+            bestEngineMove: player1Uci, bestEngineScore: 10000,
+            turnStartFen, winnerId: 'player1', loserId: 'player2',
+            loserFrom: player2From, loserTo: player2To,
+            alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
+          }
+          this.gameState.resolve(player1Move)
+          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
+          return { winnerId: 'player1' as const, winningMove: player1Move }
+        }
+      } catch {}
+      chess.load(turnStartFen)
+      try {
+        chess.move(player2Move)
+        if (chess.isCheckmate()) {
+          this._lastMove = { from: player2From, to: player2To }
+          this._lastMoveComparison = {
+            player1Move, player2Move, player1Score: 0, player2Score: 10000,
+            player1Accuracy: 0, player2Accuracy: 100, player1Loss: 10000, player2Loss: 0,
+            player1Category: getAccuracyCategory(10000), player2Category: getAccuracyCategory(0),
+            winningMove: player2Move, winningScore: 10000, isSync: false,
+            bestEngineMove: player2Uci, bestEngineScore: 10000,
+            turnStartFen, winnerId: 'player2', loserId: 'player1',
+            loserFrom: player1From, loserTo: player1To,
+            alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
+          }
+          this.gameState.resolve(player2Move)
+          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
+          return { winnerId: 'player2' as const, winningMove: player2Move }
+        }
+      } catch {}
+      chess.load(turnStartFen)
+
       const verboseMoves = chess.moves({ verbose: true })
 
       const playerMoves = [player1Uci, player2Uci].filter(Boolean)
@@ -414,11 +457,54 @@ export class LocalGame {
        return san
      }
      
-     const player1Uci = sanToUci(player1Move, turnStartFen)
-     const player2Uci = sanToUci(player2Move, turnStartFen)
-     
+       const player1Uci = sanToUci(player1Move, turnStartFen)
+       const player2Uci = sanToUci(player2Move, turnStartFen)
+       
       const ChessLib = (await import('chess.js')).Chess
       const chess = new ChessLib(turnStartFen)
+
+      // Checkmate short-circuit: skip Stockfish if either move is checkmate
+      try {
+        chess.move(player1Move)
+        if (chess.isCheckmate()) {
+          this._lastMove = this.getMoveParts(player1Move, turnStartFen)
+          this._lastMoveComparison = {
+            player1Move, player2Move, player1Score: 10000, player2Score: 0,
+            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: 10000,
+            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(10000),
+            winningMove: player1Move, winningScore: 10000, isSync: false,
+            bestEngineMove: player1Uci, bestEngineScore: 10000,
+            turnStartFen, winnerId: 'player1', loserId: 'player2',
+            loserFrom: '', loserTo: '',
+            alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
+          }
+          this.gameState.resolve(player1Move)
+          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
+          return
+        }
+      } catch {}
+      chess.load(turnStartFen)
+      try {
+        chess.move(player2Move)
+        if (chess.isCheckmate()) {
+          this._lastMove = this.getMoveParts(player2Move, turnStartFen)
+          this._lastMoveComparison = {
+            player1Move, player2Move, player1Score: 0, player2Score: 10000,
+            player1Accuracy: 0, player2Accuracy: 100, player1Loss: 10000, player2Loss: 0,
+            player1Category: getAccuracyCategory(10000), player2Category: getAccuracyCategory(0),
+            winningMove: player2Move, winningScore: 10000, isSync: false,
+            bestEngineMove: player2Uci, bestEngineScore: 10000,
+            turnStartFen, winnerId: 'player2', loserId: 'player1',
+            loserFrom: '', loserTo: '',
+            alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
+          }
+          this.gameState.resolve(player2Move)
+          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
+          return
+        }
+      } catch {}
+      chess.load(turnStartFen)
+
       const verboseMoves = chess.moves({ verbose: true })
 
       const playerMoves = [player1Uci, player2Uci].filter(Boolean)
