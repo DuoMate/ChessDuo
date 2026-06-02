@@ -303,7 +303,7 @@ export default function SetupPage() {
         {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
-            <div className="text-center mb-6">
+            <div className="text-center mb-3">
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
                 {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B' : '\u26A1'}
               </div>
@@ -312,6 +312,36 @@ export default function SetupPage() {
               </h1>
               <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select game duration</p>
             </div>
+
+            {gameMode === 'online' && (
+              <div className="mb-4">
+                <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">Have a room code?</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                    placeholder="ABC123"
+                    maxLength={6}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    disabled={joinLoading}
+                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] text-white text-base placeholder:text-gray-600 focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08] disabled:opacity-40 transition-all"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    onClick={handleJoinByCode}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/25 active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    style={{ minHeight: '44px' }}
+                  >
+                    {joinLoading ? 'Joining...' : 'Join'}
+                  </button>
+                </div>
+                {joinError && <p className="text-red-400 text-[11px] mt-1.5">{joinError}</p>}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               {TIME_OPTIONS.map((option: TimeOption) => (
@@ -356,43 +386,6 @@ export default function SetupPage() {
                 {'\u2190'} Back to game mode
               </button>
             </div>
-
-            {gameMode === 'online' && (
-              <>
-                <div className="flex items-center gap-3 mb-4 mt-6">
-                  <div className="flex-1 h-px bg-white/8" />
-                  <span className="text-[10px] text-gray-600 uppercase tracking-wider">or</span>
-                  <div className="flex-1 h-px bg-white/8" />
-                </div>
-                <div className="mb-4">
-                  <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">Have a room code?</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={joinCode}
-                      onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                      placeholder="ABC123"
-                      maxLength={6}
-                      inputMode="text"
-                      autoCapitalize="characters"
-                      autoCorrect="off"
-                      disabled={joinLoading}
-                      className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] text-white text-base placeholder:text-gray-600 focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                      style={{ minHeight: '44px' }}
-                    />
-                    <button
-                      onClick={handleJoinByCode}
-                      disabled={joinLoading || !joinCode.trim()}
-                      className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/25 active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                      style={{ minHeight: '44px' }}
-                    >
-                      {joinLoading ? 'Joining...' : 'Join'}
-                    </button>
-                  </div>
-                  {joinError && <p className="text-red-400 text-[11px] mt-1.5">{joinError}</p>}
-                </div>
-              </>
-            )}
           </div>
         </div>
         {slideOvers}

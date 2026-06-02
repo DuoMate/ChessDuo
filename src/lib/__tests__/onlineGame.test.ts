@@ -639,5 +639,17 @@ describe('OnlineGame', () => {
       }).not.toThrow()
       expect(game.status).toBe(GameStatus.GAME_OVER)
     })
+
+    it('stopEngineTimer exists and does not throw', () => {
+      const game = new OnlineGame(600)
+      expect(typeof game.stopEngineTimer).toBe('function')
+      expect(() => game.stopEngineTimer()).not.toThrow()
+    })
+
+    it('getOtherPlayerId returns empty string when no other players', () => {
+      const game = new OnlineGame(600)
+      const otherId = game.getOtherPlayerId()
+      expect(otherId).toBe('')
+    })
   })
 })

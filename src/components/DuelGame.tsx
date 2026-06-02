@@ -11,6 +11,10 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
+import { GameMenu } from './GameMenu'
+import { SettingsPanel } from './SettingsPanel'
+import { ResignConfirmModal } from './ResignConfirmModal'
+import { useSettings } from '@/lib/settings'
 
 interface DuelGameProps {
   roomId: string
@@ -23,6 +27,9 @@ interface DuelGameProps {
 
 export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave }: DuelGameProps) {
   const isMobile = useIsMobile()
+  const settings = useSettings()
+  const [showSettings, setShowSettings] = useState(false)
+  const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
@@ -88,6 +95,13 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (!game) return
 
     if (promotion) {
+      if (settings.autoQueen) {
+        const result = await game.makeMove(uci.replace('-', '') + 'q')
+        if (result.success && result.accuracy !== undefined) {
+          setMoveAccuracy(result.accuracy)
+        }
+        return
+      }
       const [from, to] = uci.split('-')
       setPendingPromotion({ from, to })
       return
@@ -97,7 +111,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (result.success && result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
     }
-  }, [])
+  }, [settings.autoQueen])
 
   const handlePromotionSelect = useCallback(async (piece: PromotionPiece) => {
     if (!pendingPromotion) return
@@ -163,6 +177,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <h1 className="text-lg font-bold flex items-center gap-1.5">
             <Swords size={18} className="text-amber-400" /> Duel
           </h1>
+          <GameMenu
+            onResign={() => setShowResignConfirm(true)}
+            onOpenSettings={() => setShowSettings(true)}
+          />
         </div>
 
         <div className="flex items-center justify-between mb-2">
@@ -272,6 +290,20 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
           onPlayAgain={() => window.location.reload()}
           gameResult={gameResult}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {showResignConfirm && (
+        <ResignConfirmModal
+          onConfirm={() => {
+            setShowResignConfirm(false)
+            onLeave()
+          }}
+          onCancel={() => setShowResignConfirm(false)}
         />
       )}
     </div>

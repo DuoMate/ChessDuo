@@ -31,6 +31,10 @@ import { TeamIndicator } from './TeamIndicator'
 import { User, Volume2, VolumeX } from 'lucide-react'
 import { MobileStatusBar } from './MobileStatusBar'
 import { GameOnOverlay } from './GameOnOverlay'
+import { GameMenu } from './GameMenu'
+import { SettingsPanel } from './SettingsPanel'
+import { ResignConfirmModal } from './ResignConfirmModal'
+import { useSettings } from '@/lib/settings'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
@@ -198,6 +202,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const matchTimerStartedRef = useRef(false)
   const [showGameOn, setShowGameOn] = useState(false)
   const joinRoomCalledRef = useRef(false)
+  const settings = useSettings()
+  const [showSettings, setShowSettings] = useState(false)
+  const [showResignConfirm, setShowResignConfirm] = useState(false)
 
   // Update sound engine when setting changes
 
@@ -1200,6 +1207,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
+      if (settings.autoQueen) {
+        executeMove(uciMove, 'q')
+        return
+      }
       const [from, to] = uciMove.split('-')
       setGameState(prev => ({
         ...prev,
@@ -1208,7 +1219,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } else {
       executeMove(uciMove)
     }
-  }, [executeMove])
+  }, [executeMove, settings.autoQueen])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (gameState.pendingPromotion) {
@@ -1343,6 +1354,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
+
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+
+      {showResignConfirm && (
+        <ResignConfirmModal
+          onConfirm={() => {
+            setShowResignConfirm(false)
+            router.push('/')
+          }}
+          onCancel={() => setShowResignConfirm(false)}
+        />
+      )}
         
       <div className="w-full">
         <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -1365,6 +1390,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 </button>
               </div>
           )}
+          <GameMenu
+            onResign={() => setShowResignConfirm(true)}
+            onOpenSettings={() => setShowSettings(true)}
+          />
         </div>
 
         <div className="relative flex justify-center mb-2 pb-6">
