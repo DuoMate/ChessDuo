@@ -131,6 +131,8 @@ export class GameState {
   startPendingTurn(fen: string): void {
     this.turnStartFen = fen
     this.pendingMoves.clear()
+    this.locked.clear()
+    this.selections.clear()
   }
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
@@ -263,37 +265,39 @@ export class GameState {
       return null
     }
 
-    const currentPlayers = this._currentTeam === Team.WHITE
-      ? this.whitePlayers
-      : this.blackPlayers
-
-    const move1 = this.selections.get(currentPlayers[0])!
-    const move2 = this.selections.get(currentPlayers[1])!
-
-    let winningMove = move1
-    let winner = currentPlayers[0]
+    let winningMove: string
+    let winner: Player
 
     if (forcedWinningMove) {
-      if (forcedWinningMove === move1) {
-        winner = currentPlayers[0]
-        winningMove = move1
-      } else if (forcedWinningMove === move2) {
-        winner = currentPlayers[1]
-        winningMove = move2
-      }
-    } else if (move1 !== move2) {
-      const result1 = this.tryMove(move1)
-      const result2 = this.tryMove(move2)
+      winningMove = forcedWinningMove
+      const entries = Array.from(this.pendingMoves.entries())
+      const match = entries.find(([, m]) => m.move === forcedWinningMove)
+      winner = match?.[0] || entries[0]?.[0] || 'player1'
+    } else {
+      const currentPlayers = this._currentTeam === Team.WHITE
+        ? this.whitePlayers
+        : this.blackPlayers
 
-      if (result1 && !result2) {
-        winningMove = move1
-        winner = currentPlayers[0]
-      } else if (!result1 && result2) {
-        winningMove = move2
-        winner = currentPlayers[1]
-      } else if (result1 && result2) {
-        winningMove = move1
-        winner = currentPlayers[0]
+      const move1 = this.selections.get(currentPlayers[0])!
+      const move2 = this.selections.get(currentPlayers[1])!
+
+      winningMove = move1
+      winner = currentPlayers[0]
+
+      if (move1 !== move2) {
+        const result1 = this.tryMove(move1)
+        const result2 = this.tryMove(move2)
+
+        if (result1 && !result2) {
+          winningMove = move1
+          winner = currentPlayers[0]
+        } else if (!result1 && result2) {
+          winningMove = move2
+          winner = currentPlayers[1]
+        } else if (result1 && result2) {
+          winningMove = move1
+          winner = currentPlayers[0]
+        }
       }
     }
 
@@ -344,9 +348,6 @@ export class GameState {
   }
 
   private areBothTeamPlayersLocked(): boolean {
-    const currentPlayers = this._currentTeam === Team.WHITE
-      ? this.whitePlayers
-      : this.blackPlayers
-    return currentPlayers.every(p => this.locked.has(p))
+    return this.locked.size >= 2
   }
 }

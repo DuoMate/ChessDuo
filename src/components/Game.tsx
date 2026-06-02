@@ -660,10 +660,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const handleGameOnComplete = useCallback(() => {
     setShowGameOn(false)
     if (!matchTimerStartedRef.current) {
+      const g = isOnline ? onlineGameRef.current : gameRef.current
+      if (g) {
+        g.setMatchTimeRemaining(timeLimit)
+        g.setMatchTimerActive(true)
+      }
       startMatchTimer()
       matchTimerStartedRef.current = true
     }
-  }, [startMatchTimer])
+  }, [startMatchTimer, isOnline, timeLimit])
 
   // Clean up timer on unmount
   useEffect(() => {
