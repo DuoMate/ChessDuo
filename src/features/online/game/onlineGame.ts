@@ -327,6 +327,9 @@ export class OnlineGame {
           if (s === 'SUBSCRIBED') {
             await this._channel?.track({ player_id: playerId, team, status: 'connected' })
             console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
+            if (this._status === GameStatus.PLAYING) {
+              await this.syncGameState()
+            }
           }
         })
         return

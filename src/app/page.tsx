@@ -82,6 +82,23 @@ export default function SetupPage() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Push browser history entry when entering game mode selection screen
+  // so mobile browser back button returns to home screen instead of exiting
+  useEffect(() => {
+    if (gameMode !== null) {
+      window.history.pushState({ gameMode }, '', window.location.href)
+    }
+
+    const handlePopState = () => {
+      if (gameMode !== null) {
+        setSelectedTime(null)
+        setGameMode(null)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [gameMode])
+
   useEffect(() => {
     const signupParam = searchParams.get('signup')
     const codeParam = searchParams.get('code')
@@ -381,8 +398,8 @@ export default function SetupPage() {
               <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
             </div>
 
-            <div className="text-center">
-              <button onClick={() => setGameMode(null)} className="text-gray-500 hover:text-gray-400 text-sm transition-colors">
+            <div className="text-center mt-4">
+              <button onClick={() => setGameMode(null)} className="text-gray-400 hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2">
                 {'\u2190'} Back to game mode
               </button>
             </div>

@@ -191,6 +191,7 @@ export class DuelGame {
         this._channel.subscribe(async (s) => {
           if (s === 'SUBSCRIBED') {
             await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
+            this._syncFromDB()
           }
         })
         return
@@ -231,6 +232,32 @@ export class DuelGame {
       }
     }, 1000)
     this.notify()
+  }
+
+  private async _syncFromDB() {
+    try {
+      const { data } = await supabase
+        .from('duel_games')
+        .select('fen, move_history, white_time_remaining, black_time_remaining, status')
+        .eq('room_id', this._roomId)
+        .single()
+
+      if (!data || data.status !== 'playing') return
+
+      if (data.fen) {
+        this.chess.load(data.fen)
+      }
+
+      if (data.white_time_remaining !== undefined && data.white_time_remaining !== null) {
+        this._matchTimeRemaining = this._team === 'WHITE' ? data.white_time_remaining : (data.black_time_remaining ?? this._matchTimeRemaining)
+      }
+
+      if (Array.isArray(data.move_history) && data.move_history.length > 0) {
+        this._moveHistory = data.move_history
+      }
+
+      this.notify()
+    } catch {}
   }
 
   private async handleTimeout() {
