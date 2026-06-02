@@ -172,13 +172,9 @@ export class GameState {
   }
 
   isBothPendingLocked(): boolean {
-    const currentPlayers = this._currentTeam === Team.WHITE
-      ? this.whitePlayers
-      : this.blackPlayers
-    return currentPlayers.every(p => {
-      const pending = this.pendingMoves.get(p)
-      return pending && pending.locked
-    })
+    const lockedCount = Array.from(this.pendingMoves.values())
+      .filter(m => m.locked).length
+    return lockedCount >= 2
   }
 
   getPendingMoves(): { human: PendingMoveInfo | null; teammate: PendingMoveInfo | null } {

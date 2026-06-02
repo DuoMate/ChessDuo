@@ -30,6 +30,7 @@ import { BottomNav } from './BottomNav'
 import { TeamIndicator } from './TeamIndicator'
 import { User, Volume2, VolumeX } from 'lucide-react'
 import { MobileStatusBar } from './MobileStatusBar'
+import { GameOnOverlay } from './GameOnOverlay'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
@@ -195,6 +196,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [leavingConfirmed, setLeavingConfirmed] = useState(false)
   const alreadyReassessedRef = useRef(false)
   const matchTimerStartedRef = useRef(false)
+  const [showGameOn, setShowGameOn] = useState(false)
   const joinRoomCalledRef = useRef(false)
 
   // Update sound engine when setting changes
@@ -644,17 +646,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     setGameState(prev => ({ ...prev, matchTimerActive: false }))
   }, [isOnline])
 
-  // Start match timer when game transitions to PLAYING — all clients
+  // Show Game On overlay when game transitions to PLAYING, then start timer
   useEffect(() => {
-    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current) {
-      startMatchTimer()
-      matchTimerStartedRef.current = true
+    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current && !showGameOn) {
+      setShowGameOn(true)
     }
     if (gameState.status === GameStatus.GAME_OVER && matchTimerStartedRef.current) {
       stopMatchTimer()
       matchTimerStartedRef.current = false
     }
-  }, [gameState.status, startMatchTimer, stopMatchTimer])
+  }, [gameState.status, showGameOn, stopMatchTimer])
+
+  const handleGameOnComplete = useCallback(() => {
+    setShowGameOn(false)
+    if (!matchTimerStartedRef.current) {
+      startMatchTimer()
+      matchTimerStartedRef.current = true
+    }
+  }, [startMatchTimer])
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -1321,6 +1330,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           showSignupPrompt={isGuest}
           onSignup={() => router.push('/?signup=1')}
         />
+      )}
+
+      {showGameOn && (
+        <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
         
       <div className="w-full">
