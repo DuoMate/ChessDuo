@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
 import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
@@ -27,6 +28,7 @@ interface DuelGameProps {
 
 export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave }: DuelGameProps) {
   const isMobile = useIsMobile()
+  const router = useRouter()
   const settings = useSettings()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
@@ -288,7 +290,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       {status === 'game_over' && winner && gameResult && (
         <GameOverModal
           winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
-          onPlayAgain={() => window.location.reload()}
+          onPlayAgain={() => router.push('/')}
           gameResult={gameResult}
         />
       )}

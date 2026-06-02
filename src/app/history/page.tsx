@@ -50,7 +50,7 @@ export default function HistoryPage() {
         <h1 className="text-2xl font-bold mb-4">Match History</h1>
         <p className="text-gray-400 mb-4">Sign in to view your match history</p>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push('/')}
           className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
         >
           Go Back
@@ -65,7 +65,7 @@ export default function HistoryPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Match History</h1>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/')}
             className="text-gray-400 hover:text-yellow-400 text-sm"
           >
             ← Back
