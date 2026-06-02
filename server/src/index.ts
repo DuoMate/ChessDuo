@@ -28,17 +28,42 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok' })
 })
 
-app.post('/evaluate-moves', async (req: Request, res: Response) => {
+app.post('/evaluate', async (req: Request, res: Response) => {
   try {
-    const { fen, moves } = req.body
+    const { fen } = req.body
 
-    if (!fen || !moves?.length) {
-      return res.status(400).json({ error: 'Invalid request' })
+    if (!fen) {
+      return res.status(400).json({ error: 'Invalid request: fen required' })
     }
 
     const start = Date.now()
 
-    const results = await engine.evaluateMoves(fen, moves)
+    const results = await engine.evaluateMoves(fen, [])
+    const bestScore = results.length > 0 ? Math.max(...results.map(r => r.score)) : 0
+
+    res.json({
+      fen,
+      score: bestScore,
+      depth: 0,
+      timeMs: Date.now() - start
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'engine_failed' })
+  }
+})
+
+app.post('/evaluate-moves', async (req: Request, res: Response) => {
+  try {
+    const { fen, moves } = req.body
+
+    if (!fen) {
+      return res.status(400).json({ error: 'Invalid request: fen required' })
+    }
+
+    const start = Date.now()
+
+    const results = await engine.evaluateMoves(fen, moves || [])
 
     res.json({
       success: true,

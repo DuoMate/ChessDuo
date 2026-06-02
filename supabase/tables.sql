@@ -140,6 +140,9 @@ ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
 -- Add challenge_id to completed_games
 ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS challenge_id UUID REFERENCES challenge_links(id) ON DELETE SET NULL;
 
+-- Ensure move_comparisons column exists (may be missing if table created before schema update)
+ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS move_comparisons JSONB DEFAULT '[]'::jsonb;
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
 CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);

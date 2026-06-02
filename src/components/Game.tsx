@@ -351,9 +351,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (ts) setTurnState(ts)
 
       // Skip if state hasn't meaningfully changed (prevents re-render loops)
-      // Include pending moves size so new/locked pending moves trigger re-renders
+      // Exclude matchTimeRemaining from key — it changes every second
+      // and would defeat the guard, causing unnecessary re-renders.
+      // Timer updates are handled separately by tickMatchTimer.
       const pendingSize = (g as any).getAllPendingMoves?.()?.size ?? 0
-      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${g.getMatchTimeRemaining()}:${pendingSize}`
+      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${pendingSize}`
       if (stateKey === lastOnlineStateRef.current) return
       lastOnlineStateRef.current = stateKey
 

@@ -744,11 +744,7 @@ export class OnlineGame {
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
-    this.notifyStateChange()
     this.turnState = 'selecting'
-    // Fire a second notifyStateChange so the UI callback picks up
-    // turnState='selecting' (runs before stateKey guard so turnState
-    // always updates in React even if stateKey hasn't changed)
     this.notifyStateChange()
     console.log('[STATE] Turn resolved, reset to selecting')
   }

@@ -73,7 +73,7 @@ async function trySyncToServer(userId: string, revealsUsed: number) {
   try {
     const { error } = await supabase
       .from('profiles')
-      .upsert({ id: userId, insights_reveals_used: revealsUsed }, { onConflict: 'id' })
+      .upsert({ id: userId, insights_reveals_used: revealsUsed, username: 'Player' }, { onConflict: 'id' })
 
     if (error) {
       console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
@@ -98,7 +98,7 @@ export function setUserPremium(userId: string, isPremium: boolean) {
   try {
     supabase
       .from('profiles')
-      .upsert({ id: userId, is_premium: isPremium }, { onConflict: 'id' })
+      .upsert({ id: userId, is_premium: isPremium, username: 'Player' }, { onConflict: 'id' })
   } catch {}
 }
 
