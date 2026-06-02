@@ -620,6 +620,13 @@ export class OnlineGame {
     }, 1000)
   }
 
+  stopEngineTimer(): void {
+    if (this._timerCountdownInterval) {
+      clearInterval(this._timerCountdownInterval)
+      this._timerCountdownInterval = null
+    }
+  }
+
   private stopMatchTimer(): void {
     if (this._timerCountdownInterval) {
       clearInterval(this._timerCountdownInterval)

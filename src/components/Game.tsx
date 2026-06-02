@@ -664,6 +664,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (g) {
         g.setMatchTimeRemaining(timeLimit)
         g.setMatchTimerActive(true)
+        if (isOnline && (g as any).stopEngineTimer) {
+          (g as any).stopEngineTimer()
+        }
       }
       startMatchTimer()
       matchTimerStartedRef.current = true
