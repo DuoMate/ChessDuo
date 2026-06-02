@@ -124,60 +124,81 @@ export class DuelGame {
       config: { presence: { key: this._playerId } }
     })
 
-    this._channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = this._channel?.presenceState() || {}
-        const playersOnline = Object.keys(state)
-        for (const pid of playersOnline) {
-          const isWhite = pid === this._roomId + '_WHITE'
-          if (isWhite) {
-            this._whitePlayer = { id: pid, team: 'WHITE', connected: true }
-          } else {
-            this._blackPlayer = { id: pid, team: 'BLACK', connected: true }
+    const tag = this._team === 'WHITE' ? '_WHITE' : '_BLACK'
+    const roomId = this._roomId
+
+    const setupListeners = () => {
+      this._channel!
+        .on('presence', { event: 'sync' }, () => {
+          const state = this._channel?.presenceState() || {}
+          const playersOnline = Object.keys(state)
+          for (const pid of playersOnline) {
+            const isWhite = pid === roomId + '_WHITE'
+            if (isWhite) {
+              this._whitePlayer = { id: pid, team: 'WHITE', connected: true }
+            } else {
+              this._blackPlayer = { id: pid, team: 'BLACK', connected: true }
+            }
           }
-        }
-        if (playersOnline.length >= 2 && this._status === 'waiting') {
-          this.startGame()
-        }
-        this.notify()
-      })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        for (const p of newPresences) {
-          const pid = p.player_id as string
-          if (pid.endsWith('_WHITE')) {
-            this._whitePlayer = { id: pid, team: 'WHITE', connected: true }
-          } else {
-            this._blackPlayer = { id: pid, team: 'BLACK', connected: true }
+          if (playersOnline.length >= 2 && this._status === 'waiting') {
+            this.startGame()
           }
-        }
-        if (this._whitePlayer && this._blackPlayer && this._status === 'waiting') {
-          this.startGame()
-        }
-        this.notify()
-      })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        for (const p of leftPresences) {
-          const pid = p.player_id as string
-          if (pid === this._whitePlayer?.id) {
-            this._whitePlayer = { ...this._whitePlayer, connected: false }
-          } else if (pid === this._blackPlayer?.id) {
-            this._blackPlayer = { ...this._blackPlayer, connected: false }
+          this.notify()
+        })
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+          for (const p of newPresences) {
+            const pid = p.player_id as string
+            if (pid.endsWith('_WHITE')) {
+              this._whitePlayer = { id: pid, team: 'WHITE', connected: true }
+            } else {
+              this._blackPlayer = { id: pid, team: 'BLACK', connected: true }
+            }
           }
-        }
-        this.notify()
-      })
-      .on('broadcast', { event: 'duel_move' }, ({ payload }) => {
-        this.handleOpponentMove(payload as { move: string })
-      })
-      .on('broadcast', { event: 'duel_game_over' }, ({ payload }) => {
-        this.handleGameOverBroadcast(payload as { winner: string; result: string; reason: string })
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          const tag = this._team === 'WHITE' ? '_WHITE' : '_BLACK'
-          await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
-        }
-      })
+          if (this._whitePlayer && this._blackPlayer && this._status === 'waiting') {
+            this.startGame()
+          }
+          this.notify()
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          for (const p of leftPresences) {
+            const pid = p.player_id as string
+            if (pid === this._whitePlayer?.id) {
+              this._whitePlayer = { ...this._whitePlayer, connected: false }
+            } else if (pid === this._blackPlayer?.id) {
+              this._blackPlayer = { ...this._blackPlayer, connected: false }
+            }
+          }
+          this.notify()
+        })
+        .on('broadcast', { event: 'duel_move' }, ({ payload }) => {
+          this.handleOpponentMove(payload as { move: string })
+        })
+        .on('broadcast', { event: 'duel_game_over' }, ({ payload }) => {
+          this.handleGameOverBroadcast(payload as { winner: string; result: string; reason: string })
+        })
+    }
+
+    setupListeners()
+
+    this._channel.subscribe(async (status) => {
+      if (status === 'CHANNEL_ERROR') {
+        console.warn('[DUEL] Channel error — reconnecting...')
+        try { supabase.removeChannel(this._channel!) } catch {}
+        this._channel = supabase.channel(`room:${roomId}`, {
+          config: { presence: { key: this._playerId } }
+        })
+        setupListeners()
+        this._channel.subscribe(async (s) => {
+          if (s === 'SUBSCRIBED') {
+            await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
+          }
+        })
+        return
+      }
+      if (status === 'SUBSCRIBED') {
+        await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
+      }
+    })
 
     this._pollingInterval = setInterval(async () => {
       if (this._status !== 'waiting') {
