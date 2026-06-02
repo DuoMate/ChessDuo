@@ -268,62 +268,78 @@ export class OnlineGame {
       }
     })
 
-    this._channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = this._channel?.presenceState() || {}
-        const playersOnline = Object.keys(state)
-        console.log('[ONLINE] Presence sync:', playersOnline)
-        
-        // If both players are online, ensure game is ready
-        // If game hasn't started, start it. If already started, just ensure state is synced.
-        if (playersOnline.length >= 2) {
-          if (this._status !== GameStatus.PLAYING) {
-            this.startGameWhenReady()
-          } else {
-            // Game already started (we joined late) - sync state from database
-            this.syncGameState()
+    const setupListeners = () => {
+      this._channel!
+        .on('presence', { event: 'sync' }, () => {
+          const state = this._channel?.presenceState() || {}
+          const playersOnline = Object.keys(state)
+          console.log('[ONLINE] Presence sync:', playersOnline)
+          
+          if (playersOnline.length >= 2) {
+            if (this._status !== GameStatus.PLAYING) {
+              this.startGameWhenReady()
+            } else {
+              this.syncGameState()
+            }
           }
-        }
-      })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        console.log('[ONLINE] Player joined:', newPresences)
-        const state = this._channel?.presenceState() || {}
-        if (Object.keys(state).length >= 2 && this._status !== GameStatus.PLAYING) {
-          this.startGameWhenReady()
-        }
-      })
-      .on('broadcast', { event: 'player_move' }, ({ payload }) => {
-        this.handleTeammateMove(payload as MovePayload)
-      })
-      .on('broadcast', { event: 'player_locked' }, ({ payload }) => {
-        this.handleTeammateLocked(payload as LockedPayload)
-      })
-      .on('broadcast', { event: 'turn_resolved' }, ({ payload }) => {
-        this.handleTurnResolved(payload as ResolvedPayload)
-      })
-      .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
-        this.handleTimerSync(payload as { matchTimeRemaining: number })
-      })
-      .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
-        this.handleMatchAbandoned(payload as { playerId: string })
-      })
-      .on('broadcast', { event: 'match_timeout' }, ({ payload }) => {
-        this.handleMatchTimeoutBroadcast(payload as { result: string; reason: string })
-      })
-      .subscribe(async (status: string) => {
-        console.log('[ONLINE] Channel subscription status:', status)
-        if (status === 'CHANNEL_ERROR') {
-          console.warn('[ONLINE] Channel error — reconnection attempt in progress')
-        }
-        if (status === 'SUBSCRIBED') {
-          await this._channel?.track({
-            player_id: playerId,
-            team: team,
-            status: 'connected'
-          })
-          console.log('[ONLINE] Player tracked:', playerId)
-        }
-      })
+        })
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+          console.log('[ONLINE] Player joined:', newPresences)
+          const state = this._channel?.presenceState() || {}
+          if (Object.keys(state).length >= 2 && this._status !== GameStatus.PLAYING) {
+            this.startGameWhenReady()
+          }
+        })
+        .on('broadcast', { event: 'player_move' }, ({ payload }) => {
+          this.handleTeammateMove(payload as MovePayload)
+        })
+        .on('broadcast', { event: 'player_locked' }, ({ payload }) => {
+          this.handleTeammateLocked(payload as LockedPayload)
+        })
+        .on('broadcast', { event: 'turn_resolved' }, ({ payload }) => {
+          this.handleTurnResolved(payload as ResolvedPayload)
+        })
+        .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+          this.handleTimerSync(payload as { matchTimeRemaining: number })
+        })
+        .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
+          this.handleMatchAbandoned(payload as { playerId: string })
+        })
+        .on('broadcast', { event: 'match_timeout' }, ({ payload }) => {
+          this.handleMatchTimeoutBroadcast(payload as { result: string; reason: string })
+        })
+    }
+
+    setupListeners()
+
+    this._channel.subscribe(async (status: string) => {
+      console.log('[ONLINE] Channel subscription status:', status)
+      if (status === 'CHANNEL_ERROR') {
+        console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
+        try {
+          supabase.removeChannel(this._channel!)
+        } catch {}
+        this._channel = supabase.channel(`room:${room.id}`, {
+          config: { presence: { key: playerId } }
+        })
+        setupListeners()
+        this._channel.subscribe(async (s: string) => {
+          if (s === 'SUBSCRIBED') {
+            await this._channel?.track({ player_id: playerId, team, status: 'connected' })
+            console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
+          }
+        })
+        return
+      }
+      if (status === 'SUBSCRIBED') {
+        await this._channel?.track({
+          player_id: playerId,
+          team: team,
+          status: 'connected'
+        })
+        console.log('[ONLINE] Player tracked:', playerId)
+      }
+    })
 
     // Fallback polling: if presence events are delayed, poll room_players directly.
     // Only counts REAL human players (bots are never in room_players table).
