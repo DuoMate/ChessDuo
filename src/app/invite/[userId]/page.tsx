@@ -64,11 +64,11 @@ export default function InvitePage() {
 
   if (isSelf) {
     return (
-      <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
         <div className="max-w-sm w-full text-center space-y-4">
           <div className="text-5xl mb-2">⚠️</div>
           <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
-          <p className="text-gray-400">You cannot add yourself as a friend</p>
+          <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
           <button onClick={() => router.push('/')} className="mt-4 px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
             Go Home
           </button>
@@ -79,20 +79,20 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f1119] text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
       </div>
     )
   }
 
   if (!playerId) {
     return (
-      <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
         <div className="max-w-sm w-full text-center space-y-6">
           <div className="text-5xl mb-2">👥</div>
-          <h1 className="text-2xl font-bold text-white">Friend Invite</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
           {targetUsername && (
-            <p className="text-gray-400">{targetUsername} invited you to be friends</p>
+            <p className="text-gray-500 dark:text-gray-400">{targetUsername} invited you to be friends</p>
           )}
           <p className="text-gray-500 text-sm">Sign in to accept this friend request</p>
 
@@ -103,17 +103,17 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
       <div className="max-w-sm w-full text-center space-y-4">
         {status === 'loading' && (
-          <p className="text-gray-400">Sending friend request...</p>
+          <p className="text-gray-500 dark:text-gray-400">Sending friend request...</p>
         )}
 
         {status === 'already_friends' && (
           <>
             <div className="text-5xl mb-2">🤝</div>
             <h1 className="text-2xl font-bold text-yellow-400">Already Friends!</h1>
-            <p className="text-gray-400">
+            <p className="text-gray-500 dark:text-gray-400">
               {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
             </p>
             <button
@@ -129,7 +129,7 @@ export default function InvitePage() {
           <>
             <div className="text-5xl mb-2">✉️</div>
             <h1 className="text-2xl font-bold text-yellow-400">Friend Request Sent!</h1>
-            <p className="text-gray-400">
+            <p className="text-gray-500 dark:text-gray-400">
               {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
             </p>
             <p className="text-gray-500 text-sm">They will see your request in their friends panel</p>
@@ -146,10 +146,10 @@ export default function InvitePage() {
           <>
             <div className="text-5xl mb-2">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Something went wrong</h1>
-            <p className="text-gray-400">{errorMsg || 'Could not send friend request'}</p>
+            <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
             <button
               onClick={() => router.push('/')}
-              className="mt-4 px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-colors"
+              className="mt-4 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Go Home
             </button>

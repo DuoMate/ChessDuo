@@ -96,10 +96,10 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
       className="w-full max-w-[500px] mx-auto"
     >
       <div className="flex justify-center mb-2">
-        <div className="w-10 md:w-12 h-1 md:h-1.5 bg-gray-600 rounded-full" />
+        <div className="w-10 md:w-12 h-1 md:h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
       </div>
 
-      <div className="bg-game-surface/95 backdrop-blur-sm rounded-2xl p-3 md:p-4 shadow-2xl border border-white/10">
+      <div className="bg-game-surface/95 backdrop-blur-sm rounded-2xl p-3 md:p-4 shadow-2xl border border-gray-200 dark:border-white/10">
 
         {/* Header */}
         <div className="text-center mb-3 md:mb-4">
@@ -158,12 +158,12 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl border ${
               humanWon && !isSync ? 'bg-emerald-500/10 border-emerald-500/40'
                 : !humanWon && !isSync ? 'bg-rose-500/10 border-rose-500/40'
-                : 'bg-white/5 border-white/10'
+                : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
             }`}
           >
             <div className="flex flex-col min-w-0 flex-1 mr-2">
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-                <span className="text-white font-bold text-xs md:text-sm">You</span>
+                <span className="text-gray-900 dark:text-white font-bold text-xs md:text-sm">You</span>
                 {humanWon && !isSync && (
                   <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
@@ -175,7 +175,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
-                <span className="text-gray-300 text-xs md:text-sm font-mono">{yourMove}</span>
+                <span className="text-gray-600 dark:text-gray-300 text-xs md:text-sm font-mono">{yourMove}</span>
                 <span
                   className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
                   style={{ backgroundColor: `${yourCategory.color}30`, color: yourCategory.color }}
@@ -193,7 +193,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   style={{
@@ -222,12 +222,12 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             className={`flex items-center justify-between p-2.5 md:p-3 rounded-xl border ${
               !humanWon && !isSync ? 'bg-emerald-500/10 border-emerald-500/40'
                 : humanWon && !isSync ? 'bg-rose-500/10 border-rose-500/40'
-                : 'bg-white/5 border-white/10'
+                : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
             }`}
           >
             <div className="flex flex-col min-w-0 flex-1 mr-2">
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-                <span className="text-gray-300 font-bold text-xs md:text-sm">Teammate</span>
+                <span className="text-gray-600 dark:text-gray-300 font-bold text-xs md:text-sm">Teammate</span>
                 {!humanWon && !isSync && (
                   <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
@@ -239,7 +239,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
-                <span className="text-gray-300 text-xs md:text-sm font-mono">{teammateMove}</span>
+                <span className="text-gray-600 dark:text-gray-300 text-xs md:text-sm font-mono">{teammateMove}</span>
                 <span
                   className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
                   style={{ backgroundColor: `${teammateCategory.color}30`, color: teammateCategory.color }}
@@ -257,7 +257,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
               )}
             </div>
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="w-12 md:w-20 h-2 md:h-2.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full rounded-full"
                   style={{
@@ -306,14 +306,14 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
-            className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-white/10"
+            className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200 dark:border-white/10"
           >
             <p className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">Other good moves:</p>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
               {alternatives.map((alt, i) => (
                 <span
                   key={i}
-                  className="text-[10px] md:text-xs bg-white/5 text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
+                  className="text-[10px] md:text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
                 >
                   {alt.move.replace(/(\w{2})(\w{2})/, '$1\u2192$2')}
                   <span className={alt.score >= 0 ? 'text-emerald-400 ml-1' : 'text-rose-400 ml-1'}>
@@ -330,14 +330,14 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="mt-2 md:mt-4 pt-2 md:pt-3 border-t border-white/10"
+          className="mt-2 md:mt-4 pt-2 md:pt-3 border-t border-gray-200 dark:border-white/10"
         >
           <div className="flex justify-between text-xs md:text-sm">
             <span className="text-gray-500">Centipawn Loss</span>
-            <span className="text-gray-400">
-              You: <span className={yourLoss <= teammateLoss ? 'text-green-400' : 'text-gray-300'}>{yourLoss}cp</span>
+            <span className="text-gray-500 dark:text-gray-400">
+              You: <span className={yourLoss <= teammateLoss ? 'text-green-400' : 'text-gray-600 dark:text-gray-300'}>{yourLoss}cp</span>
               {' \u00B7 '}
-              Teammate: <span className={teammateLoss <= yourLoss ? 'text-green-400' : 'text-gray-300'}>{teammateLoss}cp</span>
+              Teammate: <span className={teammateLoss <= yourLoss ? 'text-green-400' : 'text-gray-600 dark:text-gray-300'}>{teammateLoss}cp</span>
             </span>
           </div>
         </motion.div>

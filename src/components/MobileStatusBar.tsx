@@ -40,20 +40,20 @@ export function MobileStatusBar({
     <motion.div 
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-40 bg-gray-800/95 backdrop-blur-sm border-b border-gray-700"
+      className="fixed top-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="flex items-center justify-between px-4 py-2">
         {/* White Team */}
-        <div className={`flex flex-col items-start ${currentTurn === Team.WHITE ? 'bg-white/20 rounded-lg px-3 py-1' : ''}`}>
-          <span className="text-white font-semibold text-sm">White</span>
-          <span className="text-gray-400 text-xs">
+        <div className={`flex flex-col items-start ${currentTurn === Team.WHITE ? 'bg-gray-200 dark:bg-white/20 rounded-lg px-3 py-1' : ''}`}>
+          <span className="text-gray-900 dark:text-white font-semibold text-sm">White</span>
+          <span className="text-gray-500 dark:text-gray-400 text-xs">
             {formatCaptured(whiteCaptured)}
           </span>
         </div>
 
         {/* Timer */}
-        <div className={`flex items-center gap-2 ${timerActive ? 'text-yellow-400' : 'text-gray-500'}`}>
+        <div className={`flex items-center gap-2 ${timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
           <motion.span
             animate={timerActive ? { scale: [1, 1.1, 1] } : {}}
             transition={{ repeat: Infinity, duration: 1 }}
@@ -64,9 +64,9 @@ export function MobileStatusBar({
         </div>
 
         {/* Black Team */}
-        <div className={`flex flex-col items-end ${currentTurn === Team.BLACK ? 'bg-white/20 rounded-lg px-3 py-1' : ''}`}>
-          <span className="text-gray-300 font-semibold text-sm">Black</span>
-          <span className="text-gray-400 text-xs">
+        <div className={`flex flex-col items-end ${currentTurn === Team.BLACK ? 'bg-gray-200 dark:bg-white/20 rounded-lg px-3 py-1' : ''}`}>
+          <span className="text-gray-700 dark:text-gray-300 font-semibold text-sm">Black</span>
+          <span className="text-gray-500 dark:text-gray-400 text-xs">
             {formatCaptured(blackCaptured)}
           </span>
         </div>

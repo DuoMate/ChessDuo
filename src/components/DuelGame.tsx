@@ -147,14 +147,14 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             <Swords size={48} className="text-amber-400" />
           </div>
           <h1 className="text-2xl font-bold text-amber-400">Waiting for opponent...</h1>
-          <p className="text-gray-400">Share this room code with your friend:</p>
-          <div className="bg-gray-800 border border-white/10 rounded-xl p-4">
-            <p className="text-3xl font-bold tracking-widest font-mono text-amber-400">{roomCode}</p>
+          <p className="text-gray-500 dark:text-gray-400">Share this room code with your friend:</p>
+          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
+            <p className="text-3xl font-bold tracking-widest font-mono text-amber-500 dark:text-amber-400">{roomCode}</p>
           </div>
           <p className="text-gray-500 text-sm">The game starts when your opponent joins</p>
           <button
             onClick={onLeave}
-            className="mt-4 px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-colors min-h-[44px]"
+            className="mt-4 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors min-h-[44px]"
           >
             Cancel
           </button>
@@ -164,7 +164,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   }
 
   return (
-    <div className={`min-h-screen bg-[#0f1119] text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
       {isMobile && (
         <MobileStatusBar
           currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
@@ -186,16 +186,16 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         </div>
 
         <div className="flex items-center justify-between mb-2">
-          <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-white' : 'text-gray-500'}`}>
-            {team === 'WHITE' ? 'You (White)' : 'Opponent (White)'}
-          </span>
-          <MatchTimer seconds={matchTime} isActive={timerActive} totalSeconds={timeLimit} />
-          <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-white' : 'text-gray-500'}`}>
-            {team === 'BLACK' ? 'You (Black)' : 'Opponent (Black)'}
+            <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+              {team === 'WHITE' ? 'You (White)' : 'Opponent (White)'}
+            </span>
+            <MatchTimer seconds={matchTime} isActive={timerActive} totalSeconds={timeLimit} />
+            <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+              {team === 'BLACK' ? 'You (Black)' : 'Opponent (Black)'}
           </span>
         </div>
 
-        <div className="relative w-full max-w-[94vw] md:max-w-[500px] mx-auto aspect-square mb-2">
+        <div className="relative w-full max-w-[94vw] md:max-w-[500px] mx-auto aspect-square mb-2 lg:max-h-[calc(100vh-240px)]">
           <div className="absolute inset-0">
             {isMobile ? (
               <MobileChessBoard
@@ -262,9 +262,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <div className="text-center">
             {status === 'playing' && (
               isMyTurn ? (
-                <span className="text-amber-400 font-semibold">Your turn</span>
+                <span className="text-amber-500 dark:text-amber-400 font-semibold">Your turn</span>
               ) : (
-                <span className="text-gray-400">Waiting for opponent...</span>
+                <span className="text-gray-500 dark:text-gray-400">Waiting for opponent...</span>
               )
             )}
           </div>
@@ -274,11 +274,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         </div>
 
         {moveHistory.length > 0 && (
-          <div className="mt-3 max-h-24 overflow-y-auto bg-white/[0.02] rounded-lg border border-white/5 p-2">
+          <div className="mt-3 max-h-24 overflow-y-auto bg-gray-100/50 dark:bg-white/[0.02] rounded-lg border border-gray-200 dark:border-white/5 p-2">
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {moveHistory.map((move, i) => (
-                <span key={i} className="text-xs text-gray-400">
-                  <span className="text-gray-500">{Math.floor(i / 2) + 1}.{i % 2 === 0 ? '' : '..'}</span>
+                <span key={i} className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-gray-400 dark:text-gray-500">{Math.floor(i / 2) + 1}.{i % 2 === 0 ? '' : '..'}</span>
                   {move}
                 </span>
               ))}
@@ -303,6 +303,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         <ResignConfirmModal
           onConfirm={() => {
             setShowResignConfirm(false)
+            gameRef.current?.resign()
             onLeave()
           }}
           onCancel={() => setShowResignConfirm(false)}

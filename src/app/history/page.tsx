@@ -38,7 +38,7 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
         <p className="text-gray-400">Loading...</p>
       </div>
     )
@@ -46,7 +46,7 @@ export default function HistoryPage() {
 
   if (!playerId) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold mb-4">Match History</h1>
         <p className="text-gray-400 mb-4">Sign in to view your match history</p>
         <button
@@ -60,7 +60,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Match History</h1>
@@ -78,11 +78,11 @@ export default function HistoryPage() {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-3 gap-3 mb-6"
           >
-            <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-center border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-400">Games</p>
               <p className="text-xl font-bold">{playerStats.totalGames}</p>
             </div>
-            <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-center border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-400">W/L/D</p>
               <p className="text-xl font-bold">
                 <span className="text-green-400">{playerStats.wins}</span>
@@ -92,7 +92,7 @@ export default function HistoryPage() {
                 <span className="text-yellow-400">{playerStats.draws}</span>
               </p>
             </div>
-            <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
+            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-center border border-gray-200 dark:border-gray-700">
               <p className="text-xs text-gray-400">Avg Sync</p>
               <p className="text-xl font-bold">{Math.round(playerStats.avgSyncRate * 100)}%</p>
             </div>
@@ -118,7 +118,7 @@ export default function HistoryPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-600 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">

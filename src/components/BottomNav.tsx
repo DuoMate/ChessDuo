@@ -25,7 +25,7 @@ export function BottomNav({
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed bottom-0 left-0 right-0 z-30 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700 safe-area-bottom"
+      className="fixed bottom-0 left-0 right-0 z-30 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 safe-area-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around h-14 px-2">
@@ -80,7 +80,7 @@ function NavButton({
           ? 'text-gray-600 cursor-not-allowed'
           : active
             ? 'text-yellow-400 bg-yellow-400/10'
-            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
       }`}
     >
       <span className="text-lg leading-none">{icon}</span>

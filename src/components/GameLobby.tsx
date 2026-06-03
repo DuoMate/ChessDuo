@@ -72,7 +72,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
   const phase = isLoading ? 'joining' : 'waiting'
 
   return (
-    <div className="min-h-screen bg-[#0f1119] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="flex flex-col items-center">
 
@@ -92,7 +92,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                 <div ref={dot2Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
                 <div ref={dot3Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
               </div>
-              <p className={`text-gray-400 ${statusTextSize} mb-4`}>Connecting to room...</p>
+              <p className={`text-gray-500 dark:text-gray-400 ${statusTextSize} mb-4`}>Connecting to room...</p>
             </>
           )}
 
@@ -109,11 +109,11 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                   <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
                     <User size={10} className="text-amber-400" />
                   </div>
-                  <span className="text-sm text-gray-300">You</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">You</span>
                 </div>
                 <div className="text-gray-600 text-xs font-mono">{'\u2192'}</div>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center">
                     <Loader2 size={10} className="text-gray-500 animate-spin" />
                   </div>
                   <span className="text-sm text-gray-500">Waiting for teammate</span>
@@ -129,13 +129,13 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                 Send this code to your friend to join
               </p>
 
-              <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center mb-3">
+              <div className="w-full px-5 py-4 bg-gray-50 dark:bg-white/[0.04] rounded-2xl border border-gray-200 dark:border-white/8 text-center mb-3">
                 <p className={`font-mono font-bold text-amber-400 tracking-[0.2em] select-all mb-3 ${codeTextSize}`}>
                   {roomCode}
                 </p>
                 <button
                   onClick={handleCopyCode}
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-amber-400 transition-colors min-h-[44px] px-4 rounded-lg hover:bg-white/5"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-amber-400 transition-colors min-h-[44px] px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5"
                 >
                   {copied ? (
                     <>
@@ -160,7 +160,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                 Or share the invite link
               </p>
 
-              <div className="w-full px-5 py-4 bg-white/[0.04] rounded-2xl border border-white/8 text-center">
+              <div className="w-full px-5 py-4 bg-gray-50 dark:bg-white/[0.04] rounded-2xl border border-gray-200 dark:border-white/8 text-center">
                 <div className="flex gap-2">
                   <button
                     onClick={handleShare}
@@ -170,7 +170,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                   </button>
                   <button
                     onClick={handleCopyLink}
-                    className="min-h-[44px] min-w-[44px] rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center"
+                    className="min-h-[44px] min-w-[44px] rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center justify-center"
                     title={linkCopied ? 'Copied' : 'Copy link'}
                   >
                     {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}

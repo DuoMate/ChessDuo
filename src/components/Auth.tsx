@@ -139,8 +139,8 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-yellow-400">
           ♟️ ChessDuo
         </h1>
@@ -160,12 +160,12 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
         </button>
 
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 border-t border-gray-600"/>
+          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"/>
           <span className="text-gray-500 text-xs">or</span>
-          <div className="flex-1 border-t border-gray-600"/>
+          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"/>
         </div>
 
-        <h2 className="text-xl text-center mb-6 text-white">
+        <h2 className="text-xl text-center mb-6 text-gray-900 dark:text-white">
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
 
@@ -173,7 +173,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
           <div className="space-y-4">
             <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 text-center">
               <p className="text-green-400 font-bold text-lg mb-2">✓ Check your email</p>
-              <p className="text-gray-300 text-sm">
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
                 We sent a verification link to <strong>{email}</strong>.
                 Click the link in the email to complete your registration.
               </p>
@@ -196,7 +196,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none"
+                 className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
               />
             )}
 
@@ -235,18 +235,18 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
         <div className="mt-4 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setVerificationSent(false); setError(null) }}
-            className="text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-500 dark:text-gray-400 hover:text-yellow-400 text-sm"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
           </button>
         </div>
 
-        <div className="mt-6 border-t border-gray-700 pt-6">
+        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
           <p className="text-center text-gray-500 text-sm mb-3">Or play as guest</p>
           <button
             onClick={handleAnonymous}
             disabled={loading}
-            className="w-full p-3 bg-gray-700 text-white font-bold rounded hover:bg-gray-600 disabled:opacity-50"
+            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
           >
             Play as Guest
           </button>

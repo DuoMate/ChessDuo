@@ -32,13 +32,13 @@ export default function PremiumPage() {
   }, [playerId])
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       <div className="max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">✨ Premium</h1>
           <button
             onClick={() => router.push('/')}
-            className="text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-500 dark:text-gray-400 hover:text-yellow-400 text-sm"
           >
             ← Home
           </button>
@@ -48,16 +48,16 @@ export default function PremiumPage() {
           <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6 text-center">
             <div className="text-4xl mb-3">✅</div>
             <h2 className="text-xl font-bold text-green-400 mb-2">You're Premium!</h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               Enjoy unlimited move insights, AI analysis, and all premium features.
             </p>
           </div>
         ) : (
           <>
-            <div className="bg-gray-800 border border-yellow-400/30 rounded-lg p-6 text-center mb-6">
+            <div className="bg-white dark:bg-gray-800 border border-yellow-400/30 rounded-lg p-6 text-center mb-6">
               <div className="text-3xl mb-3">♟️</div>
               <h2 className="text-xl font-bold text-yellow-400 mb-2">ChessDuo Premium</h2>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
                 Take your game to the next level with AI-powered analysis.
               </p>
 
@@ -96,10 +96,10 @@ export default function PremiumPage() {
 
 function FeatureRow({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
-    <div className="flex items-start gap-3 text-left p-2 rounded-lg bg-gray-700/50">
+    <div className="flex items-start gap-3 text-left p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50">
       <span className="text-lg flex-shrink-0">{icon}</span>
       <div>
-        <p className="text-white text-sm font-medium">{title}</p>
+        <p className="text-gray-900 dark:text-white text-sm font-medium">{title}</p>
         <p className="text-gray-500 text-xs">{desc}</p>
       </div>
     </div>

@@ -20,7 +20,7 @@ import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
 import { EvaluatingLoader } from './EvaluatingLoader'
-import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setSoundEngineEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
@@ -185,7 +185,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     isLoading: true
   })
 
-  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [soundEnabled, setSoundEnabledState] = useState(true)
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
   const [turnState, setTurnState] = useState<string>('selecting')
   const prevTurnRef = useRef<Team | null>(null)
@@ -206,11 +206,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
 
-  // Update sound engine when setting changes
-
-  // Update sound engine when setting changes
   useEffect(() => {
-    setSoundEnabled(soundEnabled)
+    setSoundEngineEnabled(soundEnabled)
   }, [soundEnabled])
 
   useEffect(() => {
@@ -478,6 +475,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         fenAfter: g.board.fen(),
       }
       moveHistoryRef.current = [...moveHistoryRef.current, entry]
+    }
+
+    // Populate move history from saved data after page reload recovery
+    if (isOnline && moveHistoryRef.current.length === 0 && g.status === GameStatus.PLAYING) {
+      const savedMoves = (g as any).savedMoveHistory as Array<{ team: string; move: string }> | undefined
+      if (savedMoves && savedMoves.length > 0) {
+        const entries: MoveEntry[] = savedMoves.map((sm, i) => ({
+          turn: i + 1,
+          team: sm.team as 'WHITE' | 'BLACK',
+          winningMove: sm.move,
+          winningMoveUci: sm.move,
+          shadowMove: null,
+          shadowMoveUci: '',
+          isSync: true,
+          player1Accuracy: 0,
+          player2Accuracy: 0,
+          fenAfter: '',
+        }))
+        moveHistoryRef.current = entries
+      }
     }
 
     if (!alreadyReassessedRef.current && bot && moveHistoryRef.current.length > 0) {
@@ -1000,23 +1017,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             // Set highlight squares after resolve (comparison now available)
             const comparison = g.lastMoveComparison
             if (comparison) {
-              const isValidSquare = (sq: string): sq is string => 
-                !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
               const highlightSquares: HighlightSquares = {}
               const isPlayer1 = playerId === (g as any).player1Id
-              
+
               if (comparison.winningMove && comparison.player1Move) {
-                const wf = comparison.winningMove.substring(0, 2)
-                const wt = comparison.winningMove.substring(2, 4)
-                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
+                const lastMove = g.lastMove
+                if (lastMove?.from) highlightSquares.winnerFrom = lastMove.from
+                if (lastMove?.to) highlightSquares.winnerTo = lastMove.to
                 if (!comparison.isSync) {
-                  const loserMove = comparison.winningMove === comparison.player1Move ? comparison.player2Move : comparison.player1Move
-                  const lf = loserMove?.substring(0, 2)
-                  const lt = loserMove?.substring(2, 4)
-                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
-                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
+                  if (comparison.loserFrom && comparison.loserFrom.length === 2) highlightSquares.loserFrom = comparison.loserFrom
+                  if (comparison.loserTo && comparison.loserTo.length === 2) highlightSquares.loserTo = comparison.loserTo
                 }
               }
               
@@ -1313,7 +1324,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Show loading state for offline mode while game initializes
   if (gameState.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <GameLoading 
           message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
           roomCode={roomCode}
@@ -1324,7 +1335,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className={`min-h-screen bg-gray-900 text-white p-2 md:p-4 overflow-x-hidden ${isMobile ? 'pb-16 pt-14' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2 md:p-4 overflow-x-hidden ${isMobile ? 'pb-16 pt-14' : ''}`}>
       {isMobile && (
         <MobileStatusBar
           currentTurn={gameState.currentTurn}
@@ -1363,6 +1374,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <ResignConfirmModal
           onConfirm={() => {
             setShowResignConfirm(false)
+            if (isOnline && onlineGameRef.current) {
+              onlineGameRef.current.abandonMatch()
+            }
             router.push('/')
           }}
           onCancel={() => setShowResignConfirm(false)}
@@ -1376,17 +1390,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setOverlayMode('profile')}
-                  className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                  className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
                   title="Profile"
                 >
-                  <User size={18} className="text-gray-300" />
+                  <User size={18} className="text-gray-600 dark:text-gray-300" />
                 </button>
                 <button
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center"
+                  onClick={() => setSoundEnabledState(!soundEnabled)}
+                  className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
                   title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
                 >
-                  {soundEnabled ? <Volume2 size={18} className="text-gray-300" /> : <VolumeX size={18} className="text-gray-400" />}
+                  {soundEnabled ? <Volume2 size={18} className="text-gray-600 dark:text-gray-300" /> : <VolumeX size={18} className="text-gray-400" />}
                 </button>
               </div>
           )}
@@ -1406,83 +1420,86 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
-        <div className="flex flex-col items-center gap-2 mb-3">
-          <MatchTimer
-            seconds={gameState.matchTimeRemaining}
-            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-            totalSeconds={timeLimit}
-          />
-          <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative">
-            {isMobile ? (
-              <MobileChessBoard
-                fen={playbackFen || gameState.fen}
-                onMove={handleMove}
-                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                orientation="white"
-                lastMove={gameState.lastMove}
-                pendingOverlay={gameState.pendingOverlay}
-                myPendingOverlay={gameState.myPendingOverlay}
-                highlightSquares={gameState.highlightSquares}
-                onAnimationComplete={handleResolutionComplete}
-              />
-            ) : (
-              <ChessBoard 
-                fen={playbackFen || gameState.fen}
-                onMove={handleMove}
-                enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                orientation="white"
-                lastMove={gameState.lastMove}
-                pendingOverlay={gameState.pendingOverlay}
-                myPendingOverlay={gameState.myPendingOverlay}
-                highlightSquares={gameState.highlightSquares}
-                onAnimationComplete={handleResolutionComplete}
-              />
-            )}
-          </div>
-          {/* Captured pieces - compact row below board */}
-          <div className="flex items-center justify-center gap-4 md:gap-8 mt-1 w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-gray-500">White:</span>
-              <CapturedPiecesRow pieces={gameState.capturedByWhite} />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-gray-500">Black:</span>
-              <CapturedPiecesRow pieces={gameState.capturedByBlack} />
-            </div>
-          </div>
-        </div>
-
-        {/* Accuracy Panel - below board as bottom sheet */}
-        <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] mx-auto mb-4">
-          {(() => {
-            const g = isOnline ? onlineGameRef.current : gameRef.current
-            return (
-              <>
-                {!accuracyComparison && turnState === 'resolving' && (
-                  <EvaluatingLoader />
-                )}
-                <AccuracyBottomSheet 
-                  comparison={accuracyComparison}
-                  isVisible={!!accuracyComparison}
-                  playerId={playerId}
-                  player1Id={isOnline ? (g as any)?.player1Id : null}
+        <div className="flex flex-col lg:flex-row lg:items-start justify-center gap-3 lg:gap-6 mb-3">
+          {/* Left: Board column */}
+          <div className="flex flex-col items-center gap-2">
+            <MatchTimer
+              seconds={gameState.matchTimeRemaining}
+              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+              totalSeconds={timeLimit}
+            />
+            <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative lg:max-h-[calc(100vh-220px)]">
+              {isMobile ? (
+                <MobileChessBoard
+                  fen={playbackFen || gameState.fen}
+                  onMove={handleMove}
+                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                  orientation="white"
+                  lastMove={gameState.lastMove}
+                  pendingOverlay={gameState.pendingOverlay}
+                  myPendingOverlay={gameState.myPendingOverlay}
+                  highlightSquares={gameState.highlightSquares}
+                  onAnimationComplete={handleResolutionComplete}
                 />
-              </>
-            )
-          })()}
+              ) : (
+                <ChessBoard 
+                  fen={playbackFen || gameState.fen}
+                  onMove={handleMove}
+                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                  orientation="white"
+                  lastMove={gameState.lastMove}
+                  pendingOverlay={gameState.pendingOverlay}
+                  myPendingOverlay={gameState.myPendingOverlay}
+                  highlightSquares={gameState.highlightSquares}
+                  onAnimationComplete={handleResolutionComplete}
+                />
+              )}
+            </div>
+            {/* Captured pieces - compact row below board */}
+            <div className="flex items-center justify-center gap-4 md:gap-8 mt-1 w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">White:</span>
+                <CapturedPiecesRow pieces={gameState.capturedByWhite} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">Black:</span>
+                <CapturedPiecesRow pieces={gameState.capturedByBlack} />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Accuracy Panel - on desktop appears beside board, on mobile below */}
+          <div className="w-full max-w-[94vw] md:max-w-[600px] lg:w-72 lg:max-w-none lg:pt-9 mx-auto lg:mx-0">
+            {(() => {
+              const g = isOnline ? onlineGameRef.current : gameRef.current
+              return (
+                <>
+                  {!accuracyComparison && turnState === 'resolving' && (
+                    <EvaluatingLoader />
+                  )}
+                  <AccuracyBottomSheet 
+                    comparison={accuracyComparison}
+                    isVisible={!!accuracyComparison}
+                    playerId={playerId}
+                    player1Id={isOnline ? (g as any)?.player1Id : null}
+                  />
+                </>
+              )
+            })()}
+          </div>
         </div>
 
         <div className="mt-4 text-center">
           {gameState.selectedMove && (
-            <p className="text-green-400">Selected: {gameState.selectedMove}</p>
-          )}
-          {gameState.status === GameStatus.GAME_OVER && (
-            <p className="text-xl font-bold text-yellow-400">
-              {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
-            </p>
-          )}
-          {gameState.isBotThinking && (
-            <p className="text-blue-400">Bot is making a move...</p>
+              <p className="text-green-600 dark:text-green-400">Selected: {gameState.selectedMove}</p>
+            )}
+            {gameState.status === GameStatus.GAME_OVER && (
+              <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
+              </p>
+            )}
+            {gameState.isBotThinking && (
+              <p className="text-blue-600 dark:text-blue-400">Bot is making a move...</p>
           )}
         </div>
 
@@ -1548,7 +1565,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             }
             setOverlayMode(overlayMode === 'history' ? 'none' : 'history')
           }}
-          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
+          onSoundToggle={() => setSoundEnabledState(!soundEnabled)}
           soundEnabled={soundEnabled}
         />
       )}

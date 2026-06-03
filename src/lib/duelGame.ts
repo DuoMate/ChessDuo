@@ -402,6 +402,15 @@ export class DuelGame {
     }
   }
 
+  resign() {
+    if (this._status !== 'playing') return
+    this.stopTimer()
+    const opponentWins = this._team === 'WHITE' ? 'black' : 'white'
+    const result = opponentWins === 'white' ? 'White wins by resignation' : 'Black wins by resignation'
+    this.setGameOver(opponentWins, result, 'resignation')
+    this.broadcastGameOver(opponentWins, result, 'resignation')
+  }
+
   destroy() {
     this.stopTimer()
     if (this._pollingInterval) clearInterval(this._pollingInterval)

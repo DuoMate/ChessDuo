@@ -1,33 +1,51 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-page-bg: #f8f9fa;
+  --color-page-fg: #171717;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f0f1f3;
+  --color-border: #e2e4e8;
+  --color-muted: #6b7280;
+  --color-muted-bg: #e5e7eb;
+  --color-accent-bg: #f3f4f6;
+  --color-input-bg: #ffffff;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+}
+
+.dark {
+  --color-page-bg: #0f1119;
+  --color-page-fg: #ffffff;
+  --color-surface: #16191f;
+  --color-surface-hover: #1f2230;
+  --color-border: #2a2d35;
+  --color-muted: #9ca3af;
+  --color-muted-bg: #1f2230;
+  --color-accent-bg: rgba(255, 255, 255, 0.05);
+  --color-input-bg: #1f2230;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--color-page-bg);
+  --color-foreground: var(--color-page-fg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-game: var(--font-chakra-petch), var(--font-geist-sans);
   --color-game-gold: #fbbf24;
   --color-game-winner: #34d399;
   --color-game-loser: #f43f5e;
-  --color-game-bg: #0a0a0a;
-  --color-game-card: #16191f;
-  --color-game-surface: #1f2230;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-game-bg: var(--color-page-bg);
+  --color-game-card: var(--color-surface);
+  --color-game-surface: var(--color-muted-bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-page-bg);
+  color: var(--color-page-fg);
   font-family: Arial, Helvetica, sans-serif;
 }

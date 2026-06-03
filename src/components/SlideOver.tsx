@@ -31,14 +31,14 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="fixed inset-x-0 top-0 bottom-0 z-50 bg-gray-900 overflow-y-auto shadow-2xl"
+              className="fixed inset-x-0 top-0 bottom-0 z-50 bg-gray-50 dark:bg-gray-900 overflow-y-auto shadow-2xl"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between z-10">
-                <h2 className="text-lg font-bold text-white">{title}</h2>
+              <div className="sticky top-0 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-10">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
                 <button
                   onClick={onClose}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   ✕
                 </button>
@@ -67,14 +67,14 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-gray-900 border-l border-gray-700 z-50 overflow-y-auto shadow-2xl"
+            className="fixed top-0 right-0 bottom-0 w-full max-w-sm bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 z-50 overflow-y-auto shadow-2xl"
           >
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">{title}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-white text-lg transition-colors"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-lg transition-colors"
                 >
                   ✕
                 </button>

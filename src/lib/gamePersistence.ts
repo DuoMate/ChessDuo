@@ -71,7 +71,7 @@ export async function loadGameState(roomId: string): Promise<{
       .maybeSingle()
 
     if (error || !data) {
-      console.log('[PERSIST] No saved state for room:', roomId, error?.message || '')
+      console.debug('[PERSIST] No saved state for room:', roomId, error?.message || '')
       return null
     }
 

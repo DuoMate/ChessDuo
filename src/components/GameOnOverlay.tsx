@@ -27,7 +27,7 @@ export function GameOnOverlay({ onComplete }: GameOnOverlayProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[60] pointer-events-none"
+        className="fixed inset-0 bg-white/95 dark:bg-gray-900/95 flex items-center justify-center z-[60] pointer-events-none"
       >
         <motion.div
           initial={{ scale: 0.3, opacity: 0 }}

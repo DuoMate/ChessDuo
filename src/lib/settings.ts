@@ -4,14 +4,18 @@ import { useState, useCallback } from 'react'
 
 const SETTINGS_KEY = 'chessduo_settings'
 
+export type Theme = 'dark' | 'light'
+
 interface Settings {
   autoQueen: boolean
   lowTimeWarning: boolean
+  theme: Theme
 }
 
 const DEFAULTS: Settings = {
   autoQueen: false,
   lowTimeWarning: true,
+  theme: 'dark',
 }
 
 function loadSettings(): Settings {
@@ -22,6 +26,7 @@ function loadSettings(): Settings {
       return {
         autoQueen: parsed.autoQueen ?? DEFAULTS.autoQueen,
         lowTimeWarning: parsed.lowTimeWarning ?? DEFAULTS.lowTimeWarning,
+        theme: parsed.theme === 'light' ? 'light' : (parsed.theme === 'dark' ? 'dark' : DEFAULTS.theme),
       }
     }
   } catch {}
@@ -44,6 +49,10 @@ export function setSetting<K extends keyof Settings>(key: K, value: Settings[K])
   saveSettings(settings)
 }
 
+export function getTheme(): Theme {
+  return loadSettings().theme
+}
+
 export function useSettings() {
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
 
@@ -63,10 +72,21 @@ export function useSettings() {
     })
   }, [])
 
+  const setTheme = useCallback((value: Theme) => {
+    setSettingsState(prev => {
+      const updated = { ...prev, theme: value }
+      saveSettings(updated)
+      document.documentElement.classList.toggle('dark', value === 'dark')
+      return updated
+    })
+  }, [])
+
   return {
     autoQueen: settings.autoQueen,
     lowTimeWarning: settings.lowTimeWarning,
+    theme: settings.theme,
     setAutoQueen,
     setLowTimeWarning,
+    setTheme,
   }
 }

@@ -113,7 +113,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
   }, [status, playerId, onRoomJoined])
 
   return (
-    <div className="min-h-screen bg-[#0f1119] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] flex flex-col items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -132,7 +132,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
               transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
               className="w-10 h-10 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full mx-auto"
             />
-            <p className="text-gray-400 text-sm">Searching for opponent...</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Searching for opponent...</p>
           </div>
         )}
 
@@ -145,7 +145,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             >
               {"\u265E"}
             </motion.div>
-            <p className="text-gray-400 text-sm">Creating room...</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Creating room...</p>
           </div>
         )}
 
@@ -167,11 +167,11 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="text-gray-400 text-sm"
+              className="text-gray-500 dark:text-gray-400 text-sm"
             >
               Waiting for opponent to join...
             </motion.div>
-            <div className="bg-white/[0.04] border border-white/8 rounded-2xl p-5">
+            <div className="bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-2xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Share this code</p>
               <p className="text-3xl font-bold text-yellow-400 tracking-[0.15em] font-mono select-all">
                 {roomCode}
@@ -188,7 +188,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             <p className="text-red-400 text-sm">{error || 'Something went wrong'}</p>
             <button
               onClick={() => setRetries(r => r + 1)}
-              className="px-6 py-2 bg-white/[0.05] border border-white/10 rounded-xl text-gray-300 text-sm hover:bg-white/[0.08] transition-colors"
+              className="px-6 py-2 bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/10 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
             >
               Try Again
             </button>
@@ -197,7 +197,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
 
         <button
           onClick={onCancel}
-          className="mt-8 text-gray-500 hover:text-gray-400 text-sm transition-colors"
+          className="mt-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm transition-colors"
         >
           {"\u2190"} Cancel
         </button>

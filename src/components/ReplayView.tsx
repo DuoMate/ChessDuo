@@ -43,7 +43,7 @@ export function ReplayView({ game }: ReplayViewProps) {
   const currentFen = playbackFen || (moves.length > 0 ? moves[moves.length - 1].fenAfter : initialFen)
 
   return (
-    <div className={`min-h-screen bg-gray-900 text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
       <div className="max-w-xl mx-auto w-full">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -52,7 +52,7 @@ export function ReplayView({ game }: ReplayViewProps) {
         >
           <button
             onClick={() => router.push('/history')}
-            className="flex items-center gap-1.5 text-gray-400 hover:text-yellow-400 text-sm transition-colors"
+            className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-yellow-400 text-sm transition-colors"
           >
             <ArrowLeft size={16} /> Back
           </button>
@@ -65,7 +65,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gray-800 rounded-xl p-4 mb-4 border border-gray-700"
+          className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-4 border border-gray-200 dark:border-gray-700"
         >
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">
@@ -75,7 +75,7 @@ export function ReplayView({ game }: ReplayViewProps) {
               {game.winner === 'WHITE' ? 'White Wins' : game.winner === 'DRAW' ? 'Draw' : 'Black Wins'}
             </span>
           </div>
-          <p className="text-sm text-gray-400 mb-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             {game.game_result || (game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over')}
           </p>
           <div className="flex items-center gap-4 text-xs text-gray-500">

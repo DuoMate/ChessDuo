@@ -47,6 +47,8 @@ export class OnlineGame {
   private _playerId: string = ''
   private _player1Id: string = '' // Track which player ID is player1 for this client
   private _team: 'WHITE' | 'BLACK' = 'WHITE'
+  private _savedMoveHistory: Array<{ team: string; move: string }> = []
+
   private _players: Map<string, RoomPlayer> = new Map()
   private _channel: RealtimeChannel | null = null
   private initialized = false
@@ -70,6 +72,10 @@ export class OnlineGame {
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
   private onAbandonCallback: (() => void) | null = null
+
+  get savedMoveHistory(): Array<{ team: string; move: string }> {
+    return this._savedMoveHistory
+  }
 
   get highlightSquares() {
     return null
@@ -346,9 +352,14 @@ export class OnlineGame {
 
     // Fallback polling: if presence events are delayed, poll room_players directly.
     // Only counts REAL human players (bots are never in room_players table).
-    const fallbackInterval = setInterval(async () => {
+    // Exponential backoff: 3s → 5s → 8s → 12s → 12s... (max 60s budget)
+    const MAX_BUDGET = 60000
+    let elapsed = 0
+    let delay = 3000
+
+    const runPoll = async () => {
       if (this._status === GameStatus.PLAYING) {
-        clearInterval(fallbackInterval)
+        this._pollingInterval = null
         return
       }
 
@@ -356,7 +367,7 @@ export class OnlineGame {
       if (existing) {
         console.log('[ONLINE] Polling fallback: game already exists, syncing...')
         await this.syncGameState()
-        clearInterval(fallbackInterval)
+        this._pollingInterval = null
         return
       }
 
@@ -364,20 +375,26 @@ export class OnlineGame {
         .from('room_players')
         .select('*')
         .eq('room_id', this._room!.id)
-      if (error) return
-      const humanPlayers = (data || []).filter(p => !p.player_id.startsWith('bot_'))
-      if (humanPlayers.length >= 2) {
-        console.log('[ONLINE] Polling fallback: game start triggered from DB')
-        this.startGameWhenReady()
-        clearInterval(fallbackInterval)
+      if (!error) {
+        const humanPlayers = (data || []).filter(p => !p.player_id.startsWith('bot_'))
+        if (humanPlayers.length >= 2) {
+          console.log('[ONLINE] Polling fallback: game start triggered from DB')
+          await this.startGameWhenReady()
+          this._pollingInterval = null
+          return
+        }
       }
-    }, 3000)
 
-    setTimeout(() => {
-      clearInterval(fallbackInterval)
-    }, 60000)
+      elapsed += delay
+      if (elapsed < MAX_BUDGET) {
+        delay = Math.min(Math.floor(delay * 1.6), 12000)
+        const timerId = setTimeout(runPoll, delay)
+        this._pollingInterval = timerId as unknown as ReturnType<typeof setInterval>
+      }
+    }
 
-    this._pollingInterval = fallbackInterval
+    const timerId = setTimeout(runPoll, delay)
+    this._pollingInterval = timerId as unknown as ReturnType<typeof setInterval>
 
     this._status = GameStatus.READY
     this.notifyStateChange()
@@ -397,15 +414,9 @@ export class OnlineGame {
     }
     
     this.starting = true
-    
-    // Create fresh game state BEFORE any async operations — broadcast events
-    // (handleTeammateMove/handleTeammateLocked) can arrive during Supabase queries
-    // and must survive into the active game state
-    this.gameState = new GameState(this._timeLimitSeconds)
-    this._status = GameStatus.READY
-    
+
     try {
-      // Check if a game already exists for this room (e.g., started by another player)
+      // Check if a game already exists for this room BEFORE creating fresh state
       // Retry up to 3 times with 1s delay — handles transient RLS/auth propagation delays
       let existing = null
       if (this._room) {
@@ -419,11 +430,19 @@ export class OnlineGame {
         }
         if (existing) {
           console.log('[ONLINE] Game already exists in DB, syncing as late joiner (status:', existing.status, ')')
+          // Create game state for sync to operate on — needed before broadcast
+          // event handlers (handleTeammateMove etc.) can fire during DB queries
+          this.gameState = new GameState(this._timeLimitSeconds)
+          this._status = GameStatus.READY
           this.starting = false
           await this.syncGameState()
           return
         }
       }
+
+      // No existing game — create fresh state and start new game
+      this.gameState = new GameState(this._timeLimitSeconds)
+      this._status = GameStatus.READY
 
       // Query room_players to get all human players in the room
       const { data: players } = await supabase
@@ -575,6 +594,11 @@ export class OnlineGame {
           
           if (saved.moveHistory.length > 0) {
             console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
+            // Store move history for UI reference (move playback panel)
+            this._savedMoveHistory = saved.moveHistory.map((m: any) => ({
+              team: m.team,
+              move: m.move
+            }))
             try {
               this.gameState.resetBoard(saved.fen)
             } catch (e) {
@@ -587,6 +611,16 @@ export class OnlineGame {
                   console.warn('[ONLINE] Could not replay move:', entry.move, me)
                 }
               }
+            }
+            // Restore last move from board history
+            try {
+              const verboseHistory = this.gameState.board.history({ verbose: true }) as any[]
+              if (verboseHistory.length > 0) {
+                const lastHistoryMove = verboseHistory[verboseHistory.length - 1]
+                this._lastMove = { from: lastHistoryMove.from, to: lastHistoryMove.to }
+              }
+            } catch {
+              this._lastMove = null
             }
           } else {
             this.gameState.startMatch()

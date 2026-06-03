@@ -34,10 +34,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-900 rounded-xl">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 dark:bg-gray-900 rounded-xl">
           <div className="text-red-400 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
-          <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 text-center max-w-md">
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
           <button
@@ -60,14 +60,14 @@ export function GameErrorFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] p-8">
       <div className="text-red-400 text-6xl mb-6">♟️</div>
-      <h2 className="text-2xl font-bold text-white mb-3">Game Error</h2>
-      <p className="text-gray-400 mb-6 text-center max-w-lg">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Game Error</h2>
+      <p className="text-gray-500 dark:text-gray-400 mb-6 text-center max-w-lg">
         There was an error loading the game. Please try refreshing the page.
       </p>
       <div className="flex gap-4">
         <button
           onClick={() => router.push('/')}
-          className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+          className="px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
         >
           Go Home
         </button>

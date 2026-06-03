@@ -45,6 +45,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=JSON.parse(localStorage.getItem('chessduo_settings')||'{}').theme;if(!t||t==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}`,
+          }}
+        />
         <link rel="stylesheet" href="/cm-chessboard/chessboard.css" />
         <link rel="stylesheet" href="/cm-chessboard/extensions/markers/markers.css" />
       </head>
