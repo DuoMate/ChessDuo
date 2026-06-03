@@ -278,6 +278,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [isGuest, setIsGuest] = useState(false)
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
 
+  // Detect guest status unconditionally — for signup prompt after game ends
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsGuest(session.user.is_anonymous ?? false)
+      }
+    })
+  }, [])
+
   useEffect(() => {
     if (playerIdFromProps || autoJoinAttempted) return
 
@@ -586,6 +595,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline])
 
   const handleMatchTimeout = useCallback(async (g: any) => {
+    if (g.status === GameStatus.GAME_OVER) return
     try {
       const evaluator = g.getEvaluator()
       if (!evaluator) {
@@ -1353,9 +1363,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
           onPlayAgain={() => {
+            stopMatchTimer()
+            if (isOnline && onlineGameRef.current) {
+              onlineGameRef.current.leaveRoom()
+            }
             router.push('/')
           }}
-          onClose={() => router.push('/')}
+          onClose={() => {
+            stopMatchTimer()
+            if (isOnline && onlineGameRef.current) {
+              onlineGameRef.current.leaveRoom()
+            }
+            router.push('/')
+          }}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
           showSignupPrompt={isGuest}

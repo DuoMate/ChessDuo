@@ -14,6 +14,8 @@ import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
+import { useSettings } from '@/lib/settings'
+import { Sun, Moon } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -687,6 +689,7 @@ function TopBar({
   onFriends: () => void
   onSignIn: () => void
 }) {
+  const { theme, setTheme } = useSettings()
   return (
     <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-[#0f1119]/80 backdrop-blur-md border-b border-white/5">
       <button
@@ -701,9 +704,18 @@ function TopBar({
         <span className="text-sm">{playerId ? 'Profile' : 'Sign In'}</span>
       </button>
 
-      <div className="flex items-center gap-1 text-yellow-400/60 text-sm font-bold">
-        <span>♔</span>
-        <span className="hidden sm:inline">ChessDuo</span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05]"
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+        <div className="flex items-center gap-1 text-yellow-400/60 text-sm font-bold">
+          <span>♔</span>
+          <span className="hidden sm:inline">ChessDuo</span>
+        </div>
       </div>
 
       {playerId ? (

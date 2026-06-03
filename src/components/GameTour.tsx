@@ -27,8 +27,8 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    title: "Your Teammate's Move",
-    caption: "Both White players choose moves independently. Your teammate moved the pawn in front of their knight from c2 to c4.",
+    title: 'Your teammate picked a move',
+    caption: "Both of you are White. You each choose independently — you don't see each other's choice yet. Here, your teammate moved the knight's pawn from c2 to c4.",
     pendingOverlay: { from: 'c2', to: 'c4', piece: 'p', color: 'white', showTeammateLabel: true },
     myPendingOverlay: null,
     highlightSquares: null,
@@ -36,8 +36,8 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     fen: 'rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 1',
-    title: 'Your Move',
-    caption: "Now you pick a move. You chose to push your king's pawn forward two squares from e2 to e4.",
+    title: 'You picked a move',
+    caption: "Now it's your turn. You chose the king's pawn, pushing it two squares from e2 to e4. Two different moves. Two different strategies. Only one will play.",
     pendingOverlay: null,
     myPendingOverlay: { from: 'e2', to: 'e4', piece: 'p', color: 'white' },
     highlightSquares: null,
@@ -45,9 +45,9 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     fen: 'rnbqkbnr/pppppppp/8/8/2P1P3/8/PP1P1PPP/RNBQKBNR w KQkq - 0 1',
-    title: 'Engine Evaluates',
-    caption: "The engine compares both moves. Your e4 scored higher — your move wins this turn. The stronger move plays on the board. Sync rates and accuracy determine the winner!",
-    pendingOverlay: null,
+    title: 'The engine decides',
+    caption: "The engine evaluates both moves blind. Yours (+0.32) beat your teammate's (+0.15). So your move plays on the board, and the losing piece gets pulled back. This is how every turn works.",
+    pendingOverlay: { from: 'c2', to: 'c4', piece: 'p', color: 'white' },
     myPendingOverlay: null,
     highlightSquares: { winnerFrom: 'e2', winnerTo: 'e4', loserFrom: 'c2', loserTo: 'c4' },
     lastMove: { from: 'e2', to: 'e4' },

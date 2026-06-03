@@ -652,4 +652,45 @@ describe('OnlineGame', () => {
       expect(otherId).toBe('')
     })
   })
+
+  describe('Broadcast handler guards against re-entry after game over', () => {
+    it('handleMatchAbandoned does not change result when game already over', () => {
+      const game = new OnlineGame(600)
+      ;(game as any)._status = GameStatus.GAME_OVER
+      ;(game as any)._gameOverResult = 'White wins by checkmate'
+      ;(game as any)._gameOverReason = 'checkmate'
+
+      ;(game as any).handleMatchAbandoned({ playerId: 'test' })
+
+      expect((game as any)._gameOverResult).toBe('White wins by checkmate')
+      expect((game as any)._gameOverReason).toBe('checkmate')
+    })
+
+    it('handleMatchTimeoutBroadcast does not overwrite result when game already over', () => {
+      const game = new OnlineGame(600)
+      ;(game as any)._status = GameStatus.GAME_OVER
+      ;(game as any)._gameOverResult = 'Black wins by checkmate'
+      ;(game as any)._gameOverReason = 'checkmate'
+
+      ;(game as any).handleMatchTimeoutBroadcast({ result: 'Draw by timeout', reason: 'timeout' })
+
+      expect((game as any)._gameOverResult).toBe('Black wins by checkmate')
+      expect((game as any)._gameOverReason).toBe('checkmate')
+    })
+
+    it('handleTurnResolved does not process when game already over', () => {
+      const game = new OnlineGame(600)
+      ;(game as any)._status = GameStatus.GAME_OVER
+      const callCount = (game as any)._notifyCallCount || 0
+
+      ;(game as any).handleTurnResolved({
+        winningTeam: 'WHITE',
+        winningMove: 'e4',
+        comparison: null,
+      })
+
+      // Status should remain GAME_OVER
+      expect((game as any)._status).toBe(GameStatus.GAME_OVER)
+    })
+  })
 })

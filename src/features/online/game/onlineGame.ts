@@ -723,6 +723,7 @@ export class OnlineGame {
   }
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
+    if (this._status === GameStatus.GAME_OVER) return
     console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,
@@ -1273,6 +1274,7 @@ export class OnlineGame {
   }
 
   private handleMatchAbandoned(_payload: { playerId: string }): void {
+    if (this._status === GameStatus.GAME_OVER) return
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = 'Match abandoned by teammate'
     this._gameOverReason = 'abandoned'
@@ -1288,6 +1290,7 @@ export class OnlineGame {
   }
 
   private handleMatchTimeoutBroadcast(payload: { result: string; reason: string }): void {
+    if (this._status === GameStatus.GAME_OVER) return
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = payload.result
     this._gameOverReason = payload.reason

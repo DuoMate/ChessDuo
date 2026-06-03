@@ -17,6 +17,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
 import { saveCompletedGame } from '@/lib/matchHistory'
+import { supabase } from '@/lib/supabase'
 
 interface DuelGameProps {
   roomId: string
@@ -33,6 +34,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const settings = useSettings()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
@@ -50,6 +52,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.is_anonymous) setIsGuest(true)
+    })
+  }, [])
 
   useEffect(() => {
     const game = new DuelGameEngine(roomId, playerId, team, timeLimit)
@@ -330,6 +338,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onPlayAgain={() => router.push('/')}
           onClose={() => router.push('/')}
           gameResult={gameResult}
+          showSignupPrompt={isGuest}
+          onSignup={() => router.push('/?signup=1')}
         />
       )}
 
