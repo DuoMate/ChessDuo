@@ -154,7 +154,7 @@ export default function ChallengePage() {
         {status === 'joining' && (
           <>
             <div className="animate-spin text-4xl mb-2">⚡</div>
-            <h1 className="text-xl font-bold text-yellow-400">Joining Challenge...</h1>
+            <h1 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Joining Challenge...</h1>
             <p className="text-gray-500 dark:text-gray-400">Setting up the game room</p>
           </>
         )}

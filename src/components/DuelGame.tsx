@@ -175,7 +175,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   if (waiting) {
     return (
-      <div className={`min-h-screen bg-[#0f1119] text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
+      <div className={`min-h-screen bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
         {isMobile && (
           <MobileStatusBar
             currentTurn={Team.WHITE}
@@ -187,9 +187,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         )}
         <div className="text-center space-y-4">
           <div className="animate-pulse text-5xl flex justify-center">
-            <Swords size={48} className="text-amber-400" />
+            <Swords size={48} className="text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-2xl font-bold text-amber-400">Waiting for opponent...</h1>
+          <h1 className="text-2xl font-bold text-amber-600 dark:text-amber-400">Waiting for opponent...</h1>
           <p className="text-gray-500 dark:text-gray-400">Share this room code with your friend:</p>
           <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
             <p className="text-3xl font-bold tracking-widest font-mono text-amber-500 dark:text-amber-400">{roomCode}</p>
@@ -220,7 +220,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       <div className="max-w-xl mx-auto w-full">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold flex items-center gap-1.5">
-            <Swords size={18} className="text-amber-400" /> Duel
+            <Swords size={18} className="text-amber-600 dark:text-amber-400" /> Duel
           </h1>
           <GameMenu
             onResign={() => setShowResignConfirm(true)}
@@ -271,7 +271,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               exit={{ opacity: 0, y: -10 }}
               className="text-center mb-2"
             >
-              <span className={`text-sm font-semibold ${moveAccuracy !== null ? 'text-yellow-400' : 'text-gray-400'}`}>
+              <span className={`text-sm font-semibold ${moveAccuracy !== null ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400'}`}>
                 {moveAccuracy !== null ? `Your move: ${moveAccuracy}% accuracy` : `Opponent move: ${opponentAccuracy}% accuracy`}
               </span>
             </motion.div>
@@ -280,16 +280,16 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
         {pendingPromotion && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-game-surface p-6 rounded-lg border border-white/10">
-              <h3 className="text-xl font-bold text-white mb-4 text-center">Promote Pawn</h3>
+            <div className="bg-game-surface p-6 rounded-lg border border-gray-200 dark:border-white/10">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
               <div className="flex gap-3 md:gap-4">
                 {(['q', 'r', 'b', 'n'] as PromotionPiece[]).map((piece) => (
                   <button
                     key={piece}
                     onClick={() => handlePromotionSelect(piece)}
-                    className="flex flex-col items-center p-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors min-h-[44px] min-w-[44px]"
+                    className="flex flex-col items-center p-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg border border-gray-200 dark:border-white/10 transition-colors min-h-[44px] min-w-[44px]"
                   >
-                    <span className="text-3xl md:text-4xl text-white mb-1">
+                    <span className="text-3xl md:text-4xl text-gray-900 dark:text-white mb-1">
                       {{ q: '♛', r: '♜', b: '♝', n: '♞' }[piece]}
                     </span>
                     <span className="text-[10px] md:text-xs text-gray-400">

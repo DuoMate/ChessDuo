@@ -15,7 +15,7 @@ function DuelContent() {
 
   if (!roomId || !roomCode || !playerId || !team) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-4">
           <div className="text-5xl">⚠️</div>
           <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
@@ -43,7 +43,7 @@ function DuelContent() {
 export default function DuelPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
         <p className="text-gray-400">Loading...</p>
       </div>
     }>

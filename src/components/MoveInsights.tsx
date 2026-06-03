@@ -67,7 +67,7 @@ export function MoveInsights({
         <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">Engine best:</span>
-            <span className="text-white text-sm font-bold">{bestEngineMove}</span>
+            <span className="text-gray-900 dark:text-white text-sm font-bold">{bestEngineMove}</span>
           </div>
           {bestEngineScore != null && (
             <span className="text-xs text-blue-400">+{Math.round(bestEngineScore)}cp</span>
@@ -115,14 +115,14 @@ function InsightCard({
   return (
     <div className={`p-2 rounded-lg border text-sm ${isWinner ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
       <div className="flex items-center gap-1 mb-1">
-        <span className="text-white font-bold">{move}</span>
+        <span className="text-gray-900 dark:text-white font-bold">{move}</span>
         <span className="text-xs">{classification.icon}</span>
       </div>
       <p className="text-xs text-gray-400 leading-tight">{classification.description}</p>
       <div className="mt-1 flex items-center justify-between">
         <span className="text-xs text-gray-500">{accuracy.toFixed(0)}% · {loss.toFixed(0)}cp loss</span>
         {!isWinner && scoreDiff > 0 && (
-          <span className="text-xs text-yellow-400">{scoreDiff.toFixed(0)}cp worse</span>
+          <span className="text-xs text-yellow-600 dark:text-yellow-400">{scoreDiff.toFixed(0)}cp worse</span>
         )}
       </div>
     </div>

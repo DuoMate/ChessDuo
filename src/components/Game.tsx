@@ -110,7 +110,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-gray-800 p-6 rounded-lg border-2 border-yellow-500">
-        <h3 className="text-xl font-bold text-white mb-4 text-center">Promote Pawn</h3>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
         <div className="flex gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
@@ -118,7 +118,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
               onClick={() => onSelect(piece)}
               className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-500 transition-colors"
             >
-              <span className="text-4xl text-white mb-1">{symbol}</span>
+              <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-300">{label}</span>
             </button>
           ))}

@@ -38,7 +38,7 @@ export default function PremiumPage() {
           <h1 className="text-2xl font-bold">✨ Premium</h1>
           <button
             onClick={() => router.push('/')}
-            className="text-gray-500 dark:text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             ← Home
           </button>
@@ -56,7 +56,7 @@ export default function PremiumPage() {
           <>
             <div className="bg-white dark:bg-gray-800 border border-yellow-400/30 rounded-lg p-6 text-center mb-6">
               <div className="text-3xl mb-3">♟️</div>
-              <h2 className="text-xl font-bold text-yellow-400 mb-2">ChessDuo Premium</h2>
+              <h2 className="text-xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">ChessDuo Premium</h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
                 Take your game to the next level with AI-powered analysis.
               </p>
@@ -84,7 +84,7 @@ export default function PremiumPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/profile')}
-            className="text-gray-500 hover:text-yellow-400 text-sm"
+            className="text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             👤 Profile
           </button>

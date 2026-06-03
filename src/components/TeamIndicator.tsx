@@ -33,16 +33,16 @@ export function TeamIndicator({
         transition={{ duration: 0.4, ease: 'easeInOut' }}
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border min-w-0 ${
           whiteActive
-            ? 'bg-gradient-to-r from-white/15 to-white/5 border-amber-400/60'
-            : 'bg-white/5 border-white/10'
+            ? 'bg-gradient-to-r from-gray-200 dark:from-white/15 to-gray-100 dark:to-white/5 border-amber-400/60'
+            : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
         }`}
       >
-        <Crown size={20} className={whiteActive ? 'text-amber-400' : 'text-gray-500'} />
-        <span className="text-white font-semibold text-xs sm:text-sm truncate">{whiteLabel}</span>
+        <Crown size={20} className={whiteActive ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'} />
+        <span className="text-gray-900 dark:text-white font-semibold text-xs sm:text-sm truncate">{whiteLabel}</span>
       </motion.div>
 
       <div className="flex flex-col items-center">
-        <Swords size={16} className="text-amber-400/60" />
+        <Swords size={16} className="text-amber-600/60 dark:text-amber-400/60" />
         <span className="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mt-0.5">VS</span>
       </div>
 
@@ -56,8 +56,8 @@ export function TeamIndicator({
         transition={{ duration: 0.4, ease: 'easeInOut' }}
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border min-w-0 ${
           blackActive
-            ? 'bg-gradient-to-r from-gray-700 to-gray-600/50 border-gray-400/40'
-            : 'bg-white/5 border-white/10'
+            ? 'bg-gradient-to-r from-gray-700 to-gray-600/50 dark:from-gray-700 dark:to-gray-600/50 border-gray-400/40'
+            : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
         }`}
       >
         <Bot size={20} className={blackActive ? 'text-gray-300' : 'text-gray-500'} />
@@ -66,7 +66,7 @@ export function TeamIndicator({
 
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
         {isGameOver ? (
-          <span className="text-amber-400 font-semibold text-xs uppercase tracking-wider">
+          <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs uppercase tracking-wider">
             Game Over
           </span>
         ) : isBotThinking ? (

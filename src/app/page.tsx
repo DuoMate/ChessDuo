@@ -15,7 +15,6 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
 import { useSettings } from '@/lib/settings'
-import { Sun, Moon } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -369,7 +368,7 @@ export default function SetupPage() {
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
                 {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B' : '\u26A1'}
               </div>
-              <h1 className="text-2xl font-black text-yellow-400 tracking-wider">
+              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">
                 {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'ONLINE' : 'QUICK MATCH'}
               </h1>
               <p className="text-[10px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select game duration</p>
@@ -389,13 +388,13 @@ export default function SetupPage() {
                     autoCapitalize="characters"
                     autoCorrect="off"
                     disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-white/8 bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-600 focus:border-yellow-500/40 focus:outline-none focus:bg-white/[0.08] disabled:opacity-40 transition-all"
+                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:border-yellow-500/40 focus:outline-none focus:bg-gray-200 dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
                     style={{ minHeight: '44px' }}
                   />
                   <button
                     onClick={handleJoinByCode}
                     disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 text-yellow-400 font-semibold text-sm hover:bg-yellow-500/25 active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    className="px-5 py-3 rounded-xl bg-yellow-500/15 border border-yellow-500/25 text-yellow-600 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-500/25 active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
                     style={{ minHeight: '44px' }}
                   >
                     {joinLoading ? 'Joining...' : 'Join'}
@@ -420,13 +419,13 @@ export default function SetupPage() {
                   className={`p-5 rounded-xl border transition-all duration-200 text-center ${
                     selectedTime === option.seconds
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
+                      : 'border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/15 hover:bg-gray-200 dark:hover:bg-white/[0.05]'
                   } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   {creatingTime === option.seconds ? (
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-amber-400/80">Creating...</span>
+                      <span className="text-sm text-amber-600/80 dark:text-amber-400/80">Creating...</span>
                     </div>
                   ) : (
                     <>
@@ -463,7 +462,7 @@ export default function SetupPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col relative overflow-hidden">
         {topBar}
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 text-[340px] leading-none opacity-[0.025] text-yellow-400 select-none pointer-events-none">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 text-[340px] leading-none opacity-[0.025] text-yellow-600 dark:text-yellow-400 select-none pointer-events-none">
           {"\u265E"}
         </div>
         <div className="absolute inset-0 opacity-[0.015] pointer-events-none"
@@ -479,7 +478,7 @@ export default function SetupPage() {
           <div className="max-w-md w-full relative z-10 px-4">
             <div className="text-center mb-6">
               <div className="text-[42px] mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.2)]">{"\u2654"}</div>
-              <h1 className="text-[30px] font-black text-yellow-400 tracking-wider">ChessDuo</h1>
+              <h1 className="text-[30px] font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo</h1>
               <p className="text-[9px] text-gray-600 dark:text-gray-500 tracking-[0.2em] uppercase mt-0.5">Play Smarter, Together</p>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-500 dark:text-gray-400 text-center font-medium mb-4">Choose your game mode</p>
@@ -489,7 +488,7 @@ export default function SetupPage() {
               <ModeButton icon={'\u26A1'} title="Quick Match" desc="auto-find teammate" onClick={() => setGameMode('quickmatch')} />
             </div>
             <div className="text-center mb-5">
-              <div className="flex items-center justify-center gap-2 text-2xl opacity-[0.12] text-yellow-400">
+              <div className="flex items-center justify-center gap-2 text-2xl opacity-[0.12] text-yellow-600 dark:text-yellow-400">
                 <span>{"\u2654"}</span>
                 <span className="text-[10px] text-gray-600">vs</span>
                 <span className="text-gray-600 dark:text-gray-500">{"\u265A"}</span>
@@ -497,10 +496,10 @@ export default function SetupPage() {
               <p className="text-[10px] text-gray-600 mt-1">White team — You + Teammate (2v2 vs Black bots)</p>
             </div>
             <div className="flex justify-center gap-5 text-[11px]">
-              <button onClick={() => router.push('/history')} className="text-gray-600 dark:text-gray-500 hover:text-yellow-400 transition-colors">
+              <button onClick={() => router.push('/history')} className="text-gray-600 dark:text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors">
                 {"\uD83D\uDCCB"} History
               </button>
-              <button onClick={() => router.push('/premium')} className="text-yellow-400 hover:brightness-110 transition-all">
+              <button onClick={() => router.push('/premium')} className="text-yellow-600 dark:text-yellow-400 hover:brightness-110 transition-all">
                 {"\u2728"} Premium
               </button>
               {!playerId && (
@@ -528,7 +527,7 @@ export default function SetupPage() {
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
-              <h1 className="text-2xl font-black text-yellow-400 tracking-wider">OFFLINE</h1>
+              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">OFFLINE</h1>
               <p className="text-[10px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select opponent skill level</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
@@ -539,7 +538,7 @@ export default function SetupPage() {
                   className={`p-5 rounded-xl border transition-all duration-200 text-center ${
                     selectedLevel === level.level
                       ? 'border-yellow-500 bg-yellow-500/10 shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]'
+                      : 'border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/15 hover:bg-gray-200 dark:hover:bg-white/[0.05]'
                   }`}
                 >
                   <div className="text-base font-bold mb-1">{level.label}</div>
@@ -606,7 +605,7 @@ export default function SetupPage() {
         {topBar}
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-amber-400 text-sm">Creating room...</p>
+          <p className="text-amber-600 dark:text-amber-400 text-sm">Creating room...</p>
         </div>
         {slideOvers}
         {authOverlay}
@@ -658,7 +657,7 @@ function ModeButton({ icon, title, desc, onClick, highlight }: {
       className={`flex items-center gap-3.5 p-[18px] rounded-2xl border transition-all duration-200 text-left group ${
         highlight
           ? 'border-yellow-500/15 bg-yellow-500/[0.03] hover:border-yellow-500/40 hover:bg-yellow-500/[0.06]'
-          : 'border-white/8 bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04]'
+          : 'border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.04] hover:border-yellow-500/30 hover:bg-yellow-500/[0.04]'
       }`}
     >
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-[28px] ${
@@ -667,12 +666,12 @@ function ModeButton({ icon, title, desc, onClick, highlight }: {
         {icon}
       </div>
       <div className="flex-1">
-        <div className={`font-bold text-[15px] ${highlight ? 'text-yellow-400 group-hover:brightness-110' : 'text-gray-100 group-hover:text-yellow-400'} transition-all`}>
+        <div className={`font-bold text-[15px] ${highlight ? 'text-yellow-600 dark:text-yellow-400 group-hover:brightness-110' : 'text-gray-700 dark:text-gray-100 group-hover:text-yellow-600 dark:group-hover:text-yellow-400'} transition-all`}>
           {title}
         </div>
         <div className="text-[11px] text-gray-600 dark:text-gray-500 mt-0.5">{desc}</div>
       </div>
-      <span className="text-base text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
+      <span className="text-base text-yellow-600 dark:text-yellow-400 opacity-30 group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
     </button>
   )
 }
@@ -694,7 +693,7 @@ function TopBar({
     <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-[#0f1119]/80 backdrop-blur-md border-b border-white/5">
       <button
         onClick={() => playerId ? onProfile() : onSignIn()}
-        className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
+        className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05] px-2"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
@@ -707,10 +706,15 @@ function TopBar({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/[0.05]"
+          className="flex items-center gap-0.5 bg-gray-100 dark:bg-white/10 rounded-full p-1 border border-gray-200 dark:border-white/[0.08] transition-colors"
           aria-label="Toggle theme"
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          <span className={`text-[10px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 dark:text-gray-500'}`}>
+            Light
+          </span>
+          <span className={`text-[10px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-400'}`}>
+            Dark
+          </span>
         </button>
         <div className="flex items-center gap-1 text-yellow-400/60 text-sm font-bold">
           <span>♔</span>

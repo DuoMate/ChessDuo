@@ -57,7 +57,7 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
               {'/'}
               <span className="text-red-400">{playerStats.losses}</span>
               {'/'}
-              <span className="text-yellow-400">{playerStats.draws}</span>
+              <span className="text-yellow-600 dark:text-yellow-400">{playerStats.draws}</span>
             </p>
           </div>
           <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
@@ -87,7 +87,7 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
                   <span className="text-sm">
                     {game.winner === 'WHITE' ? '🏆' : game.winner === 'DRAW' ? '🤝' : '💀'}
                   </span>
-                  <span className="text-xs font-bold text-white">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">
                     {game.winner === 'WHITE' ? 'Win' : game.winner === 'DRAW' ? 'Draw' : 'Loss'}
                   </span>
                 </div>

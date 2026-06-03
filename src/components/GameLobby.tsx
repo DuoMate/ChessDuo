@@ -107,7 +107,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-1.5">
                   <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                    <User size={10} className="text-amber-400" />
+                    <User size={10} className="text-amber-600 dark:text-amber-400" />
                   </div>
                   <span className="text-sm text-gray-600 dark:text-gray-300">You</span>
                 </div>
@@ -135,7 +135,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                 </p>
                 <button
                   onClick={handleCopyCode}
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-amber-400 transition-colors min-h-[44px] px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors min-h-[44px] px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5"
                 >
                   {copied ? (
                     <>

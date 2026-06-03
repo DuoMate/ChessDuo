@@ -50,7 +50,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold">Profile</h1>
           <button
             onClick={() => router.push('/')}
-            className="text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             ← Back
           </button>
@@ -67,7 +67,7 @@ export default function ProfilePage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/history')}
-            className="text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             View Match History →
           </button>

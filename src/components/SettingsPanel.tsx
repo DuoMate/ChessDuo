@@ -49,7 +49,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               style={{ minHeight: '44px', minWidth: '44px' }}
               aria-label="Toggle theme"
             >
-              {theme === 'dark' ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
+              {theme === 'dark' ? <Sun size={18} className="text-yellow-600 dark:text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
             </button>
           </div>
 

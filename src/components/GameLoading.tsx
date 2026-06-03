@@ -85,7 +85,7 @@ export function GameLoading({
             </button>
             <button
               onClick={() => navigator.clipboard.writeText(inviteUrl)}
-              className="min-h-[44px] min-w-[44px] rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center justify-center"
               title="Copy link to clipboard"
             >
               <Copy size={14} />

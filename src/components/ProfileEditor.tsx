@@ -62,7 +62,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
         {!editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-gray-400 hover:text-yellow-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -81,7 +81,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
             placeholder="Enter username"
             maxLength={30}
             autoFocus
-            className="w-full min-h-[44px] px-4 py-2 bg-gray-700 text-white rounded-xl border border-gray-600 focus:border-yellow-400 focus:outline-none text-sm"
+              className="w-full min-h-[44px] px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-600 focus:border-yellow-600 dark:focus:border-yellow-400 focus:outline-none text-sm"
           />
           <div className="flex gap-2">
             <button
@@ -100,7 +100,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
           </div>
         </div>
       ) : (
-        <p className="text-white font-semibold text-lg">{username}</p>
+        <p className="text-gray-900 dark:text-white font-semibold text-lg">{username}</p>
       )}
 
       {error && <p className="text-red-400 text-xs">{error}</p>}

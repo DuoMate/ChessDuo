@@ -107,10 +107,10 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 500, delay: 0.1 }}
-            className="text-amber-400 font-bold text-base md:text-lg uppercase tracking-wider font-game flex items-center justify-center gap-2"
+            className="text-amber-600 dark:text-amber-400 font-bold text-base md:text-lg uppercase tracking-wider font-game flex items-center justify-center gap-2"
           >
             {isSync ? (
-              <><Target size={18} className="text-amber-400" /> Synchronized!</>
+              <><Target size={18} className="text-amber-600 dark:text-amber-400" /> Synchronized!</>
             ) : humanWon ? (
               <><Crown size={18} className="text-emerald-400" /> You Won This Turn!</>
             ) : (
@@ -171,7 +171,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                   <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {youMatchedEngine && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
@@ -235,7 +235,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                   <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {teammateMatchedEngine && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
@@ -287,10 +287,10 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           className="mt-2 md:mt-3 text-center"
         >
           {isSync && (
-            <p className="text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Both played exactly the same move!</p>
+            <p className="text-amber-600 dark:text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Both played exactly the same move!</p>
           )}
           {!isSync && bothMatched && (
-            <p className="text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Perfect — both matched the engine&apos;s best move!</p>
+            <p className="text-amber-600 dark:text-amber-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Sparkles size={14} /> Perfect — both matched the engine&apos;s best move!</p>
           )}
           {!isSync && youMatchedEngine && !teammateMatchedEngine && (
             <p className="text-emerald-400 text-xs md:text-sm font-medium inline-flex items-center gap-1"><Target size={14} /> You found the engine&apos;s top move!</p>

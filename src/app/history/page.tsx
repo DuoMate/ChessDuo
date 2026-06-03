@@ -66,7 +66,7 @@ export default function HistoryPage() {
           <h1 className="text-2xl font-bold">Match History</h1>
           <button
             onClick={() => router.push('/')}
-            className="text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             ← Back
           </button>
@@ -89,7 +89,7 @@ export default function HistoryPage() {
                 {' / '}
                 <span className="text-red-400">{playerStats.losses}</span>
                 {' / '}
-                <span className="text-yellow-400">{playerStats.draws}</span>
+                <span className="text-yellow-600 dark:text-yellow-400">{playerStats.draws}</span>
               </p>
             </div>
             <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-center border border-gray-200 dark:border-gray-700">
@@ -155,7 +155,7 @@ export default function HistoryPage() {
                       e.stopPropagation()
                       router.push(`/replay/${game.id}`)
                     }}
-                    className="text-yellow-400 hover:text-yellow-300 text-xs font-medium transition-colors ml-3 flex-shrink-0"
+                    className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-xs font-medium transition-colors ml-3 flex-shrink-0"
                   >
                     Replay →
                   </button>

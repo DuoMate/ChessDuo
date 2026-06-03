@@ -188,7 +188,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name or username..."
-            className="w-full min-h-[44px] px-4 py-2 bg-gray-700 text-white rounded-xl border border-gray-600 focus:border-yellow-400 focus:outline-none text-sm"
+            className="w-full min-h-[44px] px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-600 focus:border-yellow-600 dark:focus:border-yellow-400 focus:outline-none text-sm"
           />
           {searching && (
             <p className="text-gray-500 text-xs mt-1">Searching...</p>
@@ -202,7 +202,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
                   className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-white/[0.05] transition-colors flex items-center justify-between min-h-[44px]"
                 >
                   <span>{user.username}</span>
-                  <span className="text-yellow-400 text-xs">+ Add</span>
+                  <span className="text-yellow-600 dark:text-yellow-400 text-xs">+ Add</span>
                 </button>
               ))}
             </div>
@@ -211,7 +211,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
 
         <button
           onClick={copyInviteLink}
-          className="w-full min-h-[44px] px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors flex items-center justify-center gap-2"
+          className="w-full min-h-[44px] px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-600 dark:text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors flex items-center justify-center gap-2"
         >
           📋 {inviteCopied ? 'Link copied!' : 'Copy invite link'}
         </button>
@@ -339,7 +339,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={`flex-1 min-h-[36px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
         active
-          ? 'bg-yellow-500/20 text-yellow-400'
+          ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
           : 'text-gray-400 hover:text-gray-300 hover:bg-white/[0.03]'
       }`}
     >
@@ -402,7 +402,7 @@ function FriendList({
             {pendingChallenges?.has(friend.friend_id) && onAcceptChallenge && (
               <button
                 onClick={(e) => { e.stopPropagation(); onAcceptChallenge(friend) }}
-                className="min-h-[36px] px-3 py-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-xs font-semibold rounded-lg hover:bg-yellow-500/25 transition-colors whitespace-nowrap"
+                className="min-h-[36px] px-3 py-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold rounded-lg hover:bg-yellow-500/25 transition-colors whitespace-nowrap"
               >
                 ⚡ Accept
               </button>

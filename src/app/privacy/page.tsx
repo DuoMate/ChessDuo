@@ -11,13 +11,13 @@ export default function PrivacyPage() {
       <div className="max-w-2xl mx-auto px-4 py-12">
         <Link
           href="/"
-          className="text-yellow-400 hover:text-yellow-300 text-sm mb-6 inline-block"
+          className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-sm mb-6 inline-block"
         >
           ← Back to ChessDuo
         </Link>
 
         <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
-        <p className="text-yellow-400/60 text-sm mb-8">ChessDuo is a product of Navron</p>
+        <p className="text-yellow-600/60 dark:text-yellow-400/60 text-sm mb-8">ChessDuo is a product of Navron</p>
 
         <section className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">
           <div>
@@ -63,8 +63,8 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">5. Third-Party Services</h2>
             <ul className="list-disc pl-6 space-y-1">
-              <li><strong>Supabase</strong> — for authentication, real-time messaging, and database storage. See <a href="https://supabase.com/privacy" className="text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Supabase Privacy Policy</a>.</li>
-              <li><strong>Render</strong> — for hosting the web application and Stockfish backend. See <a href="https://render.com/privacy" className="text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Render Privacy Policy</a>.</li>
+              <li><strong>Supabase</strong> — for authentication, real-time messaging, and database storage. See <a href="https://supabase.com/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Supabase Privacy Policy</a>.</li>
+              <li><strong>Render</strong> — for hosting the web application and Stockfish backend. See <a href="https://render.com/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Render Privacy Policy</a>.</li>
             </ul>
           </div>
 
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
             <p>
               If you have questions about this privacy policy or your data, contact us at:
             </p>
-            <p className="mt-2 text-yellow-400">
+            <p className="mt-2 text-yellow-600 dark:text-yellow-400">
               chessdoubles27@gmail.com
             </p>
           </div>

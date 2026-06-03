@@ -103,11 +103,11 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 + i * 0.1 }}
-                  className="flex gap-3 p-3 rounded-xl bg-white/5 border border-white/5"
+                  className="flex gap-3 p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/5"
                 >
-                  <card.icon size={20} className="text-amber-400/80 flex-shrink-0 mt-0.5" />
+                  <card.icon size={20} className="text-amber-600/80 dark:text-amber-400/80 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="text-white font-semibold text-sm">{card.title}</h3>
+                    <h3 className="text-gray-900 dark:text-white font-semibold text-sm">{card.title}</h3>
                     <p className="text-gray-400 text-xs leading-relaxed mt-0.5">{card.description}</p>
                   </div>
                 </motion.div>
