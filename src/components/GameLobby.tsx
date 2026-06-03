@@ -9,9 +9,10 @@ interface GameLobbyProps {
   roomCode?: string
   inviteUrl?: string
   isLoading: boolean
+  username?: string
 }
 
-export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
+export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobbyProps) {
   const iconRef = useRef<HTMLDivElement>(null)
   const dot1Ref = useRef<HTMLDivElement>(null)
   const dot2Ref = useRef<HTMLDivElement>(null)
@@ -109,7 +110,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading }: GameLobbyProps) {
                   <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
                     <User size={10} className="text-amber-600 dark:text-amber-400" />
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">You</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{username || 'You'}</span>
                 </div>
                 <div className="text-gray-600 text-xs font-mono">{'\u2192'}</div>
                 <div className="flex items-center gap-1.5">

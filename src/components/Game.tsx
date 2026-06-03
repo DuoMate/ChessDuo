@@ -11,6 +11,7 @@ import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
+import { supabase } from '@/lib/supabase'
 import { MatchTimer } from './MatchTimer'
 import { TurnStatusArea } from './TurnStatusArea'
 import { MoveComparisonPanel } from './MoveComparison'
@@ -204,6 +205,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const settings = useSettings()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
+  const [playerUsername, setPlayerUsername] = useState<string>('')
 
   useEffect(() => {
     setSoundEngineEnabled(soundEnabled)
@@ -277,6 +279,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const playerId = playerIdFromProps || ''
   const effectiveTeam = team || null
+
+  useEffect(() => {
+    if (!playerId) return
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.username) setPlayerUsername(data.username)
+      })
+  }, [playerId])
 
   const inviteUrl = useMemo(() => {
     if (!isOnline || !roomId || !roomCode) return undefined
@@ -1271,6 +1285,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         roomCode={roomCode}
         inviteUrl={inviteUrl}
         isLoading={gameState.isLoading}
+        username={playerUsername}
       />
     )
   }

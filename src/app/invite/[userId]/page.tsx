@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { sendFriendRequest, isFriend } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
+import { ChooseUsername } from '@/components/ChooseUsername'
 
 export default function InvitePage() {
   const params = useParams()
@@ -17,6 +18,7 @@ export default function InvitePage() {
   const [targetUsername, setTargetUsername] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const requestSent = useRef(false)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,6 +64,26 @@ export default function InvitePage() {
     requestSent.current = false
   }
 
+  const handleNeedUsername = (userId: string, suggestedName: string) => {
+    setNeedsUsername({ userId, suggestedName })
+  }
+
+  const handleUsernameChosen = (userId: string) => {
+    setNeedsUsername(null)
+    setPlayerId(userId)
+    requestSent.current = false
+  }
+
+  if (needsUsername) {
+    return (
+      <ChooseUsername
+        userId={needsUsername.userId}
+        suggestedName={needsUsername.suggestedName}
+        onAuthComplete={handleUsernameChosen}
+      />
+    )
+  }
+
   if (isSelf) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
@@ -96,7 +118,7 @@ export default function InvitePage() {
           )}
           <p className="text-gray-500 text-sm">Sign in to accept this friend request</p>
 
-          <Auth onAuthComplete={handleAuthComplete} />
+          <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
         </div>
       </div>
     )

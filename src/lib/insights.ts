@@ -71,9 +71,10 @@ export async function getUserInsightsState(userId: string): Promise<{
 
 async function trySyncToServer(userId: string, revealsUsed: number) {
   try {
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ id: userId, insights_reveals_used: revealsUsed, username: 'Player' }, { onConflict: 'id' })
+      const { error } = await supabase
+        .from('profiles')
+        .update({ insights_reveals_used: revealsUsed })
+        .eq('id', userId)
 
     if (error) {
       console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
@@ -96,9 +97,10 @@ export function setUserPremium(userId: string, isPremium: boolean) {
   setLocalState(userId, { ...local, isPremium })
 
   try {
-    supabase
-      .from('profiles')
-      .upsert({ id: userId, is_premium: isPremium, username: 'Player' }, { onConflict: 'id' })
+      supabase
+        .from('profiles')
+        .update({ is_premium: isPremium })
+        .eq('id', userId)
   } catch {}
 }
 

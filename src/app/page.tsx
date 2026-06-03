@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { Auth } from '@/components/Auth'
+import { ChooseUsername } from '@/components/ChooseUsername'
 import { MatchmakingQueue } from '@/components/MatchmakingQueue'
 import { SlideOver } from '@/components/SlideOver'
 import { ProfilePanel } from '@/components/ProfilePanel'
@@ -68,6 +69,8 @@ export default function SetupPage() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const skillLevels = getAvailableSkillLevels()
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
+  const redirectUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -114,6 +117,11 @@ export default function SetupPage() {
   useEffect(() => {
     const signupParam = searchParams.get('signup')
     const codeParam = searchParams.get('code')
+    const redirectParam = searchParams.get('redirect')
+
+    if (redirectParam) {
+      redirectUrlRef.current = redirectParam
+    }
 
     if (signupParam === '1' && sessionChecked) {
       setShowAuthOverlay(true)
@@ -165,20 +173,35 @@ export default function SetupPage() {
       .select('username')
       .eq('id', userId)
       .maybeSingle()
-    const { data: { session } } = await supabase.auth.getSession()
     if (data?.username) return data.username
-
-    const name = session?.user?.email?.split('@')[0] || 'Player'
-    try {
-      await supabase.from('profiles').upsert({ id: userId, username: name }, { onConflict: 'id' })
-    } catch {}
-    return name
+    return ''
   }
 
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
     setShowAuthOverlay(false)
+    if (redirectUrlRef.current) {
+      const url = redirectUrlRef.current
+      redirectUrlRef.current = null
+      router.replace(url)
+    }
+  }
+
+  const handleNeedUsername = (userId: string, suggestedName: string) => {
+    setNeedsUsername({ userId, suggestedName })
+    setShowAuthOverlay(false)
+  }
+
+  const handleUsernameChosen = (userId: string, name: string) => {
+    setNeedsUsername(null)
+    setPlayerId(userId)
+    setUsername(name)
+    if (redirectUrlRef.current) {
+      const url = redirectUrlRef.current
+      redirectUrlRef.current = null
+      router.replace(url)
+    }
   }
 
   const handleSignOut = async () => {
@@ -311,9 +334,24 @@ export default function SetupPage() {
           {'\u2190'} Back
         </button>
       </div>
-      <Auth onAuthComplete={handleAuthComplete} defaultSignup={searchParams.get('signup') === '1'} />
+      <Auth
+        onAuthComplete={handleAuthComplete}
+        defaultSignup={searchParams.get('signup') === '1'}
+        redirectUrl={redirectUrlRef.current || undefined}
+        onNeedUsername={handleNeedUsername}
+      />
     </div>
   )
+
+  const chooseUsernameScreen = needsUsername && (
+    <ChooseUsername
+      userId={needsUsername.userId}
+      suggestedName={needsUsername.suggestedName}
+      onAuthComplete={handleUsernameChosen}
+    />
+  )
+
+  if (chooseUsernameScreen) return chooseUsernameScreen
 
   // ============================================
   // Time selection screen
@@ -469,9 +507,9 @@ export default function SetupPage() {
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-500 dark:text-gray-400 text-center font-medium mb-4">Choose your game mode</p>
             <div className="flex flex-col gap-3 mb-5">
-              <ModeButton icon={'\u265B'} title="Play Together" desc="with a friend" onClick={() => setGameMode('online')} highlight />
-              <ModeButton icon={'\u265E'} title="Play Offline" desc="vs Bot teammate" onClick={() => setGameMode('offline')} />
-              <ModeButton icon={'\u26A1'} title="Quick Match" desc="auto-find teammate" onClick={() => setGameMode('quickmatch')} />
+              <ModeButton icon={'\u265B'} title="Play Together" desc="with a friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }} highlight />
+              <ModeButton icon={'\u265E'} title="Play Offline" desc="vs Bot teammate" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} />
+              <ModeButton icon={'\u26A1'} title="Quick Match" desc="auto-find teammate" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('quickmatch') }} />
             </div>
             <div className="text-center mb-5">
               <div className="flex items-center justify-center gap-2 text-2xl opacity-[0.12] text-yellow-600 dark:text-yellow-400">

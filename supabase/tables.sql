@@ -137,6 +137,17 @@ END $$;
 ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_unique;
 ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
 
+-- Username format constraint: 3-30 chars, alphanumeric + underscore only
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_format;
+ALTER TABLE profiles ADD CONSTRAINT profiles_username_format CHECK (username ~ '^[a-zA-Z0-9_]{3,30}$');
+
+-- Lowercase username column for case-insensitive lookups
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username_lower TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_username_lower ON profiles(username_lower);
+
+-- Backfill username_lower for existing rows
+UPDATE profiles SET username_lower = LOWER(username) WHERE username_lower IS NULL;
+
 -- Add challenge_id to completed_games
 ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS challenge_id UUID REFERENCES challenge_links(id) ON DELETE SET NULL;
 
@@ -292,11 +303,6 @@ CREATE POLICY "Authenticated users can join rooms" ON room_players
         AND auth.uid()::text = player_id
           );
 
-          -- Allow guest players (no auth session) to join rooms too
-          DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
-          CREATE POLICY "Anyone can join rooms" ON room_players
-            FOR INSERT WITH CHECK (true);
-
                                                                                                                                   CREATE POLICY "Players can leave rooms" ON room_players
                                                                                                                                     FOR DELETE USING (
                                                                                                                                         auth.uid()::text = player_id
@@ -315,39 +321,30 @@ CREATE POLICY "Room members can insert game" ON games
 CREATE POLICY "Room members can update game" ON games
   FOR UPDATE USING (is_room_member(room_id));
 
-                                                                                                                                                                    -- completed_games: authenticated users can view and insert
-                                                                                                                                                                    CREATE POLICY "Authenticated users can view completed games" ON completed_games
-                                                                                                                                                                      FOR SELECT USING (auth.role() = 'authenticated');
+                                                                                                                                                                     -- completed_games: authenticated users can view and insert
+                                                                                                                                                                     CREATE POLICY "Authenticated users can view completed games" ON completed_games
+                                                                                                                                                                       FOR SELECT USING (auth.role() = 'authenticated');
 
-                                                                                                                                                                      CREATE POLICY "Authenticated users can insert completed games" ON completed_games
-                                                                                                                                                                        FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+                                                                                                                                                                       CREATE POLICY "Authenticated users can insert completed games" ON completed_games
+                                                                                                                                                                         FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
--- Allow anonymous users too (players who skip sign-up)
-DROP POLICY IF EXISTS "Anyone can view completed games" ON completed_games;
-CREATE POLICY "Anyone can view completed games" ON completed_games
-  FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Anyone can insert completed games" ON completed_games;
-CREATE POLICY "Anyone can insert completed games" ON completed_games
-  FOR INSERT WITH CHECK (true);
-
-                                                                                                                                                                        -- Function to auto-create profile on signup
-                                                                                                         CREATE OR REPLACE FUNCTION public.handle_new_user()
-                                                                                                         RETURNS TRIGGER AS $$
-                                                                                                          DECLARE
-                                                                                                            base_username TEXT;
-                                                                                                            final_username TEXT;
-                                                                                                          BEGIN
-                                                                                                          base_username := COALESCE(NEW.raw_user_meta_data->>'username', 'Player');
-                                                                                                            final_username := base_username;
-                                                                                                            WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
-                                                                                                              final_username := base_username || '_' || substr(md5(random()::text), 1, 6);
-                                                                                                            END LOOP;
-                                                                                                           INSERT INTO public.profiles (id, username)
-                                                                                                               VALUES (NEW.id, final_username);
-                                                                                                                 RETURN NEW;
-                                                                                                                 END;
-                                                                                                                 $$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Function to auto-create profile on signup
+-- Client validates username uniqueness before signup, so this just inserts directly
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+ DECLARE
+   base_username TEXT;
+ BEGIN
+   base_username := COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1));
+   IF base_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
+     base_username := 'player_' || substr(md5(random()::text), 1, 6);
+   END IF;
+   INSERT INTO public.profiles (id, username, username_lower)
+     VALUES (NEW.id, base_username, LOWER(base_username))
+     ON CONFLICT (id) DO NOTHING;
+   RETURN NEW;
+ END;
+ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
                                                                                                                                                                          -- Trigger for new user signup
                                                                                                                                                                          DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

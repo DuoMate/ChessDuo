@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getChallengeByCode, deactivateChallenge } from '@/lib/challenges'
 import { Auth } from '@/components/Auth'
+import { ChooseUsername } from '@/components/ChooseUsername'
 
 export default function ChallengePage() {
   const params = useParams()
@@ -21,6 +22,7 @@ export default function ChallengePage() {
     time_seconds: number
     creator_id: string
   } | null>(null)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -104,6 +106,25 @@ export default function ChallengePage() {
     setPlayerId(userId)
   }
 
+  const handleNeedUsername = (userId: string, suggestedName: string) => {
+    setNeedsUsername({ userId, suggestedName })
+  }
+
+  const handleUsernameChosen = (userId: string) => {
+    setNeedsUsername(null)
+    setPlayerId(userId)
+  }
+
+  if (needsUsername) {
+    return (
+      <ChooseUsername
+        userId={needsUsername.userId}
+        suggestedName={needsUsername.suggestedName}
+        onAuthComplete={handleUsernameChosen}
+      />
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
@@ -120,7 +141,7 @@ export default function ChallengePage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
           <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
 
-          <Auth onAuthComplete={handleAuthComplete} />
+          <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
         </div>
       </div>
     )

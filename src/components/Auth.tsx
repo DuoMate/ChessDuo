@@ -1,15 +1,35 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
+
+const RESERVED_USERNAMES = new Set([
+  'admin', 'moderator', 'system', 'chessduo', 'support', 'official',
+  'help', 'bot', 'null', 'undefined', 'root', 'superuser', 'staff',
+  'mod', 'owner', 'developer', 'dev', 'administrator', 'manager',
+  'test', 'guest', 'anonymous', 'api', 'webmaster', 'info',
+])
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/
+
+export function validateUsernameFormat(name: string): string | null {
+  if (!name.trim()) return 'Username is required'
+  if (name.length < 3) return 'Username must be at least 3 characters'
+  if (name.length > 30) return 'Username must be 30 characters or less'
+  if (!USERNAME_REGEX.test(name)) return 'Only letters, numbers, and underscores allowed'
+  if (RESERVED_USERNAMES.has(name.toLowerCase())) return 'This username is reserved'
+  return null
+}
 
 interface AuthProps {
   onAuthComplete: (userId: string, username: string) => void
   defaultSignup?: boolean
+  redirectUrl?: string
+  onNeedUsername?: (userId: string, suggestedName: string) => void
 }
 
-export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
+export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNeedUsername }: AuthProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -17,19 +37,21 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [verificationSent, setVerificationSent] = useState(false)
   const [checkingUsername, setCheckingUsername] = useState(false)
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+  const [usernameMessage, setUsernameMessage] = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user && session.user.email_confirmed_at) {
+      if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '')
       }
     })
     return () => subscription.unsubscribe()
   }, [onAuthComplete])
 
-  const fetchAndCompleteAuth = async (userId: string, email: string) => {
+  const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string) => {
     const { data } = await supabase
       .from('profiles')
       .select('username')
@@ -37,8 +59,16 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
       .maybeSingle()
     if (data?.username) {
       onAuthComplete(userId, data.username)
+    } else if (onNeedUsername) {
+      const suggested = googleDisplayName || email.split('@')[0]
+      onNeedUsername(userId, suggested)
     } else {
       const displayName = email.split('@')[0]
+      const formatError = validateUsernameFormat(displayName)
+      if (formatError) {
+        onAuthComplete(userId, displayName)
+        return
+      }
       try {
         await supabase.from('profiles').upsert({ id: userId, username: displayName }, { onConflict: 'id' })
       } catch {}
@@ -46,31 +76,62 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
     }
   }
 
-  const isUsernameAvailable = async (name: string): Promise<boolean> => {
+  const checkUsernameAvailability = useCallback(async (name: string) => {
     const { data } = await supabase
       .from('profiles')
       .select('id')
-      .eq('username', name)
+      .ilike('username', name)
       .maybeSingle()
     return !data
-  }
+  }, [])
 
-  const findAvailableUsername = async (desired: string): Promise<string> => {
-    let finalName = desired
-    let counter = 0
-    while (true) {
-      const available = await isUsernameAvailable(finalName)
-      if (available) return finalName
-      counter++
-      finalName = desired + counter
+  useEffect(() => {
+    if (isLogin || !username.trim()) {
+      setUsernameStatus('idle')
+      setUsernameMessage(null)
+      return
     }
-  }
+
+    const formatError = validateUsernameFormat(username)
+    if (formatError) {
+      setUsernameStatus('invalid')
+      setUsernameMessage(formatError)
+      return
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    setUsernameStatus('checking')
+    setUsernameMessage(null)
+    setCheckingUsername(true)
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const available = await checkUsernameAvailability(username.trim())
+        if (available) {
+          setUsernameStatus('available')
+          setUsernameMessage('Username is available')
+        } else {
+          setUsernameStatus('taken')
+          setUsernameMessage('Username is already taken')
+        }
+      } catch {
+        setUsernameStatus('idle')
+        setUsernameMessage(null)
+      } finally {
+        setCheckingUsername(false)
+      }
+    }, 400)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [username, isLogin, checkUsernameAvailability])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    setVerificationSent(false)
 
     try {
       if (isLogin) {
@@ -85,26 +146,31 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
           await fetchAndCompleteAuth(authData.user.id, email)
         }
       } else {
-        const desiredUsername = username.trim() || email.split('@')[0]
-        setCheckingUsername(true)
-        const available = await isUsernameAvailable(desiredUsername)
-        setCheckingUsername(false)
+        const desiredUsername = username.trim()
+        const formatError = validateUsernameFormat(desiredUsername)
+        if (formatError) {
+          setError(formatError)
+          setLoading(false)
+          return
+        }
 
-        if (!available) {
+        if (usernameStatus === 'checking') {
+          setError('Please wait while we check username availability')
+          setLoading(false)
+          return
+        }
+
+        if (usernameStatus === 'taken') {
           setError(`Username "${desiredUsername}" is already taken. Choose another.`)
           setLoading(false)
           return
         }
 
-        const redirectTo = `${window.location.origin}`
-        const finalUsername = await findAvailableUsername(desiredUsername)
-
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: { username: finalUsername },
-            emailRedirectTo: redirectTo,
+            data: { username: desiredUsername },
           }
         })
 
@@ -115,11 +181,15 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
             .from('profiles')
             .upsert({
               id: authData.user.id,
-              username: finalUsername
+              username: desiredUsername
             }, { onConflict: 'id' })
 
           if (profileError) {
-            setError('Failed to create profile. Please try again.')
+            if (profileError.message?.includes('unique') || profileError.code === '23505') {
+              setError(`Username "${desiredUsername}" is already taken. Choose another.`)
+            } else {
+              setError('Failed to create profile. Please try again.')
+            }
             setLoading(false)
             return
           }
@@ -127,7 +197,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
           if (authData.user.identities?.length === 0) {
             setError('This email is already registered. Try signing in instead.')
           } else {
-            setVerificationSent(true)
+            await fetchAndCompleteAuth(authData.user.id, email)
           }
         }
       }
@@ -135,7 +205,6 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
       setLoading(false)
-      setCheckingUsername(false)
     }
   }
 
@@ -145,7 +214,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
-        await fetchAndCompleteAuth(result.userId, result.email || '')
+        await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName)
       } else if (result.error) {
         setError(result.error)
       }
@@ -156,9 +225,13 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
     }
   }
 
+  const canSubmit = isLogin
+    ? email.trim() && password.length >= 6
+    : email.trim() && password.length >= 6 && usernameStatus === 'available'
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600 dark:text-yellow-400">
           ChessDuo
         </h1>
@@ -187,84 +260,94 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
 
-        {verificationSent ? (
-          <div className="space-y-4">
-            <div className="bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-600 rounded-lg p-4 text-center">
-              <p className="text-green-700 dark:text-green-400 font-bold text-lg mb-2">Check your email</p>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                We sent a verification link to <strong>{email}</strong>.
-                Click the link in the email to complete your registration.
-              </p>
-            </div>
-            <p className="text-gray-500 text-xs text-center">
-              Didn&apos;t receive it? Check spam folder or{' '}
-              <button
-                onClick={() => setVerificationSent(false)}
-                className="text-yellow-600 dark:text-yellow-400 hover:underline"
-              >
-                try again
-              </button>
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Choose a username"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                   required
-                  className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
+                  maxLength={30}
+                  autoComplete="username"
+                  className={`w-full p-3 pr-10 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border focus:outline-none transition-colors ${
+                    usernameStatus === 'available'
+                      ? 'border-green-500 focus:border-green-400'
+                      : usernameStatus === 'taken' || usernameStatus === 'invalid'
+                      ? 'border-red-500 focus:border-red-400'
+                      : 'border-gray-300 dark:border-gray-600 focus:border-yellow-400'
+                  }`}
                 />
-                {checkingUsername && (
-                  <p className="text-gray-500 text-xs mt-1">Checking availability...</p>
-                )}
-                {username.trim() && !checkingUsername && (
-                  <p className="text-gray-500 text-xs mt-1">
-                    This will be your unique display name
-                  </p>
-                )}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {usernameStatus === 'checking' && (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {usernameStatus === 'available' && (
+                    <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && username.trim() && (
+                    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
               </div>
-            )}
+              {usernameMessage && username.trim() && (
+                <p className={`text-xs mt-1 ${
+                  usernameStatus === 'available' ? 'text-green-500' : 'text-red-500 dark:text-red-400'
+                }`}>
+                  {usernameMessage}
+                </p>
+              )}
+              {!usernameMessage && !username.trim() && (
+                <p className="text-gray-500 text-xs mt-1">
+                  3-30 characters, letters, numbers, and underscores only
+                </p>
+              )}
+            </div>
+          )}
 
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
-              required
-            />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
+            required
+            autoComplete="email"
+          />
 
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
-              required
-              minLength={6}
-            />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
+            required
+            minLength={6}
+            autoComplete={isLogin ? 'current-password' : 'new-password'}
+          />
 
-            {error && (
-              <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
-            )}
+          {error && (
+            <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading || checkingUsername}
-              className="w-full p-3 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
-            >
-              {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
-            </button>
-          </form>
-        )}
+          <button
+            type="submit"
+            disabled={loading || checkingUsername || !canSubmit}
+            className="w-full p-3 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50 transition-colors"
+          >
+            {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
+          </button>
+        </form>
 
         <div className="mt-4 text-center">
           <button
-            onClick={() => { setIsLogin(!isLogin); setVerificationSent(false); setError(null) }}
+            onClick={() => { setIsLogin(!isLogin); setError(null); setUsernameStatus('idle'); setUsernameMessage(null) }}
             className="text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
