@@ -2,31 +2,45 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { WelcomeDisclaimer } from '../WelcomeDisclaimer'
 
-describe('WelcomeDisclaimer tour button', () => {
+describe('WelcomeDisclaimer', () => {
   beforeEach(() => {
     localStorage.clear()
   })
 
-  it('renders Take a Tour button when onTour is provided', () => {
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} onTour={jest.fn()} />)
-    expect(screen.getByText('Take a Tour')).toBeDefined()
+  it('renders when open is true', () => {
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
+    expect(screen.getByText('ChessDuo')).toBeDefined()
+    expect(screen.getByText('Got it!')).toBeDefined()
   })
 
-  it('does not render Take a Tour button when onTour is not provided', () => {
+  it('does not render Take a Tour button (removed)', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
     expect(screen.queryByText('Take a Tour')).toBeNull()
   })
 
-  it('calls onTour when Take a Tour is clicked', () => {
-    const onTour = jest.fn()
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} onTour={onTour} />)
-    fireEvent.click(screen.getByText('Take a Tour'))
-    expect(onTour).toHaveBeenCalled()
+  it('calls onDismiss when Got it is clicked', () => {
+    const onDismiss = jest.fn()
+    render(<WelcomeDisclaimer open={true} onDismiss={onDismiss} />)
+    fireEvent.click(screen.getByText('Got it!'))
+    expect(onDismiss).toHaveBeenCalled()
   })
 
-  it('still shows Got it button alongside tour button', () => {
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} onTour={jest.fn()} />)
-    expect(screen.getByText('Got it!')).toBeDefined()
-    expect(screen.getByText('Take a Tour')).toBeDefined()
+  it('saves to localStorage when checkbox is checked', () => {
+    const onDismiss = jest.fn()
+    render(<WelcomeDisclaimer open={true} onDismiss={onDismiss} />)
+    const checkbox = screen.getByRole('checkbox')
+    fireEvent.click(checkbox)
+    fireEvent.click(screen.getByText('Got it!'))
+    expect(localStorage.getItem('chessduo_welcome_dismissed')).toBe('true')
+  })
+
+  it('shows online-specific text', () => {
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="online" />)
+    expect(screen.getByText(/you & your teammate/i)).toBeDefined()
+  })
+
+  it('shows offline-specific text', () => {
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
+    expect(screen.getByText(/you & a bot teammate/i)).toBeDefined()
   })
 })

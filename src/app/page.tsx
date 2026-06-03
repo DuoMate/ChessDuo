@@ -339,10 +339,11 @@ export default function SetupPage() {
         {gameMode === 'online' && showOnlineDisclaimer && !showGameTour && (
           <WelcomeDisclaimer
             open={showOnlineDisclaimer}
-            onDismiss={() => setShowOnlineDisclaimer(false)}
-            onTour={tourCompleted ? undefined : () => {
+            onDismiss={() => {
               setShowOnlineDisclaimer(false)
-              setShowGameTour(true)
+              if (!tourCompleted) {
+                setShowGameTour(true)
+              }
             }}
             mode="online"
           />
