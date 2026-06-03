@@ -13,6 +13,7 @@ import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
+import { GameTour } from '@/components/GameTour'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,15 @@ export default function SetupPage() {
     }
     return false
   })
+  const [showOnlineDisclaimer, setShowOnlineDisclaimer] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
+    }
+    return false
+  })
+  const tourCompleted = typeof window !== 'undefined'
+    && localStorage.getItem('chessduo_tour_completed') === 'true'
+  const [showGameTour, setShowGameTour] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const skillLevels = getAvailableSkillLevels()
@@ -72,6 +82,7 @@ export default function SetupPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setPlayerId(session.user.id)
+        setUsername('')
         fetchUsername(session.user.id).then(setUsername)
       } else {
         setPlayerId(null)
@@ -154,7 +165,13 @@ export default function SetupPage() {
       .eq('id', userId)
       .maybeSingle()
     const { data: { session } } = await supabase.auth.getSession()
-    return data?.username || session?.user?.email?.split('@')[0] || 'Player'
+    if (data?.username) return data.username
+
+    const name = session?.user?.email?.split('@')[0] || 'Player'
+    try {
+      await supabase.from('profiles').upsert({ id: userId, username: name }, { onConflict: 'id' })
+    } catch {}
+    return name
   }
 
   const handleAuthComplete = (userId: string, name: string) => {
@@ -318,6 +335,31 @@ export default function SetupPage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
         {topBar}
+        
+        {gameMode === 'online' && showOnlineDisclaimer && !showGameTour && (
+          <WelcomeDisclaimer
+            open={showOnlineDisclaimer}
+            onDismiss={() => setShowOnlineDisclaimer(false)}
+            onTour={tourCompleted ? undefined : () => {
+              setShowOnlineDisclaimer(false)
+              setShowGameTour(true)
+            }}
+            mode="online"
+          />
+        )}
+        {gameMode === 'online' && showGameTour && (
+          <GameTour
+            open={showGameTour}
+            onComplete={() => {
+              setShowGameTour(false)
+              localStorage.setItem('chessduo_tour_completed', 'true')
+            }}
+            onSkip={() => {
+              setShowGameTour(false)
+              localStorage.setItem('chessduo_tour_completed', 'true')
+            }}
+          />
+        )}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-3">

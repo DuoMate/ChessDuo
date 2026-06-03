@@ -16,6 +16,7 @@ import { GameMenu } from './GameMenu'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
+import { saveCompletedGame } from '@/lib/matchHistory'
 
 interface DuelGameProps {
   roomId: string
@@ -91,6 +92,40 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
     return () => clearAccuracyTimer()
   }, [showAccuracy, clearAccuracyTimer])
+
+  // Save completed duel games to history
+  const gameSavedRef = useRef(false)
+  useEffect(() => {
+    if (status !== 'game_over' || !winner || gameSavedRef.current) return
+    gameSavedRef.current = true
+
+    const winningSide = winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'
+    saveCompletedGame({
+      winner: winningSide,
+      gameResult: gameResult || 'Game Over',
+      gameOverReason: gameResult || null,
+      stats: {
+        whiteMovesPlayed: moveHistory.length,
+        whiteSyncRate: 100,
+        whiteConflicts: 0,
+        player1Accuracy: moveAccuracy ?? 0,
+        player2Accuracy: opponentAccuracy ?? 0,
+        totalMoves: moveHistory.length,
+      },
+      isOnline: true,
+      roomId,
+      moveComparisons: moveHistory.map((move, i) => ({
+        turn: i + 1,
+        team: i % 2 === 0 ? 'WHITE' : 'BLACK',
+        winningMove: move,
+        winningMoveUci: move,
+        isSync: true,
+        player1Accuracy: 0,
+        player2Accuracy: 0,
+        fenAfter: '',
+      })),
+    })
+  }, [status, winner, gameResult, moveHistory, moveAccuracy, opponentAccuracy, roomId])
 
   const handleMove = useCallback(async (uci: string, promotion?: PromotionPiece) => {
     const game = gameRef.current
@@ -189,7 +224,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
               {team === 'WHITE' ? 'You (White)' : 'Opponent (White)'}
             </span>
-            <MatchTimer seconds={matchTime} isActive={timerActive} totalSeconds={timeLimit} />
+            {!isMobile && (
+              <MatchTimer seconds={matchTime} isActive={timerActive} totalSeconds={timeLimit} />
+            )}
             <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
               {team === 'BLACK' ? 'You (Black)' : 'Opponent (Black)'}
           </span>
@@ -291,6 +328,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         <GameOverModal
           winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
           onPlayAgain={() => router.push('/')}
+          onClose={() => router.push('/')}
           gameResult={gameResult}
         />
       )}

@@ -1,11 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, Handshake, RotateCcw, LogOut, UserPlus } from 'lucide-react'
+import { Trophy, Handshake, RotateCcw, LogOut, UserPlus, X } from 'lucide-react'
 
 interface GameOverModalProps {
   winner: 'WHITE' | 'BLACK' | 'DRAW'
   onPlayAgain: () => void
+  onClose?: () => void
   gameResult?: string
   gameOverReason?: string | null
   isOnline?: boolean
@@ -47,6 +48,7 @@ function Particles() {
 export function GameOverModal({
   winner,
   onPlayAgain,
+  onClose,
   gameResult,
   gameOverReason,
   isOnline: _isOnline,
@@ -61,6 +63,7 @@ export function GameOverModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose() }}
     >
       <motion.div
         initial={{ scale: 0.5, y: 50 }}
@@ -68,6 +71,16 @@ export function GameOverModal({
         transition={{ type: 'spring', damping: 20, stiffness: 250 }}
         className="bg-game-surface p-6 rounded-2xl text-center border border-white/10 shadow-2xl w-full max-w-sm relative overflow-hidden"
       >
+        {/* Close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} className="text-gray-400" />
+          </button>
+        )}
         {winner !== 'DRAW' && !isAbandoned && <Particles />}
 
         <motion.div

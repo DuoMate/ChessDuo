@@ -13,13 +13,13 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MatchTimer } from './MatchTimer'
+import { TurnStatusArea } from './TurnStatusArea'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
-import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setSoundEngineEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
@@ -191,7 +191,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
-  const teammateLabelShownRef = useRef(false)
+  const teammateLabelShownRef = useRef(0)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
@@ -388,7 +388,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   piece = 'p'
                 }
               }
-              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && g.currentTurn === Team.WHITE }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && g.currentTurn === Team.WHITE }
             }
           }
         }
@@ -432,7 +432,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }))
         
         if (pendingOverlay?.showTeammateLabel) {
-          teammateLabelShownRef.current = true
+          teammateLabelShownRef.current += 1
         }
 
         // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
@@ -735,7 +735,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               piece = 'p'
             }
           }
-          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && currentTurn === Team.WHITE }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && currentTurn === Team.WHITE }
         }
       }
     }
@@ -789,7 +789,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     })
     
     if (pendingOverlay?.showTeammateLabel) {
-      teammateLabelShownRef.current = true
+      teammateLabelShownRef.current += 1
     }
 
     // Accuracy transition detection (for coordinator who uses updateStateRef)
@@ -1163,9 +1163,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: !teammateLabelShownRef.current }
+              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: teammateLabelShownRef.current < 3 }
             }))
-            teammateLabelShownRef.current = true
+            teammateLabelShownRef.current += 1
           }
 
           console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
@@ -1355,6 +1355,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onPlayAgain={() => {
             router.push('/')
           }}
+          onClose={() => router.push('/')}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
           showSignupPrompt={isGuest}
@@ -1423,10 +1424,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex flex-col lg:flex-row lg:items-start justify-center gap-3 lg:gap-6 mb-3">
           {/* Left: Board column */}
           <div className="flex flex-col items-center gap-2">
-            <MatchTimer
+            <TurnStatusArea
+              state={(() => {
+                if (gameState.status === GameStatus.GAME_OVER) return 'idle'
+                if (turnState === 'resolving') return 'resolving'
+                if (gameState.isBotThinking) return 'bot_thinking'
+                if (gameState.selectedMove) return 'selected'
+                return 'idle'
+              })()}
               seconds={gameState.matchTimeRemaining}
               isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
               totalSeconds={timeLimit}
+              selectedMove={gameState.selectedMove}
+              isMobile={isMobile}
             />
             <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative lg:max-h-[calc(100vh-220px)]">
               {isMobile ? (
@@ -1473,33 +1483,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
               return (
-                <>
-                  {!accuracyComparison && turnState === 'resolving' && (
-                    <EvaluatingLoader />
-                  )}
-                  <AccuracyBottomSheet 
-                    comparison={accuracyComparison}
-                    isVisible={!!accuracyComparison}
-                    playerId={playerId}
-                    player1Id={isOnline ? (g as any)?.player1Id : null}
-                  />
-                </>
+                <AccuracyBottomSheet 
+                  comparison={accuracyComparison}
+                  isVisible={!!accuracyComparison}
+                  playerId={playerId}
+                  player1Id={isOnline ? (g as any)?.player1Id : null}
+                />
               )
             })()}
           </div>
         </div>
 
         <div className="mt-4 text-center">
-          {gameState.selectedMove && (
-              <p className="text-green-600 dark:text-green-400">Selected: {gameState.selectedMove}</p>
-            )}
-            {gameState.status === GameStatus.GAME_OVER && (
-              <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
-                {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
-              </p>
-            )}
-            {gameState.isBotThinking && (
-              <p className="text-blue-600 dark:text-blue-400">Bot is making a move...</p>
+          {gameState.status === GameStatus.GAME_OVER && (
+            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+              {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
+            </p>
           )}
         </div>
 

@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Brain, Zap, Crown, XCircle } from 'lucide-react'
+import { Users, Brain, Zap, Crown, XCircle, Map } from 'lucide-react'
 
 interface WelcomeDisclaimerProps {
   open: boolean
   onDismiss: () => void
+  onTour?: () => void
   storageKey?: string
   mode?: 'online' | 'offline'
 }
@@ -58,7 +59,7 @@ const offlineCards = [
   },
 ]
 
-export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welcome_dismissed', mode = 'online' }: WelcomeDisclaimerProps) {
+export function WelcomeDisclaimer({ open, onDismiss, onTour, storageKey = 'chessduo_welcome_dismissed', mode = 'online' }: WelcomeDisclaimerProps) {
   const [dontShow, setDontShow] = useState(false)
   const cards = mode === 'offline' ? offlineCards : onlineCards
 
@@ -143,6 +144,16 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             >
               Got it!
             </button>
+
+            {onTour && (
+              <button
+                onClick={onTour}
+                className="w-full min-h-[44px] rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-medium text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                <Map size={16} />
+                Take a Tour
+              </button>
+            )}
           </motion.div>
         </motion.div>
       )}
