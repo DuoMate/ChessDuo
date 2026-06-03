@@ -1458,7 +1458,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               selectedMove={gameState.selectedMove}
               isMobile={isMobile}
             />
-            <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative lg:max-h-[calc(100vh-220px)]">
+            <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative lg:max-h-[calc(100vh-180px)]">
               {isMobile ? (
                 <MobileChessBoard
                   fen={playbackFen || gameState.fen}

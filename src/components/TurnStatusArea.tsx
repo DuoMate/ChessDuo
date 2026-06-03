@@ -49,7 +49,7 @@ function EvaluatingPulse() {
         &#9819;
       </span>
       <span ref={textRef} className="text-yellow-500 dark:text-yellow-400 text-xs font-medium ml-0.5">
-        Evaluating...
+        Evaluating whose move was better
       </span>
     </div>
   )
