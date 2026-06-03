@@ -10,7 +10,6 @@ import { Team } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
-import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MatchTimer } from './MatchTimer'
 import { TurnStatusArea } from './TurnStatusArea'
@@ -271,67 +270,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameSavedRef.current = true
   }, [gameState.status, isOnline, game])
 
-  // Player ID from URL props (passed from Room component)
-  // Auto-detect from auth session if missing (join-link flow)
-  const [autoPlayerId, setAutoPlayerId] = useState<string | null>(null)
-  const [autoTeam, setAutoTeam] = useState<'WHITE' | 'BLACK' | null>(null)
-  const [isGuest, setIsGuest] = useState(false)
-  const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
+  // Player ID comes from URL props (passed from Room component)
 
-  // Detect guest status unconditionally — for signup prompt after game ends
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setIsGuest(session.user.is_anonymous ?? false)
-      }
-    })
-  }, [])
 
-  useEffect(() => {
-    if (playerIdFromProps || autoJoinAttempted) return
 
-    async function detectPlayer() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setAutoPlayerId(session.user.id)
-        setIsGuest(session.user.is_anonymous ?? false)
-      } else {
-        let id: string | null = null
-        try {
-          const { data: { user } } = await supabase.auth.signInAnonymously()
-          if (user) id = user.id
-        } catch (e) {
-          console.warn('[Game] Anonymous sign-in failed, using fallback ID:', e)
-        }
-        if (!id) {
-          id = `anon_${Math.random().toString(36).substring(2, 10)}`
-        }
-        setAutoPlayerId(id)
-        setIsGuest(true)
-      }
-    }
-    detectPlayer()
-  }, [playerIdFromProps, autoJoinAttempted])
 
-  useEffect(() => {
-    if (!isOnline || !roomId || !autoPlayerId || autoTeam || autoJoinAttempted) return
-
-    async function detectTeam() {
-      const { data: roomPlayers } = await supabase
-        .from('room_players')
-        .select('team')
-        .eq('room_id', roomId)
-
-      const whiteCount = roomPlayers?.filter(p => p.team === 'WHITE').length ?? 0
-      const blackCount = roomPlayers?.filter(p => p.team === 'BLACK').length ?? 0
-
-      setAutoTeam(whiteCount <= blackCount ? 'WHITE' : 'BLACK')
-    }
-    detectTeam()
-  }, [isOnline, roomId, autoPlayerId, autoTeam, autoJoinAttempted])
-
-  const playerId = playerIdFromProps || autoPlayerId
-  const effectiveTeam = team || autoTeam
+  const playerId = playerIdFromProps || ''
+  const effectiveTeam = team || null
 
   const inviteUrl = useMemo(() => {
     if (!isOnline || !roomId || !roomCode) return undefined
@@ -550,7 +495,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       joinRoomCalledRef.current = true
       console.log('[Game] [OK] Calling joinRoom with:', { roomId, playerId, team: effectiveTeam })
       onlineGame.joinRoom({ id: roomId } as any, playerId, effectiveTeam)
-      if (!team) setAutoJoinAttempted(true)
     } else {
       console.log('[Game] [NO] joinRoom NOT called - conditions not met')
     }
@@ -1378,8 +1322,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
-          showSignupPrompt={isGuest}
-          onSignup={() => router.push('/?signup=1')}
         />
       )}
 

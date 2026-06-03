@@ -18,29 +18,51 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [verificationSent, setVerificationSent] = useState(false)
+  const [checkingUsername, setCheckingUsername] = useState(false)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user && session.user.email_confirmed_at) {
-        onAuthComplete(session.user.id, session.user.email?.split('@')[0] || 'Player')
+        fetchAndCompleteAuth(session.user.id, session.user.email || '')
       }
     })
-
     return () => subscription.unsubscribe()
   }, [onAuthComplete])
+
+  const fetchAndCompleteAuth = async (userId: string, email: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', userId)
+      .maybeSingle()
+    if (data?.username) {
+      onAuthComplete(userId, data.username)
+    } else {
+      const displayName = email.split('@')[0]
+      try {
+        await supabase.from('profiles').upsert({ id: userId, username: displayName }, { onConflict: 'id' })
+      } catch {}
+      onAuthComplete(userId, displayName)
+    }
+  }
+
+  const isUsernameAvailable = async (name: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', name)
+      .maybeSingle()
+    return !data
+  }
 
   const findAvailableUsername = async (desired: string): Promise<string> => {
     let finalName = desired
     let counter = 0
     while (true) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', finalName)
-        .maybeSingle()
-      if (!data) return finalName
+      const available = await isUsernameAvailable(finalName)
+      if (available) return finalName
       counter++
-      finalName = desired + '_' + counter
+      finalName = desired + counter
     }
   }
 
@@ -60,11 +82,22 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
         if (authError) throw authError
 
         if (authData.user) {
-          onAuthComplete(authData.user.id, email.split('@')[0])
+          await fetchAndCompleteAuth(authData.user.id, email)
         }
       } else {
+        const desiredUsername = username.trim() || email.split('@')[0]
+        setCheckingUsername(true)
+        const available = await isUsernameAvailable(desiredUsername)
+        setCheckingUsername(false)
+
+        if (!available) {
+          setError(`Username "${desiredUsername}" is already taken. Choose another.`)
+          setLoading(false)
+          return
+        }
+
         const redirectTo = `${window.location.origin}`
-        const finalUsername = await findAvailableUsername(username || email.split('@')[0])
+        const finalUsername = await findAvailableUsername(desiredUsername)
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
@@ -86,7 +119,9 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
             }, { onConflict: 'id' })
 
           if (profileError) {
-            console.warn('Profile creation skipped:', profileError.message)
+            setError('Failed to create profile. Please try again.')
+            setLoading(false)
+            return
           }
 
           if (authData.user.identities?.length === 0) {
@@ -100,24 +135,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleAnonymous = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase.auth.signInAnonymously()
-
-      if (error) {
-        setError('Guest sign-in unavailable. Please sign in with email or Google.')
-        return
-      }
-
-      if (data.user) {
-        onAuthComplete(data.user.id, `Player${data.user.id.substring(0, 8)}`)
-      }
-    } finally {
-      setLoading(false)
+      setCheckingUsername(false)
     }
   }
 
@@ -127,7 +145,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
-        onAuthComplete(result.userId, result.email?.split('@')[0] || 'Player')
+        await fetchAndCompleteAuth(result.userId, result.email || '')
       } else if (result.error) {
         setError(result.error)
       }
@@ -139,16 +157,16 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-yellow-400">
-          ♟️ ChessDuo
+        <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600 dark:text-yellow-400">
+          ChessDuo
         </h1>
 
         <button
           onClick={handleGoogleSignIn}
           disabled={googleLoading || loading}
-          className="w-full p-3 rounded-lg border border-gray-500 bg-white text-gray-900 font-medium text-sm hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mb-5"
+          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-500 bg-white dark:bg-white text-gray-900 font-medium text-sm hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mb-5"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -171,8 +189,8 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
 
         {verificationSent ? (
           <div className="space-y-4">
-            <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 text-center">
-              <p className="text-green-400 font-bold text-lg mb-2">✓ Check your email</p>
+            <div className="bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-600 rounded-lg p-4 text-center">
+              <p className="text-green-700 dark:text-green-400 font-bold text-lg mb-2">Check your email</p>
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 We sent a verification link to <strong>{email}</strong>.
                 Click the link in the email to complete your registration.
@@ -182,7 +200,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
               Didn&apos;t receive it? Check spam folder or{' '}
               <button
                 onClick={() => setVerificationSent(false)}
-                className="text-yellow-400 hover:underline"
+                className="text-yellow-600 dark:text-yellow-400 hover:underline"
               >
                 try again
               </button>
@@ -191,13 +209,24 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                 className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
-              />
+              <div>
+                <input
+                  type="text"
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
+                />
+                {checkingUsername && (
+                  <p className="text-gray-500 text-xs mt-1">Checking availability...</p>
+                )}
+                {username.trim() && !checkingUsername && (
+                  <p className="text-gray-500 text-xs mt-1">
+                    This will be your unique display name
+                  </p>
+                )}
+              </div>
             )}
 
             <input
@@ -205,7 +234,7 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none"
+              className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
               required
             />
 
@@ -214,20 +243,21 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-yellow-400 focus:outline-none"
+              className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
               required
+              minLength={6}
             />
 
             {error && (
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
             )}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || checkingUsername}
               className="w-full p-3 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
             >
-              {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
+              {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
             </button>
           </form>
         )}
@@ -235,20 +265,9 @@ export function Auth({ onAuthComplete, defaultSignup = false }: AuthProps) {
         <div className="mt-4 text-center">
           <button
             onClick={() => { setIsLogin(!isLogin); setVerificationSent(false); setError(null) }}
-            className="text-gray-500 dark:text-gray-400 hover:text-yellow-400 text-sm"
+            className="text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
           >
             {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-          </button>
-        </div>
-
-        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
-          <p className="text-center text-gray-500 text-sm mb-3">Or play as guest</p>
-          <button
-            onClick={handleAnonymous}
-            disabled={loading}
-            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
-          >
-            Play as Guest
           </button>
         </div>
       </div>

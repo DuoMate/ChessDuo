@@ -189,23 +189,8 @@ export default function SetupPage() {
     setFriendsOpen(false)
   }
 
-  const ensurePlayerId = async (): Promise<string> => {
-    if (playerId) return playerId
-    try {
-      const { data } = await supabase.auth.signInAnonymously()
-      if (data.user) {
-        setPlayerId(data.user.id)
-        setUsername(`Player${data.user.id.substring(0, 8)}`)
-        return data.user.id
-      }
-    } catch {}
-    const fallbackId = `anon_${Math.random().toString(36).substring(2, 10)}`
-    setPlayerId(fallbackId)
-    setUsername(`Player${fallbackId.substring(0, 8)}`)
-    return fallbackId
-  }
-
   const handleJoinByCode = async () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
     const code = joinCode.trim().toUpperCase()
     if (!code) return
     setJoinLoading(true)
@@ -230,7 +215,7 @@ export default function SetupPage() {
         return
       }
 
-      const pid = await ensurePlayerId()
+      const pid = playerId as string
 
       const { data: existingPlayers } = await supabase
         .from('room_players')
@@ -273,10 +258,11 @@ export default function SetupPage() {
   }
 
   const handleStartOnline = async (timeSeconds: number) => {
+    if (!playerId) { setShowAuthOverlay(true); return }
     setCreatingTime(timeSeconds)
     setJoinError(null)
     try {
-      const pid = await ensurePlayerId()
+      const pid = playerId as string
       const result = await createOnlineRoom({ playerId: pid, timeSeconds })
       router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
     } catch (err) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, Handshake, RotateCcw, LogOut, UserPlus, X } from 'lucide-react'
+import { Trophy, Handshake, RotateCcw, LogOut, X } from 'lucide-react'
 
 interface GameOverModalProps {
   winner: 'WHITE' | 'BLACK' | 'DRAW'
@@ -11,8 +11,6 @@ interface GameOverModalProps {
   gameOverReason?: string | null
   isOnline?: boolean
   roomId?: string
-  showSignupPrompt?: boolean
-  onSignup?: () => void
 }
 
 function Particles() {
@@ -53,8 +51,6 @@ export function GameOverModal({
   gameOverReason,
   isOnline: _isOnline,
   roomId: _roomId,
-  showSignupPrompt,
-  onSignup,
 }: GameOverModalProps) {
   const isAbandoned = gameOverReason === 'abandoned'
 
@@ -125,24 +121,6 @@ export function GameOverModal({
           <RotateCcw size={18} />
           {isAbandoned ? 'Go Home' : 'Play Again'}
         </motion.button>
-
-        {showSignupPrompt && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="relative z-10 mt-4 pt-4 border-t border-white/10"
-          >
-            <p className="text-sm text-gray-300 mb-3">Enjoyed the game? Create a profile to save your progress.</p>
-            <button
-              onClick={onSignup}
-              className="w-full min-h-[44px] rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-colors inline-flex items-center justify-center gap-2"
-            >
-              <UserPlus size={18} />
-              Create Profile
-            </button>
-          </motion.div>
-        )}
       </motion.div>
     </motion.div>
   )
