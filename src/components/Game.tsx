@@ -985,7 +985,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 }
               }
               
-              setGameState(prev => ({ ...prev, highlightSquares, pendingOverlay: null, myPendingOverlay: null }))
+              setGameState(prev => ({ ...prev, highlightSquares }))
             }
             
             const newTurn = g.currentTurn as Team
