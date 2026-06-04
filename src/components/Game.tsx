@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
+import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import type { GameInterface } from '@/features/shared/GameInterface'
@@ -11,7 +13,6 @@ import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
-import { TeamTimer } from './TeamTimer'
 import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
@@ -20,12 +21,22 @@ import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
 import { GameOnOverlay } from './GameOnOverlay'
+import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
+import { BottomNav } from './BottomNav'
+import { TeamIndicator } from './TeamIndicator'
+import { MobileStatusBar } from './MobileStatusBar'
+import { GameMenu } from './GameMenu'
+import { SettingsPanel } from './SettingsPanel'
+import { ResignConfirmModal } from './ResignConfirmModal'
+import { useSettings } from '@/lib/settings'
+import { LeaveConfirmModal } from './LeaveConfirmModal'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -132,6 +143,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
 }
 
 export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
+  const router = useRouter()
   console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
   
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
@@ -192,10 +204,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const toast = useGameToast()
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
   const [showGameOn, setShowGameOn] = useState(false)
+  const settings = useSettings()
+  const [showSettings, setShowSettings] = useState(false)
+  const [showResignConfirm, setShowResignConfirm] = useState(false)
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING,
-    onAttemptLeave: () => toast.warning('You are leaving an active game!'),
+    onAttemptLeave: () => setShowLeaveModal(true),
   })
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
@@ -1051,6 +1067,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
+      if (settings.autoQueen) {
+        executeMove(uciMove, 'q')
+        return
+      }
       const [from, to] = uciMove.split('-')
       setGameState(prev => ({
         ...prev,
@@ -1059,7 +1079,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } else {
       executeMove(uciMove)
     }
-  }, [executeMove])
+  }, [executeMove, settings.autoQueen])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (gameState.pendingPromotion) {
@@ -1069,6 +1089,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       executeMove(uciMove, piece)
     }
   }, [gameState.pendingPromotion, executeMove])
+
+  const handleResign = useCallback(() => {
+    if (isOnline && onlineGameRef.current) {
+      onlineGameRef.current.abandonMatch()
+    }
+    if (isOnline) {
+      router.push('/')
+    } else {
+      window.location.reload()
+    }
+  }, [isOnline])
+
+  const handleLeaveConfirm = useCallback(() => {
+    if (isOnline && onlineGameRef.current) {
+      onlineGameRef.current.abandonMatch()
+    }
+    setShowLeaveModal(false)
+    confirmNavLeave()
+  }, [isOnline, confirmNavLeave])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
@@ -1136,6 +1175,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       )}
         
       <div className="max-w-4xl mx-auto">
+        {showSettings && (
+          <SettingsPanel onClose={() => setShowSettings(false)} />
+        )}
+        {showResignConfirm && (
+          <ResignConfirmModal
+            onConfirm={() => {
+              setShowResignConfirm(false)
+              handleResign()
+            }}
+            onCancel={() => setShowResignConfirm(false)}
+          />
+        )}
+        {showLeaveModal && (
+          <LeaveConfirmModal
+            open={showLeaveModal}
+            onConfirm={() => handleLeaveConfirm()}
+            onCancel={() => setShowLeaveModal(false)}
+          />
+        )}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold">ChessDuo</h1>
           <div className="flex items-center gap-2">
@@ -1146,13 +1204,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             >
               👤
             </button>
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-            >
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
+            <GameMenu
+              onResign={() => setShowResignConfirm(true)}
+              onOpenSettings={() => setShowSettings(true)}
+            />
           </div>
         </div>
 
@@ -1201,8 +1256,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
+        {/* Match Timer — centered above board */}
+        <div className="flex justify-center mb-2 md:mb-3">
+          <MatchTimer
+            seconds={gameState.matchTimeRemaining}
+            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+            totalSeconds={timeLimitSeconds || 600}
+          />
+        </div>
+
         <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
-          {/* Chess Board */}
+          {/* Chess Board — centered */}
           <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px] aspect-square flex-shrink-0 relative">
             <ChessBoard 
               fen={playbackFen || gameState.fen}
@@ -1216,31 +1280,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onAnimationComplete={handleResolutionComplete}
             />
           </div>
+        </div>
 
-          {/* Accuracy Panel - below board as bottom sheet */}
-          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
-            {(() => {
-              const g = isOnline ? onlineGameRef.current : gameRef.current
-              return (
-                <AccuracyBottomSheet 
-                  comparison={accuracyComparison}
-                  isVisible={!!accuracyComparison}
-                  playerId={playerId}
-                  player1Id={isOnline ? (g as any)?.player1Id : null}
-                />
-              )
-            })()}
+          {/* Accuracy Panel — below board, max width matching board */}
+          <div className="flex justify-center mt-2 mb-2">
+            <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px]">
+              {(() => {
+                const g = isOnline ? onlineGameRef.current : gameRef.current
+                return (
+                  <AccuracyBottomSheet 
+                    comparison={accuracyComparison}
+                    isVisible={!!accuracyComparison}
+                    playerId={playerId}
+                    player1Id={isOnline ? (g as any)?.player1Id : null}
+                  />
+                )
+              })()}
+            </div>
           </div>
-        </div>
-
-        {/* Match Timer — centered above board */}
-        <div className="flex justify-center mb-2 md:mb-3">
-          <MatchTimer
-            seconds={gameState.matchTimeRemaining}
-            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-            totalSeconds={timeLimitSeconds || 600}
-          />
-        </div>
 
         {/* Captured Pieces — below board */}
         <div className="flex justify-center gap-4 md:gap-10 mb-4 px-2">
