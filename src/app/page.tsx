@@ -147,12 +147,27 @@ export default function SetupPage() {
       setJoinCode(codeParam)
       const doAutoJoin = async () => {
         setJoinLoading(true)
-        const { data: room } = await supabase
+
+        let room = null
+        const { data: byCode } = await supabase
           .from('rooms')
           .select('*')
           .eq('code', codeParam)
           .eq('status', 'waiting')
-          .single()
+          .maybeSingle()
+        if (byCode) {
+          room = byCode
+        } else {
+          const { data: byId } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('id', codeParam)
+            .eq('status', 'waiting')
+            .maybeSingle()
+          if (byId) {
+            room = byId
+          }
+        }
 
         if (room) {
           router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=600`)
@@ -236,13 +251,26 @@ export default function SetupPage() {
     setJoinError(null)
 
     try {
-      const { data: room, error: roomError } = await supabase
+      let room = null
+      const { data: byCode } = await supabase
         .from('rooms')
         .select('*')
         .eq('code', code)
-        .single()
+        .maybeSingle()
+      if (byCode) {
+        room = byCode
+      } else {
+        const { data: byId } = await supabase
+          .from('rooms')
+          .select('*')
+          .eq('id', code)
+          .maybeSingle()
+        if (byId) {
+          room = byId
+        }
+      }
 
-      if (roomError || !room) {
+      if (!room) {
         setJoinError('Room not found — check the code')
         setJoinLoading(false)
         return
