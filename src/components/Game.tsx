@@ -1,43 +1,27 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
-import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import { Team } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
-import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { supabase } from '@/lib/supabase'
-import { MatchTimer } from './MatchTimer'
-import { TurnStatusArea } from './TurnStatusArea'
+import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
+import { TeamTimer } from './TeamTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
-import { GameLobby } from './GameLobby'
-import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setSoundEngineEnabled } from '@/lib/sounds'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
-import { BottomNav } from './BottomNav'
-import { TeamIndicator } from './TeamIndicator'
-import { User, Volume2, VolumeX } from 'lucide-react'
-import { MobileStatusBar } from './MobileStatusBar'
-import { GameOnOverlay } from './GameOnOverlay'
-import { GameMenu } from './GameMenu'
-import { SettingsPanel } from './SettingsPanel'
-import { ResignConfirmModal } from './ResignConfirmModal'
-import { useSettings } from '@/lib/settings'
-import { LeaveConfirmModal } from './LeaveConfirmModal'
-import { useIsMobile } from '@/hooks/useIsMobile'
-import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -48,8 +32,6 @@ interface GameProps {
   roomId?: string
   team?: 'WHITE' | 'BLACK'
   playerId?: string
-  timeLimitSeconds?: number
-  challengeId?: string
 }
 
 interface GameState {
@@ -67,12 +49,13 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
-  matchTimeRemaining: number
-  matchTimerActive: boolean
+  timerSeconds: number
+  timerActive: boolean
   pendingOverlay: PendingOverlay | null
   myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
   isLoading: boolean
+  turnStatus: 'your_turn' | 'selecting' | 'waiting_for_teammate' | 'teammate_locked' | 'evaluating' | 'opponent_turn' | 'waiting'
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -91,18 +74,31 @@ const PROMOTION_PIECES: { piece: PromotionPiece; symbol: string; label: string }
   { piece: 'n', symbol: '♞', label: 'Knight' }
 ]
 
-function CapturedPiecesRow({ pieces }: { pieces: string[] }) {
-  if (pieces.length === 0) return <span className="text-[10px] text-gray-600">—</span>
+function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: string }) {
   const sortedPieces = [...pieces].sort((a, b) => {
     const order = ['q', 'r', 'b', 'n', 'p']
     return order.indexOf(a) - order.indexOf(b)
   })
+  
   return (
-    <span className="text-base md:text-lg leading-none">
-      {sortedPieces.map((piece, i) => (
-        <span key={`${piece}-${i}`}>{PIECE_SYMBOLS[piece] || piece}</span>
-      ))}
-    </span>
+    <div className="flex flex-col items-center w-[100px]">
+      <span className="text-xs text-gray-400 mb-1">{label}</span>
+      <div className="flex flex-wrap gap-1 p-2 bg-gray-800 rounded border border-gray-600 h-[80px] w-full justify-center content-start">
+        {sortedPieces.length === 0 ? (
+          <span className="text-gray-600 text-xs">No captures</span>
+        ) : (
+          sortedPieces.map((piece, index) => (
+            <span 
+              key={`${piece}-${index}`} 
+              className="text-2xl bg-gray-700 rounded px-1 text-white border border-gray-500"
+              style={{ textShadow: '0 0 2px rgba(255,255,255,0.5)' }}
+            >
+              {PIECE_SYMBOLS[piece] || piece}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -110,7 +106,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-gray-800 p-6 rounded-lg border-2 border-yellow-500">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
+        <h3 className="text-xl font-bold text-white mb-4 text-center">Promote Pawn</h3>
         <div className="flex gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
@@ -118,7 +114,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
               onClick={() => onSelect(piece)}
               className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-500 transition-colors"
             >
-              <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
+              <span className="text-4xl text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-300">{label}</span>
             </button>
           ))}
@@ -128,14 +124,13 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, challengeId }: GameProps) {
-  const router = useRouter()
-  const timeLimit = timeLimitSeconds || 600
-
-  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimit) : null)
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps }: GameProps) {
+  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
+  
+  const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
   const [onlineGame] = useState(() => {
     console.log('[Game] Creating OnlineGame, mode:', mode)
-    return mode === 'online' ? new OnlineGame(timeLimit) : null
+    return mode === 'online' ? new OnlineGame() : null
   })
   const isOnline = mode === 'online'
   console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
@@ -177,38 +172,29 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    matchTimeRemaining: 600,
-    matchTimerActive: false,
+    timerSeconds: 10,
+    timerActive: false,
     pendingOverlay: null,
     myPendingOverlay: null,
     highlightSquares: null,
-    isLoading: true
+    isLoading: true,
+    turnStatus: 'waiting'
   })
 
-  const [soundEnabled, setSoundEnabledState] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(true)
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
-  const [turnState, setTurnState] = useState<string>('selecting')
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
-  const teammateLabelShownRef = useRef(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
-  const isMobile = useIsMobile()
-  const [showLeaveModal, setShowLeaveModal] = useState(false)
-  const [leavingConfirmed, setLeavingConfirmed] = useState(false)
-  const alreadyReassessedRef = useRef(false)
-  const matchTimerStartedRef = useRef(false)
-  const [showGameOn, setShowGameOn] = useState(false)
-  const joinRoomCalledRef = useRef(false)
-  const settings = useSettings()
-  const [showSettings, setShowSettings] = useState(false)
-  const [showResignConfirm, setShowResignConfirm] = useState(false)
-  const [playerUsername, setPlayerUsername] = useState<string>('')
 
+  // Update sound engine when setting changes
+
+  // Update sound engine when setting changes
   useEffect(() => {
-    setSoundEngineEnabled(soundEnabled)
+    setSoundEnabled(soundEnabled)
   }, [soundEnabled])
 
   useEffect(() => {
@@ -266,48 +252,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       },
       isOnline: !!isOnline,
       moveComparisons: moveHistoryRef.current,
-      challengeId: challengeId || undefined,
     })
 
     gameSavedRef.current = true
   }, [gameState.status, isOnline, game])
 
-  // Player ID comes from URL props (passed from Room component)
-
-
-
-
-  const playerId = playerIdFromProps || ''
-  const effectiveTeam = team || null
-
-  useEffect(() => {
-    if (!playerId) return
-    supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', playerId)
-      .maybeSingle()
-      .then((result: { data: any }) => {
-        const data = result.data
-        if (data?.username) setPlayerUsername(data.username)
-      })
-  }, [playerId])
-
-  const inviteUrl = useMemo(() => {
-    if (!isOnline || !roomId || !roomCode) return undefined
-    const base = typeof window !== 'undefined' ? window.location.origin : ''
-    const params = new URLSearchParams({
-      mode: 'online',
-      room: roomId,
-      code: roomCode,
-      time: String(timeLimit),
-    })
-    return `${base}/game?${params.toString()}`
-  }, [isOnline, roomId, roomCode, timeLimit])
+  // Player ID from URL props (passed from Room component)
+  // No need to get session - use the playerId directly from URL
+  const playerId = playerIdFromProps || null
+  console.log('[Game] Using playerId from props:', playerId)
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
-  const lastOnlineStateRef = useRef<string>('')
   useEffect(() => {
     console.log('[Game] setOnStateChange useEffect, onlineGame:', !!onlineGame)
     if (!onlineGame) {
@@ -318,23 +274,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     onlineGameRef.current = onlineGame
     console.log('[Game] Setting up setOnStateChange callback')
     onlineGame.setOnStateChange(() => {
-      if (!onlineGameRef.current) return
-      const g = onlineGameRef.current
-
-      // Track turn state for "evaluating" loader visibility — MUST run before stateKey guard
-      const ts = (g as any).turnState
-      if (ts) setTurnState(ts)
-
-      // Skip if state hasn't meaningfully changed (prevents re-render loops)
-      // Exclude matchTimeRemaining from key — it changes every second
-      // and would defeat the guard, causing unnecessary re-renders.
-      // Timer updates are handled separately by tickMatchTimer.
-      const pendingSize = (g as any).getAllPendingMoves?.()?.size ?? 0
-      const stateKey = `${g.status}:${g.fen}:${g.currentTurn}:${pendingSize}`
-      if (stateKey === lastOnlineStateRef.current) return
-      lastOnlineStateRef.current = stateKey
-
-      const captured = g.getCapturedPieces()
+      console.log('[Game] 🔥 State change callback triggered!')
+      if (onlineGameRef.current) {
+        const g = onlineGameRef.current
+        const captured = g.getCapturedPieces()
+        console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
         
         // Get pendingOverlay for online mode - show teammate's pending move
         // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
@@ -357,7 +301,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   piece = 'p'
                 }
               }
-              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && g.currentTurn === Team.WHITE }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
             }
           }
         }
@@ -384,6 +328,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }
         }
         
+        // Compute turnStatus for UI
+        let turnStatus: GameState['turnStatus'] = 'waiting'
+        if (g.status === GameStatus.PLAYING && g.currentTurn === Team.WHITE && playerId) {
+          const ts = (g as any).getTurnState()
+          const allMovesLocal = (g as any).getAllPendingMoves() as Map<string, any>
+          const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
+          const localOtherPlayer = localEntries.filter(([p]) => p !== playerId)
+          const localMyPending = allMovesLocal.get(playerId)
+          const localTeammateLocked = localOtherPlayer.length > 0 && localOtherPlayer[0][1]?.locked
+          if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
+          else if (localTeammateLocked) turnStatus = 'teammate_locked'
+          else if (localOtherPlayer.length > 0 || localMyPending) turnStatus = 'waiting_for_teammate'
+          else turnStatus = 'your_turn'
+        } else if (g.status === GameStatus.PLAYING) {
+          turnStatus = 'opponent_turn'
+        }
+
         setGameState(prev => ({
           ...prev,
           status: g.status,
@@ -393,17 +354,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByWhite: captured.white,
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
-          matchTimeRemaining: g.getMatchTimeRemaining(),
-          matchTimerActive: g.isMatchTimerActive(),
-          isLoading: (g.status === GameStatus.PLAYING || g.status === GameStatus.READY) ? false : prev.isLoading,
+          timerSeconds: g.getTeamTimer(),
+          timerActive: g.isTimerActive(),
+          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
           pendingOverlay,
-          myPendingOverlay
+          myPendingOverlay,
+          turnStatus
         }))
         
-        if (pendingOverlay?.showTeammateLabel) {
-          teammateLabelShownRef.current = true
-        }
-
         // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
@@ -445,51 +403,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
       moveHistoryRef.current = [...moveHistoryRef.current, entry]
     }
-
-    // Populate move history from saved data after page reload recovery
-    if (isOnline && moveHistoryRef.current.length === 0 && g.status === GameStatus.PLAYING) {
-      const savedMoves = (g as any).savedMoveHistory as Array<{ team: string; move: string }> | undefined
-      if (savedMoves && savedMoves.length > 0) {
-        const entries: MoveEntry[] = savedMoves.map((sm, i) => ({
-          turn: i + 1,
-          team: sm.team as 'WHITE' | 'BLACK',
-          winningMove: sm.move,
-          winningMoveUci: sm.move,
-          shadowMove: null,
-          shadowMoveUci: '',
-          isSync: true,
-          player1Accuracy: 0,
-          player2Accuracy: 0,
-          fenAfter: '',
-        }))
-        moveHistoryRef.current = entries
-      }
-    }
-
-    if (!alreadyReassessedRef.current && bot && moveHistoryRef.current.length > 0) {
-      const whiteMoves = moveHistoryRef.current.filter(e => e.team === 'WHITE')
-      if (whiteMoves.length >= 4) {
-        const recentMoves = whiteMoves.slice(-4)
-        const avgAccuracy = recentMoves.reduce((sum, e) =>
-          sum + (e.player1Accuracy + e.player2Accuracy) / 2, 0
-        ) / 4
-
-        let newLevel = 4
-        if (avgAccuracy >= 92) newLevel = 6
-        else if (avgAccuracy >= 85) newLevel = 5
-
-        const oldLevel = bot.getConfig().skillLevel
-        if (newLevel > oldLevel) {
-          console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across 4 WHITE turns → upgrading bot from Level ${oldLevel} to Level ${newLevel}`)
-          bot.setSkillLevel(newLevel)
-          if (teammateBot) teammateBot.setSkillLevel(newLevel)
-        } else {
-          console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across 4 WHITE turns → keeping bot at Level ${oldLevel}`)
-        }
-        alreadyReassessedRef.current = true
-      }
-    }
         console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
+      }
     })
     console.log('[Game] setOnStateChange callback set up complete')
   }, [onlineGame, playerId])
@@ -502,21 +417,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       hasOnlineGame: !!onlineGame,
       playerId,
       roomId,
-      effectiveTeam,
-      conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!effectiveTeam
+      team,
+      conditionsMet: mode === 'online' && !!onlineGame && !!playerId && !!roomId && !!team
     })
     
-    if (mode === 'online' && onlineGame && playerId && roomId && effectiveTeam && !joinRoomCalledRef.current) {
-      joinRoomCalledRef.current = true
-      console.log('[Game] [OK] Calling joinRoom with:', { roomId, playerId, team: effectiveTeam })
-      onlineGame.joinRoom({ id: roomId } as any, playerId, effectiveTeam)
+    if (mode === 'online' && onlineGame && playerId && roomId && team) {
+      console.log('[Game] ✅ Calling joinRoom with:', { roomId, playerId, team })
+      onlineGame.joinRoom({ id: roomId } as any, playerId, team)
     } else {
-      console.log('[Game] [NO] joinRoom NOT called - conditions not met')
+      console.log('[Game] ❌ joinRoom NOT called - conditions not met')
     }
-  }, [mode, onlineGame, playerId, roomId, effectiveTeam, team])
+  }, [mode, onlineGame, playerId, roomId, team])
 
-  const matchTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const matchTimeoutFlagRef = useRef(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
   const gameRef = useRef(game)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
@@ -525,156 +438,44 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameRef.current = game
   }, [game])
 
-  const tickMatchTimer = useCallback(() => {
+  const startTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
-
-    const remaining = g.getMatchTimeRemaining()
-    if (remaining <= 0) {
-      if (matchTimerRef.current) {
-        clearInterval(matchTimerRef.current)
-        matchTimerRef.current = null
-      }
-      if (matchTimeoutFlagRef.current) return
-      matchTimeoutFlagRef.current = true
-      g.setMatchTimerActive(false)
-      g.setMatchTimeRemaining(0)
-      setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
-
-      if (isOnline && !(g as any).isCoordinator()) {
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+    
+    g.setTeamTimer(10)
+    
+    timerRef.current = setInterval(() => {
+      const currentTimer = g.getTeamTimer()
+      if (currentTimer <= 0) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+          timerRef.current = null
+        }
+        g.setTimerActive(false)
+        setGameState(prev => ({ ...prev, timerSeconds: 0, timerActive: false }))
         return
       }
-
-      handleMatchTimeout(g)
-      return
-    }
-
-    g.setMatchTimeRemaining(remaining - 1)
-    setGameState(prev => ({ ...prev, matchTimeRemaining: remaining - 1 }))
-  }, [isOnline])
-
-  const handleMatchTimeout = useCallback(async (g: any) => {
-    if (g.status === GameStatus.GAME_OVER) return
-    try {
-      const evaluator = g.getEvaluator()
-      if (!evaluator) {
-        g.setGameOverTimeup('Draw by timeout', 'timeout')
-        setGameState(prev => ({ ...prev, status: 3 as any }))
-        updateStateRef.current?.()
-        return
-      }
-
-      const fen = g.board.fen()
-      const score = await evaluator.evaluatePosition(fen)
-      let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
-      let result = ''
-
-      if (score > 0) {
-        winner = 'WHITE'
-        result = 'White wins by timeout — material advantage'
-      } else if (score < 0) {
-        winner = 'BLACK'
-        result = 'Black wins by timeout — material advantage'
-      } else {
-        winner = 'DRAW'
-        result = "Draw by timeout — equal position"
-      }
-
-      g.setGameOverTimeup(result, 'timeout')
-      setGameState(prev => ({ ...prev, status: 3 as any }))
-      updateStateRef.current?.()
-    } catch (e) {
-      console.error('[TIMEOUT] Evaluation failed:', e)
-      const g2 = isOnline ? onlineGameRef.current : gameRef.current
-      if (g2) {
-        g2.setGameOverTimeup('Draw by timeout', 'timeout')
-        setGameState(prev => ({ ...prev, status: 3 as any }))
-        updateStateRef.current?.()
-      }
-    }
-  }, [isOnline])
-
-  const startMatchTimer = useCallback(() => {
-    const g = isOnline ? onlineGameRef.current : gameRef.current
-    if (!g) return
-
-    if (matchTimerRef.current) {
-      clearInterval(matchTimerRef.current)
-      matchTimerRef.current = null
-    }
-
-    matchTimeoutFlagRef.current = false
-    const currentRemaining = g.getMatchTimeRemaining()
-    if (currentRemaining > 0 && currentRemaining < timeLimit) {
-      g.setMatchTimerActive(true)
-      setGameState(prev => ({
-        ...prev,
-        matchTimeRemaining: currentRemaining,
-        matchTimerActive: true
-      }))
-    } else {
-      g.setMatchTimerActive(true)
-      g.setMatchTimeRemaining(timeLimit)
-      setGameState(prev => ({
-        ...prev,
-        matchTimeRemaining: timeLimit,
-        matchTimerActive: true
-      }))
-    }
-
-    matchTimerRef.current = setInterval(() => {
-      tickMatchTimer()
+      
+      g.setTeamTimer(currentTimer - 1)
+      setGameState(prev => ({ ...prev, timerSeconds: currentTimer - 1 }))
     }, 1000)
-  }, [isOnline, timeLimit, tickMatchTimer])
+  }, [isOnline])
 
-  const stopMatchTimer = useCallback(() => {
-    if (matchTimerRef.current) {
-      clearInterval(matchTimerRef.current)
-      matchTimerRef.current = null
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
     }
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (g) {
-      g.setMatchTimerActive(false)
+      g.setTimerActive(false)
     }
-    setGameState(prev => ({ ...prev, matchTimerActive: false }))
+    setGameState(prev => ({ ...prev, timerActive: false }))
   }, [isOnline])
-
-  // Show Game On overlay when game transitions to PLAYING, then start timer
-  useEffect(() => {
-    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current && !showGameOn) {
-      setShowGameOn(true)
-    }
-    if (gameState.status === GameStatus.GAME_OVER && matchTimerStartedRef.current) {
-      stopMatchTimer()
-      matchTimerStartedRef.current = false
-    }
-  }, [gameState.status, showGameOn, stopMatchTimer])
-
-  const handleGameOnComplete = useCallback(() => {
-    setShowGameOn(false)
-    if (!matchTimerStartedRef.current) {
-      const g = isOnline ? onlineGameRef.current : gameRef.current
-      if (g) {
-        g.setMatchTimeRemaining(timeLimit)
-        g.setMatchTimerActive(true)
-        if (isOnline && (g as any).stopEngineTimer) {
-          (g as any).stopEngineTimer()
-        }
-      }
-      startMatchTimer()
-      matchTimerStartedRef.current = true
-    }
-  }, [startMatchTimer, isOnline, timeLimit])
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (matchTimerRef.current) {
-        clearInterval(matchTimerRef.current)
-        matchTimerRef.current = null
-      }
-    }
-  }, [])
 
   const updateState = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -704,7 +505,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               piece = 'p'
             }
           }
-          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && currentTurn === Team.WHITE }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black' }
         }
       }
     }
@@ -731,6 +532,34 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     }
     
+    // Compute turnStatus for UI
+    let turnStatus: GameState['turnStatus'] = 'waiting'
+    if (g.status === GameStatus.PLAYING && currentTurn === Team.WHITE) {
+      if (isOnline && playerId) {
+        const ts = (g as any).getTurnState()
+        const allMovesLocal = (g as any).getAllPendingMoves() as Map<string, any>
+        const myMove = allMovesLocal.get(playerId)
+        const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
+        const teammateEntry = localEntries.find(([p]) => p !== playerId)
+        const teammateLocked = teammateEntry ? teammateEntry[1]?.locked : false
+        if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
+        else if (teammateLocked) turnStatus = 'teammate_locked'
+        else if (teammateEntry || myMove) turnStatus = 'waiting_for_teammate'
+        else turnStatus = 'your_turn'
+      } else {
+        const pending = g.getPendingMoves?.() || { human: null, teammate: null }
+        if (pending.human && pending.teammate) {
+          turnStatus = (g as any).isBothPendingLocked?.() ? 'evaluating' : 'waiting_for_teammate'
+        } else if (pending.human) {
+          turnStatus = 'waiting_for_teammate'
+        } else {
+          turnStatus = 'your_turn'
+        }
+      }
+    } else if (g.status === GameStatus.PLAYING) {
+      turnStatus = 'opponent_turn'
+    }
+
     setGameState(prev => {
       const newState = {
         ...prev,
@@ -746,21 +575,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracy: 100,
         moveAccuracyP2: 100,
         totalMoves: 0,
-        matchTimeRemaining: g.getMatchTimeRemaining(),
-        matchTimerActive: g.isMatchTimerActive(),
+        timerSeconds: g.getTeamTimer(),
+        timerActive: g.isTimerActive(),
         pendingOverlay,
         myPendingOverlay,
-        isLoading: (g.status === GameStatus.PLAYING || g.status === GameStatus.READY) ? false : prev.isLoading,
+        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
         isBotThinking: currentTurn === Team.BLACK ? prev.isBotThinking : false,
-        highlightSquares: null as HighlightSquares | null
+        highlightSquares: null as HighlightSquares | null,
+        turnStatus
       }
       return newState
     })
     
-    if (pendingOverlay?.showTeammateLabel) {
-      teammateLabelShownRef.current = true
-    }
-
     // Accuracy transition detection (for coordinator who uses updateStateRef)
     const prevTurn = prevTurnRef.current
     if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
@@ -785,6 +611,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (!g.isBothPendingLocked()) {
       return false
     }
+
+    stopTimer()
 
     const pending = g.getPendingMoves()
     const humanMove = pending.human
@@ -826,16 +654,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       setGameState(prev => ({
         ...prev,
-        highlightSquares,
-        pendingOverlay: null,
-        myPendingOverlay: null
+        highlightSquares
       }))
-
-      const wm = comparison.winningMove
-      if (wm.includes('#')) playCheckmateSound()
-      else if (wm.includes('+')) playCheckSound()
-      else if (wm.includes('x')) playCaptureSound()
-      else playMoveSound()
 
       updateStateRef.current()
       return true
@@ -887,10 +707,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     g.lockMove('player4')
     
     await g.resolveLegacy(true)
-    if (sanMove.includes('#')) playCheckmateSound()
-    else if (sanMove.includes('+')) playCheckSound()
-    else if (sanMove.includes('x')) playCaptureSound()
-    else playMoveSound()
     updateStateRef.current()
     
     console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
@@ -922,10 +738,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         return
       }
 
-      // Clear accuracy panel when player starts new WHITE move (skip if resolving)
-      if ((g as any).turnState !== 'resolving') {
-        setAccuracyComparison(null)
-      }
+      // Clear accuracy panel when player starts new WHITE move
+      setAccuracyComparison(null)
       console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
 
       console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
@@ -986,17 +800,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             // Set highlight squares after resolve (comparison now available)
             const comparison = g.lastMoveComparison
             if (comparison) {
+              const isValidSquare = (sq: string): sq is string => 
+                !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
               const highlightSquares: HighlightSquares = {}
               const isPlayer1 = playerId === (g as any).player1Id
-
+              
               if (comparison.winningMove && comparison.player1Move) {
-                const lastMove = g.lastMove
-                if (lastMove?.from) highlightSquares.winnerFrom = lastMove.from
-                if (lastMove?.to) highlightSquares.winnerTo = lastMove.to
+                const wf = comparison.winningMove.substring(0, 2)
+                const wt = comparison.winningMove.substring(2, 4)
+                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
+                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
                 if (!comparison.isSync) {
-                  if (comparison.loserFrom && comparison.loserFrom.length === 2) highlightSquares.loserFrom = comparison.loserFrom
-                  if (comparison.loserTo && comparison.loserTo.length === 2) highlightSquares.loserTo = comparison.loserTo
+                  const loserMove = comparison.winningMove === comparison.player1Move ? comparison.player2Move : comparison.player1Move
+                  const lf = loserMove?.substring(0, 2)
+                  const lt = loserMove?.substring(2, 4)
+                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
+                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
                 }
               }
               
@@ -1006,13 +826,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             const newTurn = g.currentTurn as Team
             console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
             playResolutionSound()
-            if (comparison) {
-              const wm = comparison.winningMove
-              if (wm.includes('#')) playCheckmateSound()
-              else if (wm.includes('+')) playCheckSound()
-              else if (wm.includes('x')) playCaptureSound()
-              else playMoveSound()
-            }
             
             // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
             if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
@@ -1046,6 +859,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 } catch (e) {
                   console.log(`[RESOLVE] BLACK resolve failed:`, e)
                 }
+                
+                startTimer()
               })()
             }
           } catch (e: any) {
@@ -1079,6 +894,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       try {
         g.startPendingTurn()
+        startTimer()
 
         setGameState(prev => ({
           ...prev,
@@ -1099,7 +915,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             ...prev,
             selectedMove: sanMove,
             pendingOverlay: null,
-            myPendingOverlay: null
+            myPendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'white' }
           }))
         }
 
@@ -1132,9 +948,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: !teammateLabelShownRef.current }
+              pendingOverlay: { from, to, piece, color: 'white' }
             }))
-            teammateLabelShownRef.current = true
           }
 
           console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
@@ -1164,6 +979,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (!pendingOpponentTurnRef.current) {
           console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
           g.startPendingTurn()
+          startTimer()
         } else {
           console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
           await handleResolutionComplete()
@@ -1172,7 +988,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
     }
-  }, [isOnline, onlineGame, game, playerId, teammateBot, checkAndResolve])
+  }, [isOnline, onlineGame, game, playerId, teammateBot, startTimer, checkAndResolve])
 
   useEffect(() => {
     if (!isOnline && game && game.status === GameStatus.WAITING) {
@@ -1187,10 +1003,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
-      if (settings.autoQueen) {
-        executeMove(uciMove, 'q')
-        return
-      }
       const [from, to] = uciMove.split('-')
       setGameState(prev => ({
         ...prev,
@@ -1199,7 +1011,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } else {
       executeMove(uciMove)
     }
-  }, [executeMove, settings.autoQueen])
+  }, [executeMove])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (gameState.pendingPromotion) {
@@ -1227,94 +1039,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
-      }
-
-      if (!isOnline && !alreadyReassessedRef.current && bot && teammateBot && gameRef.current) {
-        const g = gameRef.current
-        const stats = g.getStats()
-        if (stats.whiteMovesPlayed >= 4) {
-          const avgAccuracy = (stats.player1Accuracy + stats.player2Accuracy) / 2
-
-          let newLevel = 4
-          if (avgAccuracy >= 92) newLevel = 6
-          else if (avgAccuracy >= 85) newLevel = 5
-
-          const oldLevel = bot.getConfig().skillLevel
-          if (newLevel > oldLevel) {
-            console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across ${stats.whiteMovesPlayed} WHITE turns → upgrading bots from Level ${oldLevel} to Level ${newLevel}`)
-            bot.setSkillLevel(newLevel)
-            teammateBot.setSkillLevel(newLevel)
-          } else {
-            console.log(`[ADAPTIVE] Human avg accuracy: ${avgAccuracy.toFixed(1)}% across ${stats.whiteMovesPlayed} WHITE turns → keeping bots at Level ${oldLevel}`)
-          }
-          alreadyReassessedRef.current = true
-        }
+        startTimer()
       }
     }
-  }, [executeBotMove])
+  }, [executeBotMove, startTimer])
 
-  const handleLeaveConfirm = useCallback(async () => {
-    setShowLeaveModal(false)
-    setLeavingConfirmed(true)
-    if (isOnline && onlineGameRef.current) {
-      await onlineGameRef.current.abandonMatch()
-    }
-    router.push('/')
-  }, [isOnline, router])
-
-  const handleLeaveCancel = useCallback(() => {
-    setShowLeaveModal(false)
-  }, [])
-
-  const { confirmLeave } = useNavigationGuard({
-    enabled: isOnline && gameState.status === GameStatus.PLAYING,
-    onAttemptLeave: () => setShowLeaveModal(true),
-  })
-
-  const handleLeaveModalConfirm = useCallback(() => {
-    setShowLeaveModal(false)
-    if (isOnline && onlineGameRef.current) {
-      onlineGameRef.current.abandonMatch()
-    }
-    confirmLeave()
-  }, [isOnline, confirmLeave])
-
-  // Show lobby for online mode while waiting for game to start
-  if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
-    return (
-      <GameLobby
-        roomCode={roomCode}
-        inviteUrl={inviteUrl}
-        isLoading={gameState.isLoading}
-        username={playerUsername}
-      />
-    )
-  }
-
-  // Show loading state for offline mode while game initializes
+  // Show loading state while game initializes
   if (gameState.isLoading) {
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <GameLoading 
           message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
-          roomCode={roomCode}
-          inviteUrl={inviteUrl}
         />
       </div>
     )
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2 md:p-4 overflow-x-hidden ${isMobile ? 'pb-16 pt-14' : ''}`}>
-      {isMobile && (
-        <MobileStatusBar
-          currentTurn={gameState.currentTurn}
-          timerSeconds={gameState.matchTimeRemaining}
-          timerActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-          whiteCaptured={gameState.capturedByWhite}
-          blackCaptured={gameState.capturedByBlack}
-        />
-      )}
+    <div className="min-h-screen bg-gray-900 text-white p-4">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1322,142 +1064,125 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
-          onPlayAgain={() => {
-            stopMatchTimer()
-            if (isOnline && onlineGameRef.current) {
-              onlineGameRef.current.leaveRoom()
-            }
-            router.push('/')
-          }}
-          onClose={() => {
-            stopMatchTimer()
-            if (isOnline && onlineGameRef.current) {
-              onlineGameRef.current.leaveRoom()
-            }
-            router.push('/')
-          }}
-          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
-          gameOverReason={isOnline ? (onlineGameRef.current?.getGameOverReason() || null) : (game?.getGameOverReason() || null)}
-        />
-      )}
-
-      {showGameOn && (
-        <GameOnOverlay onComplete={handleGameOnComplete} />
-      )}
-
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
-
-      {showResignConfirm && (
-        <ResignConfirmModal
-          onConfirm={() => {
-            setShowResignConfirm(false)
-            if (isOnline && onlineGameRef.current) {
-              onlineGameRef.current.abandonMatch()
-            }
-            router.push('/')
-          }}
-          onCancel={() => setShowResignConfirm(false)}
+          onPlayAgain={() => window.location.reload()}
+          gameResult={game?.getResult()}
+          gameOverReason={game?.getGameOverReason() || null}
+          stats={!isOnline && game ? {
+            whiteMovesPlayed: game.getStats().whiteMovesPlayed,
+            whiteSyncRate: game.getStats().whiteSyncRate,
+            whiteConflicts: game.getStats().whiteConflicts,
+            player1Accuracy: game.getStats().player1Accuracy,
+            player2Accuracy: game.getStats().player2Accuracy,
+            totalMoves: game.getStats().movesPlayed,
+          } : undefined}
         />
       )}
         
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-3 md:mb-4">
-          <h1 className="text-lg md:text-2xl font-bold">ChessDuo</h1>
-          {!isMobile && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setOverlayMode('profile')}
-                  className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
-                  title="Profile"
-                >
-                  <User size={18} className="text-gray-600 dark:text-gray-300" />
-                </button>
-                <button
-                  onClick={() => setSoundEnabledState(!soundEnabled)}
-                  className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
-                  title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-                >
-                  {soundEnabled ? <Volume2 size={18} className="text-gray-600 dark:text-gray-300" /> : <VolumeX size={18} className="text-gray-400" />}
-                </button>
-              </div>
-          )}
-          <GameMenu
-            onResign={() => setShowResignConfirm(true)}
-            onOpenSettings={() => setShowSettings(true)}
-          />
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">ClashMate</h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOverlayMode('profile')}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              title="Profile"
+            >
+              👤
+            </button>
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+          </div>
         </div>
 
-        <div className="relative flex justify-center mb-2 pb-6">
-          <TeamIndicator
-            whiteLabel="White Team (You)"
-            blackLabel="Black Team (Bot)"
-            activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
-            isGameOver={gameState.status === GameStatus.GAME_OVER}
-            isBotThinking={gameState.isBotThinking ?? false}
-          />
-        </div>
-
-        <div className="flex flex-col lg:flex-row lg:items-start justify-center gap-3 lg:gap-6 mb-3">
-          {/* Left: Board column */}
-          <div className="flex flex-col items-center gap-2">
-            <TurnStatusArea
-              state={(() => {
-                if (gameState.status === GameStatus.GAME_OVER) return 'idle'
-                if (turnState === 'resolving') return 'resolving'
-                if (gameState.isBotThinking) return 'bot_thinking'
-                if (gameState.selectedMove) return 'selected'
-                return 'idle'
-              })()}
-              seconds={gameState.matchTimeRemaining}
-              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-              totalSeconds={timeLimit}
-              selectedMove={gameState.selectedMove}
-              isMobile={isMobile}
-            />
-            <div className="w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px] aspect-square flex-shrink-0 relative lg:max-h-[calc(100vh-180px)]">
-              {isMobile ? (
-                <MobileChessBoard
-                  fen={playbackFen || gameState.fen}
-                  onMove={handleMove}
-                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                  orientation="white"
-                  lastMove={gameState.lastMove}
-                  pendingOverlay={gameState.pendingOverlay}
-                  myPendingOverlay={gameState.myPendingOverlay}
-                  highlightSquares={gameState.highlightSquares}
-                  onAnimationComplete={handleResolutionComplete}
-                />
+        {roomCode && (
+          <div className="mb-4 p-3 bg-gray-700 rounded text-center">
+            <p className="text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
+            <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
+              {roomCode}
+            </p>
+          </div>
+        )}
+        
+        <div className="flex justify-between items-center mb-2">
+          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+            White Team (You)
+          </div>
+          
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-lg font-mono">
+              {gameState.status === GameStatus.GAME_OVER ? (
+                <span className="text-yellow-400 font-bold">Game Over!</span>
+              ) : gameState.turnStatus === 'your_turn' ? (
+                <span className="text-green-400 font-bold">Your turn</span>
+              ) : gameState.turnStatus === 'selecting' ? (
+                <span className="text-blue-300">Select a move</span>
+              ) : gameState.turnStatus === 'waiting_for_teammate' ? (
+                <span className="text-yellow-300">Waiting for teammate...</span>
+              ) : gameState.turnStatus === 'teammate_locked' ? (
+                <span className="text-green-400">Teammate locked ✓</span>
+              ) : gameState.turnStatus === 'evaluating' ? (
+                <span className="text-purple-300">Evaluating...</span>
+              ) : gameState.turnStatus === 'opponent_turn' ? (
+                <span className="text-blue-300">Opponent thinking...</span>
               ) : (
-                <ChessBoard 
-                  fen={playbackFen || gameState.fen}
-                  onMove={handleMove}
-                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                  orientation="white"
-                  lastMove={gameState.lastMove}
-                  pendingOverlay={gameState.pendingOverlay}
-                  myPendingOverlay={gameState.myPendingOverlay}
-                  highlightSquares={gameState.highlightSquares}
-                  onAnimationComplete={handleResolutionComplete}
-                />
+                <span className="text-gray-400">Waiting...</span>
               )}
             </div>
-            {/* Captured pieces - compact row below board */}
-            <div className="flex items-center justify-center gap-4 md:gap-8 mt-1 w-full max-w-[94vw] md:max-w-[600px] lg:max-w-[720px]">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-gray-500">White:</span>
-                <CapturedPiecesRow pieces={gameState.capturedByWhite} />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-gray-500">Black:</span>
-                <CapturedPiecesRow pieces={gameState.capturedByBlack} />
-              </div>
-            </div>
+            <AnalyzingIndicator
+              isVisible={
+                gameState.status === GameStatus.PLAYING &&
+                (gameState.turnStatus === 'waiting_for_teammate' ||
+                 gameState.turnStatus === 'evaluating' ||
+                 gameState.turnStatus === 'opponent_turn')
+              }
+              phase={
+                gameState.turnStatus === 'waiting_for_teammate' ? 'teammate' :
+                gameState.turnStatus === 'evaluating' ? 'evaluating' :
+                gameState.turnStatus === 'opponent_turn' ? 'opponent' : 'teammate'
+              }
+            />
           </div>
+          
+          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+            Black Team (Bot)
+          </div>
+        </div>
 
-          {/* Right: Accuracy Panel - on desktop appears beside board, on mobile below */}
-          <div className="w-full max-w-[94vw] md:max-w-[600px] lg:w-72 lg:max-w-none lg:pt-9 mx-auto lg:mx-0">
+        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
+          {/* Left side - WHITE team (Timer + Captured) */}
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
+              <TeamTimer 
+                seconds={gameState.timerSeconds}
+                isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
+                currentTeam={Team.WHITE}
+              />
+            </div>
+            <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
+          </div>
+          
+          {/* Chess Board */}
+          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
+            <ChessBoard 
+              fen={playbackFen || gameState.fen}
+              onMove={handleMove}
+              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+              orientation="white"
+              lastMove={gameState.lastMove}
+              pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.myPendingOverlay}
+              highlightSquares={gameState.highlightSquares}
+              onAnimationComplete={handleResolutionComplete}
+            />
+          </div>
+          
+{/* Accuracy Panel - below board as bottom sheet */}
+          <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
               return (
@@ -1470,21 +1195,35 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               )
             })()}
           </div>
+          
+          {/* Right side - BLACK team (Timer + Resolution + Captured) */}
+          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
+              <TeamTimer 
+                seconds={gameState.timerSeconds}
+                isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
+                currentTeam={Team.BLACK}
+              />
+            </div>
+            <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
+          </div>
         </div>
 
         <div className="mt-4 text-center">
+          {gameState.selectedMove && (
+            <p className="text-green-400">Selected: {gameState.selectedMove}</p>
+          )}
           {gameState.status === GameStatus.GAME_OVER && (
-            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+            <p className="text-xl font-bold text-yellow-400">
               {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
             </p>
           )}
         </div>
 
-        <div className="mt-4 md:mt-6 w-full max-w-[500px] mx-auto">
+        <div className="mt-6 max-w-[500px] mx-auto">
           <MovePlayback
             moves={moveHistoryRef.current}
             currentIndex={playbackIndex}
-            initialFen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             onSelectMove={(index, fen) => {
               setPlaybackIndex(index)
               setPlaybackFen(fen)
@@ -1496,6 +1235,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
+        <div className="mt-8 p-4 bg-gray-800 rounded">
+          <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            {!isOnline && game ? (
+              <>
+                <div>White Moves: {game.getStats().whiteMovesPlayed}</div>
+                <div>Sync Rate: {Math.round(game.getStats().whiteSyncRate * 100)}%</div>
+                <div>Conflicts: {game.getStats().whiteConflicts}</div>
+                <div>Player 1 Avg Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
+                <div>Player 2 Avg Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
+              </>
+            ) : (
+              <>
+                <div>Game Mode: Online (Human vs Human)</div>
+                <div>Stats not available in online mode</div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <SlideOver
@@ -1524,34 +1282,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
-
-      {isMobile && (
-        <BottomNav
-          activeOverlay={overlayMode}
-          onProfileClick={() => {
-            if (!playerId) {
-              setOverlayMode('profile')
-              return
-            }
-            setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')
-          }}
-          onHistoryClick={() => {
-            if (!playerId) {
-              setOverlayMode('profile')
-              return
-            }
-            setOverlayMode(overlayMode === 'history' ? 'none' : 'history')
-          }}
-          onSoundToggle={() => setSoundEnabledState(!soundEnabled)}
-          soundEnabled={soundEnabled}
-        />
-      )}
-
-      <LeaveConfirmModal
-        open={showLeaveModal}
-        onCancel={handleLeaveCancel}
-        onConfirm={handleLeaveModalConfirm}
-      />
     </div>
   )
 }
