@@ -287,7 +287,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       .select('username')
       .eq('id', playerId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then((result: { data: any }) => {
+        const data = result.data
         if (data?.username) setPlayerUsername(data.username)
       })
   }, [playerId])

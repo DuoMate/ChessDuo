@@ -22,7 +22,8 @@ export default function HistoryPage() {
   const [playerId, setPlayerId] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
       }

@@ -1,19 +1,40 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/game')) {
-    const hasAuthCookie = request.cookies
-      .getAll()
-      .some(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
-
-    if (!hasAuthCookie) {
-      const redirectUrl = encodeURIComponent(request.nextUrl.toString())
-      return NextResponse.redirect(new URL(`/?redirect=${redirectUrl}`, request.url))
-    }
+export async function middleware(request: NextRequest) {
+  if (!request.nextUrl.pathname.startsWith('/game')) {
+    return NextResponse.next()
   }
 
-  return NextResponse.next()
+  let supabaseResponse = NextResponse.next()
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            supabaseResponse.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    const redirectUrl = encodeURIComponent(request.nextUrl.toString())
+    return NextResponse.redirect(new URL(`/?redirect=${redirectUrl}`, request.url))
+  }
+
+  return supabaseResponse
 }
 
 export const config = {

@@ -180,7 +180,7 @@ export class DuelGame {
 
     setupListeners()
 
-    this._channel.subscribe(async (status) => {
+    this._channel!.subscribe(async (status) => {
       if (status === 'CHANNEL_ERROR') {
         console.warn('[DUEL] Channel error — reconnecting...')
         try { supabase.removeChannel(this._channel!) } catch {}

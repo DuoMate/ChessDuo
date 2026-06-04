@@ -12,7 +12,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
       }

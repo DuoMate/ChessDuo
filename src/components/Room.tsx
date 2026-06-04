@@ -84,7 +84,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       console.log('[Join] Looking for room:', joinCode.toUpperCase())
       
       // Try to find by code first (6-char code), then by ID (UUID)
-      let rooms = null
+      let rooms: any = null
       let roomError = null
       
       // First try as room code

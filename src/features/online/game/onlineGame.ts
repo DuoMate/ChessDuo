@@ -318,7 +318,7 @@ export class OnlineGame {
 
     setupListeners()
 
-    this._channel.subscribe(async (status: string) => {
+    this._channel!.subscribe(async (status: string) => {
       console.log('[ONLINE] Channel subscription status:', status)
       if (status === 'CHANNEL_ERROR') {
         console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
@@ -329,7 +329,7 @@ export class OnlineGame {
           config: { presence: { key: playerId } }
         })
         setupListeners()
-        this._channel.subscribe(async (s: string) => {
+        this._channel!.subscribe(async (s: string) => {
           if (s === 'SUBSCRIBED') {
             await this._channel?.track({ player_id: playerId, team, status: 'connected' })
             console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
@@ -418,7 +418,7 @@ export class OnlineGame {
     try {
       // Check if a game already exists for this room BEFORE creating fresh state
       // Retry up to 3 times with 1s delay — handles transient RLS/auth propagation delays
-      let existing = null
+      let existing: any = null
       if (this._room) {
         for (let attempt = 0; attempt < 3; attempt++) {
           existing = await loadGameState(this._room.id)

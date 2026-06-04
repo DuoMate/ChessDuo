@@ -21,7 +21,8 @@ export default function InvitePage() {
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      const session = result.data.session
       setPlayerId(session?.user?.id || null)
       setLoading(false)
     })
@@ -31,7 +32,8 @@ export default function InvitePage() {
       .select('username')
       .eq('id', targetUserId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then((result: { data: any }) => {
+        const data = result.data
         if (data) setTargetUsername(data.username)
       })
   }, [targetUserId])

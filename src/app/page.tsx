@@ -73,7 +73,8 @@ export default function SetupPage() {
   const redirectUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
         fetchUsername(session.user.id).then(name => {
@@ -90,7 +91,7 @@ export default function SetupPage() {
       setSessionChecked(true)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername('')

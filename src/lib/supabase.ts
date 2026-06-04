@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -6,10 +8,12 @@ function getSupabaseClient() {
   
   if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('[supabase] Missing env vars at runtime')
-    return createClient('https://placeholder.supabase.co', 'placeholder')
+    return createBrowserClient('https://placeholder.supabase.co', 'placeholder')
   }
   
-  return createClient(supabaseUrl, supabaseAnonKey)
+  if (supabaseInstance) return supabaseInstance
+  supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return supabaseInstance
 }
 
 export const supabase = getSupabaseClient()

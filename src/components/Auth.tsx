@@ -43,7 +43,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '')
       }

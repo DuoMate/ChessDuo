@@ -11,7 +11,8 @@ export default function PremiumPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
       }
@@ -26,7 +27,8 @@ export default function PremiumPage() {
       .select('is_premium')
       .eq('id', playerId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then((result: { data: any }) => {
+        const data = result.data
         if (data?.is_premium) setIsPremium(true)
       })
   }, [playerId])

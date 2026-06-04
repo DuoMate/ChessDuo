@@ -25,7 +25,8 @@ export default function ChallengePage() {
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then((response: { data: { session: any } }) => {
+      const session = response.data.session
       setPlayerId(session?.user?.id || null)
       setLoading(false)
     })
