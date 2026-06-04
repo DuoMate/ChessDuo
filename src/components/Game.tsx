@@ -201,7 +201,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
   const teammateLabelShownRef = useRef(false)
-  const matchTimerStartedRef = useRef(false)
+  const [matchTimerStarted, setMatchTimerStarted] = useState(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
@@ -213,20 +213,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Game ON overlay — show when game transitions to PLAYING, then start timer
   useEffect(() => {
-    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current && !showGameOn) {
+    if (gameState.status === GameStatus.PLAYING && !matchTimerStarted && !showGameOn) {
       setShowGameOn(true)
     }
-    if (gameState.status === GameStatus.GAME_OVER && matchTimerStartedRef.current) {
-      matchTimerStartedRef.current = false
+    if (gameState.status === GameStatus.GAME_OVER && matchTimerStarted) {
+      setMatchTimerStarted(false)
     }
-  }, [gameState.status, showGameOn])
+  }, [gameState.status, showGameOn, matchTimerStarted])
 
   const handleGameOnComplete = useCallback(() => {
     setShowGameOn(false)
-    if (!matchTimerStartedRef.current) {
-      matchTimerStartedRef.current = true
+    if (!matchTimerStarted) {
+      setMatchTimerStarted(true)
     }
-  }, [])
+  }, [matchTimerStarted])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.GAME_OVER) return
@@ -488,7 +488,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       matchTimeoutFlagRef.current = true
       g.setMatchTimerActive(false)
       g.setMatchTimeRemaining(0)
-      setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
+
+      const captured = g.getCapturedPieces()
+      const whiteCaptured = captured.white.length
+      const blackCaptured = captured.black.length
+
+      if (whiteCaptured > blackCaptured) {
+        g.setGameOverTimeup?.('White wins on time', 'timeout')
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.BLACK }))
+      } else if (blackCaptured > whiteCaptured) {
+        g.setGameOverTimeup?.('Black wins on time', 'timeout')
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE }))
+      } else {
+        g.setGameOverTimeup?.('Draw on time', 'timeout')
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER }))
+      }
       return
     }
 
@@ -1023,7 +1037,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
     if (matchTimerRef.current) return
-    if (!matchTimerStartedRef.current) return
+    if (!matchTimerStarted) return
 
     matchTimerRef.current = setInterval(tickMatchTimer, 1000)
 
@@ -1033,7 +1047,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         matchTimerRef.current = null
       }
     }
-  }, [gameState.status, tickMatchTimer])
+  }, [gameState.status, tickMatchTimer, matchTimerStarted])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
@@ -1079,7 +1093,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Show lobby for online mode while waiting for game to start
   const inviteUrl = roomCode && typeof window !== 'undefined'
-    ? `${window.location.origin}/game?code=${roomCode}`
+    ? `${window.location.origin}/?code=${roomCode}`
     : undefined
 
   if (isOnline && gameState.status !== GameStatus.PLAYING) {
