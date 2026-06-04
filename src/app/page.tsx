@@ -76,7 +76,14 @@ export default function SetupPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setPlayerId(session.user.id)
-        fetchUsername(session.user.id).then(setUsername)
+        fetchUsername(session.user.id).then(name => {
+          if (name) {
+            setUsername(name)
+          } else {
+            const suggested = session.user.email?.split('@')[0] || 'player'
+            setNeedsUsername({ userId: session.user.id, suggestedName: suggested })
+          }
+        })
       }
       setSessionChecked(true)
     }).catch(() => {
@@ -87,10 +94,18 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername('')
-        fetchUsername(session.user.id).then(setUsername)
+        fetchUsername(session.user.id).then(name => {
+          if (name) {
+            setUsername(name)
+          } else {
+            const suggested = session.user.email?.split('@')[0] || 'player'
+            setNeedsUsername({ userId: session.user.id, suggestedName: suggested })
+          }
+        })
       } else {
         setPlayerId(null)
         setUsername('')
+        setNeedsUsername(null)
       }
     })
 

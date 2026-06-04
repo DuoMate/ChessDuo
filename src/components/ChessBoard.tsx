@@ -302,8 +302,8 @@ export function ChessBoard({
                 height: '12.5%',
                 color: pendingOverlay.color === 'white' ? '#fff' : '#000',
                 textShadow: pendingOverlay.color === 'white' 
-                  ? '0 0 3px #000, 0 0 3px #000' 
-                  : '0 0 3px #fff, 0 0 3px #fff',
+                  ? '0 0 2px #000' 
+                  : '0 0 2px #fff',
                 fontSize: overlayContainerRef.current
                   ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
                   : '28px',
@@ -336,8 +336,8 @@ export function ChessBoard({
                 height: '12.5%',
                 color: myPendingOverlay.color === 'white' ? '#fff' : '#000',
                 textShadow: myPendingOverlay.color === 'white' 
-                  ? '0 0 3px #000, 0 0 3px #000' 
-                  : '0 0 3px #fff, 0 0 3px #fff',
+                  ? '0 0 2px #000' 
+                  : '0 0 2px #fff',
                 fontSize: overlayContainerRef.current
                   ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
                   : '28px',
@@ -354,7 +354,6 @@ export function ChessBoard({
               <motion.div
                 key="teammate-label"
                 initial={{
-                  x: getSquarePosition(pendingOverlay.to).x,
                   y: getSquarePosition(pendingOverlay.to).y,
                   opacity: 0,
                   scale: 0.5
@@ -369,17 +368,22 @@ export function ChessBoard({
                   scale: 0.7
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 18 }}
-                className="absolute pointer-events-none select-none z-20 whitespace-nowrap"
-                style={{ transform: 'translateX(-50%)' }}
+                className="absolute pointer-events-none select-none z-20"
+                style={{
+                  left: getSquarePosition(pendingOverlay.to).x,
+                  width: '12.5%',
+                }}
               >
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full
-                    bg-gradient-to-r from-amber-500/90 to-amber-400/90
-                    shadow-[0_0_12px_rgba(251,191,36,0.4)] backdrop-blur-sm
-                    border border-amber-300/30"
-                >
-                  <span className="text-[11px] leading-none">{'\u265E'}</span>
-                  <span className="text-[10px] font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
+                <div className="flex justify-center">
+                  <div
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap
+                      bg-gradient-to-r from-amber-500/90 to-amber-400/90
+                      shadow-[0_0_12px_rgba(251,191,36,0.4)] backdrop-blur-sm
+                      border border-amber-300/30"
+                  >
+                    <span className="text-[11px] leading-none">{'\u265E'}</span>
+                    <span className="text-[10px] font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -436,8 +440,8 @@ export function ChessBoard({
             style={{
               width: '12.5%',
               height: '12.5%',
-              left: `${(getSquarePosition(highlightSquares.winnerTo).x / (overlayContainerRef.current?.getBoundingClientRect().width || 1)) * 100}%`,
-              top: `${(getSquarePosition(highlightSquares.winnerTo).y / (overlayContainerRef.current?.getBoundingClientRect().height || 1)) * 100}%`,
+              left: `${((highlightSquares.winnerTo.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
+              top: `${((parseInt(highlightSquares.winnerTo[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
               boxShadow: '0 0 20px rgba(34, 197, 94, 0.8)'
             }}
           />

@@ -47,7 +47,7 @@ const TOUR_STEPS: TourStep[] = [
     fen: 'rnbqkbnr/pppppppp/8/8/2P1P3/8/PP1P1PPP/RNBQKBNR w KQkq - 0 1',
     title: 'The engine decides',
     caption: "The engine evaluates both moves blind. Yours (+0.32) beat your teammate's (+0.15). So your move plays on the board, and the losing piece gets pulled back. This is how every turn works.",
-    pendingOverlay: { from: 'c2', to: 'c4', piece: 'p', color: 'white' },
+    pendingOverlay: null,
     myPendingOverlay: null,
     highlightSquares: { winnerFrom: 'e2', winnerTo: 'e4', loserFrom: 'c2', loserTo: 'c4' },
     lastMove: { from: 'e2', to: 'e4' },
@@ -128,8 +128,8 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden ${
-          isMobile ? 'w-full' : 'max-w-2xl w-full'
+        className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-y-auto ${
+          isMobile ? 'w-full max-h-[90vh]' : 'max-w-2xl w-full max-h-[90vh]'
         }`}
       >
         {/* Header */}
@@ -157,10 +157,11 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
         </div>
 
         {/* Body */}
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 p-4`}>
+        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 ${isMobile ? 'p-3' : 'p-4'}`}>
           {/* Board */}
           <div className={`${isMobile ? 'w-full max-w-[300px] mx-auto' : 'w-[320px] flex-shrink-0'} aspect-square`}>
             <ChessBoard
+              key={step}
               fen={current.fen}
               onMove={() => {}}
               enabled={false}

@@ -335,13 +335,15 @@ RETURNS TRIGGER AS $$
  DECLARE
    base_username TEXT;
  BEGIN
-   base_username := COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1));
-   IF base_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
-     base_username := 'player_' || substr(md5(random()::text), 1, 6);
-   END IF;
-   INSERT INTO public.profiles (id, username, username_lower)
-     VALUES (NEW.id, base_username, LOWER(base_username))
-     ON CONFLICT (id) DO NOTHING;
+  base_username := NEW.raw_user_meta_data->>'username';
+  IF base_username IS NOT NULL THEN
+    IF base_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
+      base_username := 'player_' || substr(md5(random()::text), 1, 6);
+    END IF;
+    INSERT INTO public.profiles (id, username, username_lower)
+      VALUES (NEW.id, base_username, LOWER(base_username))
+      ON CONFLICT (id) DO NOTHING;
+  END IF;
    RETURN NEW;
  END;
  $$ LANGUAGE plpgsql SECURITY DEFINER;
