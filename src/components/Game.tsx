@@ -17,6 +17,7 @@ import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
+import { GameLobby } from './GameLobby'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
@@ -1050,12 +1051,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove])
 
-  // Show loading state while game initializes
+  // Show lobby for online mode while waiting for game to start
+  const inviteUrl = roomCode && typeof window !== 'undefined'
+    ? `${window.location.origin}/game?code=${roomCode}`
+    : undefined
+
+  if (isOnline && gameState.status !== GameStatus.PLAYING) {
+    return (
+      <GameLobby
+        roomCode={roomCode}
+        inviteUrl={inviteUrl}
+        isLoading={gameState.isLoading}
+      />
+    )
+  }
+
+  // Show loading state for offline mode while game initializes
   if (gameState.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <GameLoading 
-          message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
+          message="Initializing game..." 
         />
       </div>
     )
