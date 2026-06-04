@@ -5,6 +5,7 @@ import { GameStatus, MoveComparison } from '../../offline/game/localGame'
 import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
 import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
+import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
@@ -148,7 +149,6 @@ export class OnlineGame {
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
     try {
-      const { Chess } = require('chess.js')
       const chess = new Chess(fen)
       const moves = chess.moves({ verbose: true }) as Array<{ san: string; from: string; to: string }>
       const matchedMove = moves.find(m => m.san === move || m.san.replace(/[+#]/g, '') === move)
@@ -1047,12 +1047,12 @@ export class OnlineGame {
       if (mateCheck.isCheckmate()) {
         this._lastMove = { from: player1From, to: player1To }
         this._lastMoveComparison = {
-          player1Move, player2Move, player1Score: 10000, player2Score: 0,
+          player1Move, player2Move, player1Score: CHECKMATE_SCORE, player2Score: 0,
           player1Accuracy: 100, player2Accuracy: 0,
-          player1Loss: 0, player2Loss: 10000,
-          player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(10000),
-          winningMove: player1Move, winningScore: 10000,
-          isSync: false, bestEngineMove: player1Uci, bestEngineScore: 10000,
+          player1Loss: 0, player2Loss: CHECKMATE_SCORE,
+          player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(CHECKMATE_SCORE),
+          winningMove: player1Move, winningScore: CHECKMATE_SCORE,
+          isSync: false, bestEngineMove: player1Uci, bestEngineScore: CHECKMATE_SCORE,
           turnStartFen, winnerId: 'player1', loserId: 'player2',
           loserFrom: player2From, loserTo: player2To,
           alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
@@ -1070,12 +1070,12 @@ export class OnlineGame {
       if (mateCheck2.isCheckmate()) {
         this._lastMove = { from: player2From, to: player2To }
         this._lastMoveComparison = {
-          player1Move, player2Move, player1Score: 0, player2Score: 10000,
+          player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
           player1Accuracy: 0, player2Accuracy: 100,
-          player1Loss: 10000, player2Loss: 0,
-          player1Category: getAccuracyCategory(10000), player2Category: getAccuracyCategory(0),
-          winningMove: player2Move, winningScore: 10000,
-          isSync: false, bestEngineMove: player2Uci, bestEngineScore: 10000,
+          player1Loss: CHECKMATE_SCORE, player2Loss: 0,
+          player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
+          winningMove: player2Move, winningScore: CHECKMATE_SCORE,
+          isSync: false, bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
           turnStartFen, winnerId: 'player2', loserId: 'player1',
           loserFrom: player1From, loserTo: player1To,
           alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,

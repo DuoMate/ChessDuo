@@ -96,7 +96,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
                 }`}
               >
                 <p className="break-words">{msg.content}</p>
-                <p className="text-[10px] mt-1 opacity-50">
+                <p className="text-xs mt-1 opacity-50">
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>

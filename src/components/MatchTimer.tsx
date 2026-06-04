@@ -46,7 +46,7 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.span
-            className={`text-[10px] md:text-xs font-bold font-mono ${
+            className={`text-xs md:text-xs font-bold font-mono ${
               !isActive ? 'text-gray-500' :
               isCritical ? 'text-red-400' :
               isWarning ? 'text-yellow-400' :

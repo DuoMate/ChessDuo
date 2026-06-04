@@ -57,7 +57,7 @@ export function GameLoading({
       <p className="text-gray-400 text-lg">{message}</p>
       {roomCode && (
         <div className="mt-6 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Room code</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Room code</p>
           <p className="text-xl font-mono font-bold text-amber-400 tracking-widest select-all">{roomCode}</p>
           <button
             onClick={() => navigator.clipboard.writeText(roomCode)}
@@ -69,7 +69,7 @@ export function GameLoading({
       )}
       {inviteUrl && (
         <div className="mt-3 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Invite your friend</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Invite your friend</p>
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => {
@@ -91,7 +91,7 @@ export function GameLoading({
               <Copy size={14} />
             </button>
           </div>
-          <p className="text-[10px] text-gray-600">Room code: <span className="text-amber-400/70 font-mono">{roomCode}</span></p>
+          <p className="text-xs text-gray-600">Room code: <span className="text-amber-400/70 font-mono">{roomCode}</span></p>
         </div>
       )}
     </div>

@@ -1,10 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Chakra_Petch } from "next/font/google";
-import { Suspense } from "react";
 import "./globals.css";
-import { ToastProvider } from "@/components/Toast";
-import Loading from "./loading";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "ChessDuo",
@@ -52,13 +50,10 @@ export default function RootLayout({
         />
         <link rel="stylesheet" href="/cm-chessboard/chessboard.css" />
         <link rel="stylesheet" href="/cm-chessboard/extensions/markers/markers.css" />
+        <link rel="stylesheet" href="/cm-chessboard/extensions/promotion-dialog/promotion-dialog.css" />
       </head>
       <body className="min-h-full flex flex-col">
-        <ToastProvider>
-          <Suspense fallback={<Loading />}>
-            {children}
-          </Suspense>
-        </ToastProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -29,7 +29,7 @@ function RecentMatches({ games }: { games: CompletedGame[] }) {
               <div className="flex items-center gap-2 min-w-0">
                 <span>{winnerIcon}</span>
                 <span className="text-gray-300 truncate">{game.game_result}</span>
-                {isOnline && <span className="text-[10px] text-yellow-500/70">online</span>}
+                {isOnline && <span className="text-xs text-yellow-500/70">online</span>}
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-gray-500">{game.total_moves} moves</span>

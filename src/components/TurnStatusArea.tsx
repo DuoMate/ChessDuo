@@ -92,7 +92,7 @@ function SelectedMoveBadge({ move }: { move: string }) {
       <span className="text-sm font-bold font-mono text-amber-800 dark:text-amber-300">
         {move}
       </span>
-      <span className="hidden sm:inline text-[10px] text-amber-600/60 dark:text-amber-400/50 tracking-wide">
+      <span className="hidden sm:inline text-xs text-amber-600/60 dark:text-amber-400/50 tracking-wide">
         Move locked
       </span>
     </motion.div>

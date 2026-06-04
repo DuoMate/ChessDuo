@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js'
+import { DEFAULT_TEAM_TIMER_SECONDS } from '../shared/gameConstants'
 
 export enum GamePhase {
   WAITING = 'WAITING',
@@ -51,7 +52,7 @@ export class GameState {
   private _matchTimeRemaining: number
   private _matchTimerActive: boolean
 
-  constructor(timeLimitSeconds: number = 600) {
+  constructor(timeLimitSeconds: number = DEFAULT_TEAM_TIMER_SECONDS) {
     this.chess = new Chess()
     this._phase = GamePhase.WAITING
     this._currentTeam = Team.WHITE
@@ -219,8 +220,6 @@ export class GameState {
   }
 
   resetBoard(fen: string): void {
-    const { Chess } = require('chess.js')
-    const newBoard = new Chess(fen)
     this.board.load(fen)
     const fenParts = fen.split(' ')
     this._currentTeam = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK

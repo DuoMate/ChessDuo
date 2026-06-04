@@ -2,6 +2,7 @@ import { Chess, Move } from 'chess.js'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
+import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
@@ -172,6 +173,21 @@ export class LocalGame {
     return this.gameState.getPendingMoves()
   }
 
+  getAllPendingMoves(): Map<Player, PendingMoveInfo> {
+    return this.gameState.getAllPendingMoves()
+  }
+
+  get player1Id(): string {
+    return 'player1'
+  }
+
+  getTurnState(): string {
+    if (this._status === GameStatus.GAME_OVER) return 'game_over'
+    if (this.isBothPendingLocked()) return 'locked'
+    if (this.gameState.getPendingMoves().human) return 'waiting_for_teammate'
+    return 'selecting'
+  }
+
   getTurnStartFen(): string {
     return this.gameState.getTurnStartFen()
   }
@@ -280,11 +296,11 @@ export class LocalGame {
         if (chess.isCheckmate()) {
           this._lastMove = { from: player1From, to: player1To }
           this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 10000, player2Score: 0,
-            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: 10000,
-            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(10000),
-            winningMove: player1Move, winningScore: 10000, isSync: false,
-            bestEngineMove: player1Uci, bestEngineScore: 10000,
+            player1Move, player2Move, player1Score: CHECKMATE_SCORE, player2Score: 0,
+            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: CHECKMATE_SCORE,
+            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(CHECKMATE_SCORE),
+            winningMove: player1Move, winningScore: CHECKMATE_SCORE, isSync: false,
+            bestEngineMove: player1Uci, bestEngineScore: CHECKMATE_SCORE,
             turnStartFen, winnerId: 'player1', loserId: 'player2',
             loserFrom: player2From, loserTo: player2To,
             alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
@@ -300,11 +316,11 @@ export class LocalGame {
         if (chess.isCheckmate()) {
           this._lastMove = { from: player2From, to: player2To }
           this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 0, player2Score: 10000,
-            player1Accuracy: 0, player2Accuracy: 100, player1Loss: 10000, player2Loss: 0,
-            player1Category: getAccuracyCategory(10000), player2Category: getAccuracyCategory(0),
-            winningMove: player2Move, winningScore: 10000, isSync: false,
-            bestEngineMove: player2Uci, bestEngineScore: 10000,
+            player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
+            player1Accuracy: 0, player2Accuracy: 100, player1Loss: CHECKMATE_SCORE, player2Loss: 0,
+            player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
+            winningMove: player2Move, winningScore: CHECKMATE_SCORE, isSync: false,
+            bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
             turnStartFen, winnerId: 'player2', loserId: 'player1',
             loserFrom: player1From, loserTo: player1To,
             alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
@@ -469,11 +485,11 @@ export class LocalGame {
         if (chess.isCheckmate()) {
           this._lastMove = this.getMoveParts(player1Move, turnStartFen)
           this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 10000, player2Score: 0,
-            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: 10000,
-            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(10000),
-            winningMove: player1Move, winningScore: 10000, isSync: false,
-            bestEngineMove: player1Uci, bestEngineScore: 10000,
+            player1Move, player2Move, player1Score: CHECKMATE_SCORE, player2Score: 0,
+            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: CHECKMATE_SCORE,
+            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(CHECKMATE_SCORE),
+            winningMove: player1Move, winningScore: CHECKMATE_SCORE, isSync: false,
+            bestEngineMove: player1Uci, bestEngineScore: CHECKMATE_SCORE,
             turnStartFen, winnerId: 'player1', loserId: 'player2',
             loserFrom: '', loserTo: '',
             alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
@@ -489,11 +505,11 @@ export class LocalGame {
         if (chess.isCheckmate()) {
           this._lastMove = this.getMoveParts(player2Move, turnStartFen)
           this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 0, player2Score: 10000,
-            player1Accuracy: 0, player2Accuracy: 100, player1Loss: 10000, player2Loss: 0,
-            player1Category: getAccuracyCategory(10000), player2Category: getAccuracyCategory(0),
-            winningMove: player2Move, winningScore: 10000, isSync: false,
-            bestEngineMove: player2Uci, bestEngineScore: 10000,
+            player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
+            player1Accuracy: 0, player2Accuracy: 100, player1Loss: CHECKMATE_SCORE, player2Loss: 0,
+            player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
+            winningMove: player2Move, winningScore: CHECKMATE_SCORE, isSync: false,
+            bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
             turnStartFen, winnerId: 'player2', loserId: 'player1',
             loserFrom: '', loserTo: '',
             alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,

@@ -67,7 +67,7 @@ export function InsightsGate({ playerId, ...comparison }: InsightsGateProps) {
       >
         <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3 text-center">
           <p className="text-xs text-gray-400 mb-1">🔒 0/3 free insights used</p>
-          <p className="text-gray-500 text-[10px] mb-2 leading-tight">
+          <p className="text-gray-500 text-xs mb-2 leading-tight">
             Unlock unlimited AI-powered move analysis,<br />positional insights, and more.
           </p>
           <a

@@ -172,7 +172,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
               Waiting for opponent to join...
             </motion.div>
             <div className="bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-2xl p-5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Share this code</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Share this code</p>
               <p className="text-3xl font-bold text-yellow-400 tracking-[0.15em] font-mono select-all">
                 {roomCode}
               </p>

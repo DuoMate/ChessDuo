@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { OnlineGame } from '@/features/online/game/onlineGame'
+import type { GameInterface } from '@/features/shared/GameInterface'
 import { Team } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
@@ -22,6 +23,8 @@ import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
+import { useGameToast } from './Toast'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -184,7 +187,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const toast = useGameToast()
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+
+  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
+    enabled: gameState.status === GameStatus.PLAYING,
+    onAttemptLeave: () => toast.warning('You are leaving an active game!'),
+  })
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -256,6 +265,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       moveComparisons: moveHistoryRef.current,
     })
 
+    toast.gameOver(result)
+
     gameSavedRef.current = true
   }, [gameState.status, isOnline, game])
 
@@ -286,7 +297,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
         let pendingOverlay: PendingOverlay | null = null
         if (playerId) {
-          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const entries = Array.from(allMoves.entries()) as [string, any][]
           const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
           
@@ -297,7 +308,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               let piece = teammatePending.piece
               if (!piece || piece === 'unknown') {
                 try {
-                  const boardPiece = (g as any).board.get(teammatePending.from)
+                  const boardPiece = (g as GameInterface).board.get(teammatePending.from)
                   piece = boardPiece?.type || 'p'
                 } catch {
                   piece = 'p'
@@ -313,14 +324,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
         let myPendingOverlay: PendingOverlay | null = null
         if (playerId) {
-          const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+          const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const myPending = allMoves.get(playerId)
           // Only show myPendingOverlay if I have a move AND it's not locked yet
           if (myPending && !myPending.locked && myPending.from && myPending.to) {
             let piece = myPending.piece
             if (!piece || piece === 'unknown') {
               try {
-                const boardPiece = (g as any).board.get(myPending.from)
+                const boardPiece = (g as GameInterface).board.get(myPending.from)
                 piece = boardPiece?.type || 'p'
               } catch {
                 piece = 'p'
@@ -333,8 +344,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // Compute turnStatus for UI
         let turnStatus: GameState['turnStatus'] = 'waiting'
         if (g.status === GameStatus.PLAYING && g.currentTurn === Team.WHITE && playerId) {
-          const ts = (g as any).getTurnState()
-          const allMovesLocal = (g as any).getAllPendingMoves() as Map<string, any>
+          const ts = (g as GameInterface).getTurnState()
+          const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
           const localOtherPlayer = localEntries.filter(([p]) => p !== playerId)
           const localMyPending = allMovesLocal.get(playerId)
@@ -369,7 +380,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const currentTurn = g.currentTurn
         
         if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
-          const comp = (g as any).lastMoveComparison as MoveComparison | null
+          const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
           console.log('[ACCURACY-TRANSITION] WHITE→BLACK detected', {
             hasComparison: !!comp,
             compPlayer1Move: comp?.player1Move,
@@ -474,7 +485,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
     let pendingOverlay: PendingOverlay | null = null
     if (isOnline && playerId) {
-      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       const entries = Array.from(allMoves.entries()) as [string, any][]
       const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
       
@@ -485,7 +496,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           let piece = teammatePending.piece
           if (!piece || piece === 'unknown') {
             try {
-              const boardPiece = (g as any).board.get(teammatePending.from)
+              const boardPiece = (g as GameInterface).board.get(teammatePending.from)
               piece = boardPiece?.type || 'p'
             } catch {
               piece = 'p'
@@ -501,14 +512,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
     let myPendingOverlay: PendingOverlay | null = null
     if (isOnline && playerId) {
-      const allMoves = (g as any).getAllPendingMoves() as Map<string, any>
+      const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       const myPending = allMoves.get(playerId)
       // Only show myPendingOverlay if I have a move AND it's not locked yet
       if (myPending && !myPending.locked && myPending.from && myPending.to) {
         let piece = myPending.piece
         if (!piece || piece === 'unknown') {
           try {
-            const boardPiece = (g as any).board.get(myPending.from)
+            const boardPiece = (g as GameInterface).board.get(myPending.from)
             piece = boardPiece?.type || 'p'
           } catch {
             piece = 'p'
@@ -522,8 +533,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     let turnStatus: GameState['turnStatus'] = 'waiting'
     if (g.status === GameStatus.PLAYING && currentTurn === Team.WHITE) {
       if (isOnline && playerId) {
-        const ts = (g as any).getTurnState()
-        const allMovesLocal = (g as any).getAllPendingMoves() as Map<string, any>
+        const ts = (g as GameInterface).getTurnState()
+        const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
         const myMove = allMovesLocal.get(playerId)
         const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
         const teammateEntry = localEntries.find(([p]) => p !== playerId)
@@ -535,7 +546,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       } else {
         const pending = g.getPendingMoves?.() || { human: null, teammate: null }
         if (pending.human && pending.teammate) {
-          turnStatus = (g as any).isBothPendingLocked?.() ? 'evaluating' : 'waiting_for_teammate'
+          turnStatus = (g as GameInterface).isBothPendingLocked?.() ? 'evaluating' : 'waiting_for_teammate'
         } else if (pending.human) {
           turnStatus = 'waiting_for_teammate'
         } else {
@@ -665,7 +676,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     opponentInProgressRef.current = true
     
-    console.log(`[OPPONENT] Starting... currentPhase=${(g as any).gameState._phase}, currentTurn=${g.currentTurn}`)
+    console.log(`[OPPONENT] Starting... currentTurn=${g.currentTurn}`)
     
     const currentFen = g.board.fen()
     const currentTurn = g.currentTurn
@@ -716,7 +727,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
 
       // Block if player already submitted a move this turn
-      const allPending = (g as any).getAllPendingMoves() as Map<string, any>
+      const allPending = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       if (allPending && allPending.has(playerId)) {
         console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
         return
@@ -772,7 +783,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           console.log(`[RESOLVE] Both locked, my role:`, { 
             playerId, 
             isCoordinator: g.isCoordinator(), 
-            coordinatorId: (g as any).getCoordinatorId?.() 
+            coordinatorId: (onlineGameRef.current as any)?.getCoordinatorId?.() 
           })
           console.log(`[RESOLVE] Attempting resolve...`)
           
@@ -788,7 +799,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
               const highlightSquares: HighlightSquares = {}
-              const isPlayer1 = playerId === (g as any).player1Id
+              const isPlayer1 = playerId === (g as GameInterface).player1Id
               
               if (comparison.winningMove && comparison.player1Move) {
                 const wf = comparison.winningMove.substring(0, 2)
@@ -940,6 +951,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
         g.lockPendingMove('player1')
+        toast.moveLocked()
 
         console.log(`[RESOLVE] Both moves locked, waiting...`)
         console.log(`[RESOLVE] isBothPendingLocked: ${g.isBothPendingLocked()}`)
@@ -1041,7 +1053,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Show loading state while game initializes
   if (gameState.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <GameLoading 
           message={isOnline ? "Connecting to game server..." : "Initializing game..."} 
         />
@@ -1050,7 +1062,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1070,14 +1082,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOverlayMode('profile')}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+              className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
               title="Profile"
             >
               👤
             </button>
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+              className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
             >
               {soundEnabled ? '🔊' : '🔇'}
@@ -1086,8 +1098,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
 
         {roomCode && (
-          <div className="mb-4 p-3 bg-gray-700 rounded text-center">
-            <p className="text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
+          <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded text-center">
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
             <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
               {roomCode}
             </p>
@@ -1095,7 +1107,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         )}
         
         <div className="flex justify-between items-center mb-2">
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
             White Team (You)
           </div>
           
@@ -1134,7 +1146,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             />
           </div>
           
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-white text-gray-900' : 'bg-gray-700'}`}>
+          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
             Black Team (Bot)
           </div>
         </div>
@@ -1222,7 +1234,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
-        <div className="mt-8 p-4 bg-gray-800 rounded">
+        <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded">
           <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
           <div className="grid grid-cols-2 gap-2 text-sm">
             {!isOnline && game ? (

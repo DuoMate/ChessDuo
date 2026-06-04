@@ -47,11 +47,11 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
           className="grid grid-cols-3 gap-2"
         >
           <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-[10px] text-gray-400">Games</p>
+            <p className="text-xs text-gray-400">Games</p>
             <p className="text-lg font-bold">{playerStats.totalGames}</p>
           </div>
           <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-[10px] text-gray-400">W/L/D</p>
+            <p className="text-xs text-gray-400">W/L/D</p>
             <p className="text-sm font-bold">
               <span className="text-green-400">{playerStats.wins}</span>
               {'/'}
@@ -61,7 +61,7 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
             </p>
           </div>
           <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-[10px] text-gray-400">Avg Sync</p>
+            <p className="text-xs text-gray-400">Avg Sync</p>
             <p className="text-lg font-bold">{Math.round(playerStats.avgSyncRate * 100)}%</p>
           </div>
         </motion.div>
@@ -91,12 +91,12 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
                     {game.winner === 'WHITE' ? 'Win' : game.winner === 'DRAW' ? 'Draw' : 'Loss'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span>{game.is_online ? '🌐' : '🤖'}</span>
                   <span>{new Date(game.played_at).toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-gray-400">
+              <div className="flex items-center gap-3 text-xs text-gray-400">
                 <span>{game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'End'}</span>
                 <span>{game.white_moves}m</span>
                 <span className="text-green-400">S{(game.white_sync_rate * 100).toFixed(0)}%</span>

@@ -84,7 +84,7 @@ function NavButton({
       }`}
     >
       <span className="text-lg leading-none">{icon}</span>
-      <span className="text-[10px] leading-none">{label}</span>
+      <span className="text-xs leading-none">{label}</span>
     </button>
   )
 }

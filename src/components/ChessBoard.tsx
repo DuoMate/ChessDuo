@@ -304,6 +304,7 @@ export function ChessBoard({
                 textShadow: pendingOverlay.color === 'white' 
                   ? '0 0 2px #000' 
                   : '0 0 2px #fff',
+                filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
                 fontSize: overlayContainerRef.current
                   ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
                   : '28px',
@@ -338,6 +339,7 @@ export function ChessBoard({
                 textShadow: myPendingOverlay.color === 'white' 
                   ? '0 0 2px #000' 
                   : '0 0 2px #fff',
+                filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
                 fontSize: overlayContainerRef.current
                   ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
                   : '28px',
@@ -382,7 +384,7 @@ export function ChessBoard({
                       border border-amber-300/30"
                   >
                     <span className="text-[11px] leading-none">{'\u265E'}</span>
-                    <span className="text-[10px] font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
+                    <span className="text-xs font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
                   </div>
                 </div>
               </motion.div>
@@ -392,41 +394,73 @@ export function ChessBoard({
 
         <AnimatePresence>
           {showRetraction && retractionData && (
-            <motion.div
-              key={`retraction-${retractionData.from}-${retractionData.to}`}
-              initial={{ 
-                x: getSquarePosition(retractionData.to).x,
-                y: getSquarePosition(retractionData.to).y,
-                opacity: 0.6,
-                backgroundColor: 'rgba(255, 0, 0, 0.3)'
-              }}
-              animate={{ 
-                x: getSquarePosition(retractionData.from).x,
-                y: getSquarePosition(retractionData.from).y,
-                opacity: 0
-              }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: "easeIn" }}
-              className="absolute flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold select-none"
-              style={{ 
-                width: '12.5%', 
-                height: '12.5%',
-                borderRadius: '0'
-              }}
-              onAnimationComplete={handleRetractionComplete}
-            >
-              <span 
-                className="opacity-50"
-                style={{ 
-                  color: retractionData.color === 'white' ? '#fff' : '#000',
-                  textShadow: retractionData.color === 'white' 
-                    ? '0 0 3px #000' 
-                    : '0 0 3px #fff'
+            <>
+              {Array.from({ length: 8 }).map((_, i) => {
+                const angle = (i / 8) * Math.PI * 2
+                const dx = Math.cos(angle) * 40
+                const dy = Math.sin(angle) * 40
+                return (
+                  <motion.div
+                    key={`particle-${i}-${retractionData.from}-${retractionData.to}`}
+                    initial={{ 
+                      x: getSquarePosition(retractionData.to).x,
+                      y: getSquarePosition(retractionData.to).y,
+                      opacity: 0.8,
+                      scale: 0.6,
+                    }}
+                    animate={{ 
+                      x: getSquarePosition(retractionData.to).x + dx,
+                      y: getSquarePosition(retractionData.to).y + dy,
+                      opacity: 0,
+                      scale: 0,
+                    }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="absolute rounded-full pointer-events-none"
+                    style={{ 
+                      width: '6px',
+                      height: '6px',
+                      backgroundColor: retractionData.color === 'white' ? '#ff4444' : '#cc0000'
+                    }}
+                  />
+                )
+              })}
+              <motion.div
+                key={`retraction-${retractionData.from}-${retractionData.to}`}
+                initial={{ 
+                  x: getSquarePosition(retractionData.to).x,
+                  y: getSquarePosition(retractionData.to).y,
+                  opacity: 0.6,
+                  backgroundColor: 'rgba(255, 0, 0, 0.3)'
                 }}
+                animate={{ 
+                  x: getSquarePosition(retractionData.from).x,
+                  y: getSquarePosition(retractionData.from).y,
+                  opacity: 0
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeIn" }}
+                className="absolute flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold select-none"
+                style={{ 
+                  width: '12.5%', 
+                  height: '12.5%',
+                  borderRadius: '0'
+                }}
+                onAnimationComplete={handleRetractionComplete}
               >
-                {getPieceChar(retractionData.piece, retractionData.color as 'white' | 'black')}
-              </span>
-            </motion.div>
+                <span 
+                  className="opacity-50"
+                  style={{ 
+                    color: retractionData.color === 'white' ? '#fff' : '#000',
+                    textShadow: retractionData.color === 'white' 
+                      ? '0 0 3px #000' 
+                      : '0 0 3px #fff'
+                  }}
+                >
+                  {getPieceChar(retractionData.piece, retractionData.color as 'white' | 'black')}
+                </span>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </div>

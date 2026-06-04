@@ -1,5 +1,14 @@
-import { Game } from '@/components/Game'
+import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
+
+const GameComponent = dynamic(() => import('@/components/Game').then(mod => ({ default: mod.Game })), {
+  loading: () => (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <p className="text-gray-500 dark:text-gray-400">Loading game...</p>
+    </div>
+  ),
+  ssr: false,
+})
 
 export default async function GamePage({
   searchParams,
@@ -18,7 +27,7 @@ export default async function GamePage({
 
   return (
     <ErrorBoundary fallback={<GameErrorFallback />}>
-      <Game level={level} mode={mode} roomId={roomId} roomCode={roomCode} team={team} playerId={playerId} timeLimitSeconds={timeLimit} challengeId={challengeId} />
+      <GameComponent level={level} mode={mode} roomId={roomId} roomCode={roomCode} team={team} playerId={playerId} timeLimitSeconds={timeLimit} challengeId={challengeId} />
     </ErrorBoundary>
   )
 }

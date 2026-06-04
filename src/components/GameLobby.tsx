@@ -126,7 +126,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
           {/* Room code — always visible */}
           {roomCode && (
             <>
-              <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+              <p className="text-xs text-gray-500 tracking-[0.15em] uppercase mb-2">
                 Send this code to your friend to join
               </p>
 
@@ -157,7 +157,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
           {/* Share link — always visible */}
           {inviteUrl && (
             <>
-              <p className="text-[10px] text-gray-500 tracking-[0.15em] uppercase mb-2">
+              <p className="text-xs text-gray-500 tracking-[0.15em] uppercase mb-2">
                 Or share the invite link
               </p>
 

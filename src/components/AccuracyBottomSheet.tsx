@@ -127,7 +127,7 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
           className="mb-3 md:mb-4"
         >
           <div className="flex items-center gap-2 md:gap-3">
-            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px] text-right">Black</span>
+            <span className="text-xs md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px] text-right">Black</span>
             <div className="flex-1 h-3 md:h-4 bg-gradient-to-r from-gray-900 via-gray-600 to-white rounded-full overflow-hidden relative shadow-inner">
               <motion.div
                 className="absolute top-0 h-full w-1.5 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.6)]"
@@ -136,11 +136,11 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
                 transition={{ delay: 0.3, duration: 0.6, ease: 'easeOut' }}
               />
             </div>
-            <span className="text-[10px] md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px]">White</span>
+            <span className="text-xs md:text-xs text-gray-500 min-w-[40px] md:min-w-[50px]">White</span>
           </div>
           <div className="flex items-center justify-center gap-1 md:gap-1.5 mt-1 md:mt-1.5">
             <span
-              className="text-[10px] md:text-xs px-2 py-0.5 rounded-full font-medium"
+              className="text-xs md:text-xs px-2 py-0.5 rounded-full font-medium"
               style={{ backgroundColor: `${posLabel.color}20`, color: posLabel.color }}
             >
               {posLabel.label}
@@ -165,29 +165,29 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <span className="text-gray-900 dark:text-white font-bold text-xs md:text-sm">You</span>
                 {humanWon && !isSync && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
                 {!humanWon && !isSync && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {youMatchedEngine && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
                 <span className="text-gray-600 dark:text-gray-300 text-xs md:text-sm font-mono">{yourMove}</span>
                 <span
-                  className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
+                  className="text-xs md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
                   style={{ backgroundColor: `${yourCategory.color}30`, color: yourCategory.color }}
                 >
                   {yourCategory.emoji} {yourCategory.label}
                 </span>
               </div>
               {yourMoveImpact && (
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">{yourMoveImpact}</p>
+                <p className="text-xs md:text-xs text-gray-500 mt-0.5">{yourMoveImpact}</p>
               )}
               {yourBlunder && (
-                <p className="text-[10px] md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: yourBlunder.color }}>
+                <p className="text-xs md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: yourBlunder.color }}>
                   <BlunderIcon loss={yourLoss} />{' '}{yourBlunder.label}
                 </p>
               )}
@@ -229,29 +229,29 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
               <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                 <span className="text-gray-600 dark:text-gray-300 font-bold text-xs md:text-sm">Teammate</span>
                 {!humanWon && !isSync && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-emerald-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><Crown size={10} /> WINNER</span>
                 )}
                 {humanWon && !isSync && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-rose-500 text-white px-1.5 md:px-2 py-0.5 rounded-full font-bold"><XCircle size={10} /> LOSER</span>
                 )}
                 {teammateMatchedEngine && (
-                  <span className="inline-flex items-center gap-1 text-[10px] md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
+                  <span className="inline-flex items-center gap-1 text-xs md:text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 md:px-2 py-0.5 rounded-full font-medium"><Target size={10} /> Engine pick</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-1 flex-wrap">
                 <span className="text-gray-600 dark:text-gray-300 text-xs md:text-sm font-mono">{teammateMove}</span>
                 <span
-                  className="text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
+                  className="text-xs md:text-xs px-1.5 md:px-2 py-0.5 rounded font-medium whitespace-nowrap"
                   style={{ backgroundColor: `${teammateCategory.color}30`, color: teammateCategory.color }}
                 >
                   {teammateCategory.emoji} {teammateCategory.label}
                 </span>
               </div>
               {teammateMoveImpact && (
-                <p className="text-[10px] md:text-xs text-gray-500 mt-0.5">{teammateMoveImpact}</p>
+                <p className="text-xs md:text-xs text-gray-500 mt-0.5">{teammateMoveImpact}</p>
               )}
               {mateBlunder && (
-                <p className="text-[10px] md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: mateBlunder.color }}>
+                <p className="text-xs md:text-xs mt-0.5 font-medium inline-flex items-center gap-1" style={{ color: mateBlunder.color }}>
                   <BlunderIcon loss={teammateLoss} />{' '}{mateBlunder.label}
                 </p>
               )}
@@ -308,12 +308,12 @@ export function AccuracyBottomSheet({ comparison, isVisible, playerId, player1Id
             transition={{ delay: 0.35 }}
             className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-200 dark:border-white/10"
           >
-            <p className="text-[10px] md:text-xs text-gray-500 mb-1.5 md:mb-2">Other good moves:</p>
+            <p className="text-xs md:text-xs text-gray-500 mb-1.5 md:mb-2">Other good moves:</p>
             <div className="flex flex-wrap gap-1.5 md:gap-2">
               {alternatives.map((alt, i) => (
                 <span
                   key={i}
-                  className="text-[10px] md:text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
+                  className="text-xs md:text-xs bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 px-2 md:px-2.5 py-0.5 md:py-1 rounded-full font-mono"
                 >
                   {alt.move.replace(/(\w{2})(\w{2})/, '$1\u2192$2')}
                   <span className={alt.score >= 0 ? 'text-emerald-400 ml-1' : 'text-rose-400 ml-1'}>

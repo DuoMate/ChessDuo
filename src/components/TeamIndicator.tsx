@@ -43,7 +43,7 @@ export function TeamIndicator({
 
       <div className="flex flex-col items-center">
         <Swords size={16} className="text-amber-600/60 dark:text-amber-400/60" />
-        <span className="text-[9px] text-gray-600 font-semibold uppercase tracking-wider mt-0.5">VS</span>
+        <span className="text-[11px] text-gray-600 font-semibold uppercase tracking-wider mt-0.5">VS</span>
       </div>
 
       <motion.div

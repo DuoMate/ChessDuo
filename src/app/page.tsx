@@ -16,6 +16,7 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
 import { useSettings } from '@/lib/settings'
+import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 
 export const dynamic = 'force-dynamic'
 
@@ -320,7 +321,7 @@ export default function SetupPage() {
   }
 
   const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
-    const time = selectedTime || 600
+    const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
     router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
   }
 
@@ -339,7 +340,7 @@ export default function SetupPage() {
   }
 
   const handleStartOffline = () => {
-    const time = selectedTime || 600
+    const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
     router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
@@ -439,12 +440,12 @@ export default function SetupPage() {
               <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">
                 {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'ONLINE' : 'QUICK MATCH'}
               </h1>
-              <p className="text-[10px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select game duration</p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select game duration</p>
             </div>
 
             {gameMode === 'online' && (
               <div className="mb-4">
-                <p className="text-[10px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mb-2">Have a room code?</p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mb-2">Have a room code?</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -507,7 +508,7 @@ export default function SetupPage() {
             </div>
 
             <div className="text-center mb-4">
-              <p className="text-[10px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
+              <p className="text-[11px] text-gray-600">Game ends when time runs out. Winner decided by board advantage.</p>
             </div>
 
             <div className="text-center mt-4">
@@ -547,7 +548,7 @@ export default function SetupPage() {
             <div className="text-center mb-6">
               <div className="text-[42px] mb-1 drop-shadow-[0_0_20px_rgba(250,204,21,0.2)]">{"\u2654"}</div>
               <h1 className="text-[30px] font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo</h1>
-              <p className="text-[9px] text-gray-600 dark:text-gray-500 tracking-[0.2em] uppercase mt-0.5">Play Smarter, Together</p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-500 tracking-[0.2em] uppercase mt-0.5">Play Smarter, Together</p>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-500 dark:text-gray-400 text-center font-medium mb-4">Choose your game mode</p>
             <div className="flex flex-col gap-3 mb-5">
@@ -558,10 +559,10 @@ export default function SetupPage() {
             <div className="text-center mb-5">
               <div className="flex items-center justify-center gap-2 text-2xl opacity-[0.12] text-yellow-600 dark:text-yellow-400">
                 <span>{"\u2654"}</span>
-                <span className="text-[10px] text-gray-600">vs</span>
+                <span className="text-[11px] text-gray-600">vs</span>
                 <span className="text-gray-600 dark:text-gray-500">{"\u265A"}</span>
               </div>
-              <p className="text-[10px] text-gray-600 mt-1">White team — You + Teammate (2v2 vs Black bots)</p>
+              <p className="text-[11px] text-gray-600 mt-1">White team — You + Teammate (2v2 vs Black bots)</p>
             </div>
             <div className="flex justify-center gap-5 text-[11px]">
               <button onClick={() => router.push('/history')} className="text-gray-600 dark:text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors">
@@ -596,7 +597,7 @@ export default function SetupPage() {
             <div className="text-center mb-6">
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
               <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">OFFLINE</h1>
-              <p className="text-[10px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select opponent skill level</p>
+              <p className="text-[11px] text-gray-600 dark:text-gray-500 tracking-[0.15em] uppercase mt-0.5">Select opponent skill level</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
               {skillLevels.map((level: SkillLevel) => (
@@ -615,7 +616,7 @@ export default function SetupPage() {
               ))}
             </div>
             <div className="text-center mb-4">
-              <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[10px] text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:text-gray-400 transition-colors underline">
+              <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-500 dark:text-gray-400 transition-colors underline">
                 How to play?
               </button>
             </div>
@@ -703,7 +704,7 @@ export default function SetupPage() {
       <MatchmakingQueue
         playerId={playerId}
         username={username}
-        timeSeconds={selectedTime || 600}
+        timeSeconds={selectedTime || DEFAULT_TEAM_TIMER_SECONDS}
         onRoomJoined={handleRoomJoined}
         onCancel={() => setGameMode(null)}
       />
@@ -777,10 +778,10 @@ function TopBar({
           className="flex items-center gap-0.5 bg-gray-100 dark:bg-white/10 rounded-full p-1 border border-gray-200 dark:border-white/[0.08] transition-colors"
           aria-label="Toggle theme"
         >
-          <span className={`text-[10px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 dark:text-gray-500'}`}>
+          <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm' : 'text-gray-400 dark:text-gray-500'}`}>
             Light
           </span>
-          <span className={`text-[10px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-400'}`}>
+          <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-400'}`}>
             Dark
           </span>
         </button>
@@ -798,7 +799,7 @@ function TopBar({
           <span className="text-xl">👥</span>
           <span className="text-sm hidden sm:inline">Friends</span>
           {unreadMessages > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-gray-900 dark:text-white text-[10px] font-bold rounded-full px-1">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-gray-900 dark:text-white text-[11px] font-bold rounded-full px-1">
               {unreadMessages > 99 ? '99+' : unreadMessages}
             </span>
           )}

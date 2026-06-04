@@ -17,6 +17,8 @@ import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
 import { saveCompletedGame } from '@/lib/matchHistory'
+import { useGameToast } from './Toast'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 
 interface DuelGameProps {
   roomId: string
@@ -31,6 +33,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const isMobile = useIsMobile()
   const router = useRouter()
   const settings = useSettings()
+  const toast = useGameToast()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
@@ -50,6 +53,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
+
+  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
+    enabled: status === 'playing',
+    onAttemptLeave: () => toast.warning('You are leaving an active game!'),
+  })
 
   useEffect(() => {
     const game = new DuelGameEngine(roomId, playerId, team, timeLimit)
@@ -125,6 +133,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         fenAfter: '',
       })),
     })
+    toast.gameOver(gameResult || 'Game Over')
   }, [status, winner, gameResult, moveHistory, moveAccuracy, opponentAccuracy, roomId])
 
   const handleMove = useCallback(async (uci: string, promotion?: PromotionPiece) => {
@@ -284,7 +293,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
                     <span className="text-3xl md:text-4xl text-gray-900 dark:text-white mb-1">
                       {{ q: '♛', r: '♜', b: '♝', n: '♞' }[piece]}
                     </span>
-                    <span className="text-[10px] md:text-xs text-gray-400">
+                    <span className="text-xs md:text-xs text-gray-400">
                       {{ q: 'Queen', r: 'Rook', b: 'Bishop', n: 'Knight' }[piece]}
                     </span>
                   </button>

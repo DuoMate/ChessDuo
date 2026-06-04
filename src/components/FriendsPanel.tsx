@@ -223,7 +223,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
           Friends ({friends.length})
         </TabButton>
         <TabButton active={tab === 'requests'} onClick={() => setTab('requests')}>
-          Requests {totalRequests > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{totalRequests}</span>}
+          Requests {totalRequests > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalRequests}</span>}
         </TabButton>
         <TabButton active={tab === 'blocked'} onClick={() => setTab('blocked')}>
           Blocked
@@ -262,8 +262,8 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
                       <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between py-2 border-b border-white/5">
                         <span className="text-gray-200 text-sm">{req.friend_username}</span>
                         <div className="flex gap-1">
-                          <button onClick={() => handleAccept(req.sender_id)} className="min-h-[36px] min-w-[36px] px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-500 transition-colors">Accept</button>
-                          <button onClick={() => handleReject(req.sender_id)} className="min-h-[36px] min-w-[36px] px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-lg hover:bg-gray-600 transition-colors">Reject</button>
+                          <button onClick={() => handleAccept(req.sender_id)} className="min-h-[44px] min-w-[44px] px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-500 transition-colors">Accept</button>
+                          <button onClick={() => handleReject(req.sender_id)} className="min-h-[44px] min-w-[44px] px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-lg hover:bg-gray-600 transition-colors">Reject</button>
                         </div>
                       </div>
                     ))}
@@ -393,7 +393,7 @@ function FriendList({
             </div>
             <span className="text-gray-200 text-sm truncate">{friend.friend_username}</span>
             {unreadBySender[friend.friend_id] && (
-              <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+              <span className="bg-yellow-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
                 {unreadBySender[friend.friend_id]}
               </span>
             )}

@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { getCompletedGame, type CompletedGame } from '@/lib/matchHistory'
-import { ReplayView } from '@/components/ReplayView'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
+
+const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
+  loading: () => (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
+      <p className="text-gray-500 dark:text-gray-400">Loading replay...</p>
+    </div>
+  ),
+  ssr: false,
+})
 
 export default function ReplayPage() {
   const params = useParams()
@@ -52,5 +61,5 @@ export default function ReplayPage() {
     )
   }
 
-  return <ReplayView game={game} />
+  return <ReplayViewComponent game={game} />
 }

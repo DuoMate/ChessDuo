@@ -1,0 +1,9 @@
+export const CHECKMATE_SCORE = 10000
+
+export const DEFAULT_TEAM_TIMER_SECONDS = 600
+
+export const DEFAULT_MOVE_TIMER_SECONDS = 10
+
+export const ROOM_EXPIRY_MS = 24 * 60 * 60 * 1000
+
+export const DEFAULT_POLLING_INTERVAL_MS = 2000

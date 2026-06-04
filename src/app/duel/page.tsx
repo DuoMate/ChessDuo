@@ -2,7 +2,17 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import { DuelGame } from '@/components/DuelGame'
+import dynamic from 'next/dynamic'
+import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
+
+const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {
+  loading: () => (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
+      <p className="text-gray-400">Loading duel...</p>
+    </div>
+  ),
+  ssr: false,
+})
 
 function DuelContent() {
   const router = useRouter()
@@ -11,7 +21,7 @@ function DuelContent() {
   const roomCode = searchParams.get('code')
   const playerId = searchParams.get('playerId')
   const team = searchParams.get('team') as 'WHITE' | 'BLACK' | null
-  const time = searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : 600
+  const time = searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : DEFAULT_TEAM_TIMER_SECONDS
 
   if (!roomId || !roomCode || !playerId || !team) {
     return (
@@ -29,7 +39,7 @@ function DuelContent() {
   }
 
   return (
-    <DuelGame
+    <DuelGameComponent
       roomId={roomId}
       roomCode={roomCode}
       playerId={playerId}

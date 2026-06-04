@@ -71,7 +71,7 @@ export function GameOverModal({
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="absolute top-3 right-3 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-gray-400" />
