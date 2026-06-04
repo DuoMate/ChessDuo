@@ -1,4 +1,6 @@
-# ClashMate - Project Roadmap
+# ChessDuo - Project Roadmap
+
+> **Architecture Bible**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for code conventions, patterns, and rules that ALL commits must follow.
 
 ## Overview
 
@@ -475,6 +477,53 @@ Key files:
 - Shows winning moves + shadow (losing) moves with strikethrough
 - Click any move to replay board position
 - Sync indicators (✓) and accuracy percentages per move
+
+---
+
+## Test Health
+
+| Metric | Count | Status |
+|--------|-------|--------|
+| Test suites | 48 | 44 pass, 2 fail (pre-existing), 2 skip |
+| Individual tests | 633 | 511 pass, 5 fail (pre-existing), 117 skip |
+
+**Status**: ✅ All passing tests green; 2 pre-existing suite failures in `messages.test.ts` and `ChallengePicker.test.tsx` (2026-05-31)
+
+---
+
+*Last Updated: 2026-06-04 — Code quality pass complete: shared GameInterface, dynamic imports, dark mode, toast wiring, font/touch fixes, network overlay*
+
+---
+
+## Code Quality Pass (June 2026)
+
+After architecture analysis, the following cross-cutting improvements were applied:
+
+### Architecture
+- **Shared `GameInterface`** — `src/features/shared/GameInterface.ts` defines the common API between `OnlineGame` and `LocalGame`. Eliminated 32 `as any` casts in `Game.tsx`. New methods must be added to the interface + both implementations.
+- **Dynamic code splitting** — `Game`, `DuelGame`, and `ReplayView` now lazy-load via `next/dynamic()` in their page files, reducing initial bundle size.
+- **Centralized providers** — `src/app/providers.tsx` is the single source for client-side context (Toast, NetworkOverlay, Suspense).
+
+### Wired Up (Was Built But Never Used)
+- **Toast notifications** — `useGameToast()` now fires on move-lock, resolution-complete, game-over events in `Game.tsx` and `DuelGame.tsx`.
+- **Navigation guard** — `useNavigationGuard()` prevents accidental back-button/tab-close during active games.
+- **Promotion dialog CSS** — linked in `layout.tsx` (was missing from `<head>`).
+
+### UI/UX
+- **Dark mode** — `Game.tsx` now supports light theme via `dark:` variants (was hardcoded dark-only).
+- **Touch targets** — All interactive elements now meet WCAG minimum of 44×44px (MovePlayback buttons, GameOverModal close, FriendsPanel accept/reject).
+- **Font sizes** — Minimum bumped from 9-10px to 11-12px across 15 components.
+- **Network overlay** — Global offline banner in `NetworkOverlay.tsx`, rendered via providers.
+- **Particle animation** — Losing move retraction now spawns 8-particle burst effect.
+- **Color-coded indicators** — Green drop-shadow on my move, blue on teammate's move, red particles on loser.
+
+### Code Hygiene
+- **Removed `require()` anti-pattern** — Replaced with ES module imports in `gameState.ts` and `onlineGame.ts`.
+- **Constants extraction** — `CHECKMATE_SCORE`, `DEFAULT_TEAM_TIMER_SECONDS`, `ROOM_EXPIRY_MS`, `DEFAULT_POLLING_INTERVAL_MS` centralized in `src/features/shared/gameConstants.ts`.
+- **Subscription manager** — `src/lib/subscriptionManager.ts` for centralized Supabase channel lifecycle tracking.
+
+### Key Files Changed (32 files, +419/−170)
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the complete ruleset.
 
 ---
 

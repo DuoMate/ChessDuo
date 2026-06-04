@@ -1,5 +1,7 @@
 @AGENTS.md
 
+**Project-specific**: Read [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) before writing any code. It contains mandatory patterns for game methods, styling, error handling, and directory conventions.
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, use judgment.
