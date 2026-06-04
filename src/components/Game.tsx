@@ -32,6 +32,8 @@ interface GameProps {
   roomId?: string
   team?: 'WHITE' | 'BLACK'
   playerId?: string
+  timeLimitSeconds?: number
+  challengeId?: string
 }
 
 interface GameState {
@@ -49,8 +51,8 @@ interface GameState {
   moveAccuracy: number
   moveAccuracyP2: number
   totalMoves: number
-  timerSeconds: number
-  timerActive: boolean
+  matchTimeRemaining: number
+  matchTimerActive: boolean
   pendingOverlay: PendingOverlay | null
   myPendingOverlay: PendingOverlay | null
   highlightSquares: HighlightSquares | null
@@ -172,8 +174,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    timerSeconds: 10,
-    timerActive: false,
+    matchTimeRemaining: 600,
+    matchTimerActive: false,
     pendingOverlay: null,
     myPendingOverlay: null,
     highlightSquares: null,
@@ -354,8 +356,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           capturedByWhite: captured.white,
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
-          timerSeconds: g.getTeamTimer(),
-          timerActive: g.isTimerActive(),
+          matchTimeRemaining: g.getMatchTimeRemaining(),
+          matchTimerActive: g.isMatchTimerActive(),
           isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
           pendingOverlay,
           myPendingOverlay,
@@ -429,7 +431,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [mode, onlineGame, playerId, roomId, team])
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const matchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const matchTimeoutFlagRef = useRef(false)
   const gameRef = useRef(game)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
@@ -438,43 +441,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameRef.current = game
   }, [game])
 
-  const startTimer = useCallback(() => {
+  const tickMatchTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    
-    g.setTeamTimer(10)
-    
-    timerRef.current = setInterval(() => {
-      const currentTimer = g.getTeamTimer()
-      if (currentTimer <= 0) {
-        if (timerRef.current) {
-          clearInterval(timerRef.current)
-          timerRef.current = null
-        }
-        g.setTimerActive(false)
-        setGameState(prev => ({ ...prev, timerSeconds: 0, timerActive: false }))
-        return
-      }
-      
-      g.setTeamTimer(currentTimer - 1)
-      setGameState(prev => ({ ...prev, timerSeconds: currentTimer - 1 }))
-    }, 1000)
-  }, [isOnline])
 
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+    const remaining = g.getMatchTimeRemaining()
+    if (remaining <= 0) {
+      if (matchTimerRef.current) {
+        clearInterval(matchTimerRef.current)
+        matchTimerRef.current = null
+      }
+      if (matchTimeoutFlagRef.current) return
+      matchTimeoutFlagRef.current = true
+      g.setMatchTimerActive(false)
+      g.setMatchTimeRemaining(0)
+      setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false }))
+      return
     }
-    const g = isOnline ? onlineGameRef.current : gameRef.current
-    if (g) {
-      g.setTimerActive(false)
-    }
-    setGameState(prev => ({ ...prev, timerActive: false }))
+
+    g.setMatchTimeRemaining(remaining - 1)
+    setGameState(prev => ({ ...prev, matchTimeRemaining: remaining - 1 }))
   }, [isOnline])
 
   const updateState = useCallback(() => {
@@ -575,8 +561,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         moveAccuracy: 100,
         moveAccuracyP2: 100,
         totalMoves: 0,
-        timerSeconds: g.getTeamTimer(),
-        timerActive: g.isTimerActive(),
+        matchTimeRemaining: g.getMatchTimeRemaining(),
+        matchTimerActive: g.isMatchTimerActive(),
         pendingOverlay,
         myPendingOverlay,
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
@@ -611,8 +597,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (!g.isBothPendingLocked()) {
       return false
     }
-
-    stopTimer()
 
     const pending = g.getPendingMoves()
     const humanMove = pending.human
@@ -860,7 +844,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   console.log(`[RESOLVE] BLACK resolve failed:`, e)
                 }
                 
-                startTimer()
               })()
             }
           } catch (e: any) {
@@ -894,7 +877,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       try {
         g.startPendingTurn()
-        startTimer()
 
         setGameState(prev => ({
           ...prev,
@@ -979,7 +961,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (!pendingOpponentTurnRef.current) {
           console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
           g.startPendingTurn()
-          startTimer()
         } else {
           console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
           await handleResolutionComplete()
@@ -988,7 +969,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
     }
-  }, [isOnline, onlineGame, game, playerId, teammateBot, startTimer, checkAndResolve])
+  }, [isOnline, onlineGame, game, playerId, teammateBot, checkAndResolve])
 
   useEffect(() => {
     if (!isOnline && game && game.status === GameStatus.WAITING) {
@@ -1000,6 +981,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       updateStateRef.current()
     }
   }, [isOnline, game])
+
+  useEffect(() => {
+    if (gameState.status !== GameStatus.PLAYING) return
+    if (matchTimerRef.current) return
+
+    matchTimerRef.current = setInterval(tickMatchTimer, 1000)
+
+    return () => {
+      if (matchTimerRef.current) {
+        clearInterval(matchTimerRef.current)
+        matchTimerRef.current = null
+      }
+    }
+  }, [gameState.status, tickMatchTimer])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (promotion) {
@@ -1039,10 +1034,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (gameRef.current) {
         gameRef.current.startPendingTurn()
         updateStateRef.current()
-        startTimer()
       }
     }
-  }, [executeBotMove, startTimer])
+  }, [executeBotMove])
 
   // Show loading state while game initializes
   if (gameState.isLoading) {
@@ -1067,14 +1061,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onPlayAgain={() => window.location.reload()}
           gameResult={game?.getResult()}
           gameOverReason={game?.getGameOverReason() || null}
-          stats={!isOnline && game ? {
-            whiteMovesPlayed: game.getStats().whiteMovesPlayed,
-            whiteSyncRate: game.getStats().whiteSyncRate,
-            whiteConflicts: game.getStats().whiteConflicts,
-            player1Accuracy: game.getStats().player1Accuracy,
-            player2Accuracy: game.getStats().player2Accuracy,
-            totalMoves: game.getStats().movesPlayed,
-          } : undefined}
         />
       )}
         
@@ -1158,8 +1144,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
             <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.WHITE}
+                seconds={gameState.matchTimeRemaining}
+                isActive={gameState.matchTimerActive && gameState.currentTurn === Team.WHITE}
                 currentTeam={Team.WHITE}
               />
             </div>
@@ -1200,8 +1186,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
             <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
               <TeamTimer 
-                seconds={gameState.timerSeconds}
-                isActive={gameState.timerActive && gameState.currentTurn === Team.BLACK}
+                seconds={gameState.matchTimeRemaining}
+                isActive={gameState.matchTimerActive && gameState.currentTurn === Team.BLACK}
                 currentTeam={Team.BLACK}
               />
             </div>
@@ -1224,6 +1210,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <MovePlayback
             moves={moveHistoryRef.current}
             currentIndex={playbackIndex}
+            initialFen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
             onSelectMove={(index, fen) => {
               setPlaybackIndex(index)
               setPlaybackFen(fen)

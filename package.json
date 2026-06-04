@@ -30,7 +30,7 @@
     "chess.js": "^1.4.0",
     "cm-chessboard": "^8.11.5",
     "framer-motion": "^12.38.0",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.17.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
