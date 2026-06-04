@@ -159,7 +159,7 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
         {/* Body */}
         <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 ${isMobile ? 'p-3' : 'p-4'}`}>
           {/* Board */}
-          <div className={`${isMobile ? 'w-full max-w-[300px] mx-auto' : 'w-[320px] flex-shrink-0'} aspect-square`}>
+          <div className={`${isMobile ? 'w-full max-w-[min(85vw,400px)] mx-auto' : 'w-[400px] flex-shrink-0'} aspect-square`}>
             <ChessBoard
               key={step}
               fen={current.fen}

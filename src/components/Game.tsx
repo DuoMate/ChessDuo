@@ -1153,7 +1153,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           
           {/* Chess Board */}
-          <div className="w-[280px] h-[280px] md:w-[360px] md:h-[360px] lg:w-[500px] lg:h-[500px] flex-shrink-0 relative">
+          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px] aspect-square flex-shrink-0 relative">
             <ChessBoard 
               fen={playbackFen || gameState.fen}
               onMove={handleMove}
