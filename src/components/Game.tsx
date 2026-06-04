@@ -208,6 +208,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const isMobile = useIsMobile()
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING,
@@ -1161,6 +1162,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
+      {isMobile && (
+        <MobileStatusBar
+          currentTurn={gameState.currentTurn}
+          timerSeconds={gameState.matchTimeRemaining}
+          timerActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+          whiteCaptured={gameState.capturedByWhite}
+          blackCaptured={gameState.capturedByBlack}
+        />
+      )}
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1211,49 +1221,31 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        <div className="flex justify-between items-center mb-2">
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
-            White Team (You)
-          </div>
-          
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-lg font-mono">
-              {gameState.status === GameStatus.GAME_OVER ? (
-                <span className="text-yellow-400 font-bold">Game Over!</span>
-              ) : gameState.turnStatus === 'your_turn' ? (
-                <span className="text-green-400 font-bold">Your turn</span>
-              ) : gameState.turnStatus === 'selecting' ? (
-                <span className="text-blue-300">Select a move</span>
-              ) : gameState.turnStatus === 'waiting_for_teammate' ? (
-                <span className="text-yellow-300">Waiting for teammate...</span>
-              ) : gameState.turnStatus === 'teammate_locked' ? (
-                <span className="text-green-400">Teammate locked ✓</span>
-              ) : gameState.turnStatus === 'evaluating' ? (
-                <span className="text-purple-300">Evaluating...</span>
-              ) : gameState.turnStatus === 'opponent_turn' ? (
-                <span className="text-blue-300">Opponent thinking...</span>
-              ) : (
-                <span className="text-gray-400">Waiting...</span>
-              )}
-            </div>
-            <AnalyzingIndicator
-              isVisible={
-                gameState.status === GameStatus.PLAYING &&
-                (gameState.turnStatus === 'waiting_for_teammate' ||
-                 gameState.turnStatus === 'evaluating' ||
-                 gameState.turnStatus === 'opponent_turn')
-              }
-              phase={
-                gameState.turnStatus === 'waiting_for_teammate' ? 'teammate' :
-                gameState.turnStatus === 'evaluating' ? 'evaluating' :
-                gameState.turnStatus === 'opponent_turn' ? 'opponent' : 'teammate'
-              }
-            />
-          </div>
-          
-          <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.BLACK ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
-            Black Team (Bot)
-          </div>
+        <div className="relative flex justify-center mb-2 pb-1">
+          <TeamIndicator
+            whiteLabel="White Team (You)"
+            blackLabel="Black Team (Bot)"
+            activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
+            isGameOver={gameState.status === GameStatus.GAME_OVER}
+            isBotThinking={gameState.isBotThinking ?? false}
+          />
+        </div>
+        <div className="text-center mb-2">
+          <span className={`text-xs font-medium ${
+            gameState.status === GameStatus.GAME_OVER ? 'text-yellow-400 dark:text-yellow-300' :
+            gameState.turnStatus === 'your_turn' ? 'text-green-500 dark:text-green-400' :
+            gameState.turnStatus === 'waiting_for_teammate' ? 'text-yellow-500 dark:text-yellow-300' :
+            gameState.turnStatus === 'evaluating' ? 'text-purple-500 dark:text-purple-300' :
+            gameState.turnStatus === 'opponent_turn' ? 'text-blue-500 dark:text-blue-300' :
+            'text-gray-400 dark:text-gray-500'
+          }`}>
+            {gameState.status === GameStatus.GAME_OVER ? 'Game Over!' :
+             gameState.turnStatus === 'your_turn' ? 'Your turn' :
+             gameState.turnStatus === 'waiting_for_teammate' ? 'Waiting for teammate...' :
+             gameState.turnStatus === 'evaluating' ? 'Evaluating...' :
+             gameState.turnStatus === 'opponent_turn' ? 'Opponent thinking...' :
+             'Waiting...'}
+          </span>
         </div>
 
         {/* Match Timer — centered above board */}
@@ -1288,12 +1280,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               {(() => {
                 const g = isOnline ? onlineGameRef.current : gameRef.current
                 return (
-                  <AccuracyBottomSheet 
-                    comparison={accuracyComparison}
-                    isVisible={!!accuracyComparison}
-                    playerId={playerId}
-                    player1Id={isOnline ? (g as any)?.player1Id : null}
-                  />
+                  <>
+                    {!accuracyComparison && gameState.turnStatus === 'evaluating' && (
+                      <EvaluatingLoader />
+                    )}
+                    <AccuracyBottomSheet 
+                      comparison={accuracyComparison}
+                      isVisible={!!accuracyComparison}
+                      playerId={playerId}
+                      player1Id={isOnline ? (g as any)?.player1Id : null}
+                    />
+                  </>
                 )
               })()}
             </div>
@@ -1379,6 +1376,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
+
+      {isMobile && (
+        <BottomNav
+          activeOverlay={overlayMode}
+          onProfileClick={() => setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')}
+          onHistoryClick={() => setOverlayMode(overlayMode === 'history' ? 'none' : 'history')}
+          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
+          soundEnabled={soundEnabled}
+        />
+      )}
     </div>
   )
 }
