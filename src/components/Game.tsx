@@ -12,12 +12,14 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { TeamTimer } from './TeamTimer'
+import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
 import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
+import { GameOnOverlay } from './GameOnOverlay'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
@@ -87,17 +89,16 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
   })
   
   return (
-    <div className="flex flex-col items-center w-[100px]">
-      <span className="text-xs text-gray-400 mb-1">{label}</span>
-      <div className="flex flex-wrap gap-1 p-2 bg-gray-800 rounded border border-gray-600 h-[80px] w-full justify-center content-start">
+    <div className="flex flex-col items-center">
+      <span className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</span>
+      <div className="flex flex-wrap gap-0.5 md:gap-1 p-1.5 md:p-2 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 min-h-[36px] md:min-h-[44px] min-w-[60px] md:min-w-[80px] justify-center content-start">
         {sortedPieces.length === 0 ? (
-          <span className="text-gray-600 text-xs">No captures</span>
+          <span className="text-gray-400 dark:text-gray-600 text-[11px] md:text-xs">No captures</span>
         ) : (
           sortedPieces.map((piece, index) => (
             <span 
               key={`${piece}-${index}`} 
-              className="text-2xl bg-gray-700 rounded px-1 text-white border border-gray-500"
-              style={{ textShadow: '0 0 2px rgba(255,255,255,0.5)' }}
+              className="text-lg md:text-2xl bg-gray-200 dark:bg-gray-700 rounded px-0.5 md:px-1 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-500"
             >
               {PIECE_SYMBOLS[piece] || piece}
             </span>
@@ -130,7 +131,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps }: GameProps) {
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
   console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
   
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
@@ -190,6 +191,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [soundEnabled, setSoundEnabled] = useState(true)
   const toast = useGameToast()
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+  const [showGameOn, setShowGameOn] = useState(false)
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING,
@@ -198,16 +200,33 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
+  const teammateLabelShownRef = useRef(false)
+  const matchTimerStartedRef = useRef(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
 
   // Update sound engine when setting changes
-
-  // Update sound engine when setting changes
   useEffect(() => {
     setSoundEnabled(soundEnabled)
   }, [soundEnabled])
+
+  // Game ON overlay — show when game transitions to PLAYING, then start timer
+  useEffect(() => {
+    if (gameState.status === GameStatus.PLAYING && !matchTimerStartedRef.current && !showGameOn) {
+      setShowGameOn(true)
+    }
+    if (gameState.status === GameStatus.GAME_OVER && matchTimerStartedRef.current) {
+      matchTimerStartedRef.current = false
+    }
+  }, [gameState.status, showGameOn])
+
+  const handleGameOnComplete = useCallback(() => {
+    setShowGameOn(false)
+    if (!matchTimerStartedRef.current) {
+      matchTimerStartedRef.current = true
+    }
+  }, [])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.GAME_OVER) return
@@ -315,7 +334,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   piece = 'p'
                 }
               }
-              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black' }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && g.currentTurn === Team.WHITE }
             }
           }
         }
@@ -376,7 +395,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           turnStatus
         }))
         
-        // Accuracy visibility: show after WHITE resolves, persist through BLACK, clear on next WHITE
+        if (pendingOverlay?.showTeammateLabel) {
+          teammateLabelShownRef.current = true
+        }
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
         
@@ -503,7 +524,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               piece = 'p'
             }
           }
-          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black' }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: !teammateLabelShownRef.current && currentTurn === Team.WHITE }
         }
       }
     }
@@ -584,6 +605,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
       return newState
     })
+    
+    if (pendingOverlay?.showTeammateLabel) {
+      teammateLabelShownRef.current = true
+    }
     
     // Accuracy transition detection (for coordinator who uses updateStateRef)
     const prevTurn = prevTurnRef.current
@@ -998,6 +1023,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
     if (matchTimerRef.current) return
+    if (!matchTimerStartedRef.current) return
 
     matchTimerRef.current = setInterval(tickMatchTimer, 1000)
 
@@ -1079,6 +1105,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+      {showGameOn && (
+        <GameOnOverlay onComplete={handleGameOnComplete} />
+      )}
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
@@ -1094,7 +1123,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">ClashMate</h1>
+          <h1 className="text-3xl font-bold">ChessDuo</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOverlayMode('profile')}
@@ -1113,15 +1142,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {roomCode && (
-          <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Share this room code with your teammate:</p>
-            <p className="text-2xl font-bold text-yellow-400 tracking-widest font-mono">
-              {roomCode}
-            </p>
-          </div>
-        )}
-        
         <div className="flex justify-between items-center mb-2">
           <div className={`px-4 py-2 rounded ${gameState.currentTurn === Team.WHITE ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
             White Team (You)
@@ -1168,18 +1188,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
 
         <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
-          {/* Left side - WHITE team (Timer + Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.matchTimeRemaining}
-                isActive={gameState.matchTimerActive && gameState.currentTurn === Team.WHITE}
-                currentTeam={Team.WHITE}
-              />
-            </div>
-            <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
-          </div>
-          
           {/* Chess Board */}
           <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px] aspect-square flex-shrink-0 relative">
             <ChessBoard 
@@ -1194,8 +1202,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onAnimationComplete={handleResolutionComplete}
             />
           </div>
-          
-{/* Accuracy Panel - below board as bottom sheet */}
+
+          {/* Accuracy Panel - below board as bottom sheet */}
           <div className="w-[280px] md:w-[360px] lg:w-[500px] px-2">
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -1209,18 +1217,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               )
             })()}
           </div>
-          
-          {/* Right side - BLACK team (Timer + Resolution + Captured) */}
-          <div className="hidden md:flex w-32 lg:w-40 flex-col items-center gap-4">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
-              <TeamTimer 
-                seconds={gameState.matchTimeRemaining}
-                isActive={gameState.matchTimerActive && gameState.currentTurn === Team.BLACK}
-                currentTeam={Team.BLACK}
-              />
-            </div>
-            <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
-          </div>
+        </div>
+
+        {/* Match Timer — centered above board */}
+        <div className="flex justify-center mb-2 md:mb-3">
+          <MatchTimer
+            seconds={gameState.matchTimeRemaining}
+            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+            totalSeconds={timeLimitSeconds || 600}
+          />
+        </div>
+
+        {/* Captured Pieces — below board */}
+        <div className="flex justify-center gap-4 md:gap-10 mb-4 px-2">
+          <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
+          <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
         </div>
 
         <div className="mt-4 text-center">
