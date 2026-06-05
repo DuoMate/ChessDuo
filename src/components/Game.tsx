@@ -1264,7 +1264,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             >
               {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
                gameState.turnStatus === 'your_turn' ? 'Your turn' :
-               gameState.turnStatus === 'evaluating' ? 'Evaluating...' :
+               gameState.turnStatus === 'evaluating' ? 'Picking the best move...' :
                gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
                gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
                'Waiting'}
