@@ -125,6 +125,7 @@ export default function SetupPage() {
       if (gameMode !== null) {
         setSelectedTime(null)
         setGameMode(null)
+        setJoinCode('')
       }
     }
     window.addEventListener('popstate', handlePopState)
@@ -321,6 +322,7 @@ export default function SetupPage() {
   }
 
   const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
+    setJoinCode('')
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
     router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
   }

@@ -305,7 +305,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     toast.gameOver(result)
 
     gameSavedRef.current = true
-  }, [gameState.status, isOnline, game])
+  }, [gameState.status, isOnline, game, toast])
+
+  // Auto-redirect to home when match is abandoned (teammate left)
+  useEffect(() => {
+    if (!isOnline) return
+    if (gameState.status !== GameStatus.GAME_OVER) return
+    const reason = onlineGameRef.current?.getGameOverReason()
+    if (reason !== 'abandoned') return
+    toast.warning('Match abandoned by teammate')
+    const timer = setTimeout(() => router.push('/'), 3000)
+    return () => clearTimeout(timer)
+  }, [gameState.status, isOnline, router, toast])
 
   // Player ID from URL props (passed from Room component)
   // No need to get session - use the playerId directly from URL
@@ -1178,9 +1189,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
           winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
-          onPlayAgain={() => window.location.reload()}
-          gameResult={game?.getResult()}
-          gameOverReason={game?.getGameOverReason() || null}
+          onPlayAgain={isOnline ? () => router.push('/') : () => window.location.reload()}
+          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
+          gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
         />
       )}
         
@@ -1204,12 +1215,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             onCancel={() => setShowLeaveModal(false)}
           />
         )}
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold">ChessDuo</h1>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2 md:mb-3">
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">ChessDuo</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOverlayMode('profile')}
-              className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-sm"
               title="Profile"
             >
               👤
@@ -1221,99 +1233,167 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        <div className="relative flex justify-center mb-2 pb-1">
-          <TeamIndicator
-            whiteLabel="White Team (You)"
-            blackLabel="Black Team (Bot)"
-            activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
-            isGameOver={gameState.status === GameStatus.GAME_OVER}
-            isBotThinking={gameState.isBotThinking ?? false}
-          />
-        </div>
-        <div className="text-center mb-2">
-          <span className={`text-xs font-medium ${
-            gameState.status === GameStatus.GAME_OVER ? 'text-yellow-400 dark:text-yellow-300' :
-            gameState.turnStatus === 'your_turn' ? 'text-green-500 dark:text-green-400' :
-            gameState.turnStatus === 'waiting_for_teammate' ? 'text-yellow-500 dark:text-yellow-300' :
-            gameState.turnStatus === 'evaluating' ? 'text-purple-500 dark:text-purple-300' :
-            gameState.turnStatus === 'opponent_turn' ? 'text-blue-500 dark:text-blue-300' :
-            'text-gray-400 dark:text-gray-500'
-          }`}>
-            {gameState.status === GameStatus.GAME_OVER ? 'Game Over!' :
-             gameState.turnStatus === 'your_turn' ? 'Your turn' :
-             gameState.turnStatus === 'waiting_for_teammate' ? 'Waiting for teammate...' :
-             gameState.turnStatus === 'evaluating' ? 'Evaluating...' :
-             gameState.turnStatus === 'opponent_turn' ? 'Opponent thinking...' :
-             'Waiting...'}
-          </span>
-        </div>
-
-        {/* Match Timer — centered above board */}
-        <div className="flex justify-center mb-2 md:mb-3">
-          <MatchTimer
-            seconds={gameState.matchTimeRemaining}
-            isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-            totalSeconds={timeLimitSeconds || 600}
-          />
-        </div>
-
-        <div className="flex items-start justify-center gap-2 md:gap-6 mb-4">
-          {/* Chess Board — centered */}
-          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px] aspect-square flex-shrink-0 relative">
-            <ChessBoard 
-              fen={playbackFen || gameState.fen}
-              onMove={handleMove}
-              enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-              orientation="white"
-              lastMove={gameState.lastMove}
-              pendingOverlay={gameState.pendingOverlay}
-              myPendingOverlay={gameState.myPendingOverlay}
-              highlightSquares={gameState.highlightSquares}
-              onAnimationComplete={handleResolutionComplete}
+        {/* Unified info bar: TeamIndicator + turn status + timer */}
+        <div className="flex items-center justify-between gap-2 mb-3 px-0 md:px-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <TeamIndicator
+              whiteLabel="White Team (You)"
+              blackLabel="Black Team (Bot)"
+              activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
+              isGameOver={gameState.status === GameStatus.GAME_OVER}
+              isBotThinking={gameState.isBotThinking ?? false}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <motion.div
+              key={gameState.turnStatus}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide ${
+                gameState.status === GameStatus.GAME_OVER
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border border-yellow-400/30'
+                  : gameState.turnStatus === 'your_turn'
+                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-400/30 animate-pulse'
+                  : gameState.turnStatus === 'evaluating'
+                  ? 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-300 border border-purple-400/30'
+                  : gameState.turnStatus === 'waiting_for_teammate'
+                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-400/30'
+                  : 'bg-white/5 text-gray-400 border border-white/10'
+              }`}
+            >
+              {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
+               gameState.turnStatus === 'your_turn' ? 'Your turn' :
+               gameState.turnStatus === 'evaluating' ? 'Evaluating...' :
+               gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
+               gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
+               'Waiting'}
+            </motion.div>
+            <MatchTimer
+              seconds={gameState.matchTimeRemaining}
+              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
+              totalSeconds={timeLimitSeconds || 600}
             />
           </div>
         </div>
 
-          {/* Accuracy Panel — below board, max width matching board */}
-          <div className="flex justify-center mt-2 mb-2">
-            <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px]">
-              {(() => {
-                const g = isOnline ? onlineGameRef.current : gameRef.current
-                return (
-                  <>
-                    {!accuracyComparison && gameState.turnStatus === 'evaluating' && (
-                      <EvaluatingLoader />
-                    )}
-                    <AccuracyBottomSheet 
-                      comparison={accuracyComparison}
-                      isVisible={!!accuracyComparison}
-                      playerId={playerId}
-                      player1Id={isOnline ? (g as any)?.player1Id : null}
-                    />
-                  </>
-                )
-              })()}
+        {/* Chess Board — centered */}
+        <div className="flex justify-center mb-3">
+          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px] aspect-square flex-shrink-0 relative">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
+              {isMobile ? (
+                <MobileChessBoard
+                  fen={playbackFen || gameState.fen}
+                  onMove={handleMove}
+                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                  orientation="white"
+                  lastMove={gameState.lastMove}
+                  pendingOverlay={gameState.pendingOverlay}
+                  myPendingOverlay={gameState.myPendingOverlay}
+                  highlightSquares={gameState.highlightSquares}
+                  onAnimationComplete={handleResolutionComplete}
+                />
+              ) : (
+                <ChessBoard 
+                  fen={playbackFen || gameState.fen}
+                  onMove={handleMove}
+                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
+                  orientation="white"
+                  lastMove={gameState.lastMove}
+                  pendingOverlay={gameState.pendingOverlay}
+                  myPendingOverlay={gameState.myPendingOverlay}
+                  highlightSquares={gameState.highlightSquares}
+                  onAnimationComplete={handleResolutionComplete}
+                />
+              )}
             </div>
           </div>
-
-        {/* Captured Pieces — below board */}
-        <div className="flex justify-center gap-4 md:gap-10 mb-4 px-2">
-          <CapturedPiecesDisplay pieces={gameState.capturedByWhite} label="White captured" />
-          <CapturedPiecesDisplay pieces={gameState.capturedByBlack} label="Black captured" />
         </div>
 
-        <div className="mt-4 text-center">
+        {/* Accuracy Panel — below board */}
+        <div className="flex justify-center mb-3">
+          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px]">
+            {(() => {
+              const g = isOnline ? onlineGameRef.current : gameRef.current
+              return (
+                <>
+                  {!accuracyComparison && gameState.turnStatus === 'evaluating' && (
+                    <EvaluatingLoader />
+                  )}
+                  <AccuracyBottomSheet 
+                    comparison={accuracyComparison}
+                    isVisible={!!accuracyComparison}
+                    playerId={playerId}
+                    player1Id={isOnline ? (g as any)?.player1Id : null}
+                  />
+                </>
+              )
+            })()}
+          </div>
+        </div>
+
+        {/* Bottom bar: captured pieces + selected move */}
+        <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mb-3 px-2 py-2 rounded-xl bg-white/40 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">White</span>
+              <motion.div layout className="flex gap-0.5">
+                {gameState.capturedByWhite.length === 0 ? (
+                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
+                ) : (
+                  [...gameState.capturedByWhite].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
+                    <motion.span
+                      key={`w-${p}-${i}`}
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      className="text-base md:text-xl leading-none"
+                    >
+                      {PIECE_SYMBOLS[p] || p}
+                    </motion.span>
+                  ))
+                )}
+              </motion.div>
+            </div>
+            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Black</span>
+              <motion.div layout className="flex gap-0.5">
+                {gameState.capturedByBlack.length === 0 ? (
+                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
+                ) : (
+                  [...gameState.capturedByBlack].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
+                    <motion.span
+                      key={`b-${p}-${i}`}
+                      initial={{ scale: 0, rotate: 20 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      className="text-base md:text-xl leading-none"
+                    >
+                      {PIECE_SYMBOLS[p] || p}
+                    </motion.span>
+                  ))
+                )}
+              </motion.div>
+            </div>
+          </div>
           {gameState.selectedMove && (
-            <p className="text-green-400">Selected: {gameState.selectedMove}</p>
-          )}
-          {gameState.status === GameStatus.GAME_OVER && (
-            <p className="text-xl font-bold text-yellow-400">
-              {isOnline && onlineGameRef.current ? 'Game Over' : game?.getResult()}
-            </p>
+            <>
+              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+              <motion.div
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-1.5"
+              >
+                <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Move</span>
+                <span className="px-2 py-0.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-xs md:text-sm font-mono font-bold border border-green-500/20">
+                  {gameState.selectedMove}
+                </span>
+              </motion.div>
+            </>
           )}
         </div>
 
-        <div className="mt-6 max-w-[500px] mx-auto">
+        {/* Move Playback */}
+        <div className="max-w-[500px] mx-auto mb-3">
           <MovePlayback
             moves={moveHistoryRef.current}
             currentIndex={playbackIndex}
@@ -1329,25 +1409,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           />
         </div>
 
-        <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded">
-          <h2 className="font-bold mb-2">Your Team Stats (White)</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {!isOnline && game ? (
-              <>
-                <div>White Moves: {game.getStats().whiteMovesPlayed}</div>
-                <div>Sync Rate: {Math.round(game.getStats().whiteSyncRate * 100)}%</div>
-                <div>Conflicts: {game.getStats().whiteConflicts}</div>
-                <div>Player 1 Avg Accuracy: {Math.round(game.getStats().player1Accuracy)}%</div>
-                <div>Player 2 Avg Accuracy: {Math.round(game.getStats().player2Accuracy)}%</div>
-              </>
-            ) : (
-              <>
-                <div>Game Mode: Online (Human vs Human)</div>
-                <div>Stats not available in online mode</div>
-              </>
-            )}
-          </div>
-        </div>
+        {/* Game Over result text */}
+        {gameState.status === GameStatus.GAME_OVER && (
+          <motion.p
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center text-xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent mb-3"
+          >
+            {isOnline && onlineGameRef.current ? onlineGameRef.current.getResult() : game?.getResult()}
+          </motion.p>
+        )}
       </div>
 
       <SlideOver
