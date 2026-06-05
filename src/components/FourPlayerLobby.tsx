@@ -344,11 +344,11 @@ export function FourPlayerLobby({
                 {roomCode}
               </p>
               <div className="flex justify-center gap-2 mt-2">
-                <button onClick={handleCopyCode} className="min-h-[44px] px-4 text-xs text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 font-medium">
+                <button onClick={handleCopyCode} className="min-h-[44px] px-5 py-2 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-all">
                   {copied ? '✓ Copied' : 'Copy code'}
                 </button>
                 {inviteUrl && (
-                  <button onClick={handleShare} className="min-h-[44px] px-4 text-xs text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 font-medium">
+                  <button onClick={handleShare} className="min-h-[44px] px-5 py-2 text-xs font-semibold rounded-xl bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 border border-amber-300 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 transition-all">
                     Share link
                   </button>
                 )}
