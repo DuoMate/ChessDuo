@@ -1142,9 +1142,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [gameState.pendingPromotion, executeMove])
 
-  const handleResign = useCallback(() => {
+  const handleResign = useCallback(async () => {
     if (isOnline && onlineGameRef.current) {
-      onlineGameRef.current.abandonMatch()
+      await onlineGameRef.current.abandonMatch()
     }
     if (isOnline) {
       router.push('/')
@@ -1333,12 +1333,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   ? currentTurn === myTeamRef.current
                   : currentTurn === Team.WHITE
                 const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))
+                const boardOrientation = isFourPlayer && myTeamRef.current === 'BLACK' ? 'black' : 'white'
                 return isMobile ? (
                   <MobileChessBoard
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
-                    orientation="white"
+                    orientation={boardOrientation as 'white' | 'black'}
                     lastMove={gameState.lastMove}
                     pendingOverlay={gameState.pendingOverlay}
                     myPendingOverlay={gameState.myPendingOverlay}
@@ -1350,7 +1351,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
-                    orientation="white"
+                    orientation={boardOrientation as 'white' | 'black'}
                     lastMove={gameState.lastMove}
                     pendingOverlay={gameState.pendingOverlay}
                     myPendingOverlay={gameState.myPendingOverlay}

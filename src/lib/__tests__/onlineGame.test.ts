@@ -694,4 +694,117 @@ describe('OnlineGame', () => {
       expect((game as any)._status).toBe(GameStatus.GAME_OVER)
     })
   })
+
+  describe('startMatchTimer timeout handling', () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('calls setGameOverTimeup when timer reaches zero', () => {
+      const game = new OnlineGame(600)
+      const setGameOverTimeupSpy = jest.spyOn(game, 'setGameOverTimeup')
+      const notifySpy = jest.spyOn(game as any, 'notifyStateChange')
+
+      // Setup coordinator and timer at 0
+      ;(game as any)._playerId = 'player1'
+      ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
+      ;(game as any).gameState.addPlayer('player4' as any, Team.BLACK)
+      ;(game as any).gameState.startMatch()
+      ;(game as any).gameState.setMatchTimeRemaining(0)
+      ;(game as any).gameState.setMatchTimerActive(true)
+
+      // Call startMatchTimer — should tick and detect 0
+      ;(game as any).startMatchTimer()
+      jest.advanceTimersByTime(1000)
+
+      expect(setGameOverTimeupSpy).toHaveBeenCalledWith('Draw on time', 'timeout')
+      expect(notifySpy).toHaveBeenCalled()
+    })
+
+    it('determines White wins on time when white has more captured pieces', () => {
+      const game = new OnlineGame(600)
+
+      ;(game as any)._playerId = 'player1'
+      ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
+      ;(game as any).gameState.addPlayer('player4' as any, Team.BLACK)
+      ;(game as any).gameState.startMatch()
+      ;(game as any).gameState._capturedByWhite.push('p')
+      ;(game as any).gameState._capturedByWhite.push('n')
+      ;(game as any).gameState._capturedByBlack.push('p')
+      ;(game as any).gameState.setMatchTimeRemaining(0)
+
+      const setGameOverTimeupSpy = jest.spyOn(game, 'setGameOverTimeup')
+      ;(game as any).startMatchTimer()
+      jest.advanceTimersByTime(1000)
+
+      expect(setGameOverTimeupSpy).toHaveBeenCalledWith('White wins on time', 'timeout')
+    })
+
+    it('determines Black wins on time when black has more captured pieces', () => {
+      const game = new OnlineGame(600)
+
+      ;(game as any)._playerId = 'player1'
+      ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
+      ;(game as any).gameState.addPlayer('player4' as any, Team.BLACK)
+      ;(game as any).gameState.startMatch()
+      ;(game as any).gameState._capturedByWhite.push('p')
+      ;(game as any).gameState._capturedByBlack.push('p')
+      ;(game as any).gameState._capturedByBlack.push('n')
+      ;(game as any).gameState.setMatchTimeRemaining(0)
+
+      const setGameOverTimeupSpy = jest.spyOn(game, 'setGameOverTimeup')
+      ;(game as any).startMatchTimer()
+      jest.advanceTimersByTime(1000)
+
+      expect(setGameOverTimeupSpy).toHaveBeenCalledWith('Black wins on time', 'timeout')
+    })
+
+    it('determines Draw on time when captured pieces are equal', () => {
+      const game = new OnlineGame(600)
+
+      ;(game as any)._playerId = 'player1'
+      ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
+      ;(game as any).gameState.addPlayer('player4' as any, Team.BLACK)
+      ;(game as any).gameState.startMatch()
+      ;(game as any).gameState._capturedByWhite.push('p')
+      ;(game as any).gameState._capturedByBlack.push('p')
+      ;(game as any).gameState.setMatchTimeRemaining(0)
+
+      const setGameOverTimeupSpy = jest.spyOn(game, 'setGameOverTimeup')
+      ;(game as any).startMatchTimer()
+      jest.advanceTimersByTime(1000)
+
+      expect(setGameOverTimeupSpy).toHaveBeenCalledWith('Draw on time', 'timeout')
+    })
+
+    it('does not run on non-coordinator', () => {
+      const game = new OnlineGame(600)
+
+      ;(game as any)._playerId = 'player2'
+      ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
+      ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
+      ;(game as any).gameState.addPlayer('player4' as any, Team.BLACK)
+      ;(game as any).gameState.startMatch()
+      ;(game as any).gameState.setMatchTimeRemaining(0)
+
+      const setGameOverTimeupSpy = jest.spyOn(game, 'setGameOverTimeup')
+      ;(game as any).startMatchTimer()
+      jest.advanceTimersByTime(1000)
+
+      expect(setGameOverTimeupSpy).not.toHaveBeenCalled()
+    })
+  })
 })

@@ -696,7 +696,17 @@ export class OnlineGame {
     this._timerCountdownInterval = setInterval(() => {
       const remaining = this.gameState.getMatchTimeRemaining()
       if (remaining <= 0) {
-        this.stopMatchTimer()
+        const captured = this.gameState.capturedPieces
+        const whiteCaptured = captured.white.length
+        const blackCaptured = captured.black.length
+        if (whiteCaptured > blackCaptured) {
+          this.setGameOverTimeup('White wins on time', 'timeout')
+        } else if (blackCaptured > whiteCaptured) {
+          this.setGameOverTimeup('Black wins on time', 'timeout')
+        } else {
+          this.setGameOverTimeup('Draw on time', 'timeout')
+        }
+        this.notifyStateChange()
         return
       }
       this.gameState.setMatchTimeRemaining(remaining - 1)
