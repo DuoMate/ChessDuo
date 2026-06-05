@@ -690,6 +690,20 @@ export class LocalGame {
     return 'Game in progress'
   }
 
+  getTeam(): 'WHITE' | 'BLACK' {
+    return 'WHITE'
+  }
+
+  isFourPlayer(): boolean {
+    return false
+  }
+
+  getPlayerTeam(playerId: string): 'WHITE' | 'BLACK' | null {
+    if (this.gameState.getPlayers(Team.WHITE).includes(playerId as Player)) return 'WHITE'
+    if (this.gameState.getPlayers(Team.BLACK).includes(playerId as Player)) return 'BLACK'
+    return null
+  }
+
   getGameOverReason(): string | null {
     if (this._gameOverReason) return this._gameOverReason
     const board = this.gameState.board

@@ -108,7 +108,7 @@ export function FourPlayerLobby({
         clearInterval(interval)
         const me = currentPlayers.find(p => p.playerId === playerId)
         if (me?.team) {
-          router.push(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}`)
+    router.push(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}&fourplayer=1`)
         }
         return
       }

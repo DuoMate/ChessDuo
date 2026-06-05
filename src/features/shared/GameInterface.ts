@@ -38,4 +38,11 @@ export interface GameInterface {
   getStats(): { movesPlayed: number; syncRate: number; conflicts: number; player1Accuracy: number; player2Accuracy: number }
   getCapturedPieces(): { white: string[]; black: string[] }
   getEvaluator(): ServerMoveEvaluator
+
+  /** Returns the viewer's team */
+  getTeam(): 'WHITE' | 'BLACK'
+  /** Whether this game is a 4-player (all-human) match */
+  isFourPlayer(): boolean
+  /** Get the team for a given player ID */
+  getPlayerTeam(playerId: string): 'WHITE' | 'BLACK' | null
 }

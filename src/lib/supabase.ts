@@ -54,6 +54,7 @@ export type Database = {
           created_at: string
           time_seconds: number
           expires_at: string | null
+          mode: string | null
         }
         Insert: {
           id?: string
@@ -62,6 +63,7 @@ export type Database = {
           created_by: string
           time_seconds?: number
           expires_at?: string | null
+          mode?: string
         }
         Update: {
           id?: string

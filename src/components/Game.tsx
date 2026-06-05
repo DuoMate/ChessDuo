@@ -51,6 +51,7 @@ interface GameProps {
   playerId?: string
   timeLimitSeconds?: number
   challengeId?: string
+  fourplayer?: boolean
 }
 
 interface GameState {
@@ -142,9 +143,9 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds }: GameProps) {
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, fourplayer = false }: GameProps) {
   const router = useRouter()
-  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps })
+  console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, fourplayer })
   
   const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
   const [onlineGame] = useState(() => {
@@ -153,6 +154,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
   const isOnline = mode === 'online'
   console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
+
+  // Track viewer's team (from prop in online mode, cached after joinRoom)
+  const myTeamRef = useRef<'WHITE' | 'BLACK'>(team || 'WHITE')
+  // 4-player mode: all humans, no bots
+  const isFourPlayer = fourplayer
 
   // Create bot config (used for opponent bots in online mode, and both bots in offline)
   const botConfig = useMemo(() => {
@@ -165,13 +171,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [level])
 
   const [bot] = useState(() => {
-    if (!botConfig) return null
+    if (isFourPlayer || !botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.opponentSkillLevel })
     console.log(`[Game] Opponent bot created with level: ${botConfig.opponentSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
   })
   const [teammateBot] = useState(() => {
-    if (!botConfig) return null
+    if (isFourPlayer || !botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.teammateSkillLevel })
     console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
@@ -344,13 +350,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const captured = g.getCapturedPieces()
         console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
         
+        // Determine viewer's team
+        const myTeam = team || (g as GameInterface).getTeam()
+        if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
+        
         // Get pendingOverlay for online mode - show teammate's pending move
         // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+        // In 4-player mode, only show moves from same-team players
         let pendingOverlay: PendingOverlay | null = null
         if (playerId) {
           const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const entries = Array.from(allMoves.entries()) as [string, any][]
-          const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+          const otherPlayerMoves = isFourPlayer
+            ? entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+            : entries.filter(([p]) => p !== playerId)
           
           // Only show pendingOverlay if there's a teammate move (not my own)
           if (otherPlayerMoves.length > 0) {
@@ -393,12 +406,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
         
         // Compute turnStatus for UI
+        // In 4-player mode: detailed status only when it's YOUR team's turn
+        // In 2-player mode: detailed status only when it's WHITE's turn
+        const isMyTurnToAct = isFourPlayer
+          ? g.currentTurn === myTeam
+          : g.currentTurn === Team.WHITE
         let turnStatus: GameState['turnStatus'] = 'waiting'
-        if (g.status === GameStatus.PLAYING && g.currentTurn === Team.WHITE && playerId) {
+        if (g.status === GameStatus.PLAYING && isMyTurnToAct && playerId) {
           const ts = (g as GameInterface).getTurnState()
           const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
-          const localOtherPlayer = localEntries.filter(([p]) => p !== playerId)
+          const localOtherPlayer = isFourPlayer
+            ? localEntries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+            : localEntries.filter(([p]) => p !== playerId)
           const localMyPending = allMovesLocal.get(playerId)
           const localTeammateLocked = localOtherPlayer.length > 0 && localOtherPlayer[0][1]?.locked
           if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
@@ -414,7 +434,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           status: g.status,
           fen: g.fen,
           currentTurn: g.currentTurn,
-          isMyTurn: g.currentTurn === Team.WHITE,
+          isMyTurn: isMyTurnToAct,
           capturedByWhite: captured.white,
           capturedByBlack: captured.black,
           lastMove: g.lastMove,
@@ -548,13 +568,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const captured = g.getCapturedPieces()
     const currentTurn = g.currentTurn
     
+    // Determine viewer's team
+    const myTeam = team || (g as GameInterface).getTeam()
+    if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
+    
     // Get pendingOverlay for online mode - show teammate's pending move
     // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
+    // In 4-player mode, only show moves from same-team players
     let pendingOverlay: PendingOverlay | null = null
     if (isOnline && playerId) {
       const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       const entries = Array.from(allMoves.entries()) as [string, any][]
-      const otherPlayerMoves = entries.filter(([p]) => p !== playerId)
+      const otherPlayerMoves = isFourPlayer
+        ? entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+        : entries.filter(([p]) => p !== playerId)
       
       // Only show pendingOverlay if there's a teammate move (not my own)
       if (otherPlayerMoves.length > 0) {
@@ -597,14 +624,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     
     // Compute turnStatus for UI
+    // In 4-player mode: detailed status only when it's YOUR team's turn
+    // In 2-player mode: detailed status only when it's WHITE's turn
+    const isMyTurnToAct = isFourPlayer
+      ? currentTurn === myTeam
+      : currentTurn === Team.WHITE
     let turnStatus: GameState['turnStatus'] = 'waiting'
-    if (g.status === GameStatus.PLAYING && currentTurn === Team.WHITE) {
+    if (g.status === GameStatus.PLAYING && isMyTurnToAct) {
       if (isOnline && playerId) {
         const ts = (g as GameInterface).getTurnState()
         const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
         const myMove = allMovesLocal.get(playerId)
         const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
-        const teammateEntry = localEntries.find(([p]) => p !== playerId)
+        const teammateEntry = isFourPlayer
+          ? localEntries.find(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+          : localEntries.find(([p]) => p !== playerId)
         const teammateLocked = teammateEntry ? teammateEntry[1]?.locked : false
         if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
         else if (teammateLocked) turnStatus = 'teammate_locked'
@@ -634,7 +668,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         phase: g.status === GameStatus.PLAYING ? 'selecting' : 'waiting',
         capturedByWhite: captured.white,
         capturedByBlack: captured.black,
-        isMyTurn: currentTurn === Team.WHITE && g.status === GameStatus.PLAYING,
+        isMyTurn: isMyTurnToAct && g.status === GameStatus.PLAYING,
         lastMove: g.lastMove,
         moveAccuracy: 100,
         moveAccuracyP2: 100,
@@ -644,7 +678,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         pendingOverlay,
         myPendingOverlay,
         isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
-        isBotThinking: currentTurn === Team.BLACK ? prev.isBotThinking : false,
+        isBotThinking: isFourPlayer ? false : (currentTurn === Team.BLACK ? prev.isBotThinking : false),
         highlightSquares: null as HighlightSquares | null,
         turnStatus
       }
@@ -790,10 +824,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       const g = onlineGameRef.current
       const currentTurn = g.currentTurn
 
-      console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
+      const myTeam = (g as GameInterface).getTeam()
 
-      if (currentTurn !== Team.WHITE) {
-        console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
+      console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn}, myTeam: ${myTeam})`)
+
+      if (currentTurn !== myTeam) {
+        console.warn(`[HUMAN] BLOCKED - Not ${myTeam}'s turn! Current: ${currentTurn}`)
         return
       }
 
@@ -804,11 +840,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         return
       }
 
-      // Clear accuracy panel when player starts new WHITE move
+      // Clear accuracy panel when player starts new turn
       setAccuracyComparison(null)
-      console.log(`[ACCURACY-CLEAR] Cleared accuracy for new WHITE move`)
+      console.log(`[ACCURACY-CLEAR] Cleared accuracy for new ${myTeam} move`)
 
-      console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
+      console.log(`[HUMAN] Turn confirmed as ${myTeam} - processing move...`)
 
       try {
         const fenBefore = g.board.fen()
@@ -844,7 +880,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.log(`[STATE] Teammate locked or already locked, checking state...`)
 
         // Check if turn already changed (another client resolved)
-        if (g.currentTurn !== Team.WHITE) {
+        if (g.currentTurn !== myTeam) {
           console.log(`[STATE] Turn changed, another client resolved`)
           g.setTurnState('selecting' as any)
           return
@@ -894,7 +930,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             playResolutionSound()
             
             // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
-            if (newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
+            // In 4-player mode, skip bot handling — humans manage BLACK turn
+            if (!isFourPlayer && newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
               console.log(`[RESOLVE] Coordinator handling BLACK bot moves...`)
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
@@ -1240,8 +1277,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex flex-col items-center gap-1 mb-3">
           <div className="w-full flex justify-center">
             <TeamIndicator
-              whiteLabel="White Team (You)"
-              blackLabel="Black Team (Bot)"
+              whiteLabel={isFourPlayer
+                ? (myTeamRef.current === 'WHITE' ? 'White Team (You)' : 'White Team')
+                : 'White Team (You)'
+              }
+              blackLabel={isFourPlayer
+                ? (myTeamRef.current === 'BLACK' ? 'Black Team (You)' : 'Black Team')
+                : 'Black Team (Bot)'
+              }
               activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
               isGameOver={gameState.status === GameStatus.GAME_OVER}
               isBotThinking={gameState.isBotThinking ?? false}
@@ -1284,31 +1327,38 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex justify-center mb-3">
           <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px] aspect-square flex-shrink-0 relative">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
-              {isMobile ? (
-                <MobileChessBoard
-                  fen={playbackFen || gameState.fen}
-                  onMove={handleMove}
-                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                  orientation="white"
-                  lastMove={gameState.lastMove}
-                  pendingOverlay={gameState.pendingOverlay}
-                  myPendingOverlay={gameState.myPendingOverlay}
-                  highlightSquares={gameState.highlightSquares}
-                  onAnimationComplete={handleResolutionComplete}
-                />
-              ) : (
-                <ChessBoard 
-                  fen={playbackFen || gameState.fen}
-                  onMove={handleMove}
-                  enabled={overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && gameState.currentTurn === Team.WHITE && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))}
-                  orientation="white"
-                  lastMove={gameState.lastMove}
-                  pendingOverlay={gameState.pendingOverlay}
-                  myPendingOverlay={gameState.myPendingOverlay}
-                  highlightSquares={gameState.highlightSquares}
-                  onAnimationComplete={handleResolutionComplete}
-                />
-              )}
+              {(() => {
+                const currentTurn = gameState.currentTurn
+                const myTeamEnabled = isFourPlayer
+                  ? currentTurn === myTeamRef.current
+                  : currentTurn === Team.WHITE
+                const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && (onlineGameRef.current as any)?.getAllPendingMoves?.()?.has(playerId)))
+                return isMobile ? (
+                  <MobileChessBoard
+                    fen={playbackFen || gameState.fen}
+                    onMove={handleMove}
+                    enabled={isBoardEnabled}
+                    orientation="white"
+                    lastMove={gameState.lastMove}
+                    pendingOverlay={gameState.pendingOverlay}
+                    myPendingOverlay={gameState.myPendingOverlay}
+                    highlightSquares={gameState.highlightSquares}
+                    onAnimationComplete={handleResolutionComplete}
+                  />
+                ) : (
+                  <ChessBoard 
+                    fen={playbackFen || gameState.fen}
+                    onMove={handleMove}
+                    enabled={isBoardEnabled}
+                    orientation="white"
+                    lastMove={gameState.lastMove}
+                    pendingOverlay={gameState.pendingOverlay}
+                    myPendingOverlay={gameState.myPendingOverlay}
+                    highlightSquares={gameState.highlightSquares}
+                    onAnimationComplete={handleResolutionComplete}
+                  />
+                )
+              })()}
             </div>
           </div>
         </div>

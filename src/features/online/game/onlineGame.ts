@@ -147,6 +147,36 @@ export class OnlineGame {
     }
   }
 
+  getTeam(): 'WHITE' | 'BLACK' {
+    return this._team
+  }
+
+  isFourPlayer(): boolean {
+    return this._room?.mode === 'fourplayer'
+  }
+
+  getPlayerTeam(playerId: string): 'WHITE' | 'BLACK' | null {
+    if (playerId.startsWith('bot_')) {
+      if (this.gameState.getPlayers(Team.WHITE).includes(playerId as any)) return 'WHITE'
+      if (this.gameState.getPlayers(Team.BLACK).includes(playerId as any)) return 'BLACK'
+      return null
+    }
+    if (this.gameState.getPlayers(Team.WHITE).includes(playerId as any)) return 'WHITE'
+    if (this.gameState.getPlayers(Team.BLACK).includes(playerId as any)) return 'BLACK'
+    return null
+  }
+
+  isBlackCoordinator(): boolean {
+    try {
+      const players = this.gameState.getPlayers(Team.BLACK)
+      if (players.length === 0) return true
+      const sorted = [...players].sort()
+      return this._playerId === sorted[0]
+    } catch {
+      return true
+    }
+  }
+
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
     try {
       const chess = new Chess(fen)
@@ -691,6 +721,10 @@ export class OnlineGame {
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
     console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
+      // In 4-player mode, only react if the player is on our team
+      if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
+        return
+      }
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
       
       // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
@@ -707,6 +741,10 @@ export class OnlineGame {
   private handleTeammateLocked(payload: { playerId: string }) {
     console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
+      // In 4-player mode, only react if the player is on our team
+      if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
+        return
+      }
       this.gameState.lockPendingMove(payload.playerId as Player)
       
       // Resolve the waitForTeammateLock Promise
@@ -968,6 +1006,16 @@ export class OnlineGame {
     
     if (currentTeam === Team.WHITE && !this.isCoordinator()) {
       console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
+      if (this.turnState !== 'resolving') {
+        this.turnState = 'resolving'
+        this.notifyStateChange()
+      }
+      throw new Error('NOT_COORDINATOR')
+    }
+    
+    // In 4-player mode, BLACK turn also needs a coordinator (first BLACK player)
+    if (currentTeam === Team.BLACK && this.isFourPlayer() && !this.isBlackCoordinator()) {
+      console.log('[ONLINE] Not BLACK coordinator — waiting for BLACK coordinator broadcast')
       if (this.turnState !== 'resolving') {
         this.turnState = 'resolving'
         this.notifyStateChange()

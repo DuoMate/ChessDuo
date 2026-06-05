@@ -24,6 +24,7 @@ function GameContent() {
   const playerId = searchParams.get('playerId')
   const timeLimit = searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : undefined
   const challengeId = searchParams.get('challengeId')
+  const fourplayer = searchParams.get('fourplayer') === '1'
 
   return (
     <ErrorBoundary fallback={<GameErrorFallback />}>
@@ -36,6 +37,7 @@ function GameContent() {
         playerId={playerId}
         timeLimitSeconds={timeLimit}
         challengeId={challengeId}
+        fourplayer={fourplayer}
       />
     </ErrorBoundary>
   )

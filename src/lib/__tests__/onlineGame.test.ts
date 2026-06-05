@@ -91,7 +91,8 @@ describe('OnlineGame', () => {
         created_by: 'player1',
         created_at: new Date().toISOString(),
         time_seconds: 600,
-        expires_at: null
+        expires_at: null,
+        mode: null
       }
 
       await game.joinRoom(room, 'player1', 'WHITE')
