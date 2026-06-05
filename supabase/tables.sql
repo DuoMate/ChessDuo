@@ -32,9 +32,9 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
                   CREATE TABLE IF NOT EXISTS room_players (
                     room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
                       player_id TEXT NOT NULL,
-                        team TEXT NOT NULL CHECK (team IN ('WHITE', 'BLACK')),
-                          slot INTEGER NOT NULL,
-                            status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'ready', 'locked')),
+                        team TEXT CHECK (team IN ('WHITE', 'BLACK')),
+                          slot INTEGER CHECK (slot IN (0, 1)),
+                            status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'joined', 'ready', 'locked')),
                               joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                                 PRIMARY KEY (room_id, player_id)
                                 );
@@ -185,6 +185,14 @@ BEGIN
     ALTER TABLE room_players ADD CONSTRAINT room_players_pkey PRIMARY KEY (room_id, player_id);
     ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_room_fk;
     ALTER TABLE room_players ADD CONSTRAINT room_players_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
+    ALTER TABLE room_players ALTER COLUMN team DROP NOT NULL;
+    ALTER TABLE room_players ALTER COLUMN slot DROP NOT NULL;
+    ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_team_check;
+    ALTER TABLE room_players ADD CONSTRAINT room_players_team_check CHECK (team IS NULL OR team IN ('WHITE', 'BLACK'));
+    ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_slot_check;
+    ALTER TABLE room_players ADD CONSTRAINT room_players_slot_check CHECK (slot IS NULL OR slot IN (0, 1));
+    ALTER TABLE room_players DROP CONSTRAINT IF EXISTS room_players_status_check;
+    ALTER TABLE room_players ADD CONSTRAINT room_players_status_check CHECK (status IN ('waiting', 'joined', 'ready', 'locked'));
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'games') THEN

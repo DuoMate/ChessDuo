@@ -128,11 +128,107 @@ export function areAllSeatsFilled(seats: FourPlayerSeat[]): boolean {
   return seats.every(s => s.playerId !== null)
 }
 
+export interface LobbyPlayer {
+  playerId: string
+  username: string | null
+  team: 'WHITE' | 'BLACK' | null
+  slot: number | null
+  status: 'joined' | 'ready' | 'locked'
+}
+
+export async function joinLobby(options: {
+  roomId: string
+  playerId: string
+}): Promise<void> {
+  const { roomId, playerId } = options
+  await supabase
+    .from('room_players')
+    .upsert({
+      room_id: roomId,
+      player_id: playerId,
+      status: 'joined',
+    }, { onConflict: 'room_id,player_id' })
+}
+
+export async function assignPlayer(options: {
+  roomId: string
+  playerId: string
+  team: 'WHITE' | 'BLACK'
+  slot: number
+}): Promise<void> {
+  const { roomId, playerId, team, slot } = options
+  const { error } = await supabase
+    .from('room_players')
+    .upsert({
+      room_id: roomId,
+      player_id: playerId,
+      team,
+      slot,
+      status: 'ready',
+    }, { onConflict: 'room_id,player_id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function unassignPlayer(options: {
+  roomId: string
+  playerId: string
+}): Promise<void> {
+  const { roomId, playerId } = options
+  const { error } = await supabase
+    .from('room_players')
+    .upsert({
+      room_id: roomId,
+      player_id: playerId,
+      team: null,
+      slot: null,
+      status: 'joined',
+    }, { onConflict: 'room_id,player_id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function getLobbyPlayers(roomId: string): Promise<LobbyPlayer[]> {
+  const { data: players, error } = await supabase
+    .from('room_players')
+    .select('player_id, team, slot, status')
+    .eq('room_id', roomId)
+
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch lobby players')
+  }
+
+  const playerIds = (players || []).map(p => p.player_id)
+  const profilesMap = new Map<string, string>()
+
+  if (playerIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', playerIds)
+    for (const p of profiles || []) {
+      profilesMap.set(p.id, p.username)
+    }
+  }
+
+  return (players || []).map(p => ({
+    playerId: p.player_id,
+    username: profilesMap.get(p.player_id) || null,
+    team: p.team as 'WHITE' | 'BLACK' | null,
+    slot: p.slot as number | null,
+    status: (p.status === 'ready' ? 'ready' : 'joined') as 'joined' | 'ready' | 'locked',
+  }))
+}
+
+export function areTeamsReady(players: LobbyPlayer[]): boolean {
+  const whiteCount = players.filter(p => p.team === 'WHITE').length
+  const blackCount = players.filter(p => p.team === 'BLACK').length
+  return players.length === 4 && whiteCount === 2 && blackCount === 2
+}
+
 export async function joinFourPlayerByCode(options: {
   code: string
   playerId: string
 }): Promise<{ roomId: string; roomCode: string; timeSeconds: number } | null> {
-  const { code, playerId } = options
+  const { code } = options
 
   const { data: room } = await supabase
     .from('rooms')
