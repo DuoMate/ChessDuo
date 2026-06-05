@@ -12,6 +12,7 @@ import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
+import { createFourPlayerRoom } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
@@ -352,8 +353,8 @@ export default function SetupPage() {
     setJoinError(null)
     try {
       const pid = playerId as string
-      const result = await createOnlineRoom({ playerId: pid, timeSeconds })
-      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&mode=fourplayer`)
+      const result = await createFourPlayerRoom({ playerId: pid, timeSeconds })
+      router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`)
     } catch (err) {
       setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
