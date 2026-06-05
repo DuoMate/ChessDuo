@@ -1233,9 +1233,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {/* Unified info bar: TeamIndicator + turn status + timer */}
-        <div className="flex items-center justify-between gap-2 mb-3 px-0 md:px-2">
-          <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Unified info bar: TeamIndicator centered, turn status + timer below */}
+        <div className="flex flex-col items-center gap-1 mb-3">
+          <div className="w-full flex justify-center">
             <TeamIndicator
               whiteLabel="White Team (You)"
               blackLabel="Black Team (Bot)"
@@ -1244,13 +1244,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               isBotThinking={gameState.isBotThinking ?? false}
             />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mt-1">
             <motion.div
               key={gameState.turnStatus}
-              initial={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide ${
+              className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
                 gameState.status === GameStatus.GAME_OVER
                   ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border border-yellow-400/30'
                   : gameState.turnStatus === 'your_turn'
