@@ -22,6 +22,7 @@ export async function createOnlineRoom(options: {
     .insert({
       code,
       status: 'waiting',
+      mode: 'online',
       created_by: playerId,
       time_seconds: timeSeconds,
       expires_at: expiresAt,

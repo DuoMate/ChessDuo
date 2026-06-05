@@ -36,6 +36,7 @@ export function FourPlayerLobby({
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [pendingSeat, setPendingSeat] = useState<{ team: 'WHITE' | 'BLACK'; slot: number } | null>(null)
 
   const inviteUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?code=${roomCode}`
@@ -112,6 +113,7 @@ export function FourPlayerLobby({
       await leaveFourPlayerRoom({ roomId, playerId })
       setSelectedTeam(null)
       setSelectedSlot(null)
+      setPendingSeat(null)
       setPhase('team-select')
       await fetchSeats()
     } catch (err) {
@@ -196,13 +198,20 @@ export function FourPlayerLobby({
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {seats.map((seat) => {
                   const isAvailable = seat.playerId === null
+                  const isPending = pendingSeat?.team === seat.team && pendingSeat?.slot === seat.slot
                   return (
                     <button
                       key={`${seat.team}-${seat.slot}`}
-                      onClick={() => isAvailable && handleJoinSeat(seat.team, seat.slot)}
+                      onClick={() => {
+                        if (!isAvailable) return
+                        setPendingSeat(isPending ? null : { team: seat.team, slot: seat.slot })
+                        setError(null)
+                      }}
                       disabled={!isAvailable}
                       className={`p-4 rounded-xl border-2 text-center transition-all min-h-[88px] ${
-                        isAvailable
+                        isPending
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/15 shadow-md'
+                          : isAvailable
                           ? 'border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] hover:border-blue-400 dark:hover:border-blue-500/40 hover:bg-blue-50 dark:hover:bg-blue-500/10 cursor-pointer'
                           : 'border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/[0.02] opacity-50 cursor-not-allowed'
                       }`}
@@ -215,7 +224,11 @@ export function FourPlayerLobby({
                       <div className="text-[13px] font-semibold text-gray-900 dark:text-white mb-1">
                         Seat {seat.slot + 1}
                       </div>
-                      {isAvailable ? (
+                      {isPending ? (
+                        <div className="text-[11px] text-blue-700 dark:text-blue-300 font-bold">
+                          Selected
+                        </div>
+                      ) : isAvailable ? (
                         <div className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
                           Available
                         </div>
@@ -228,6 +241,26 @@ export function FourPlayerLobby({
                   )
                 })}
               </div>
+
+              {pendingSeat && (
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={async () => {
+                      await handleJoinSeat(pendingSeat.team, pendingSeat.slot)
+                      setPendingSeat(null)
+                    }}
+                    className="flex-1 min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all"
+                  >
+                    Join {pendingSeat.team} Seat {pendingSeat.slot + 1}
+                  </button>
+                  <button
+                    onClick={() => setPendingSeat(null)}
+                    className="min-h-[44px] px-5 rounded-xl bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/15 text-gray-700 dark:text-gray-300 font-medium text-sm transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
 
               {error && (
                 <p className="text-red-600 dark:text-red-400 text-sm text-center font-medium mb-3">

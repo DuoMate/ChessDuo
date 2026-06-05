@@ -23,9 +23,10 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             code TEXT UNIQUE NOT NULL,
               status TEXT DEFAULT 'waiting' CHECK (status IN ('waiting', 'playing', 'finished')),
-                created_by TEXT,
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                  );
+                mode TEXT DEFAULT 'online' CHECK (mode IN ('online', 'fourplayer')),
+                  created_by TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    );
 
                   -- Create room_players table
                   CREATE TABLE IF NOT EXISTS room_players (
@@ -176,6 +177,7 @@ BEGIN
     ALTER TABLE rooms ADD CONSTRAINT rooms_code_unique UNIQUE (code);
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS time_seconds INTEGER DEFAULT 600;
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'online';
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'room_players') THEN

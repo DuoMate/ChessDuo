@@ -12,7 +12,7 @@ import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
-import { createFourPlayerRoom } from '@/lib/fourPlayerActions'
+import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
@@ -173,7 +173,12 @@ export default function SetupPage() {
         }
 
         if (room) {
-          router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=600`)
+          const roomTime = room.time_seconds || 600
+          if (room.mode === 'fourplayer') {
+            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
+          } else {
+            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=${roomTime}`)
+          }
         } else {
           setJoinError('Room not found or already started')
         }
@@ -361,6 +366,27 @@ export default function SetupPage() {
     }
   }
 
+  const handleJoinFourPlayerByCode = async () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
+    const code = joinCode.trim().toUpperCase()
+    if (!code) return
+    setJoinLoading(true)
+    setJoinError(null)
+    try {
+      const result = await joinFourPlayerByCode({ code, playerId })
+      if (!result) {
+        setJoinError('Room not found — check the code')
+        setJoinLoading(false)
+        return
+      }
+      setJoinCode('')
+      router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${playerId}&time=${result.timeSeconds}`)
+    } catch {
+      setJoinError('Something went wrong — try again')
+      setJoinLoading(false)
+    }
+  }
+
   const handleStartDuel = async (timeSeconds: number) => {
     if (!playerId) { setShowAuthOverlay(true); return }
     setCreatingTime(timeSeconds)
@@ -500,6 +526,36 @@ export default function SetupPage() {
                     onClick={handleJoinByCode}
                     disabled={joinLoading || !joinCode.trim()}
                     className="px-5 py-3 rounded-xl bg-yellow-100 dark:bg-yellow-500/15 border-2 border-yellow-400 dark:border-yellow-500/25 text-yellow-800 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-200 dark:hover:bg-yellow-500/25 active:bg-yellow-300 dark:active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    style={{ minHeight: '44px' }}
+                  >
+                    {joinLoading ? 'Joining...' : 'Join'}
+                  </button>
+                </div>
+                {joinError && <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>}
+              </div>
+            )}
+
+            {gameMode === 'fourplayer' && (
+              <div className="mb-4">
+                <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Have a room code?</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                    placeholder="ABC123"
+                    maxLength={6}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    disabled={joinLoading}
+                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:border-blue-500 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    onClick={handleJoinFourPlayerByCode}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="px-5 py-3 rounded-xl bg-blue-100 dark:bg-blue-500/15 border-2 border-blue-400 dark:border-blue-500/25 text-blue-800 dark:text-blue-400 font-semibold text-sm hover:bg-blue-200 dark:hover:bg-blue-500/25 active:bg-blue-300 dark:active:bg-blue-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
                     style={{ minHeight: '44px' }}
                   >
                     {joinLoading ? 'Joining...' : 'Join'}

@@ -28,6 +28,7 @@ export async function createFourPlayerRoom(options: {
     .insert({
       code,
       status: 'waiting',
+      mode: 'fourplayer',
       created_by: playerId,
       time_seconds: timeSeconds,
       expires_at: expiresAt,
@@ -125,4 +126,27 @@ export async function getFourPlayerSeats(roomId: string): Promise<FourPlayerSeat
 
 export function areAllSeatsFilled(seats: FourPlayerSeat[]): boolean {
   return seats.every(s => s.playerId !== null)
+}
+
+export async function joinFourPlayerByCode(options: {
+  code: string
+  playerId: string
+}): Promise<{ roomId: string; roomCode: string; timeSeconds: number } | null> {
+  const { code, playerId } = options
+
+  const { data: room } = await supabase
+    .from('rooms')
+    .select('*')
+    .eq('code', code)
+    .eq('mode', 'fourplayer')
+    .eq('status', 'waiting')
+    .maybeSingle()
+
+  if (!room) return null
+
+  return {
+    roomId: room.id,
+    roomCode: room.code,
+    timeSeconds: room.time_seconds || 600,
+  }
 }
