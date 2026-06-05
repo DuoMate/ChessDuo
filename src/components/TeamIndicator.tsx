@@ -56,12 +56,12 @@ export function TeamIndicator({
         transition={{ duration: 0.4, ease: 'easeInOut' }}
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border min-w-0 ${
           blackActive
-            ? 'bg-gradient-to-r from-gray-700 to-gray-600/50 dark:from-gray-700 dark:to-gray-600/50 border-gray-400/40'
+            ? 'bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600/50 border-gray-400 dark:border-gray-400/40'
             : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
         }`}
       >
-        <Bot size={20} className={blackActive ? 'text-gray-300' : 'text-gray-500'} />
-        <span className="text-gray-300 font-semibold text-xs sm:text-sm truncate">{blackLabel}</span>
+        <Bot size={20} className={blackActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500'} />
+        <span className="text-gray-700 dark:text-gray-300 font-semibold text-xs sm:text-sm truncate">{blackLabel}</span>
       </motion.div>
 
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">

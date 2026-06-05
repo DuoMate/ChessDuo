@@ -123,17 +123,17 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
 function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => void }) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg border-2 border-yellow-500">
-        <h3 className="text-xl font-bold text-white mb-4 text-center">Promote Pawn</h3>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-xl">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
         <div className="flex gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
               key={piece}
               onClick={() => onSelect(piece)}
-              className="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-500 transition-colors"
+              className="flex flex-col items-center p-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors"
             >
-              <span className="text-4xl text-white mb-1">{symbol}</span>
-              <span className="text-xs text-gray-300">{label}</span>
+              <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-300">{label}</span>
             </button>
           ))}
         </div>
@@ -308,11 +308,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [gameState.status, isOnline, game, toast])
 
   // Auto-redirect to home when match is abandoned (teammate left)
+  const abandonHandledRef = useRef(false)
   useEffect(() => {
     if (!isOnline) return
     if (gameState.status !== GameStatus.GAME_OVER) return
     const reason = onlineGameRef.current?.getGameOverReason()
     if (reason !== 'abandoned') return
+    if (abandonHandledRef.current) return
+    abandonHandledRef.current = true
     toast.warning('Match abandoned by teammate')
     const timer = setTimeout(() => router.push('/'), 3000)
     return () => clearTimeout(timer)
@@ -1147,7 +1150,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     ? `${window.location.origin}/?code=${roomCode}`
     : undefined
 
-  if (isOnline && gameState.status !== GameStatus.PLAYING) {
+  if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
     return (
       <GameLobby
         roomCode={roomCode}

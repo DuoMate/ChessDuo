@@ -65,7 +65,7 @@ export function GameOverModal({
         initial={{ scale: 0.5, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 250 }}
-        className="bg-game-surface p-6 rounded-2xl text-center border border-white/10 shadow-2xl w-full max-w-sm relative overflow-hidden"
+        className="bg-game-surface p-6 rounded-2xl text-center border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm relative overflow-hidden"
       >
         {/* Close button */}
         {onClose && (
@@ -100,7 +100,7 @@ export function GameOverModal({
         </motion.div>
 
         <h2 className={`text-2xl font-bold mt-4 mb-1 relative z-10 ${
-          isAbandoned ? 'text-amber-400' : winner === 'WHITE' ? 'text-white' : 'text-gray-300'
+          isAbandoned ? 'text-amber-500 dark:text-amber-400' : winner === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'
         } font-game`}>
           {isAbandoned && 'Match Abandoned'}
           {!isAbandoned && winner === 'WHITE' && 'White Team Wins!'}
@@ -108,7 +108,7 @@ export function GameOverModal({
           {!isAbandoned && winner === 'DRAW' && "It's a Draw!"}
         </h2>
 
-        <p className="text-gray-500 mb-2 relative z-10">
+        <p className="text-gray-500 dark:text-gray-400 mb-2 relative z-10">
           {isAbandoned ? 'Your teammate left the match' : 'Great game!'}
         </p>
 

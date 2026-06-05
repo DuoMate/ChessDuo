@@ -28,7 +28,7 @@ export function EvaluatingLoader() {
   }, [])
 
   return (
-    <div className="w-full bg-gray-800/50 rounded-xl border border-yellow-500/20 p-5 text-center overflow-hidden">
+    <div className="w-full bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-yellow-500/20 p-5 text-center overflow-hidden">
       <div className="flex items-center justify-center gap-3 mb-3">
         <span
           ref={leftPieceRef}
@@ -57,7 +57,7 @@ export function EvaluatingLoader() {
         Evaluating moves...
       </p>
 
-      <p ref={subtitleRef} className="text-gray-500 text-xs mt-2">
+      <p ref={subtitleRef} className="text-gray-400 dark:text-gray-500 text-xs mt-2">
         Who made the better choice?
       </p>
     </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error'
@@ -115,7 +115,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
 export function useGameToast() {
   const { addToast } = useToast()
   
-  return {
+  return useMemo(() => ({
     info: (msg: string) => addToast('info', msg),
     success: (msg: string) => addToast('success', msg),
     warning: (msg: string) => addToast('warning', msg),
@@ -127,5 +127,5 @@ export function useGameToast() {
     moveLocked: () => addToast('info', 'Move locked in'),
     resolutionComplete: (winner: string) => addToast('success', `${winner} won this turn!`),
     gameOver: (result: string) => addToast('info', `Game Over: ${result}`, 0),
-  }
+  }), [addToast])
 }

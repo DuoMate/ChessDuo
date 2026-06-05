@@ -106,7 +106,7 @@ export default function HistoryPage() {
             <p className="text-gray-600 text-sm mt-1">Complete a game to see it here</p>
             <button
               onClick={() => router.push('/')}
-              className="mt-4 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 text-sm"
+              className="mt-4 px-4 py-2 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
             >
               Play a Game
             </button>
