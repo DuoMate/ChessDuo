@@ -29,8 +29,8 @@ const onlineCards = [
   },
   {
     icon: Zap,
-    title: 'Better Move Wins',
-    description: 'Your moves are compared by the engine. The stronger move takes the turn — so bring your A-game!',
+    title: 'Better Move Plays',
+    description: 'Each of you picks a move — the engine compares them and the stronger one (yours or your teammate\'s) takes the turn.',
   },
 ]
 
@@ -53,8 +53,8 @@ const offlineCards = [
   },
   {
     icon: Zap,
-    title: 'Better Move Wins',
-    description: 'Your moves are compared by the engine. The stronger move is played on the board.',
+    title: 'Better Move Plays',
+    description: 'Both you and your bot teammate pick a move — the engine plays the stronger one on the board.',
   },
 ]
 

@@ -48,7 +48,7 @@ describe('WelcomeDisclaimer', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
     expect(screen.getByText(/you & your teammate/i)).toBeDefined()
     expect(screen.getByText(/pick your move/i)).toBeDefined()
-    expect(screen.getByText(/better move wins/i)).toBeDefined()
+    expect(screen.getByText(/better move plays/i)).toBeDefined()
   })
 
   it('shows winner/loser indicators', () => {
