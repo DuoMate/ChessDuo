@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
+import { getFriendsList, FriendWithProfile } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { SlideOver } from '@/components/SlideOver'
 import { ProfilePanel } from '@/components/ProfilePanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { Room } from '@/lib/supabase'
-import { getUnreadCounts, subscribeToMessages } from '@/lib/messages'
+import { getUnreadCounts, subscribeToMessages, sendMessage } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
@@ -73,6 +74,9 @@ export default function SetupPage() {
   const skillLevels = getAvailableSkillLevels()
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
+  const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
+  const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
+  const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then((result: { data: { session: any } }) => {
@@ -205,6 +209,19 @@ export default function SetupPage() {
       return () => { clearInterval(interval); unsub() }
     }
   }, [playerId])
+
+  // Fetch friends list when entering duel mode
+  useEffect(() => {
+    if (gameMode === 'duel' && playerId && !duelFriend) {
+      setDuelFriendsLoading(true)
+      getFriendsList(playerId).then((friends) => {
+        setDuelFriends(friends)
+        setDuelFriendsLoading(false)
+      }).catch(() => {
+        setDuelFriendsLoading(false)
+      })
+    }
+  }, [gameMode, playerId, duelFriend])
 
   const fetchUsername = async (userId: string): Promise<string> => {
     const { data } = await supabase
@@ -395,13 +412,15 @@ export default function SetupPage() {
 
   const handleStartDuel = async (timeSeconds: number) => {
     if (!playerId) { setShowAuthOverlay(true); return }
+    if (!duelFriend) { setJoinError('Please select a friend to challenge'); return }
     setCreatingTime(timeSeconds)
     setJoinError(null)
     try {
       const pid = playerId as string
-      const { data, roomId, roomCode, error } = await createChallenge(pid, 'online', timeSeconds)
+      const { data, roomId, roomCode, error } = await createChallenge(pid, 'online', timeSeconds, duelFriend.id)
       if (error) throw new Error(error)
       if (roomId && roomCode) {
+        await sendMessage(pid, duelFriend.id, JSON.stringify({ type: 'challenge', roomId, roomCode, time: timeSeconds }), 'challenge')
         router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${timeSeconds}`)
       } else {
         throw new Error('Failed to create challenge')
@@ -467,6 +486,66 @@ export default function SetupPage() {
   if (chooseUsernameScreen) return chooseUsernameScreen
 
   // ============================================
+  // Duel — Friend Selection Screen
+  // ============================================
+  if (gameMode === 'duel' && !duelFriend) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+        {topBar}
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <div className="text-center mb-6">
+              <div className="text-[42px] mb-2">{"\u2694"}</div>
+              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">1v1 Duel</h1>
+              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">Choose a friend to challenge</p>
+            </div>
+
+            {duelFriendsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : duelFriends.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-[32px] mb-3">👥</div>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No friends yet</p>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500">Add friends from the Friends panel to challenge them</p>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-6">
+                {duelFriends.map((friend) => (
+                  <button
+                    key={friend.friend_id}
+                    onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-white/8 bg-white dark:bg-white/[0.03] hover:border-amber-400 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/[0.05] transition-all text-left group"
+                    style={{ minHeight: '60px' }}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
+                      {friend.friend_username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-gray-900 dark:text-white truncate">{friend.friend_username}</div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400">Challenge to a 1v1 duel</div>
+                    </div>
+                    <span className="text-amber-500 dark:text-amber-400 text-lg opacity-0 group-hover:opacity-100 transition-opacity">{"\u2694"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center">
+              <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+                {"\u2190"} Back to home
+              </button>
+            </div>
+          </div>
+        </div>
+        {slideOvers}
+        {authOverlay}
+      </div>
+    )
+  }
+
+  // ============================================
   // Time selection screen
   // ============================================
   if (gameMode && selectedTime === null) {
@@ -508,7 +587,11 @@ export default function SetupPage() {
               <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">
                 {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'TWO PLAYER' : gameMode === 'fourplayer' ? 'FOUR PLAYER' : '1v1 DUEL'}
               </h1>
-              <p className="text-[11px] text-gray-700 dark:text-gray-400 tracking-[0.15em] uppercase mt-0.5 font-medium">Select game duration</p>
+              {gameMode === 'duel' && duelFriend ? (
+                <p className="text-[12px] text-amber-500 dark:text-amber-400 font-semibold mt-1">vs {duelFriend.name}</p>
+              ) : (
+                <p className="text-[11px] text-gray-700 dark:text-gray-400 tracking-[0.15em] uppercase mt-0.5 font-medium">Select game duration</p>
+              )}
             </div>
 
             {gameMode === 'online' && (
@@ -614,8 +697,15 @@ export default function SetupPage() {
             </div>
 
             <div className="text-center mt-4">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {'\u2190'} Back to game mode
+              <button onClick={() => {
+                if (gameMode === 'duel') {
+                  setDuelFriend(null)
+                  setSelectedTime(null)
+                } else {
+                  setGameMode(null)
+                }
+              }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+                {gameMode === 'duel' ? '\u2190 Back to friends' : '\u2190 Back to game mode'}
               </button>
             </div>
           </div>
@@ -916,104 +1006,6 @@ export default function SetupPage() {
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">Creating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-gray-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">{option.description}</div>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {joinError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-100 dark:bg-red-500/10 border-2 border-red-300 dark:border-red-500/20 text-red-700 dark:text-red-400 text-sm text-center font-medium">
-                {joinError}
-              </div>
-            )}
-
-            <div className="text-center">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {"\u2190"} Back to home
-              </button>
-            </div>
-          </div>
-        </div>
-        {slideOvers}
-        {authOverlay}
-      </div>
-    )
-  }
-
-  // ============================================
-  // Duel mode — 1v1 challenge a friend
-  // ============================================
-  if (gameMode === 'duel') {
-    if (!playerId) {
-      return (
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white">
-          {topBar}
-          <div className="absolute top-4 left-4 z-10">
-            <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-3">
-              {"\u2190"} Back
-            </button>
-          </div>
-          <Auth onAuthComplete={handleAuthComplete} />
-        </div>
-      )
-    }
-
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[42px] mb-2">{"\u2694"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">1v1 Duel</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">Challenge a Friend</p>
-            </div>
-
-            <div className="bg-pink-50 dark:bg-white/[0.04] border-2 border-pink-200 dark:border-white/10 rounded-2xl p-6 mb-6">
-              <div className="text-center mb-4">
-                <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase">How it works</div>
-              </div>
-              <div className="space-y-3 text-sm text-gray-800 dark:text-gray-300 font-medium">
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-500/20 text-pink-700 dark:text-pink-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Pick a time limit and create a challenge</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-500/20 text-pink-700 dark:text-pink-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                  <span>Share the challenge link with your friend</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-500/20 text-pink-700 dark:text-pink-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                  <span>Game starts when they accept</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center mb-4">
-              <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Select game duration</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {TIME_OPTIONS.map((option) => (
-                <button
-                  key={option.seconds}
-                  onClick={() => handleStartDuel(option.seconds)}
-                  disabled={creatingTime !== null}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-pink-400 dark:hover:border-pink-500/40 hover:bg-pink-50 dark:hover:bg-pink-500/[0.05] hover:shadow-md'
-                  } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                  {creatingTime === option.seconds ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-pink-600 dark:text-pink-400 font-medium">Creating...</span>
                     </div>
                   ) : (
                     <>
