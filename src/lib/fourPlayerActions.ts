@@ -28,10 +28,10 @@ export async function createFourPlayerRoom(options: {
     .insert({
       code,
       status: 'waiting',
-      mode: 'fourplayer',
       created_by: playerId,
       time_seconds: timeSeconds,
       expires_at: expiresAt,
+      mode: 'fourplayer',
     })
     .select()
     .single()
@@ -234,7 +234,6 @@ export async function joinFourPlayerByCode(options: {
     .from('rooms')
     .select('*')
     .eq('code', code)
-    .eq('mode', 'fourplayer')
     .eq('status', 'waiting')
     .maybeSingle()
 
@@ -245,4 +244,8 @@ export async function joinFourPlayerByCode(options: {
     roomCode: room.code,
     timeSeconds: room.time_seconds || 600,
   }
+}
+
+export function getRoomMode(room: { mode?: string }): 'online' | 'fourplayer' {
+  return room?.mode === 'fourplayer' ? 'fourplayer' : 'online'
 }

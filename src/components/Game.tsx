@@ -76,6 +76,7 @@ interface GameState {
   highlightSquares: HighlightSquares | null
   isLoading: boolean
   turnStatus: 'your_turn' | 'selecting' | 'waiting_for_teammate' | 'teammate_locked' | 'evaluating' | 'opponent_turn' | 'waiting'
+  winner: 'WHITE' | 'BLACK' | 'DRAW' | null
 }
 
 const PIECE_SYMBOLS: Record<string, string> = {
@@ -203,7 +204,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     myPendingOverlay: null,
     highlightSquares: null,
     isLoading: true,
-    turnStatus: 'waiting'
+    turnStatus: 'waiting',
+    winner: null
   })
 
   const [soundEnabled, setSoundEnabled] = useState(true)
@@ -478,13 +480,30 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             isSync: comp?.isSync
           })
           if (comp) {
-            setAccuracyComparison(comp)
-            console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+            if (!isFourPlayer || myTeam === 'WHITE') {
+              setAccuracyComparison(comp)
+              console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+            }
           } else {
             console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
-          console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
+          if (isFourPlayer) {
+            const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
+            console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected (4-player)', {
+              hasComparison: !!comp,
+              compPlayer1Move: comp?.player1Move,
+              compPlayer2Move: comp?.player2Move,
+              compWinnerId: comp?.winnerId,
+              isSync: comp?.isSync
+            })
+            if (comp && myTeam === 'BLACK') {
+              setAccuracyComparison(comp)
+              console.log('[ACCURACY-TRANSITION] SET accuracyComparison for Black team')
+            }
+          } else {
+            console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
+          }
         }
     prevTurnRef.current = currentTurn
 
@@ -568,7 +587,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE }))
       } else {
         g.setGameOverTimeup?.('Draw on time', 'timeout')
-        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER }))
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE, winner: 'DRAW' }))
       }
       return
     }
@@ -710,7 +729,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
       const comp = g.lastMoveComparison as MoveComparison | null
       if (comp) {
-        console.log('[ACCURACY-TRANSITION] (updateState) WHITE→BLACK detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
+        if (!isFourPlayer || myTeam === 'WHITE') {
+          console.log('[ACCURACY-TRANSITION] (updateState) WHITE→BLACK detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
+          setAccuracyComparison(comp)
+        }
+      }
+    } else if (isFourPlayer && prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
+      const comp = g.lastMoveComparison as MoveComparison | null
+      if (comp && myTeam === 'BLACK') {
+        console.log('[ACCURACY-TRANSITION] (updateState) BLACK→WHITE detected, SET accuracy for Black team', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
         setAccuracyComparison(comp)
       }
     }
@@ -1247,7 +1274,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
-          winner={gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE'}
+          winner={gameState.winner || (gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE')}
           onPlayAgain={isOnline ? () => router.push('/') : () => window.location.reload()}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
