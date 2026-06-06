@@ -110,6 +110,10 @@ export class LocalGame {
     return this._lastMoveComparison
   }
 
+  get savedMoveHistory(): Array<{ team: string; move: string }> {
+    return []
+  }
+
   getCapturedPieces(): CapturedPieces {
     return this.gameState.capturedPieces
   }
@@ -378,12 +382,13 @@ export class LocalGame {
      const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
      
     console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
-     console.log(`${'='.repeat(60)}\n`)
+      console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
+      console.log(`${'='.repeat(60)}\n`)
 
-    const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
-    if (moveParts) {
-      this._lastMove = moveParts
+    if (winnerId === 'player1') {
+      this._lastMove = { from: player1From, to: player1To }
+    } else if (winnerId === 'player2') {
+      this._lastMove = { from: player2From, to: player2To }
     }
 
     this._lastMoveComparison = {

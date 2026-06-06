@@ -45,4 +45,6 @@ export interface GameInterface {
   isFourPlayer(): boolean
   /** Get the team for a given player ID */
   getPlayerTeam(playerId: string): 'WHITE' | 'BLACK' | null
+  /** Saved move history from DB (populated after reconnection sync) */
+  readonly savedMoveHistory: Array<{ team: string; move: string }>
 }

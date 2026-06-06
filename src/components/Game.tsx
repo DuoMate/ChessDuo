@@ -22,7 +22,7 @@ import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
 import { GameOnOverlay } from './GameOnOverlay'
 import { EvaluatingLoader } from './EvaluatingLoader'
-import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled } from '@/lib/sounds'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
@@ -231,8 +231,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Update sound engine when setting changes
   useEffect(() => {
-    setSoundEnabled(soundEnabled)
+    setEngineSoundEnabled(soundEnabled)
   }, [soundEnabled])
+
+  // Initialize AudioContext on first user gesture for browsers
+  useEffect(() => {
+    const resumeAudio = () => {
+      const engine = (window as any).__soundEngineInstance
+      if (engine?.getContext) {
+        engine.getContext().resume().catch(() => {})
+      }
+    }
+    document.addEventListener('click', resumeAudio, { once: true })
+    document.addEventListener('touchstart', resumeAudio, { once: true })
+    return () => {
+      document.removeEventListener('click', resumeAudio)
+      document.removeEventListener('touchstart', resumeAudio)
+    }
+  }, [])
 
   // Game ON overlay — show when game transitions to PLAYING, then start timer
   useEffect(() => {
@@ -822,6 +838,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (isOnline && onlineGameRef.current && playerId) {
       // Online mode - human vs human with bots as opponents
       const g = onlineGameRef.current
+
+      if (g.status === GameStatus.GAME_OVER) return
+
       const currentTurn = g.currentTurn
 
       const myTeam = (g as GameInterface).getTeam()
@@ -1153,9 +1172,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [isOnline])
 
-  const handleLeaveConfirm = useCallback(() => {
+  const handleLeaveConfirm = useCallback(async () => {
     if (isOnline && onlineGameRef.current) {
-      onlineGameRef.current.abandonMatch()
+      await onlineGameRef.current.abandonMatch()
     }
     setShowLeaveModal(false)
     confirmNavLeave()
@@ -1260,6 +1279,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">ChessDuo</h1>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="hidden md:flex min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm items-center justify-center text-sm"
+              title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+            <button
               onClick={() => setOverlayMode('profile')}
               className="min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-sm"
               title="Profile"
@@ -1298,14 +1324,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               transition={{ duration: 0.25 }}
               className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
                 gameState.status === GameStatus.GAME_OVER
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border border-yellow-400/30'
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-400/30'
                   : gameState.turnStatus === 'your_turn'
-                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border border-green-400/30 animate-pulse'
+                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-400 border border-green-400/30 animate-pulse'
                   : gameState.turnStatus === 'evaluating'
-                  ? 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-300 border border-purple-400/30'
+                  ? 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-700 dark:text-purple-300 border border-purple-400/30'
                   : gameState.turnStatus === 'waiting_for_teammate'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-400/30'
-                  : 'bg-white/5 text-gray-400 border border-white/10'
+                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/30'
+                  : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10'
               }`}
             >
               {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
@@ -1325,7 +1351,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         {/* Chess Board — centered */}
         <div className="flex justify-center mb-3">
-          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px] aspect-square flex-shrink-0 relative">
+          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px] max-h-[calc(100vh-14rem)] aspect-square flex-shrink-0 relative">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
               {(() => {
                 const currentTurn = gameState.currentTurn

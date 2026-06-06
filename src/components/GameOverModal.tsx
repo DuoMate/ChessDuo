@@ -71,7 +71,7 @@ export function GameOverModal({
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            className="absolute top-3 right-3 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 transition-colors"
             aria-label="Close"
           >
             <X size={16} className="text-gray-400" />
@@ -86,10 +86,10 @@ export function GameOverModal({
           className="relative z-10"
         >
           {isAbandoned && (
-            <LogOut size={72} className="mx-auto text-amber-400" strokeWidth={1.5} />
+            <LogOut size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
           )}
           {!isAbandoned && winner === 'WHITE' && (
-            <Trophy size={72} className="mx-auto text-amber-400" strokeWidth={1.5} />
+            <Trophy size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
           )}
           {!isAbandoned && winner === 'BLACK' && (
             <Trophy size={72} className="mx-auto text-gray-400" strokeWidth={1.5} />

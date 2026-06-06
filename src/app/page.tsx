@@ -74,6 +74,7 @@ export default function SetupPage() {
   const skillLevels = getAvailableSkillLevels()
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
+  const autoJoinAttemptedRef = useRef<string | null>(null)
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
@@ -150,7 +151,14 @@ export default function SetupPage() {
       setShowAuthOverlay(true)
     }
 
-    if (codeParam && sessionChecked && playerId) {
+    if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam) {
+      const isValidRoomCode = /^[A-Z0-9]{6}$/.test(codeParam)
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeParam)
+      if (!isValidRoomCode && !isValidUUID) {
+        autoJoinAttemptedRef.current = codeParam
+        return
+      }
+      autoJoinAttemptedRef.current = codeParam
       setJoinCode(codeParam)
       const doAutoJoin = async () => {
         setJoinLoading(true)
@@ -185,6 +193,7 @@ export default function SetupPage() {
           }
         } else {
           setJoinError('Room not found or already started')
+          setJoinCode('')
         }
         setJoinLoading(false)
       }

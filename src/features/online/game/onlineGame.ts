@@ -658,11 +658,9 @@ export class OnlineGame {
           this.startPendingTurn()
           this.notifyStateChange()
         } else {
-          console.warn('[ONLINE] syncGameState: no saved game found')
-          this._status = GameStatus.PLAYING
-          this.gameState.startMatch()
-          this.startPendingTurn()
-          this.notifyStateChange()
+          console.warn('[ONLINE] syncGameState: no saved game found, keeping current state')
+          // Don't start a fresh game — the DB write may not have completed yet.
+          // The next presence sync or polling interval will retry.
         }
       }
     } catch (e) {
@@ -1230,10 +1228,11 @@ export class OnlineGame {
       this._blackComparison = this._lastMoveComparison
     }
 
-    // Set lastMove for board animation
-    const moveParts = this.getMoveParts(winningMove, this.gameState.board.fen())
-    if (moveParts) {
-      this._lastMove = moveParts
+    // Set lastMove for board animation — use from/to directly to handle castling
+    if (winnerId === 'player1') {
+      this._lastMove = { from: player1From, to: player1To }
+    } else if (winnerId === 'player2') {
+      this._lastMove = { from: player2From, to: player2To }
     }
 
     this.stats.movesPlayed++
@@ -1343,6 +1342,11 @@ export class OnlineGame {
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval)
       this._pollingInterval = null
+    }
+    this.stopMatchTimer()
+    if (this.resolveTeammateLocked) {
+      this.resolveTeammateLocked()
+      this.resolveTeammateLocked = null
     }
     this.notifyStateChange()
   }
