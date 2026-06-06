@@ -151,6 +151,11 @@ export default function SetupPage() {
       setShowAuthOverlay(true)
     }
 
+    if (codeParam && sessionChecked && !playerId) {
+      setShowAuthOverlay(true)
+      return
+    }
+
     if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam) {
       const isValidRoomCode = /^[A-Z0-9]{6}$/.test(codeParam)
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeParam)

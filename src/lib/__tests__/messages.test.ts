@@ -81,8 +81,9 @@ describe('getConversation', () => {
     ;(supabase.from as jest.Mock).mockReturnValue({
       select: () => ({
         or: () => ({
-          order: () => ({
-            limit: () => Promise.resolve({
+          eq: () => ({
+            order: () => ({
+              limit: () => Promise.resolve({
               data: [
                 { id: '1', sender_id: 'user1', content: 'Hi' },
                 { id: '2', sender_id: 'user2', content: 'Hey' },
@@ -92,7 +93,8 @@ describe('getConversation', () => {
           }),
         }),
       }),
-    })
+    }),
+  })
 
     const result = await getConversation('user1', 'user2')
     expect(result.length).toBe(2)

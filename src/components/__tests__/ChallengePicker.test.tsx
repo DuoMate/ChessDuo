@@ -14,6 +14,16 @@ const mockSupabase = {
   removeChannel: jest.fn(),
 }
 
+const mockRouterPush = jest.fn()
+const mockRouterReplace = jest.fn()
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+    replace: mockRouterReplace,
+  }),
+}))
+
 jest.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: () => false,
 }))
@@ -30,6 +40,8 @@ jest.mock('../../lib/challenges', () => ({
   createChallenge: jest.fn().mockResolvedValue({
     data: { id: 'c1', code: 'ABC12345', game_mode: 'online', time_seconds: 600 },
     error: null,
+    roomId: 'room-uuid-1',
+    roomCode: 'ABC12345',
   }),
   getChallengeUrl: jest.fn().mockReturnValue('https://example.com/challenge/ABC12345'),
 }))
@@ -66,18 +78,17 @@ describe('ChallengePicker', () => {
     expect(selectedButton?.className).toContain('border-amber-400')
   })
 
-  it('shows result screen after creating challenge', async () => {
+  it('navigates to duel page after sending challenge', async () => {
     render(
       <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
     )
-    fireEvent.click(screen.getByText('Create Challenge'))
+    fireEvent.click(screen.getByText('Send Challenge'))
 
     await waitFor(() => {
-      expect(screen.getByText('Challenge Created!')).toBeTruthy()
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        '/duel?room=room-uuid-1&code=ABC12345&team=WHITE&playerId=user1&time=600'
+      )
     })
-
-    expect(screen.getByText('Copy link')).toBeTruthy()
-    expect(screen.getByText('Done')).toBeTruthy()
   })
 
   it('closes via cancel button', () => {
