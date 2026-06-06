@@ -73,7 +73,7 @@ export default function PremiumPage() {
 
               <div className="text-center text-gray-500 text-sm">
                 <p>Coming soon — contact us for early access</p>
-                <p className="text-xs mt-1">chessduo@proton.me</p>
+                <p className="text-xs mt-1">chessdoubles27@gmail.com</p>
               </div>
             </div>
 

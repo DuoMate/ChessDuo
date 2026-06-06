@@ -292,6 +292,12 @@ export default function SetupPage() {
 
       const pid = playerId as string
 
+      if (room.mode === 'fourplayer') {
+        setJoinLoading(false)
+        router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
+        return
+      }
+
       const { data: existingPlayers } = await supabase
         .from('room_players')
         .select('*')
@@ -656,15 +662,15 @@ export default function SetupPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <ModeCard
-                  icon={"\u265B\u265B"}
+                  icon={"\u2654\u265A"}
                   title="Two Player"
-                  desc="You + Friend vs Bots"
+                  desc="(You + Friend) vs Bots"
                   tag="Online"
                   tagColor="blue"
                   onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }}
                 />
                 <ModeCard
-                  icon={"\u265B\u265C"}
+                  icon={"\u2654\u2654\u265A\u265A"}
                   title="Four Player"
                   desc="2 Friends vs 2 Friends"
                   tag="Online Lobby"
@@ -683,6 +689,40 @@ export default function SetupPage() {
                 <ModeButton icon={"\u2694"} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
               </div>
             </div>
+
+            {playerId && (
+              <div className="mb-6">
+                <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.2em] uppercase mb-3 px-1">
+                  Join a Room
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                    placeholder="Enter room code"
+                    maxLength={8}
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    disabled={joinLoading}
+                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-sm placeholder:text-gray-500 dark:placeholder:text-gray-500 focus:border-yellow-500 dark:focus:border-yellow-500/60 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
+                    style={{ minHeight: '44px' }}
+                  />
+                  <button
+                    onClick={handleJoinByCode}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="px-5 py-3 rounded-xl bg-yellow-100 dark:bg-yellow-500/15 border-2 border-yellow-400 dark:border-yellow-500/25 text-yellow-800 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-200 dark:hover:bg-yellow-500/25 active:bg-yellow-300 dark:active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
+                    style={{ minHeight: '44px' }}
+                  >
+                    {joinLoading ? 'Joining...' : 'Join'}
+                  </button>
+                </div>
+                {joinError && (
+                  <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-center gap-6 text-[11px] pt-4 border-t border-gray-300 dark:border-white/10">
               <button onClick={() => router.push('/history')} className="text-gray-700 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors min-h-[44px] flex items-center gap-1 font-medium">
@@ -1085,38 +1125,35 @@ function TopBar({
 }) {
   const { theme, setTheme } = useSettings()
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-2 bg-white/95 dark:bg-[#0f1119]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
-      <button
-        onClick={() => playerId ? onProfile() : onSignIn()}
-        className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-800 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.05] px-2"
-      >
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-        <span className="text-sm font-medium">{playerId ? 'Profile' : 'Sign In'}</span>
-      </button>
-
-      <div className="flex items-center gap-2">
+    <div className="sticky top-0 z-30 flex items-center px-4 py-2 bg-white/95 dark:bg-[#0f1119]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
+      <div className="flex-1 flex items-center">
         <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="flex items-center gap-0.5 bg-gray-100 dark:bg-white/10 rounded-full p-1 border border-gray-300 dark:border-white/[0.08] transition-colors"
-          aria-label="Toggle theme"
+          onClick={() => playerId ? onProfile() : onSignIn()}
+          className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-800 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.05] px-2"
         >
-          <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-500'}`}>
-            Light
-          </span>
-          <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500'}`}>
-            Dark
-          </span>
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          <span className="text-sm font-medium">{playerId ? 'Profile' : 'Sign In'}</span>
         </button>
-        <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400/60 text-sm font-bold">
-          <span>♔</span>
-          <span className="hidden sm:inline">ChessDuo</span>
-        </div>
       </div>
 
+        <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center gap-0.5 bg-gray-100 dark:bg-white/10 rounded-full p-1 border border-gray-300 dark:border-white/[0.08] transition-colors"
+            aria-label="Toggle theme"
+          >
+            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-500'}`}>
+              Light
+            </span>
+            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500'}`}>
+              Dark
+            </span>
+          </button>
+
+      <div className="flex-1 flex items-center justify-end">
       {playerId ? (
         <button
           onClick={onFriends}
@@ -1133,6 +1170,7 @@ function TopBar({
       ) : (
         <div className="min-w-[44px]" />
       )}
+      </div>
     </div>
   )
 }
