@@ -63,7 +63,12 @@ jobs:
           EOF
 
       - name: Init Capacitor Android project
-        run: npx cap add android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            echo "Android project already exists, skipping init"
+          fi
 
       - name: Build AAB
         run: bash scripts/build-aab.sh
