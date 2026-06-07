@@ -80,34 +80,17 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
 
-# ─── Strip ads permissions from merged manifest ──
-MANIFEST="android/app/src/main/AndroidManifest.xml"
-if [ -f "$MANIFEST" ]; then
-  python3 -c "
-import re
-with open('$MANIFEST') as f:
-  content = f.read()
-# Remove broken/incomplete ads permission tags left by older script versions
-content = re.sub(r'<uses-permission android:name=\"com\.google\.android\.gms\.permission\.AD_ID\"[^>]*', '', content)
-content = re.sub(r'<uses-permission android:name=\"android\.permission\.ACCESS_ADSERVICES_[^\"]*\"[^>]*', '', content)
-# Remove duplicate xmlns:tools
-content = re.sub(r' xmlns:tools=\"[^\"]*\"', '', content)
-# Add single xmlns:tools after <manifest
-content = content.replace('<manifest ', '<manifest xmlns:tools=\"http://schemas.android.com/tools\" ')
-# Inject removals before <application>
-removals = (
-  '    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\"/>\n'
-  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_AD_ID\" tools:node=\"remove\"/>\n'
-  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_ATTRIBUTION\" tools:node=\"remove\"/>\n'
-  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE\" tools:node=\"remove\"/>\n'
-  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_TOPICS\" tools:node=\"remove\"/>\n'
-)
-content = content.replace('<application', removals + '<application')
-with open('$MANIFEST', 'w') as f:
-  f.write(content)
-"
-  ok "Ads permissions stripped from merged manifest"
-fi
+# ─── Disable unused social login providers (only Google/Gmail) ──
+echo "" >> android/gradle.properties
+echo "# Disable social login providers not in use (only Google/Gmail is used)" >> android/gradle.properties
+echo "socialLogin.facebook.include=false" >> android/gradle.properties
+echo "socialLogin.apple.include=false" >> android/gradle.properties
+echo "socialLogin.twitter.include=false" >> android/gradle.properties
+ok "Unused social login providers disabled"
+
+# ─── Source manifest has tools:node="remove" for ads permissions ──
+# No additional patching needed — the source manifest is already correct.
+ok "Ads permissions handled via tools:node=remove in source manifest"
 
 # ─── Apply version from android-version.properties ──
 VERSION_FILE="android-version.properties"
