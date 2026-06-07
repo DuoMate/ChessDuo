@@ -16,14 +16,18 @@ err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# ─── Java ──────────────────────────────────────
+# ─── Use Java 21 for Gradle compatibility ─────────
 if [ -f /usr/lib/jvm/java-21-openjdk-amd64/bin/java ]; then
     export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+elif [ -d /usr/local/sdkman/candidates/java/21.0.10-ms ]; then
+    export JAVA_HOME=/usr/local/sdkman/candidates/java/21.0.10-ms
 elif [ -f /usr/lib/jvm/java-17-openjdk-amd64/bin/java ]; then
     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 fi
-export PATH="$JAVA_HOME/bin:$PATH"
-ok "Java: $JAVA_HOME"
+if [ -n "${JAVA_HOME:-}" ]; then
+    export PATH="$JAVA_HOME/bin:$PATH"
+    ok "Java: $($JAVA_HOME/bin/java -version 2>&1 | head -1)"
+fi
 
 # ─── Android SDK ───────────────────────────────
 if [ -z "${ANDROID_HOME:-}" ]; then
@@ -45,6 +49,42 @@ ok "ANDROID_HOME=$ANDROID_HOME"
 [ -f "android/keystore.properties" ] || err "Signing config not found. Run: npm run cap:setup"
 
 source android/keystore.properties
+
+# ─── Validate environment variables ──────────────
+# Required vars must be set in the environment (CI) or in .env.production.
+# Next.js auto-loads .env.production during build, but we check here for
+# fast failure. Copy .env.example to .env.production and fill in real values.
+REQUIRED_VARS=(
+  "NEXT_PUBLIC_SUPABASE_URL"
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  "NEXT_PUBLIC_STOCKFISH_SERVER_URL"
+  "NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID"
+)
+
+MISSING=0
+for var in "${REQUIRED_VARS[@]}"; do
+  if [ -z "${!var:-}" ]; then
+    MISSING=$((MISSING + 1))
+  fi
+done
+
+if [ "$MISSING" -gt 0 ]; then
+  if [ -f ".env.production" ]; then
+    MISSING=0
+    set -a; source .env.production; set +a
+    for var in "${REQUIRED_VARS[@]}"; do
+      if [ -z "${!var:-}" ]; then
+        MISSING=$((MISSING + 1))
+      fi
+    done
+  fi
+fi
+
+if [ "$MISSING" -gt 0 ]; then
+  err "Missing $MISSING required env var(s). Set them in your environment or create .env.production (see .env.example)."
+fi
+
+ok "All required env vars are set"
 
 # ─── Build Next.js static export ─────────────────
 log "Building Next.js static export..."

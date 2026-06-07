@@ -9,6 +9,7 @@ export function SplashHandler() {
         const { SplashScreen } = await import('@capacitor/splash-screen')
         await SplashScreen.hide()
       } catch {
+        // Not running in Capacitor environment
       }
     }
     hideSplash()
@@ -32,6 +33,7 @@ export function SplashHandler() {
           body: JSON.stringify(errorData),
         }).catch(() => {})
       } catch {
+        // Ignore crash-report fetch failures
       }
       if (original) return original(msg, source, line, col, err)
       return false
