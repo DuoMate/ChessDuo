@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
@@ -82,6 +83,15 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
       >
         📋 View All Match History →
       </button>
+
+      <div className="pt-2 border-t border-gray-700/50">
+        <Link
+          href="/delete-account"
+          className="w-full min-h-[44px] p-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 hover:text-red-400 hover:border-red-500/30 text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          ⚙️ Manage Account
+        </Link>
+      </div>
 
       {onSignOut && (
         <button
