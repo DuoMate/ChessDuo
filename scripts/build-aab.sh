@@ -43,11 +43,20 @@ fi
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
 ok "ANDROID_HOME=$ANDROID_HOME"
 
-# ─── Prerequisites ─────────────────────────────
-[ -d "android" ]           || err "android/ not found. Run: npm run cap:setup"
-[ -f "chessduo.keystore" ] || err "Keystore not found. Run: npm run cap:setup"
-[ -f "android/keystore.properties" ] || err "Signing config not found. Run: npm run cap:setup"
+# ─── Verify prerequisites ────────────────────────
+if [ ! -d "android" ]; then
+    err "android/ directory not found. Run: bash scripts/setup-capacitor.sh"
+fi
 
+if [ ! -f "chessduo.keystore" ]; then
+    err "chessduo.keystore not found. Run: bash scripts/setup-capacitor.sh"
+fi
+
+if [ ! -f "android/keystore.properties" ]; then
+    err "android/keystore.properties not found. Run: bash scripts/setup-capacitor.sh"
+fi
+
+# Load properties
 source android/keystore.properties
 
 # ─── Verify keystore fingerprint (CI only) ──────
