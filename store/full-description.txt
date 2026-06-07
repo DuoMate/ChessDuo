@@ -1,4 +1,4 @@
-Welcome to ChessDuo by Navron — the first multiplayer chess app where teammates play together on the same side, making simultaneous hidden moves. Think you know chess? Try coordinating with a partner without talking.
+Welcome to ChessDuo by Navron — the multiplayer chess app where teammates make simultaneous hidden moves. Think you know chess? Try coordinating with a partner without talking.
 
 ═══ HOW IT WORKS ═══
 • You and your teammate each pick a move — in secret
@@ -11,13 +11,15 @@ It's chess meets teamwork. Trust your partner. Or don't.
 
 ═══ GAME MODES ═══
 
-♛ PLAY TOGETHER (Online) — Create a room, share a code, and team up with a friend against the AI. Real-time via Supabase.
+👥 PLAY TOGETHER (2v2) — Create a room, share a code, and team up with a friend against the AI. Real-time via Supabase.
 
-♞ PLAY OFFLINE — Practice solo with a bot teammate against AI opponents. 6 difficulty levels from Beginner (1000 ELO) to Grandmaster (2600 ELO).
+🎮 PLAY OFFLINE — Practice solo with a bot teammate against AI opponents. 6 difficulty levels from Beginner to Grandmaster.
 
-⚡ QUICK MATCH — Auto-find a human teammate and jump into a game. No setup, no codes.
+⚡ QUICK MATCH — Auto-find a human teammate and jump into a 2v2 game. No setup, no codes.
 
 ⚔️ DUEL — Challenge a friend to 1v1 chess. Standard rules, real-time play.
+
+🔄 4-PLAYER MODE — Two teams of two on the same board. Each team shares a colour and coordinates secretly. Also supports all-human mode for private lobbies.
 
 ═══ FEATURES ═══
 
@@ -25,19 +27,16 @@ It's chess meets teamwork. Trust your partner. Or don't.
 
 📊 PERFORMANCE TRACKING — Per-move accuracy scores, sync rate, and conflict count for every game. Compare your stats in match history.
 
-🔄 MOVE REPLAY — Step through every move of any completed game. See winning moves, shadow moves, and accuracy scores with the built-in replay system.
+🔄 MOVE REPLAY — Step through every move of any completed game. See winning moves, shadow moves, and accuracy scores.
 
 💎 MOVE INSIGHTS — Unlock detailed analysis of your best and worst moves (3 free reveals, then premium).
 
 👥 FRIENDS & CHAT — Add friends, send messages, issue challenges. Real-time chat with online presence indicators.
 
-📱 CROSS-PLATFORM — Play on web, Android, or iOS. One account, all your stats sync.
-
-═══ PREMIUM ═══
-Unlimited move insights, deeper analysis, and priority support. Upgrade anytime.
+📱 CROSS-PLATFORM — Play on web or Android. One account, all your stats sync.
 
 ═══ PRIVACY ═══
-No ads. No third-party tracking. Your data stays yours. Read our full privacy policy at chessduo-fe.onrender.com/privacy.
+No ads. No third-party tracking. Read our full policy at chessduo-fe.onrender.com/privacy.
 
 ═══ READY ═══
 Grab a friend, pick a mode, and discover what happens when two minds control one army.

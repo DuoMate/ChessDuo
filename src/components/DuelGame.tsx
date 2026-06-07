@@ -13,6 +13,8 @@ import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
 import { GameMenu } from './GameMenu'
+
+const duelBoardStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' } as const
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
@@ -241,7 +243,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </span>
         </div>
 
-        <div className="relative w-full mx-auto aspect-square mb-2" style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' }}>
+        <div className="relative w-full mx-auto aspect-square mb-2" style={duelBoardStyle}>
           <div className="absolute inset-0">
             {isMobile ? (
               <MobileChessBoard

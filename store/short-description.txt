@@ -1,1 +1,1 @@
-2v2 multiplayer chess where teammates make simultaneous hidden moves. Play co-op vs AI or duel your friends in real-time.
+2v2 chess with hidden simultaneous moves. Team up vs AI or duel friends.

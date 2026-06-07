@@ -79,6 +79,7 @@ interface GameState {
   winner: 'WHITE' | 'BLACK' | 'DRAW' | null
 }
 
+const boardMaxStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' } as const
 const PIECE_SYMBOLS: Record<string, string> = {
   'p': '♟',
   'n': '♞',
@@ -1380,7 +1381,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex justify-center mb-3">
           <div
             className="w-full aspect-square flex-shrink-0 relative"
-            style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' }}
+            style={boardMaxStyle}
           >
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
               {(() => {
@@ -1424,7 +1425,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex justify-center mb-3">
           <div
             className="w-full"
-            style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' }}
+            style={boardMaxStyle}
           >
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
