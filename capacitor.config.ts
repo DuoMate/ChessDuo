@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.navron.chessduo',
   appName: 'ChessDuo',
   webDir: 'out',
+  server: {
+    androidScheme: 'http',
+  },
   android: {
     allowMixedContent: false,
     backgroundColor: '#0f1119',
