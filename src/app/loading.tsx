@@ -49,7 +49,7 @@ export default function Loading() {
           width: 'min(280px, 60vw)',
           height: 'auto',
           aspectRatio: '1/1',
-          backgroundImage: 'url(/loading/logo.png)',
+          backgroundImage: 'url(/loading/logo.webp)',
           backgroundSize: 'contain',
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'center',
