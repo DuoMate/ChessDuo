@@ -1,0 +1,71 @@
+name: Build Release
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: 21
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Reconstruct keystore from secret
+        run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Create keystore.properties
+        run: |
+          mkdir -p android
+          cat > android/keystore.properties <<- EOF
+          storeFile=../../chessduo.keystore
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Create .env.production
+        run: |
+          cat > .env.production <<- EOF
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
+          NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          EOF
+
+      - name: Init Capacitor Android project
+        run: npx cap add android
+
+      - name: Build AAB
+        run: bash scripts/build-aab.sh
+        env:
+          EXPECTED_KEYSTORE_SHA1: ${{ secrets.EXPECTED_KEYSTORE_SHA1 }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChessDuo-AAB
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Build APK
+        run: bash scripts/build-apk.sh
+        env:
+          EXPECTED_KEYSTORE_SHA1: ${{ secrets.EXPECTED_KEYSTORE_SHA1 }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChessDuo-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
