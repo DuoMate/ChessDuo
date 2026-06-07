@@ -38,6 +38,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Init Capacitor Android project
+        run: |
+          if [ ! -f "android/build.gradle" ]; then
+            npx cap add android
+          else
+            echo "Android project already exists, skipping init"
+          fi
+
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
         env:
@@ -45,7 +53,6 @@ jobs:
 
       - name: Create keystore.properties
         run: |
-          mkdir -p android
           cat > android/keystore.properties <<- EOF
           storeFile=../../chessduo.keystore
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
@@ -61,14 +68,6 @@ jobs:
           NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
           NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
           EOF
-
-      - name: Init Capacitor Android project
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          else
-            echo "Android project already exists, skipping init"
-          fi
 
       - name: Build AAB
         run: bash scripts/build-aab.sh
