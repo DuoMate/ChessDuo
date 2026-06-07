@@ -1378,7 +1378,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         {/* Chess Board — centered */}
         <div className="flex justify-center mb-3">
-          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px] max-h-[calc(100vh-14rem)] aspect-square flex-shrink-0 relative">
+          <div
+            className="w-full aspect-square flex-shrink-0 relative"
+            style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' }}
+          >
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
               {(() => {
                 const currentTurn = gameState.currentTurn
@@ -1419,7 +1422,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         {/* Accuracy Panel — below board */}
         <div className="flex justify-center mb-3">
-          <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[600px]">
+          <div
+            className="w-full"
+            style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' }}
+          >
             {(() => {
               const g = isOnline ? onlineGameRef.current : gameRef.current
               return (

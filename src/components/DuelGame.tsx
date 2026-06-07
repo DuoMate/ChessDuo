@@ -241,7 +241,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </span>
         </div>
 
-        <div className="relative w-full max-w-[calc(100vw-2rem)] sm:max-w-[480px] md:max-w-[550px] lg:max-w-[650px] mx-auto aspect-square mb-2">
+        <div className="relative w-full mx-auto aspect-square mb-2" style={{ maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' }}>
           <div className="absolute inset-0">
             {isMobile ? (
               <MobileChessBoard
