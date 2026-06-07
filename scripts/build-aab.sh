@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 # ──────────────────────────────────────────────────
 # ChessDuo AAB Builder (Google Play Store)
@@ -11,8 +11,7 @@ set -euxo pipefail
 RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' NC='\033[0m'
 log()  { echo -e "${CYAN}[BUILD]${NC} $1"; }
 ok()   { echo -e "${GREEN}[OK]${NC}   $1"; }
-err()  { echo -e "${RED}[ERR]${NC}  $1" >&2; exit 1; }
-trap 'err "Script failed at line $LINENO while executing: $BASH_COMMAND"' ERR
+err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -62,7 +61,7 @@ source android/keystore.properties
 
 # ─── Verify keystore fingerprint (CI only) ──────
 if [ -n "${EXPECTED_KEYSTORE_SHA1:-}" ]; then
-  ACTUAL_SHA1=$(keytool -list -v -keystore "$storeFile" -storepass "$storePassword" 2>/dev/null | grep "SHA1:" | awk '{print $NF}')
+  ACTUAL_SHA1=$(keytool -list -v -keystore "$PROJECT_ROOT/chessduo.keystore" -storepass "$storePassword" 2>&1 | grep "SHA1:" | awk '{print $NF}') || true
   if [ "$ACTUAL_SHA1" != "$EXPECTED_KEYSTORE_SHA1" ]; then
     err "Keystore fingerprint mismatch! Expected $EXPECTED_KEYSTORE_SHA1, got $ACTUAL_SHA1"
   fi

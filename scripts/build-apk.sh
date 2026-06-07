@@ -61,7 +61,7 @@ source android/keystore.properties
 
 # ─── Verify keystore fingerprint (CI only) ──────
 if [ -n "${EXPECTED_KEYSTORE_SHA1:-}" ]; then
-  ACTUAL_SHA1=$(keytool -list -v -keystore "$storeFile" -storepass "$storePassword" 2>/dev/null | grep "SHA1:" | awk '{print $NF}')
+  ACTUAL_SHA1=$(keytool -list -v -keystore "$PROJECT_ROOT/chessduo.keystore" -storepass "$storePassword" 2>&1 | grep "SHA1:" | awk '{print $NF}') || true
   if [ "$ACTUAL_SHA1" != "$EXPECTED_KEYSTORE_SHA1" ]; then
     err "Keystore fingerprint mismatch! Expected $EXPECTED_KEYSTORE_SHA1, got $ACTUAL_SHA1"
   fi
