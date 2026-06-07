@@ -14,5 +14,3 @@ services:
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5b2pzcmxseWN6bHBqdnFubHBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTc1ODIsImV4cCI6MjA5MDE5MzU4Mn0.RT7lA7WBRsUcObKCECA-JwTuxtJUAFxnjNdLsfmsAzQ
       - key: NEXT_PUBLIC_STOCKFISH_SERVER_URL
         value: https://chessduo-bllo.onrender.com
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
