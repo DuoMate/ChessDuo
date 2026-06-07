@@ -58,11 +58,20 @@ fi
 source android/keystore.properties
 
 # ─── Build Next.js static export ─────────────────
-log "Building Next.js static export (temporarily excluding API routes)..."
-mv src/app/api src/app/api.capacitor-backup 2>/dev/null || true
+log "Building Next.js static export..."
+rm -rf .next
+# Move API routes out of src/app so they don't break static export
+if [ -d "src/app/api" ]; then
+  mv src/app/api /tmp/chessduo-api-routes
+  ok "API routes excluded for static build"
+fi
 NEXT_OUTPUT=export npx next build
 ok "Next.js build complete"
-mv src/app/api.capacitor-backup src/app/api 2>/dev/null || true
+# Restore API routes
+if [ -d "/tmp/chessduo-api-routes" ]; then
+  mv /tmp/chessduo-api-routes src/app/api
+  ok "API routes restored"
+fi
 
 # ─── Sync web assets ─────────────────────────────
 log "Syncing Capacitor web assets..."
@@ -71,16 +80,33 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
 
-# ─── Remove AD_ID from merged manifest ──────────
+# ─── Strip ads permissions from merged manifest ──
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ]; then
-  if ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
-    sed -i '1s|<manifest |<manifest xmlns:tools="http://schemas.android.com/tools" |' "$MANIFEST"
-    sed -i '/<application/ i\    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>' "$MANIFEST"
-    ok "AD_ID permission removed from merged manifest"
-  else
-    ok "AD_ID already removed from manifest"
-  fi
+  python3 -c "
+import re
+with open('$MANIFEST') as f:
+  content = f.read()
+# Remove broken/incomplete ads permission tags left by older script versions
+content = re.sub(r'<uses-permission android:name=\"com\.google\.android\.gms\.permission\.AD_ID\"[^>]*', '', content)
+content = re.sub(r'<uses-permission android:name=\"android\.permission\.ACCESS_ADSERVICES_[^\"]*\"[^>]*', '', content)
+# Remove duplicate xmlns:tools
+content = re.sub(r' xmlns:tools=\"[^\"]*\"', '', content)
+# Add single xmlns:tools after <manifest
+content = content.replace('<manifest ', '<manifest xmlns:tools=\"http://schemas.android.com/tools\" ')
+# Inject removals before <application>
+removals = (
+  '    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\"/>\n'
+  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_AD_ID\" tools:node=\"remove\"/>\n'
+  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_ATTRIBUTION\" tools:node=\"remove\"/>\n'
+  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE\" tools:node=\"remove\"/>\n'
+  '    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_TOPICS\" tools:node=\"remove\"/>\n'
+)
+content = content.replace('<application', removals + '<application')
+with open('$MANIFEST', 'w') as f:
+  f.write(content)
+"
+  ok "Ads permissions stripped from merged manifest"
 fi
 
 # ─── Apply version from android-version.properties ──
@@ -137,6 +163,7 @@ fi
 # ─── Build APK ──────────────────────────────────
 log "Building release APK (this may take 3-5 minutes on first run)..."
 cd android
+./gradlew --stop 2>/dev/null || true
 ./gradlew assembleRelease
 cd ..
 
