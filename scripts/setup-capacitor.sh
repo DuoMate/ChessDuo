@@ -151,6 +151,18 @@ else
     ok "Android project created"
 fi
 
+# ─── Remove AD_ID from merged manifest ──────────
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [ -f "$MANIFEST" ]; then
+  if ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
+    sed -i '1s|<manifest |<manifest xmlns:tools="http://schemas.android.com/tools" |' "$MANIFEST"
+    sed -i '/<application/ i\    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>' "$MANIFEST"
+    ok "AD_ID permission removed from merged manifest"
+  else
+    ok "AD_ID already removed from manifest"
+  fi
+fi
+
 # ─── 6. Generate keystore ───────────────────────
 log "Checking keystore..."
 if [ -f "chessduo.keystore" ]; then

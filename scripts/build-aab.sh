@@ -54,6 +54,29 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
 
+# ─── Remove AD_ID from merged manifest ──────────
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [ -f "$MANIFEST" ]; then
+  if ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
+    sed -i '1s|<manifest |<manifest xmlns:tools="http://schemas.android.com/tools" |' "$MANIFEST"
+    sed -i '/<application/ i\    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>' "$MANIFEST"
+    ok "AD_ID permission removed from merged manifest"
+  else
+    ok "AD_ID already removed from manifest"
+  fi
+fi
+
+# ─── Apply version from android-version.properties ──
+VERSION_FILE="android-version.properties"
+if [ -f "$VERSION_FILE" ]; then
+  source "$VERSION_FILE"
+  sed -i "s/versionCode [0-9]*/versionCode $versionCode/" android/app/build.gradle
+  sed -i "s/versionName \".*\"/versionName \"$versionName\"/" android/app/build.gradle
+  ok "Version set to $versionName ($versionCode)"
+else
+  warn "android-version.properties not found, using defaults"
+fi
+
 # ─── Copy ProGuard rules ────────────────────────
 if [ -f "resources/proguard-rules.pro" ]; then
     cp resources/proguard-rules.pro android/app/proguard-rules.pro
