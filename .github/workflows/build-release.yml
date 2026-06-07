@@ -41,6 +41,7 @@ jobs:
       - name: Init Capacitor Android project
         run: |
           if [ ! -f "android/build.gradle" ]; then
+            rm -rf android
             npx cap add android
           else
             echo "Android project already exists, skipping init"
