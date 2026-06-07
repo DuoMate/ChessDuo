@@ -57,12 +57,15 @@ fi
 # Load properties
 source android/keystore.properties
 
+# ─── Build Next.js static export ─────────────────
+log "Building Next.js static export (temporarily excluding API routes)..."
+mv src/app/api src/app/api.capacitor-backup 2>/dev/null || true
+NEXT_OUTPUT=export npx next build
+ok "Next.js build complete"
+mv src/app/api.capacitor-backup src/app/api 2>/dev/null || true
+
 # ─── Sync web assets ─────────────────────────────
 log "Syncing Capacitor web assets..."
-mkdir -p out
-echo '<html><body>ChessDuo loads from server</body></html>' > out/index.html
-
-# Ensure Gradle can find Android SDK
 echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
 npx cap sync android

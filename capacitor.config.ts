@@ -5,7 +5,6 @@ const config: CapacitorConfig = {
   appName: 'ChessDuo',
   webDir: 'out',
   server: {
-    url: 'https://chessduo-fe.onrender.com',
     cleartext: false,
     androidScheme: 'https',
   },

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 
 export default function DeleteAccountPage() {
   const router = useRouter()
@@ -12,13 +13,13 @@ export default function DeleteAccountPage() {
   async function handleDelete() {
     setStep('loading')
     try {
-      const res = await fetch('/api/delete-account', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) {
-        setErrorMsg(data.error || 'Something went wrong')
+      const { error: rpcError } = await supabase.rpc('delete_my_account')
+      if (rpcError) {
+        setErrorMsg(rpcError.message || 'Something went wrong')
         setStep('error')
         return
       }
+      await supabase.auth.signOut()
       setStep('done')
     } catch {
       setErrorMsg('Network error — please try again')
