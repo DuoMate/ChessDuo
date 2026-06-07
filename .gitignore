@@ -56,3 +56,4 @@ chessduo.keystore
 *.p12
 android/keystore.properties
 android/app/build/outputs/
+chessduo.keystore.base64.txt
