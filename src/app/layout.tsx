@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Chakra_Petch } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import { SplashHandler } from "@/components/SplashHandler";
 
 export const metadata: Metadata = {
   title: "ChessDuo",
@@ -53,6 +54,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="/cm-chessboard/extensions/promotion-dialog/promotion-dialog.css" />
       </head>
       <body className="min-h-full flex flex-col">
+        <SplashHandler />
         <Providers>{children}</Providers>
       </body>
     </html>

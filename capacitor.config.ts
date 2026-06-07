@@ -4,10 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.navron.chessduo',
   appName: 'ChessDuo',
   webDir: 'out',
-  server: {
-    cleartext: false,
-    androidScheme: 'https',
-  },
   android: {
     allowMixedContent: false,
     backgroundColor: '#0f1119',
@@ -17,8 +13,8 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true,
+      launchShowDuration: 0,
+      launchAutoHide: false,
       backgroundColor: '#0f1119',
       splashFullScreen: true,
       splashImmersive: true,
