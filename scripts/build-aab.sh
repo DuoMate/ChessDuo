@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
 
 # ──────────────────────────────────────────────────
 # ChessDuo AAB Builder (Google Play Store)
@@ -11,7 +11,8 @@ set -euo pipefail
 RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' CYAN='\033[0;36m' NC='\033[0m'
 log()  { echo -e "${CYAN}[BUILD]${NC} $1"; }
 ok()   { echo -e "${GREEN}[OK]${NC}   $1"; }
-err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
+err()  { echo -e "${RED}[ERR]${NC}  $1" >&2; exit 1; }
+trap 'err "Script failed at line $LINENO while executing: $BASH_COMMAND"' ERR
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
