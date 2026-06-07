@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST() {
   try {
@@ -25,24 +25,25 @@ export async function POST() {
     }
 
     const userId = user.id
+    const admin = getSupabaseAdmin()
 
     await Promise.all([
-      supabaseAdmin.from('messages').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
-      supabaseAdmin.from('friendships').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
-      supabaseAdmin.from('challenge_links').delete().eq('creator_id', userId),
-      supabaseAdmin.from('duel_games').delete().or(`player_white.eq.${userId},player_black.eq.${userId}`),
-      supabaseAdmin.from('profiles').delete().eq('id', userId),
+      admin.from('messages').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
+      admin.from('friendships').delete().or(`sender_id.eq.${userId},receiver_id.eq.${userId}`),
+      admin.from('challenge_links').delete().eq('creator_id', userId),
+      admin.from('duel_games').delete().or(`player_white.eq.${userId},player_black.eq.${userId}`),
+      admin.from('profiles').delete().eq('id', userId),
     ])
 
-    const roomPlayers = await supabaseAdmin.from('room_players').select('room_id').eq('player_id', userId)
+    const roomPlayers = await admin.from('room_players').select('room_id').eq('player_id', userId)
     if (roomPlayers.data && roomPlayers.data.length > 0) {
       const roomIds = roomPlayers.data.map(rp => rp.room_id)
-      await supabaseAdmin.from('games').delete().in('room_id', roomIds)
-      await supabaseAdmin.from('room_players').delete().eq('player_id', userId)
-      await supabaseAdmin.from('rooms').delete().in('id', roomIds)
+      await admin.from('games').delete().in('room_id', roomIds)
+      await admin.from('room_players').delete().eq('player_id', userId)
+      await admin.from('rooms').delete().in('id', roomIds)
     }
 
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    const { error: deleteError } = await admin.auth.admin.deleteUser(userId)
     if (deleteError) {
       return NextResponse.json({ error: 'Failed to delete user: ' + deleteError.message }, { status: 500 })
     }
