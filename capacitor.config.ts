@@ -22,6 +22,12 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true,
     },
+    SocialLogin: {
+      google: {
+        webClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+        mode: 'online',
+      },
+    },
   },
 }
 
