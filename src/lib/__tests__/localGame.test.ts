@@ -144,3 +144,180 @@ describe('Move evaluation selection', () => {
     expect(result).toContain('a7a8q')
   })
 })
+
+// Game-over detection and winner determination tests
+describe('Game Over Detection', () => {
+  function setupGame() {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+    return game
+  }
+
+  test('isGameOver returns false for starting position', () => {
+    const game = setupGame()
+    expect(game.isGameOver()).toBe(false)
+    expect(game.status).toBe(GameStatus.PLAYING)
+    expect(game.getResult()).toBe('Game in progress')
+  })
+
+  test('detects checkmate position via board load', () => {
+    const game = setupGame()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+
+    expect(game.isGameOver()).toBe(false)
+
+    game.board.move('Qf7#')
+
+    expect(game.isGameOver()).toBe(true)
+    expect(game.getResult()).toContain('White wins by checkmate')
+  })
+
+  test('detects stalemate position via board load', () => {
+    const game = setupGame()
+    game.board.load('k7/8/KQ6/8/8/8/8/8 b - - 0 1')
+
+    expect(game.isGameOver()).toBe(true)
+    expect(game.getResult()).toBe('Draw by stalemate')
+  })
+
+  test('getResult returns White wins checkmate for white checkmate', () => {
+    const game = setupGame()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+    game.board.move('Qf7#')
+
+    expect(game.getResult()).toBe('White wins by checkmate')
+  })
+
+  test('getResult via setGameOverResult returns correct string', () => {
+    const game = setupGame()
+    game.setGameOverResult('Black wins by checkmate')
+    expect(game.getResult()).toBe('Black wins by checkmate')
+  })
+
+  test('getResult returns draw for stalemate via board load', () => {
+    const game = setupGame()
+
+    game.board.load('k7/8/KQ6/8/8/8/8/8 b - - 0 1')
+
+    expect(game.getResult()).toBe('Draw by stalemate')
+  })
+
+  test('setGameOverTimeup sets correct status and result', () => {
+    const game = setupGame()
+    game.setGameOverTimeup('White wins by timeout', 'timeout')
+
+    expect(game.status).toBe(GameStatus.GAME_OVER)
+    expect(game.getResult()).toBe('White wins by timeout')
+    expect(game.getGameOverReason()).toBe('timeout')
+  })
+
+  test('setGameOverTimeup result takes precedence over board state', () => {
+    const game = setupGame()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+    game.board.move('Qf7#')
+
+    expect(game.isGameOver()).toBe(true)
+
+    game.setGameOverTimeup('Draw by timeout', 'timeout')
+
+    expect(game.getResult()).toBe('Draw by timeout')
+    expect(game.getGameOverReason()).toBe('timeout')
+  })
+
+  test('getGameOverReason returns null when game not over', () => {
+    const game = setupGame()
+    expect(game.getGameOverReason()).toBeNull()
+  })
+
+  test('getGameOverReason returns checkmate for checkmate', () => {
+    const game = setupGame()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+    game.board.move('Qf7#')
+
+    expect(game.getGameOverReason()).toBe('checkmate')
+  })
+
+  test('getGameOverReason returns stalemate for stalemate', () => {
+    const game = setupGame()
+    game.board.load('k7/8/KQ6/8/8/8/8/8 b - - 0 1')
+
+    expect(game.getGameOverReason()).toBe('stalemate')
+  })
+
+  test('status transitions from PLAYING to GAME_OVER via setTimeout', () => {
+    const game = setupGame()
+    expect(game.status).toBe(GameStatus.PLAYING)
+
+    game.setGameOverTimeup('White wins by timeout', 'timeout')
+    expect(game.status).toBe(GameStatus.GAME_OVER)
+  })
+
+  test('getResult returns correct default when board is game over', () => {
+    const game = setupGame()
+    game.board.load('r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4')
+    game.board.move('Qf7#')
+
+    expect(game.isGameOver()).toBe(true)
+    expect(game.getResult()).toContain('White wins by checkmate')
+  })
+})
+
+describe('Game Status and Timer Interaction', () => {
+  test('game starts in PLAYING status after start()', () => {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+
+    expect(game.status).toBe(GameStatus.READY)
+    game.start()
+    expect(game.status).toBe(GameStatus.PLAYING)
+  })
+
+  test('isMatchTimerActive is false by default', () => {
+    const game = new LocalGame()
+    expect(game.isMatchTimerActive()).toBe(false)
+  })
+
+  test('setMatchTimerActive toggles timer state', () => {
+    const game = new LocalGame()
+    game.setMatchTimerActive(true)
+    expect(game.isMatchTimerActive()).toBe(true)
+    game.setMatchTimerActive(false)
+    expect(game.isMatchTimerActive()).toBe(false)
+  })
+
+  test('setGameOverTimeup deactivates timer', () => {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+    game.setMatchTimerActive(true)
+
+    game.setGameOverTimeup('White wins by timeout', 'timeout')
+
+    expect(game.status).toBe(GameStatus.GAME_OVER)
+  })
+
+  test('timer can be checked when game is over', () => {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+    game.setMatchTimerActive(true)
+    game.setGameOverTimeup('White wins by timeout', 'timeout')
+
+    const remaining = game.getMatchTimeRemaining()
+    expect(typeof remaining).toBe('number')
+    expect(remaining).toBeGreaterThanOrEqual(0)
+  })
+})

@@ -49,7 +49,9 @@ export async function authenticateWithGoogle(): Promise<{
     try {
       const result = await authenticateWithGoogleNative()
       if (result.success) return result
-    } catch {}
+    } catch {
+      // Native SDK unavailable — fall through to Capacitor Browser OAuth
+    }
   }
   return authenticateWithGoogleWeb()
 }
