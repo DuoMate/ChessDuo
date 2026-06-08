@@ -40,12 +40,11 @@ jobs:
 
       - name: Init Capacitor Android project
         run: |
-          if [ ! -f "android/build.gradle" ]; then
-            rm -rf android
-            npx cap add android
-          else
-            echo "Android project already exists, skipping init"
-          fi
+          rm -rf android
+          npx cap add android
+
+      - name: Add OAuth deep link intent filter
+        run: bash scripts/add-deep-link.sh
 
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore

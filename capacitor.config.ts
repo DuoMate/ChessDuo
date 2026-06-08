@@ -6,7 +6,6 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     androidScheme: 'http',
-    hostname: 'localhost',
   },
   android: {
     allowMixedContent: false,
@@ -22,15 +21,6 @@ const config: CapacitorConfig = {
       backgroundColor: '#0f1119',
       splashFullScreen: true,
       splashImmersive: true,
-    },
-    SocialLogin: {
-      google: {
-        webClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
-        mode: 'online',
-      },
-    },
-    Browser: {
-      // Capacitor Browser plugin for in-app OAuth
     },
   },
 }

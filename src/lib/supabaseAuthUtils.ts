@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+const APP_SCHEME = 'com.navron.chessduo://auth/callback'
+
 async function authenticateWithGoogleNative(): Promise<{
   success: boolean
   userId?: string
@@ -20,10 +22,12 @@ async function authenticateWithGoogleWeb(): Promise<{
   error?: string
 }> {
   try {
+    const isCapacitor = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: isCapacitor ? APP_SCHEME : window.location.origin,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
