@@ -130,4 +130,54 @@ describe('Match Timer', () => {
       expect(game.getGameOverReason()).toBe('timeout')
     })
   })
+
+  describe('Captured pieces for timeout winner determination', () => {
+    test('initial captured pieces are empty', () => {
+      const game = new LocalGame(300)
+      game.addPlayer('player1', Team.WHITE)
+      game.addPlayer('player2', Team.WHITE)
+      game.addPlayer('player3', Team.BLACK)
+      game.addPlayer('player4', Team.BLACK)
+      game.start()
+
+      const captured = game.getCapturedPieces()
+      expect(captured.white.length).toBe(0)
+      expect(captured.black.length).toBe(0)
+    })
+
+    test('equal captured pieces produces draw on timeout', () => {
+      const game = new LocalGame(300)
+      game.addPlayer('player1', Team.WHITE)
+      game.addPlayer('player2', Team.WHITE)
+      game.addPlayer('player3', Team.BLACK)
+      game.addPlayer('player4', Team.BLACK)
+      game.start()
+
+      const captured = game.getCapturedPieces()
+      expect(captured.white.length).toBe(0)
+      expect(captured.black.length).toBe(0)
+    })
+
+    test('setGameOverTimeup correctly receives team-based win messages', () => {
+      const game = new LocalGame(300)
+      game.addPlayer('player1', Team.WHITE)
+      game.addPlayer('player2', Team.WHITE)
+      game.addPlayer('player3', Team.BLACK)
+      game.addPlayer('player4', Team.BLACK)
+      game.start()
+
+      game.setGameOverTimeup('Black wins on time', 'timeout')
+      expect(game.getResult()).toBe('Black wins on time')
+
+      const game2 = new LocalGame(300)
+      game2.addPlayer('player1', Team.WHITE)
+      game2.addPlayer('player2', Team.WHITE)
+      game2.addPlayer('player3', Team.BLACK)
+      game2.addPlayer('player4', Team.BLACK)
+      game2.start()
+
+      game2.setGameOverTimeup('White wins on time', 'timeout')
+      expect(game2.getResult()).toBe('White wins on time')
+    })
+  })
 })

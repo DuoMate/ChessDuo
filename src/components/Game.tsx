@@ -565,6 +565,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
 
+    if (g.status === GameStatus.GAME_OVER) return
+
     const remaining = g.getMatchTimeRemaining()
     if (remaining <= 0) {
       if (matchTimerRef.current) {
@@ -582,10 +584,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       if (whiteCaptured > blackCaptured) {
         g.setGameOverTimeup?.('White wins on time', 'timeout')
-        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.BLACK }))
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.BLACK, winner: 'WHITE' }))
       } else if (blackCaptured > whiteCaptured) {
         g.setGameOverTimeup?.('Black wins on time', 'timeout')
-        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE }))
+        setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE, winner: 'BLACK' }))
       } else {
         g.setGameOverTimeup?.('Draw on time', 'timeout')
         setGameState(prev => ({ ...prev, matchTimeRemaining: 0, matchTimerActive: false, status: GameStatus.GAME_OVER, currentTurn: Team.WHITE, winner: 'DRAW' }))
@@ -695,9 +697,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
 
     setGameState(prev => {
+      const newWinner = g.status === GameStatus.GAME_OVER
+        ? (g.getResult().includes('White wins') ? 'WHITE' as const : g.getResult().includes('Black wins') ? 'BLACK' as const : 'DRAW' as const)
+        : prev.winner
+
       const newState = {
         ...prev,
         status: g.status,
+        winner: newWinner,
         fen: g.board.fen(),
         currentTurn,
         selectedMove: isOnline ? null : g.getSelectedMove('player1'),
@@ -1102,7 +1109,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
           console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
         } else {
-          console.warn('[TEAMMATE] No move selected, teammate will be locked without a move')
+          console.warn('[TEAMMATE] No move selected, syncing with human move')
+          teammateSanMove = sanMove
+          teammateMoveInfo = moveInfo
+          if (moveInfo) {
+            g.setPendingMove('player2', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+          }
+          g.lockPendingMove('player2')
         }
 
         g.lockPendingMove('player1')
@@ -1275,7 +1288,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
-          winner={gameState.winner || (gameState.currentTurn === Team.WHITE ? 'BLACK' : 'WHITE')}
+          winner={gameState.winner || 'DRAW'}
           onPlayAgain={isOnline ? () => router.push('/') : () => window.location.reload()}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
