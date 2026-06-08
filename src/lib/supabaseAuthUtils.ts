@@ -49,9 +49,8 @@ export async function authenticateWithGoogle(): Promise<{
     try {
       const result = await authenticateWithGoogleNative()
       if (result.success) return result
-      return result
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : 'Native Google sign-in failed' }
+    } catch {
+      // Native SDK unavailable — fall through to Capacitor Browser OAuth
     }
   }
   return authenticateWithGoogleWeb()
