@@ -38,9 +38,21 @@ jobs:
 
       - run: npm ci
 
+      - name: Create .env.production
+        run: |
+          cat > .env.production <<- EOF
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
+          NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          EOF
+
       - name: Init Capacitor Android project
         run: |
           rm -rf android
+          set -a
+          source .env.production
+          set +a
           npx cap add android
 
       - name: Add OAuth deep link intent filter
@@ -58,15 +70,6 @@ jobs:
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
-
-      - name: Create .env.production
-        run: |
-          cat > .env.production <<- EOF
-          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
-          NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
           EOF
 
       - name: Build AAB
