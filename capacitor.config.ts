@@ -1,11 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
-declare const process: {
-  env: {
-    NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string
-  }
-}
-
 const config: CapacitorConfig = {
   appId: 'com.navron.chessduo',
   appName: 'ChessDuo',
