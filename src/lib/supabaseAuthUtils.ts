@@ -61,7 +61,6 @@ async function authenticateWithGoogleNative(): Promise<{
       provider: 'google',
       options: {
         nonce: nonceDigest,
-        scopes: ['email', 'profile'],
       },
     })
 
