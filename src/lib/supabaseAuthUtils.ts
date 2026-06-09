@@ -66,10 +66,21 @@ async function authenticateWithGoogleNative(): Promise<{
 
     console.log('[NativeAuth] Login result:', JSON.stringify(loginResult, null, 2))
 
-    if (!loginResult.result || loginResult.result.responseType !== 'online') {
-      const responseType = loginResult.result?.responseType || 'null'
+    // Check for cancellation or error
+    if (!loginResult.result) {
+      console.error('[NativeAuth] No result from SocialLogin.login')
+      return { success: false, error: 'Google Sign-In returned no result. Check Google Cloud Console: enable Google Sign-In API and configure OAuth consent screen.' }
+    }
+
+    if (loginResult.result.responseType === 'cancel') {
+      console.error('[NativeAuth] User cancelled sign-in')
+      return { success: false, error: 'Google Sign-In cancelled. This usually means:\n1. Google Sign-In API is not enabled in Google Cloud Console\n2. OAuth consent screen is not configured\n3. Web Client ID is incorrect\n\nPlease check Google Cloud Console → APIs & Services → Library → Enable "Google Sign-In API"' }
+    }
+
+    if (loginResult.result.responseType !== 'online') {
+      const responseType = loginResult.result.responseType || 'null'
       console.error('[NativeAuth] Unexpected response type:', responseType)
-      return { success: false, error: `Google returned response type "${responseType}" instead of "online". Check SHA-1 fingerprint in Google Cloud Console.` }
+      return { success: false, error: `Google returned response type "${responseType}" instead of "online". Check Google Cloud Console configuration.` }
     }
 
     const { idToken } = loginResult.result
