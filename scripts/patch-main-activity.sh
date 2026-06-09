@@ -7,7 +7,7 @@ set -euo pipefail
 # to the SocialLoginPlugin.handleGoogleLoginIntent() method.
 # Without this, the consent flow hangs after SHA-1 is fixed.
 
-MAIN_ACTIVITY="android/app/src/main/java/com/chessduo/app/MainActivity.java"
+MAIN_ACTIVITY="android/app/src/main/java/com/navron/chessduo/MainActivity.java"
 
 if [ ! -f "$MAIN_ACTIVITY" ]; then
   echo "[ERR] MainActivity.java not found at $MAIN_ACTIVITY"
@@ -23,7 +23,7 @@ fi
 echo "[INFO] Patching MainActivity.java to forward Google auth intents..."
 
 cat > "$MAIN_ACTIVITY" << 'JAVA'
-package com.chessduo.app;
+package com.navron.chessduo;
 
 import android.content.Intent;
 import com.getcapacitor.BridgeActivity;
