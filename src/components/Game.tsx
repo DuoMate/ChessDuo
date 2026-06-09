@@ -30,7 +30,6 @@ import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
 import { BottomNav } from './BottomNav'
 import { TeamIndicator } from './TeamIndicator'
-import { MobileStatusBar } from './MobileStatusBar'
 import { GameMenu } from './GameMenu'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
@@ -1273,15 +1272,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
-      {isMobile && (
-        <MobileStatusBar
-          currentTurn={gameState.currentTurn}
-          timerSeconds={gameState.matchTimeRemaining}
-          timerActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-          whiteCaptured={gameState.capturedByWhite}
-          blackCaptured={gameState.capturedByBlack}
-        />
-      )}
+
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}

@@ -7,7 +7,6 @@ import { MobileChessBoard } from './MobileChessBoard'
 import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { MatchTimer } from './MatchTimer'
 import { GameOverModal } from './GameOverModal'
-import { MobileStatusBar } from './MobileStatusBar'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -179,15 +178,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   if (waiting) {
     return (
       <div className={`min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
-        {isMobile && (
-          <MobileStatusBar
-            currentTurn={Team.WHITE}
-            timerSeconds={timeLimit}
-            timerActive={false}
-            whiteCaptured={[]}
-            blackCaptured={[]}
-          />
-        )}
+        {/* Mobile status bar removed - redundant */}
         <div className="text-center space-y-4">
           <div className="animate-pulse text-5xl flex justify-center">
             <Swords size={48} className="text-amber-600 dark:text-amber-400" />
@@ -211,15 +202,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
-      {isMobile && (
-        <MobileStatusBar
-          currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
-          timerSeconds={matchTime}
-          timerActive={timerActive}
-          whiteCaptured={[]}
-          blackCaptured={[]}
-        />
-      )}
       <div className="max-w-xl mx-auto w-full">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold flex items-center gap-1.5">

@@ -306,7 +306,7 @@ export function ChessBoard({
                   : '0 0 2px #fff',
                 filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
                 fontSize: overlayContainerRef.current
-                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
+                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
                   : '28px',
               }}
             >
@@ -341,7 +341,7 @@ export function ChessBoard({
                   : '0 0 2px #fff',
                 filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
                 fontSize: overlayContainerRef.current
-                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.75}px`
+                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
                   : '28px',
               }}
             >
