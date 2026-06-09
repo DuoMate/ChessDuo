@@ -67,23 +67,24 @@ async function authenticateWithGoogleNative(): Promise<{
     console.log('[NativeAuth] Login result:', JSON.stringify(loginResult, null, 2))
 
     // Check for cancellation or error
-    if (!loginResult.result) {
+    const result = loginResult.result as any
+    if (!result) {
       console.error('[NativeAuth] No result from SocialLogin.login')
       return { success: false, error: 'Google Sign-In returned no result. Check Google Cloud Console: enable Google Sign-In API and configure OAuth consent screen.' }
     }
 
-    if (loginResult.result.responseType === 'cancel') {
+    const responseType = result.responseType || 'null'
+    if (responseType === 'cancel') {
       console.error('[NativeAuth] User cancelled sign-in')
-      return { success: false, error: 'Google Sign-In cancelled. This usually means:\n1. Google Sign-In API is not enabled in Google Cloud Console\n2. OAuth consent screen is not configured\n3. Web Client ID is incorrect\n\nPlease check Google Cloud Console → APIs & Services → Library → Enable "Google Sign-In API"' }
+      return { success: false, error: 'Google Sign-In cancelled. This usually means:\n1. Google Sign-In API is not enabled\n2. OAuth consent screen is not configured\n3. Custom URI scheme not enabled\n\nCheck Google Cloud Console → APIs & Services → Credentials → Android Client → Enable custom URI scheme' }
     }
 
-    if (loginResult.result.responseType !== 'online') {
-      const responseType = loginResult.result.responseType || 'null'
+    if (responseType !== 'online') {
       console.error('[NativeAuth] Unexpected response type:', responseType)
       return { success: false, error: `Google returned response type "${responseType}" instead of "online". Check Google Cloud Console configuration.` }
     }
 
-    const { idToken } = loginResult.result
+    const { idToken } = result
     if (!idToken) {
       console.error('[NativeAuth] No ID token in response')
       return { success: false, error: 'No ID token received from Google. Check SHA-1 fingerprint and package name in Google Cloud Console.' }
