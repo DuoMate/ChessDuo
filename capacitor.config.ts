@@ -24,7 +24,7 @@ const config: CapacitorConfig = {
     },
     SocialLogin: {
       google: {
-        webClientId: process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+        webClientId: process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
         mode: 'online',
       },
     },

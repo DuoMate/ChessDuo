@@ -27,10 +27,10 @@ async function authenticateWithGoogleNative(): Promise<{
   error?: string
 }> {
   try {
-    const webClientId = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
+    const webClientId = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
     if (!webClientId) {
-      console.error('[NativeAuth] Google Client ID is not set')
-      return { success: false, error: 'Google Client ID not configured. Set NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in env.' }
+      console.error('[NativeAuth] Google Web Client ID is not set')
+      return { success: false, error: 'Google Web Client ID not configured. Set NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID in env.' }
     }
 
     console.log('[NativeAuth] webClientId:', webClientId.substring(0, 25) + '...')
