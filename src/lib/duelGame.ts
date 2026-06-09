@@ -20,7 +20,8 @@ export interface DuelGameState {
   currentTurn: 'w' | 'b'
   whitePlayer: DuelPlayerState | null
   blackPlayer: DuelPlayerState | null
-  matchTimeRemaining: number
+  whiteTimeRemaining: number
+  blackTimeRemaining: number
   matchTimerActive: boolean
   lastMove: { from: string; to: string } | null
   winner: 'white' | 'black' | 'draw' | null
@@ -42,7 +43,8 @@ export class DuelGame {
   private _channel: RealtimeChannel | null = null
   private _whitePlayer: DuelPlayerState | null = null
   private _blackPlayer: DuelPlayerState | null = null
-  private _matchTimeRemaining: number
+  private _whiteTimeRemaining: number
+  private _blackTimeRemaining: number
   private _matchTimerActive = false
   private _timerInterval: ReturnType<typeof setInterval> | null = null
   private _lastMove: { from: string; to: string } | null = null
@@ -61,7 +63,8 @@ export class DuelGame {
     this._playerId = playerId
     this._team = team
     this._timeLimit = timeLimit
-    this._matchTimeRemaining = timeLimit
+    this._whiteTimeRemaining = timeLimit
+    this._blackTimeRemaining = timeLimit
     if (SERVER_URL) {
       this.evaluator = new ServerMoveEvaluator(SERVER_URL)
     }
@@ -72,7 +75,8 @@ export class DuelGame {
   get currentTurn() { return this.chess.turn() as 'w' | 'b' }
   get whitePlayer() { return this._whitePlayer }
   get blackPlayer() { return this._blackPlayer }
-  get matchTimeRemaining() { return this._matchTimeRemaining }
+  get whiteTimeRemaining() { return this._whiteTimeRemaining }
+  get blackTimeRemaining() { return this._blackTimeRemaining }
   get matchTimerActive() { return this._matchTimerActive }
   get lastMove() { return this._lastMove }
   get winner() { return this._winner }
@@ -90,7 +94,8 @@ export class DuelGame {
       currentTurn: this.currentTurn,
       whitePlayer: this._whitePlayer,
       blackPlayer: this._blackPlayer,
-      matchTimeRemaining: this._matchTimeRemaining,
+      whiteTimeRemaining: this._whiteTimeRemaining,
+      blackTimeRemaining: this._blackTimeRemaining,
       matchTimerActive: this._matchTimerActive,
       lastMove: this._lastMove,
       winner: this._winner,
@@ -223,11 +228,22 @@ export class DuelGame {
     this._status = 'playing'
     this._matchTimerActive = true
     this._timerInterval = setInterval(() => {
-      if (this._matchTimeRemaining > 0) {
-        this._matchTimeRemaining--
-        this.notify()
-        if (this._matchTimeRemaining <= 0) {
-          this.handleTimeout()
+      const isWhiteTurn = this.chess.turn() === 'w'
+      if (isWhiteTurn) {
+        if (this._whiteTimeRemaining > 0) {
+          this._whiteTimeRemaining--
+          this.notify()
+          if (this._whiteTimeRemaining <= 0) {
+            this.handleTimeout()
+          }
+        }
+      } else {
+        if (this._blackTimeRemaining > 0) {
+          this._blackTimeRemaining--
+          this.notify()
+          if (this._blackTimeRemaining <= 0) {
+            this.handleTimeout()
+          }
         }
       }
     }, 1000)
@@ -249,7 +265,10 @@ export class DuelGame {
       }
 
       if (data.white_time_remaining !== undefined && data.white_time_remaining !== null) {
-        this._matchTimeRemaining = this._team === 'WHITE' ? data.white_time_remaining : (data.black_time_remaining ?? this._matchTimeRemaining)
+        this._whiteTimeRemaining = data.white_time_remaining
+      }
+      if (data.black_time_remaining !== undefined && data.black_time_remaining !== null) {
+        this._blackTimeRemaining = data.black_time_remaining
       }
 
       if (Array.isArray(data.move_history) && data.move_history.length > 0) {

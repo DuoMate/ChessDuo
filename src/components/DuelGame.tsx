@@ -40,7 +40,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
-  const [matchTime, setMatchTime] = useState(timeLimit)
+  const [whiteTime, setWhiteTime] = useState(timeLimit)
+  const [blackTime, setBlackTime] = useState(timeLimit)
   const [timerActive, setTimerActive] = useState(false)
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
   const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null)
@@ -68,7 +69,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       setFen(state.fen)
       setStatus(state.status)
       setCurrentTurn(state.currentTurn)
-      setMatchTime(state.matchTimeRemaining)
+      setWhiteTime(state.whiteTimeRemaining)
+      setBlackTime(state.blackTimeRemaining)
       setTimerActive(state.matchTimerActive)
       setLastMove(state.lastMove)
       setWinner(state.winner)
@@ -217,9 +219,15 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
               {team === 'WHITE' ? 'You (White)' : 'Opponent (White)'}
             </span>
-            {!isMobile && (
-              <MatchTimer seconds={matchTime} isActive={timerActive} totalSeconds={timeLimit} />
-            )}
+            <div className="flex items-center gap-3">
+              <span className={`font-mono font-bold ${currentTurn === 'w' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                {Math.floor(whiteTime / 60)}:{(whiteTime % 60).toString().padStart(2, '0')}
+              </span>
+              <span className="text-gray-400 dark:text-gray-500">vs</span>
+              <span className={`font-mono font-bold ${currentTurn === 'b' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                {Math.floor(blackTime / 60)}:{(blackTime % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
             <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
               {team === 'BLACK' ? 'You (Black)' : 'Opponent (Black)'}
           </span>
