@@ -27,13 +27,21 @@ async function authenticateWithGoogleNative(): Promise<{
   error?: string
 }> {
   try {
-    const webClientId = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
+    const webClientId = process.env.NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
     if (!webClientId) {
-      console.error('[NativeAuth] NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID is not set')
-      return { success: false, error: 'Google Web Client ID not configured' }
+      console.error('[NativeAuth] Google Client ID is not set')
+      return { success: false, error: 'Google Client ID not configured. Set NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in env.' }
     }
 
-    console.log('[NativeAuth] Initializing SocialLogin with webClientId:', webClientId.substring(0, 20) + '...')
+    console.log('[NativeAuth] webClientId:', webClientId.substring(0, 25) + '...')
+    
+    // Check if SocialLogin plugin is available
+    if (typeof SocialLogin === 'undefined') {
+      console.error('[NativeAuth] SocialLogin plugin is not available')
+      return { success: false, error: 'SocialLogin plugin not installed. Run: npm install @capgo/capacitor-social-login && npx cap sync' }
+    }
+
+    console.log('[NativeAuth] Initializing SocialLogin...')
     
     await SocialLogin.initialize({
       google: {
@@ -60,14 +68,15 @@ async function authenticateWithGoogleNative(): Promise<{
     console.log('[NativeAuth] Login result:', JSON.stringify(loginResult, null, 2))
 
     if (!loginResult.result || loginResult.result.responseType !== 'online') {
-      console.error('[NativeAuth] Unexpected response type:', loginResult.result?.responseType)
-      return { success: false, error: 'Expected online response mode from Google' }
+      const responseType = loginResult.result?.responseType || 'null'
+      console.error('[NativeAuth] Unexpected response type:', responseType)
+      return { success: false, error: `Google returned response type "${responseType}" instead of "online". Check SHA-1 fingerprint in Google Cloud Console.` }
     }
 
     const { idToken } = loginResult.result
     if (!idToken) {
       console.error('[NativeAuth] No ID token in response')
-      return { success: false, error: 'No ID token received from Google' }
+      return { success: false, error: 'No ID token received from Google. Check SHA-1 fingerprint and package name in Google Cloud Console.' }
     }
 
     console.log('[NativeAuth] Exchanging ID token with Supabase...')
@@ -80,7 +89,7 @@ async function authenticateWithGoogleNative(): Promise<{
 
     if (error) {
       console.error('[NativeAuth] Supabase signInWithIdToken error:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: `Supabase error: ${error.message}` }
     }
 
     console.log('[NativeAuth] Successfully signed in with Supabase')
@@ -92,7 +101,8 @@ async function authenticateWithGoogleNative(): Promise<{
     }
   } catch (err: any) {
     console.error('[NativeAuth] Exception:', err)
-    return { success: false, error: err.message || 'Google sign-in failed' }
+    const msg = err.message || err.toString() || 'Unknown error'
+    return { success: false, error: `Native SDK error: ${msg}` }
   }
 }
 
@@ -169,7 +179,13 @@ export async function authenticateWithGoogle(): Promise<{
       return nativeResult
     }
     
-    console.warn('[Auth] Native SDK failed:', nativeResult.error)
+    console.error('[Auth] Native SDK failed:', nativeResult.error)
+    
+    // Show error alert on native so user can see what's wrong
+    if (typeof window !== 'undefined' && window.alert) {
+      window.alert(`Native Google Sign-In failed:\n\n${nativeResult.error}\n\nFalling back to browser sign-in...`)
+    }
+    
     console.log('[Auth] Falling back to Capacitor Browser OAuth...')
     return authenticateWithGoogleCapacitorBrowser()
   }
