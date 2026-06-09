@@ -112,8 +112,9 @@ async function authenticateWithGoogleNative(): Promise<{
     }
   } catch (err: any) {
     console.error('[NativeAuth] Exception:', err)
+    const code = err.code ? ` (${err.code})` : ''
     const msg = err.message || err.toString() || 'Unknown error'
-    return { success: false, error: `Native SDK error: ${msg}` }
+    return { success: false, error: `Native SDK error: ${msg}${code}` }
   }
 }
 

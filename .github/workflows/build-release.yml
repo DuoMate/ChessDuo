@@ -60,6 +60,9 @@ jobs:
       - name: Add OAuth deep link intent filter
         run: bash scripts/add-deep-link.sh
 
+      - name: Patch MainActivity for Google auth intent forwarding
+        run: bash scripts/patch-main-activity.sh
+
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
         env:
