@@ -135,6 +135,9 @@ echo "socialLogin.apple.include=false" >> android/gradle.properties
 echo "socialLogin.twitter.include=false" >> android/gradle.properties
 ok "Unused social login providers disabled"
 
+# ─── Patch MainActivity.java for Google auth intent forwarding ──
+bash "$PROJECT_ROOT/scripts/patch-main-activity.sh"
+
 # ─── Source manifest has tools:node="remove" for ads permissions ──
 # No additional patching needed — the source manifest is already correct.
 ok "Ads permissions handled via tools:node=remove in source manifest"

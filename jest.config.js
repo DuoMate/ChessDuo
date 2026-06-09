@@ -9,6 +9,8 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@capacitor/browser$': '<rootDir>/src/lib/__mocks__/capacitor-browser.ts',
+    '^@capacitor/app$': '<rootDir>/src/lib/__mocks__/capacitor-app.ts',
   },
 }
 
