@@ -53,6 +53,8 @@ jobs:
           set -a
           source .env.production
           set +a
+          echo "[DEBUG] NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID:0:20}..."
+          echo "[DEBUG] NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID:0:20}..."
           npx cap add android
 
       - name: Add OAuth deep link intent filter
