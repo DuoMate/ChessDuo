@@ -61,6 +61,7 @@ async function authenticateWithGoogleNative(): Promise<{
       provider: 'google',
       options: {
         nonce: nonceDigest,
+        style: 'bottom',
       },
     })
 
