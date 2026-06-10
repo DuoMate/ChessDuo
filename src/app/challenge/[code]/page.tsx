@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getChallengeByCode, deactivateChallenge } from '@/lib/challenges'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function ChallengePage() {
   const params = useParams()
@@ -23,15 +24,26 @@ export default function ChallengePage() {
     creator_id: string
   } | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then((response: { data: { session: any } }) => {
+      if (!mountedRef.current) return
       const session = response.data.session
       setPlayerId(session?.user?.id || null)
+      setLoading(false)
+    }).catch(() => {
+      if (!mountedRef.current) return
       setLoading(false)
     })
 
     getChallengeByCode(challengeCode).then((challenge) => {
+      if (!mountedRef.current) return
       if (!challenge) {
         setStatus('invalid')
         setLoading(false)
@@ -50,6 +62,10 @@ export default function ChallengePage() {
         time_seconds: challenge.time_seconds,
         creator_id: challenge.creator_id,
       })
+    }).catch(() => {
+      if (!mountedRef.current) return
+      setStatus('invalid')
+      setLoading(false)
     })
   }, [challengeCode])
 
@@ -118,38 +134,45 @@ export default function ChallengePage() {
 
   if (needsUsername) {
     return (
-      <ChooseUsername
-        userId={needsUsername.userId}
-        suggestedName={needsUsername.suggestedName}
-        onAuthComplete={handleUsernameChosen}
-      />
+      <ErrorBoundary>
+        <ChooseUsername
+          userId={needsUsername.userId}
+          suggestedName={needsUsername.suggestedName}
+          onAuthComplete={handleUsernameChosen}
+        />
+      </ErrorBoundary>
     )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
-      </div>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
+          <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
+        </div>
+      </ErrorBoundary>
     )
   }
 
   if (status === 'need_auth' || (!playerId && !loading && status === 'loading')) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
-        <div className="max-w-sm w-full text-center space-y-6">
-          <div className="text-5xl mb-2">⚡</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
-          <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+          <div className="max-w-sm w-full text-center space-y-6">
+            <div className="text-5xl mb-2">⚡</div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
+            <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
 
-          <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+            <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+          </div>
         </div>
-      </div>
+      </ErrorBoundary>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
       <div className="max-w-sm w-full text-center space-y-4">
         {status === 'invalid' && (
           <>
@@ -193,5 +216,6 @@ export default function ChallengePage() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   )
 }

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { motion } from 'framer-motion'
 
@@ -10,13 +11,23 @@ export default function ProfilePage() {
   const router = useRouter()
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      if (!mountedRef.current) return
       const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
       }
+      setLoading(false)
+    }).catch(() => {
+      if (!mountedRef.current) return
       setLoading(false)
     })
   }, [])
@@ -45,7 +56,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Profile</h1>
@@ -74,6 +86,7 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }

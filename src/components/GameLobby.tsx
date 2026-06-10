@@ -18,6 +18,8 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
   const dot2Ref = useRef<HTMLDivElement>(null)
   const dot3Ref = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<Timeline | null>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   const isMobile = useIsMobile()
@@ -43,18 +45,27 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
     }
   }, [])
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(copiedTimerRef.current)
+      clearTimeout(linkCopiedTimerRef.current)
+    }
+  }, [])
+
   const handleCopyCode = () => {
     if (!roomCode) return
     navigator.clipboard.writeText(roomCode)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   const handleCopyLink = () => {
     if (!inviteUrl) return
     navigator.clipboard.writeText(inviteUrl)
     setLinkCopied(true)
-    setTimeout(() => setLinkCopied(false), 2000)
+    clearTimeout(linkCopiedTimerRef.current)
+    linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
   }
 
   const handleShare = () => {

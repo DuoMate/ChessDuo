@@ -6,6 +6,7 @@ const DEFAULT_MAX = 60
 const ENDPOINT_LIMITS: Record<string, number> = {
   '/api/healthz': 300,
   '/api/test-supabase': 30,
+  '/api/log-crash': 30,
 }
 
 export function checkRateLimit(identifier: string, maxRequests: number = DEFAULT_MAX): { allowed: boolean; remaining: number; resetIn: number } {

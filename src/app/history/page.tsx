@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -20,13 +21,23 @@ export default function HistoryPage() {
   const [playerStats, setPlayerStats] = useState<Awaited<ReturnType<typeof getPlayerStats>>>(null)
   const [loading, setLoading] = useState(true)
   const [playerId, setPlayerId] = useState<string | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      if (!mountedRef.current) return
       const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
       }
+      setLoading(false)
+    }).catch(() => {
+      if (!mountedRef.current) return
       setLoading(false)
     })
   }, [])
@@ -39,29 +50,34 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
-      </div>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </ErrorBoundary>
     )
   }
 
   if (!playerId) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold mb-4">Match History</h1>
-        <p className="text-gray-400 mb-4">Sign in to view your match history</p>
-        <button
-          onClick={() => router.push('/')}
-          className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
-        >
-          Go Back
-        </button>
-      </div>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+          <h1 className="text-2xl font-bold mb-4">Match History</h1>
+          <p className="text-gray-400 mb-4">Sign in to view your match history</p>
+          <button
+            onClick={() => router.push('/')}
+            className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
+          >
+            Go Back
+          </button>
+        </div>
+      </ErrorBoundary>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Match History</h1>
@@ -167,5 +183,6 @@ export default function HistoryPage() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   )
 }

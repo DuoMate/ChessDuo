@@ -1,13 +1,12 @@
-import Link from 'next/link'
+'use client'
 
-export const metadata = {
-  title: 'Privacy Policy — ChessDuo',
-  description: 'ChessDuo privacy policy — what data we collect and how we use it.',
-}
+import Link from 'next/link'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
       <div className="max-w-2xl mx-auto px-4 py-12">
         <Link
           href="/"
@@ -97,5 +96,6 @@ export default function PrivacyPage() {
         </section>
       </div>
     </div>
+    </ErrorBoundary>
   )
 }

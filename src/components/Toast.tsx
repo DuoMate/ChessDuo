@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error'
@@ -35,6 +35,15 @@ interface ToastProviderProps {
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
+  const timerIdsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  useEffect(() => {
+    return () => {
+      timerIdsRef.current.forEach((id) => clearTimeout(id))
+      timerIdsRef.current.clear()
+    }
+  }, [])
+
   const addToast = useCallback((type: ToastType, message: string, duration: number = 4000) => {
     const id = Math.random().toString(36).substring(2, 9)
     const newToast: Toast = { id, type, message, duration }
@@ -42,9 +51,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
     setToasts(prev => [...prev, newToast])
 
     if (duration > 0) {
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id))
+        timerIdsRef.current.delete(timerId)
       }, duration)
+      timerIdsRef.current.add(timerId)
     }
   }, [])
 

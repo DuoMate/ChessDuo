@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {
   loading: () => (
@@ -25,39 +26,45 @@ function DuelContent() {
 
   if (!roomId || !roomCode || !playerId || !team) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <div className="text-5xl">⚠️</div>
-          <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
-          <p className="text-gray-400">Missing required parameters</p>
-          <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
-            Go Home
-          </button>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+          <div className="text-center space-y-4">
+            <div className="text-5xl">⚠️</div>
+            <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
+            <p className="text-gray-400">Missing required parameters</p>
+            <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
+              Go Home
+            </button>
+          </div>
         </div>
-      </div>
+      </ErrorBoundary>
     )
   }
 
   return (
-    <DuelGameComponent
-      roomId={roomId}
-      roomCode={roomCode}
-      playerId={playerId}
-      team={team}
-      timeLimit={time}
-      onLeave={() => router.push('/')}
-    />
+    <ErrorBoundary>
+      <DuelGameComponent
+        roomId={roomId}
+        roomCode={roomCode}
+        playerId={playerId}
+        team={team}
+        timeLimit={time}
+        onLeave={() => router.push('/')}
+      />
+    </ErrorBoundary>
   )
 }
 
 export default function DuelPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
-      </div>
-    }>
-      <DuelContent />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      }>
+        <DuelContent />
+      </Suspense>
+    </ErrorBoundary>
   )
 }
