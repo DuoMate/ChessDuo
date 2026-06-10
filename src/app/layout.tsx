@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Chakra_Petch } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
 import { SplashHandler } from "@/components/SplashHandler";
@@ -44,10 +45,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=JSON.parse(localStorage.getItem('chessduo_settings')||'{}').theme;if(!t||t==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.classList.add('dark')}`,
-          }}
+        <Script
+          src="/theme-init.js"
+          strategy="beforeInteractive"
         />
         <link rel="stylesheet" href="/cm-chessboard/chessboard.css" />
         <link rel="stylesheet" href="/cm-chessboard/extensions/markers/markers.css" />

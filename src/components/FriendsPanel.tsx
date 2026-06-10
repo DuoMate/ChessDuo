@@ -39,6 +39,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
   const [tab, setTab] = useState<'friends' | 'requests' | 'blocked'>('friends')
   const [chatFriend, setChatFriend] = useState<{ id: string; name: string } | null>(null)
   const [challengeFriend, setChallengeFriend] = useState<{ id: string; name: string } | null>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [pendingChallenges, setPendingChallenges] = useState<Map<string, { roomId: string; roomCode: string; time: number }>>(new Map())
   const [onlineFriends, setOnlineFriends] = useState<Set<string>>(new Set())
@@ -80,6 +81,10 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { mountedRef.current = false }
   }, [loadData])
+
+  useEffect(() => {
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [])
 
   useEffect(() => {
     if (!playerId) return
@@ -173,7 +178,8 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
   const copyInviteLink = () => {
     navigator.clipboard.writeText(getInviteLink(playerId))
     setInviteCopied(true)
-    setTimeout(() => setInviteCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setInviteCopied(false), 2000)
   }
 
   const totalRequests = pending.incoming.length

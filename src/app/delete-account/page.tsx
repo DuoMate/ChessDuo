@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 export default function DeleteAccountPage() {
   const router = useRouter()
@@ -13,6 +14,12 @@ export default function DeleteAccountPage() {
   async function handleDelete() {
     setStep('loading')
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        setErrorMsg('You must be signed in to delete your account')
+        setStep('error')
+        return
+      }
       const { error: rpcError } = await supabase.rpc('delete_my_account')
       if (rpcError) {
         setErrorMsg(rpcError.message || 'Something went wrong')
@@ -28,7 +35,8 @@ export default function DeleteAccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
       <div className="max-w-lg mx-auto px-4 py-12">
         <Link
           href="/"
@@ -150,5 +158,6 @@ export default function DeleteAccountPage() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   )
 }

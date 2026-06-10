@@ -39,8 +39,7 @@ async function authenticateWithGoogleNative(): Promise<{
       .replace(/\/$/, '')
       .trim()
 
-    console.log('[NativeAuth] webClientId:', webClientId.substring(0, 25) + '...')
-    console.log('[NativeAuth] RAW env value starts with:', rawId.substring(0, 30))
+    console.log('[NativeAuth] Web Client ID is configured')
     
     // Check if SocialLogin plugin is available
     if (typeof SocialLogin === 'undefined') {
@@ -71,7 +70,7 @@ async function authenticateWithGoogleNative(): Promise<{
       },
     })
 
-    console.log('[NativeAuth] Login result:', JSON.stringify(loginResult, null, 2))
+    console.log('[NativeAuth] Login completed')
 
     // Check for cancellation or error
     const result = loginResult.result as any

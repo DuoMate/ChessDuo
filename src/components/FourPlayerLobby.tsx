@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
@@ -36,6 +36,8 @@ export function FourPlayerLobby({
   const [isCreator, setIsCreator] = useState(false)
   const [dragOverTeam, setDragOverTeam] = useState<'WHITE' | 'BLACK' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
@@ -117,6 +119,13 @@ export function FourPlayerLobby({
     return () => clearInterval(interval)
   }, [view, roomId, roomCode, playerId, timeSeconds, router, fetchPlayers])
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(copiedTimerRef.current)
+      clearTimeout(linkCopiedTimerRef.current)
+    }
+  }, [])
+
   const findFreeSlot = (team: 'WHITE' | 'BLACK'): number | null => {
     const occupied = players.filter(p => p.team === team).length
     if (occupied >= 2) return null
@@ -180,14 +189,16 @@ export function FourPlayerLobby({
   const handleCopyCode = () => {
     navigator.clipboard.writeText(roomCode)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
   const handleCopyLink = () => {
     if (!inviteUrl) return
     navigator.clipboard.writeText(inviteUrl)
     setLinkCopied(true)
-    setTimeout(() => setLinkCopied(false), 2000)
+    clearTimeout(linkCopiedTimerRef.current)
+    linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
   }
 
   const handleShare = () => {

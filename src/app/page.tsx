@@ -17,6 +17,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 
@@ -78,13 +79,21 @@ export default function SetupPage() {
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then((result: { data: { session: any } }) => {
+      if (!mountedRef.current) return
       const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
         fetchUsername(session.user.id).then(name => {
+          if (!mountedRef.current) return
           if (name) {
             setUsername(name)
           } else {
@@ -95,14 +104,17 @@ export default function SetupPage() {
       }
       setSessionChecked(true)
     }).catch(() => {
+      if (!mountedRef.current) return
       setSessionChecked(true)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+      if (!mountedRef.current) return
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername('')
         fetchUsername(session.user.id).then(name => {
+          if (!mountedRef.current) return
           if (name) {
             setUsername(name)
           } else {
@@ -209,15 +221,21 @@ export default function SetupPage() {
   useEffect(() => {
     if (playerId) {
       const update = () => getUnreadCounts(playerId).then(({ total, bySender }) => {
+        if (!mountedRef.current) return
         setUnreadMessages(total)
         setUnreadBySender(bySender)
+      }).catch(() => {
+        // Message counts unavailable
       })
       update()
       const interval = setInterval(update, 10000)
       const unsub = subscribeToMessages(playerId, () => {
         getUnreadCounts(playerId).then(({ total, bySender }) => {
+          if (!mountedRef.current) return
           setUnreadMessages(total)
           setUnreadBySender(bySender)
+        }).catch(() => {
+          // Message counts unavailable
         })
       })
       return () => { clearInterval(interval); unsub() }
@@ -229,9 +247,11 @@ export default function SetupPage() {
     if (gameMode === 'duel' && playerId && !duelFriend) {
       setDuelFriendsLoading(true)
       getFriendsList(playerId).then((friends) => {
+        if (!mountedRef.current) return
         setDuelFriends(friends)
         setDuelFriendsLoading(false)
       }).catch(() => {
+        if (!mountedRef.current) return
         setDuelFriendsLoading(false)
       })
     }
@@ -445,7 +465,7 @@ export default function SetupPage() {
     }
   }
 
-  if (!sessionChecked) return null
+  if (!sessionChecked) return <ErrorBoundary>{null}</ErrorBoundary>
 
   const showTopBar = !gameMode || (gameMode && selectedTime === null)
 
@@ -464,7 +484,7 @@ export default function SetupPage() {
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
         <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} onSignOut={handleSignOut} />
       </SlideOver>
-      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { setUnreadMessages(total); setUnreadBySender(bySender) }) }} title="Friends">
+        <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
         <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
       </SlideOver>
     </>
@@ -497,15 +517,16 @@ export default function SetupPage() {
     />
   )
 
-  if (chooseUsernameScreen) return chooseUsernameScreen
+  if (chooseUsernameScreen) return <ErrorBoundary>{chooseUsernameScreen}</ErrorBoundary>
 
   // ============================================
   // Duel — Friend Selection Screen
   // ============================================
   if (gameMode === 'duel' && !duelFriend) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        {topBar}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+          {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
@@ -553,9 +574,10 @@ export default function SetupPage() {
             </div>
           </div>
         </div>
-        {slideOvers}
-        {authOverlay}
-      </div>
+          {slideOvers}
+          {authOverlay}
+        </div>
+      </ErrorBoundary>
     )
   }
 
@@ -564,8 +586,9 @@ export default function SetupPage() {
   // ============================================
   if (gameMode && selectedTime === null) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        {topBar}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+          {topBar}
         
         {gameMode === 'online' && showOnlineDisclaimer && !showGameTour && (
           <WelcomeDisclaimer
@@ -724,9 +747,10 @@ export default function SetupPage() {
             </div>
           </div>
         </div>
-        {slideOvers}
-        {authOverlay}
-      </div>
+          {slideOvers}
+          {authOverlay}
+        </div>
+      </ErrorBoundary>
     )
   }
 
@@ -735,8 +759,9 @@ export default function SetupPage() {
   // ============================================
   if (!gameMode) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col relative overflow-hidden">
-        {topBar}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col relative overflow-hidden">
+          {topBar}
         <div className="absolute top-16 left-1/2 -translate-x-1/2 text-[340px] leading-none opacity-[0.03] dark:opacity-[0.025] text-yellow-600 dark:text-yellow-400 select-none pointer-events-none">
           {"\u265E"}
         </div>
@@ -846,9 +871,10 @@ export default function SetupPage() {
             </div>
           </div>
         </div>
-        {slideOvers}
-        {authOverlay}
-      </div>
+          {slideOvers}
+          {authOverlay}
+        </div>
+      </ErrorBoundary>
     )
   }
 
@@ -857,8 +883,9 @@ export default function SetupPage() {
   // ============================================
   if (gameMode === 'offline') {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        {topBar}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+          {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
@@ -904,15 +931,16 @@ export default function SetupPage() {
         </div>
         {slideOvers}
         {authOverlay}
-        {showOfflineDisclaimer && (
-          <WelcomeDisclaimer
-            open={showOfflineDisclaimer}
-            onDismiss={() => setShowOfflineDisclaimer(false)}
-            storageKey="chessduo_offline_disclaimer_dismissed"
-            mode="offline"
-          />
-        )}
-      </div>
+          {showOfflineDisclaimer && (
+            <WelcomeDisclaimer
+              open={showOfflineDisclaimer}
+              onDismiss={() => setShowOfflineDisclaimer(false)}
+              storageKey="chessduo_offline_disclaimer_dismissed"
+              mode="offline"
+            />
+          )}
+        </div>
+      </ErrorBoundary>
     )
   }
 
@@ -923,29 +951,33 @@ export default function SetupPage() {
   if (gameMode === 'online') {
     if (!playerId) {
       return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white">
-          {topBar}
-          <div className="absolute top-4 left-4 z-10">
-            <button onClick={() => setSelectedTime(null)} className="text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 text-sm transition-colors">
-              {"\u2190"} Back
-            </button>
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white">
+            {topBar}
+            <div className="absolute top-4 left-4 z-10">
+              <button onClick={() => setSelectedTime(null)} className="text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 text-sm transition-colors">
+                {"\u2190"} Back
+              </button>
+            </div>
+            <Auth onAuthComplete={handleAuthComplete} />
           </div>
-          <Auth onAuthComplete={handleAuthComplete} />
-        </div>
+        </ErrorBoundary>
       )
     }
 
     // Auto-create room and navigate to game
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center">
-        {topBar}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-amber-600 dark:text-amber-400 text-sm">Creating room...</p>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center">
+          {topBar}
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-amber-600 dark:text-amber-400 text-sm">Creating room...</p>
+          </div>
+          {slideOvers}
+          {authOverlay}
         </div>
-        {slideOvers}
-        {authOverlay}
-      </div>
+      </ErrorBoundary>
     )
   }
 
@@ -955,21 +987,24 @@ export default function SetupPage() {
   if (gameMode === 'fourplayer') {
     if (!playerId) {
       return (
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white">
-          {topBar}
-          <div className="absolute top-4 left-4 z-10">
-            <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-3">
-              {"\u2190"} Back
-            </button>
+        <ErrorBoundary>
+          <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white">
+            {topBar}
+            <div className="absolute top-4 left-4 z-10">
+              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-3">
+                {"\u2190"} Back
+              </button>
+            </div>
+            <Auth onAuthComplete={handleAuthComplete} />
           </div>
-          <Auth onAuthComplete={handleAuthComplete} />
-        </div>
+        </ErrorBoundary>
       )
     }
 
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        {topBar}
+      <ErrorBoundary>
+        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+          {topBar}
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
@@ -1046,12 +1081,13 @@ export default function SetupPage() {
           </div>
         </div>
         {slideOvers}
-        {authOverlay}
-      </div>
+          {authOverlay}
+        </div>
+      </ErrorBoundary>
     )
   }
 
-  return null
+  return <ErrorBoundary>{null}</ErrorBoundary>
 }
 
 // ============================================

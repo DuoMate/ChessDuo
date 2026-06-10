@@ -20,6 +20,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
   const [loading, setLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const unsubRef = useRef<(() => void) | null>(null)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -29,7 +30,9 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
     getConversation(currentUserId, friendId).then(msgs => {
       setMessages(msgs)
       setLoading(false)
-      setTimeout(scrollToBottom, 100)
+      scrollTimerRef.current = setTimeout(scrollToBottom, 100)
+    }).catch(() => {
+      setLoading(false)
     })
 
     markMessagesAsRead(currentUserId, friendId)
@@ -37,7 +40,8 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
     unsubRef.current = subscribeToMessages(currentUserId, (msg) => {
       if (msg.sender_id === friendId || msg.receiver_id === friendId) {
         setMessages(prev => [...prev, msg])
-        setTimeout(scrollToBottom, 100)
+        clearTimeout(scrollTimerRef.current)
+        scrollTimerRef.current = setTimeout(scrollToBottom, 100)
         if (msg.sender_id === friendId) {
           markMessagesAsRead(currentUserId, friendId)
         }
@@ -46,6 +50,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
 
     return () => {
       unsubRef.current?.()
+      clearTimeout(scrollTimerRef.current)
     }
   }, [currentUserId, friendId, scrollToBottom])
 
@@ -56,7 +61,8 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
     if (data) {
       setMessages(prev => [...prev, data])
       setInput('')
-      setTimeout(scrollToBottom, 100)
+      clearTimeout(scrollTimerRef.current)
+      scrollTimerRef.current = setTimeout(scrollToBottom, 100)
     }
     setSending(false)
   }

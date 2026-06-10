@@ -36,6 +36,8 @@ export function InsightsGate({ playerId, ...comparison }: InsightsGateProps) {
       setRevealsRemaining(state.revealsRemaining)
       if (state.isPremium) setShowInsights(true)
       setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
   }, [playerId])
 

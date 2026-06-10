@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
@@ -45,17 +45,23 @@ function RecentMatches({ games }: { games: CompletedGame[] }) {
 }
 
 export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePanelProps) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [recentGames, setRecentGames] = useState<CompletedGame[]>([])
   const [profileCopied, setProfileCopied] = useState(false)
 
   useEffect(() => {
-    getMatchHistory(5).then(setRecentGames)
+    getMatchHistory(5).then(setRecentGames).catch(() => setRecentGames([]))
   }, [playerId])
+
+  useEffect(() => {
+    return () => clearTimeout(timerRef.current)
+  }, [])
 
   const copyProfileLink = () => {
     navigator.clipboard.writeText(getProfileLink(playerId))
     setProfileCopied(true)
-    setTimeout(() => setProfileCopied(false), 2000)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
   }
 
   return (
