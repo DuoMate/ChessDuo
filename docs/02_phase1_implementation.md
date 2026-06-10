@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the implementation of the move evaluation and best move selection system for ChessDuo/ClashMate using the **Parallel Model**.
+This document describes the implementation of the move evaluation and best move selection system for ChessDuo using the **Parallel Model**.
 
 ## Core Concept: True Simultaneous Decision Making
 
