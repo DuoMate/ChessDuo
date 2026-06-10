@@ -137,6 +137,8 @@ ok "Unused social login providers disabled"
 # ─── Patch MainActivity.java for Google auth intent forwarding ──
 bash "$PROJECT_ROOT/scripts/patch-main-activity.sh"
 
+bash "$PROJECT_ROOT/scripts/patch-google-provider.sh"
+
 # ─── Source manifest has tools:node="remove" for ads permissions ──
 # No additional patching needed — the source manifest is already correct.
 ok "Ads permissions handled via tools:node=remove in source manifest"
