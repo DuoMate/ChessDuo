@@ -647,7 +647,19 @@ public class GoogleProvider implements SocialProvider {
             }
         }
         if (e instanceof GetCredentialCancellationException) {
-            call.reject("Google Sign-In cancelled by user", USER_CANCELLED_CODE, e);
+            String detail =
+                e.getClass().getSimpleName()
+                + ": "
+                + String.valueOf(e.getMessage());
+
+            Log.e("CHESSDUO_GOOGLE", "Credential failure", e);
+
+            call.reject(
+                "Google Sign-In [" + detail + "]",
+                USER_CANCELLED_CODE,
+                e
+            );
+
             return;
         }
         if (e instanceof NoCredentialException) {
