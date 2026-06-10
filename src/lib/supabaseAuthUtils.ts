@@ -27,13 +27,20 @@ async function authenticateWithGoogleNative(): Promise<{
   error?: string
 }> {
   try {
-    const webClientId = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
-    if (!webClientId) {
+    const rawId = process.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID
+    if (!rawId) {
       console.error('[NativeAuth] Google Web Client ID is not set')
       return { success: false, error: 'Google Web Client ID not configured. Set NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID in env.' }
     }
 
+    // Defensive cleanup: strip https:// prefix and trailing slash
+    const webClientId = rawId
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '')
+      .trim()
+
     console.log('[NativeAuth] webClientId:', webClientId.substring(0, 25) + '...')
+    console.log('[NativeAuth] RAW env value starts with:', rawId.substring(0, 30))
     
     // Check if SocialLogin plugin is available
     if (typeof SocialLogin === 'undefined') {
