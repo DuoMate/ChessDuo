@@ -196,27 +196,14 @@ else
     ok "Signing config already present"
 fi
 
-# ─── Inject Gradle preBuild task for GoogleProvider override ──
-if ! grep -q "copyGoogleProviderPatch" "$BUILD_GRADLE" 2>/dev/null; then
-    log "Injecting GoogleProvider override task into build.gradle..."
-    cat >> "$BUILD_GRADLE" << 'GRADLE'
-
-// ChessDuo Android patches — override plugin sources before compilation
-task copyGoogleProviderPatch(type: Copy) {
-    from "${rootProject.projectDir}/../android-patches"
-    into "${rootProject.projectDir}/../node_modules/@capgo/capacitor-social-login/android/src/main/java/ee/forgr/capacitor/social/login"
-    include "GoogleProvider.java"
-}
-preBuild.dependsOn copyGoogleProviderPatch
-project(':capgo-capacitor-social-login').tasks.configureEach { task ->
-    if (task.name.startsWith('compile') && task.name.endsWith('JavaWithJavac')) {
-        task.dependsOn copyGoogleProviderPatch
-    }
-}
-GRADLE
-    ok "GoogleProvider override task injected"
+# ─── Override GoogleProvider.java with patched version ──
+PATCH_SRC="android-patches/GoogleProvider.java"
+PATCH_DST="node_modules/@capgo/capacitor-social-login/android/src/main/java/ee/forgr/capacitor/social/login/GoogleProvider.java"
+if [ -f "$PATCH_SRC" ]; then
+    cp "$PATCH_SRC" "$PATCH_DST"
+    ok "GoogleProvider.java overridden with patched version"
 else
-    ok "GoogleProvider override task already present"
+    err "Patched GoogleProvider.java not found at $PATCH_SRC"
 fi
 
 # ─── Build APK ──────────────────────────────────
