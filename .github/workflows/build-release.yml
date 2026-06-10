@@ -63,6 +63,9 @@ jobs:
       - name: Patch MainActivity for Google auth intent forwarding
         run: bash scripts/patch-main-activity.sh
 
+      - name: Patch GoogleProvider to skip getAuthorizationResult in online mode
+        run: bash scripts/patch-google-provider.sh
+
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
         env:
