@@ -1102,7 +1102,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white' }
+              pendingOverlay: { from, to, piece, color: 'white' },
+              myPendingOverlay: null
             }))
           }
 
