@@ -1,12 +1,12 @@
-# ♟️ ClashMate (Working Name)
-ClashMate is Multiplayer Strategy Gaming where the game redefines 1-1 chess games to group, multiplayer, fun filled gaming experience.
+# ♟️ ChessDuo
+ChessDuo is Multiplayer Strategy Gaming where the game redefines 1-1 chess games to group, multiplayer, fun filled gaming experience.
 
 ## 🧠 Product Segment
 
 ### 🎯 Primary Segment
 **Multiplayer Strategy Gaming (Real-time + Social + Competitive)**
 
-ClashMate sits at the intersection of:
+ChessDuo sits at the intersection of:
 - ♟️ Online Chess Platforms
 - 🎮 Real-time Multiplayer Games
 - 🤝 Cooperative Strategy Games
@@ -193,7 +193,7 @@ During a team's turn, both players' moves are visible on the board simultaneousl
 
 ## 💡 Unique Value Proposition
 
-> "ClashMate transforms chess from a solo strategy game into a real-time battle of ideas between teammates."
+> "ChessDuo transforms chess from a solo strategy game into a real-time battle of ideas between teammates."
 
 Key Differentiators:
 - Team vs Team gameplay (2v2)
