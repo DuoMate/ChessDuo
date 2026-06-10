@@ -115,7 +115,7 @@ NEW='                    \/\/ SKIP_AUTHORIZATION_PATCH: bypass getAuthorizationR
                     return; \/\/ The call will be resolved in the Runnable'
 
 # Use Python for robust multi-line replacement
-python3 << 'PYTHON_SCRIPT'
+python3 << PYTHON_SCRIPT
 import re
 
 with open("$PROVIDER_FILE", "r") as f:
