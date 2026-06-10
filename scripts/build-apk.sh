@@ -140,6 +140,9 @@ bash "$PROJECT_ROOT/scripts/patch-main-activity.sh"
 
 bash "$PROJECT_ROOT/scripts/patch-google-provider.sh"
 
+# ─── Copy custom app icons ──
+bash "$PROJECT_ROOT/scripts/copy-app-icons.sh"
+
 # ─── Source manifest has tools:node="remove" for ads permissions ──
 # No additional patching needed — the source manifest is already correct.
 ok "Ads permissions handled via tools:node=remove in source manifest"
