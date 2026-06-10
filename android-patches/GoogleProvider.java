@@ -343,6 +343,8 @@ public class GoogleProvider implements SocialProvider {
 
         this.scopes = uniqueScopes.toArray(new String[0]);
 
+        Log.e("CHESSDUO_GOOGLE", "CLIENT_ID=" + this.clientId);
+
         // Build credential request
         GetCredentialRequest.Builder requestBuilder = new GetCredentialRequest.Builder();
 
@@ -647,15 +649,22 @@ public class GoogleProvider implements SocialProvider {
             }
         }
         if (e instanceof GetCredentialCancellationException) {
-            String detail =
-                e.getClass().getSimpleName()
-                + ": "
-                + String.valueOf(e.getMessage());
+            StringBuilder chain = new StringBuilder();
+            chain.append("clientId=").append(this.clientId).append("\n");
 
-            Log.e("CHESSDUO_GOOGLE", "Credential failure", e);
+            Throwable t = e;
+            while (t != null) {
+                chain.append(t.getClass().getSimpleName())
+                     .append(": ")
+                     .append(t.getMessage())
+                     .append("\n");
+                t = t.getCause();
+            }
+
+            Log.e("CHESSDUO_GOOGLE", "Credential failure\n" + chain.toString(), e);
 
             call.reject(
-                "Google Sign-In [" + detail + "]",
+                "Google Sign-In\n" + chain.toString(),
                 USER_CANCELLED_CODE,
                 e
             );
