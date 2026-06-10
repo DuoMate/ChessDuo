@@ -208,6 +208,9 @@ task copyGoogleProviderPatch(type: Copy) {
     include "GoogleProvider.java"
 }
 preBuild.dependsOn copyGoogleProviderPatch
+tasks.named(':capgo-capacitor-social-login:compileReleaseJavaWithJavac') {
+    dependsOn copyGoogleProviderPatch
+}
 GRADLE
     ok "GoogleProvider override task injected"
 else
