@@ -71,7 +71,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       }
       try {
         await supabase.from('profiles').upsert({ id: userId, username: displayName }, { onConflict: 'id' })
-      } catch {}
+      } catch { console.error('[Auth] Failed to upsert profile') }
       onAuthComplete(userId, displayName)
     }
   }
