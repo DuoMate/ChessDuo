@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Script: Copy custom app icons into Capacitor Android project
+# Script: Copy custom app icons and splash into Capacitor Android project
 # Replaces the default Capacitor logo with ChessDuo branded icons
 
 ANDROID_RES="android/app/src/main/res"
@@ -33,4 +33,19 @@ for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
   fi
 done
 
-echo "[OK]  App icons installed"
+echo "[INFO] Copying custom splash screens..."
+
+for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+  SRC_FILE="$ICON_SRC/$density/splash.png"
+  if [ -f "$SRC_FILE" ]; then
+    # Main fallback splash
+    cp "$SRC_FILE" "$ANDROID_RES/drawable/splash.png"
+    # Portrait splash
+    cp "$SRC_FILE" "$ANDROID_RES/drawable-port-$density/splash.png"
+    # Landscape splash (same icon, centered on dark background)
+    cp "$SRC_FILE" "$ANDROID_RES/drawable-land-$density/splash.png"
+    echo "       Copied $density splash"
+  fi
+done
+
+echo "[OK]  App icons and splash installed"
