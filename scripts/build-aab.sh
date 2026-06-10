@@ -137,8 +137,6 @@ ok "Unused social login providers disabled"
 # ─── Patch MainActivity.java for Google auth intent forwarding ──
 bash "$PROJECT_ROOT/scripts/patch-main-activity.sh"
 
-bash "$PROJECT_ROOT/scripts/patch-google-provider.sh"
-
 # ─── Copy custom app icons ──
 bash "$PROJECT_ROOT/scripts/copy-app-icons.sh"
 
@@ -217,6 +215,24 @@ android {
 }
 GRADLE
     ok "Signing config injected"
+fi
+
+# ─── Inject Gradle preBuild task for GoogleProvider override ──
+if ! grep -q "copyGoogleProviderPatch" "$BUILD_GRADLE" 2>/dev/null; then
+    log "Injecting GoogleProvider override task into build.gradle..."
+    cat >> "$BUILD_GRADLE" << 'GRADLE'
+
+// ChessDuo Android patches — override plugin sources before compilation
+task copyGoogleProviderPatch(type: Copy) {
+    from "${rootProject.projectDir}/../android-patches"
+    into "${rootProject.projectDir}/../node_modules/@capgo/capacitor-social-login/android/src/main/java/ee/forgr/capacitor/social/login"
+    include "GoogleProvider.java"
+}
+preBuild.dependsOn copyGoogleProviderPatch
+GRADLE
+    ok "GoogleProvider override task injected"
+else
+    ok "GoogleProvider override task already present"
 fi
 
 # ─── Build AAB ──────────────────────────────────
