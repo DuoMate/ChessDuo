@@ -229,7 +229,7 @@ task copyGoogleProviderPatch(type: Copy) {
     include "GoogleProvider.java"
 }
 preBuild.dependsOn copyGoogleProviderPatch
-tasks.named(':capgo-capacitor-social-login:compileReleaseJavaWithJavac') {
+project(':capgo-capacitor-social-login').tasks.named('compileReleaseJavaWithJavac') {
     dependsOn copyGoogleProviderPatch
 }
 GRADLE
