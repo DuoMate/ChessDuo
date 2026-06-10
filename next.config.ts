@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  output: process.env.NEXT_OUTPUT === 'export' ? 'export' : 'standalone',
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
+
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
