@@ -66,6 +66,9 @@ jobs:
       - name: Patch GoogleProvider to skip getAuthorizationResult in online mode
         run: bash scripts/patch-google-provider.sh
 
+      - name: Copy custom app icons
+        run: bash scripts/copy-app-icons.sh
+
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
         env:
