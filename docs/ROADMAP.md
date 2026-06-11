@@ -457,11 +457,48 @@ Key files:
 
 ## Premium Features
 
+### Razorpay Payment Integration (June 2026)
+
+**Payment processor**: Razorpay (India-friendly — no invite required)
+
+**Architecture**:
+- `src/lib/razorpay.ts` — Server-side Razorpay client
+- `POST /api/razorpay/create-subscription` — Creates a Razorpay subscription for the authenticated user
+- `POST /api/razorpay/webhook` — Verifies HMAC-SHA256 signature, handles subscription events
+- `POST /api/razorpay/cancel-subscription` — Cancels subscription at period end (in-app)
+
+**Pricing plans** (configured via Razorpay Dashboard):
+- Monthly — ₹99/mo (`plan_T0QT9vboakOs4G`)
+- Annual — ₹999/yr (`plan_T0QTzoKMUnsuug`)
+
+**Database columns** (on `profiles`):
+- `rzp_customer_id` — Razorpay customer ID
+- `rzp_subscription_id` — Active subscription ID
+- `subscription_status` — `active`, `canceling`, or `inactive`
+
+**Security**:
+- Webhook signature verification via HMAC-SHA256
+- Auth check before creating subscription (validates Supabase session)
+- User ID passed as subscription notes for webhook matching
+- `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` never exposed to client
+
+**Flow**:
+1. User clicks "Subscribe Monthly" or "Subscribe Annual" on `/premium`
+2. Server creates a Razorpay Subscription via API → returns subscription ID
+3. Client opens Razorpay Checkout modal (uses `window.Razorpay`)
+4. Razorpay calls webhook → webhook verifies signature → sets `is_premium = true`
+5. In-app "Cancel Subscription" calls `/api/razorpay/cancel-subscription` → cancels at period end
+
+**GitHub Secrets required** (6):
+`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`,
+`NEXT_PUBLIC_RAZORPAY_KEY_ID`, `NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY`, `NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL`
+
 ### Move Insights (Freemium)
 
 - **3 free reveals** per account (stored in `profiles.insights_reveals_used`)
-- **After 3 uses**: Premium upsell via `/premium` page
+- **After 3 uses**: Premium upsell via `/premium` page with pricing table
 - **Premium users** (`profiles.is_premium = true`): unlimited insights
+- Free limit constant: `INSIGHTS_FREE_LIMIT` in `gameConstants.ts`
 
 **Insights shown:**
 - Engine's best move + centipawn score
@@ -491,7 +528,7 @@ Key files:
 
 ---
 
-*Last Updated: 2026-06-04 — Code quality pass complete: shared GameInterface, dynamic imports, dark mode, toast wiring, font/touch fixes, network overlay*
+*Last Updated: 2026-06-11 — Razorpay payment integration implemented; premium page with pricing + in-app cancel*
 
 ---
 
