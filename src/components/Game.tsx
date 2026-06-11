@@ -1137,6 +1137,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           return
         }
 
+        // Track move comparison for offline games (online handled in setOnStateChange callback)
+        const comp = g.lastMoveComparison as MoveComparison | null
+        if (comp && (moveHistoryRef.current.length === 0 ||
+            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as any))) {
+          const entry: MoveEntry = {
+            turn: moveHistoryRef.current.length + 1,
+            team: currentTurn,
+            winningMove: comp.winningMove,
+            winningMoveUci: (comp as any).winningMove || '',
+            shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+            shadowMoveUci: '',
+            isSync: comp.isSync,
+            player1Accuracy: comp.player1Accuracy,
+            player2Accuracy: comp.player2Accuracy,
+            fenAfter: g.board.fen(),
+          }
+          moveHistoryRef.current = [...moveHistoryRef.current, entry]
+        }
+
         const newTurn = g.currentTurn
         pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK)
 

@@ -962,6 +962,14 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason
+    // Fallback: if no turns resolved but board has moves, derive from board history
+    if (this.stats.movesPlayed === 0) {
+      const boardMoves = this.gameState.board.history({ verbose: true }).length
+      if (boardMoves > 0) {
+        this.stats.movesPlayed = boardMoves
+        this.stats.syncRate = 1.0
+      }
+    }
     this.stopMatchTimer()
     if (this._timerSyncInterval) {
       clearInterval(this._timerSyncInterval)

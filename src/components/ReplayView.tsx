@@ -23,7 +23,7 @@ function parseMoveComparisons(raw: unknown): MoveEntry[] {
   return raw.filter((m): m is MoveEntry => {
     if (typeof m !== 'object' || m === null) return false
     const entry = m as Record<string, unknown>
-    return typeof entry.turn === 'number' && typeof entry.fenAfter === 'string'
+    return typeof entry.turn === 'number' && typeof entry.fenAfter === 'string' && entry.fenAfter.length > 0
   })
 }
 
