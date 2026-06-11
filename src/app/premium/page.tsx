@@ -5,18 +5,24 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-declare global {
-  interface Window {
-    Razorpay: new (options: {
-      key: string
-      subscription_id: string
-      name: string
-      description: string
-      handler: (response: { razorpay_payment_id: string; razorpay_subscription_id: string }) => void
-      prefill: { name: string; email: string }
-      theme: { color: string }
-    }) => { open: () => void }
-  }
+const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js'
+
+function loadRazorpayScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('Not in browser'))
+      return
+    }
+    if ((window as unknown as Record<string, unknown>).Razorpay) {
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = RAZORPAY_SCRIPT_URL
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Razorpay checkout'))
+    document.head.appendChild(script)
+  })
 }
 
 export default function PremiumPage() {
@@ -73,6 +79,8 @@ export default function PremiumPage() {
     setError(null)
 
     try {
+      await loadRazorpayScript()
+
       const res = await fetch('/api/razorpay/create-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,24 +94,29 @@ export default function PremiumPage() {
         return
       }
 
-      if (typeof window !== 'undefined' && window.Razorpay) {
-        const rzp = new window.Razorpay({
-          key: data.keyId,
-          subscription_id: data.subscriptionId,
-          name: 'ChessDuo Premium',
-          description: 'Unlimited move insights & AI analysis',
-          handler: function () {
-            setIsPremium(true)
-            setSubscriptionStatus('active')
-          },
-          prefill: {
-            name: 'ChessDuo Player',
-            email: '',
-          },
-          theme: { color: '#F59E0B' },
-        })
-        rzp.open()
+      const Razorpay = (window as unknown as { Razorpay?: new (options: { key: string; subscription_id: string; name: string; description: string; handler: (response: { razorpay_payment_id: string; razorpay_subscription_id: string }) => void; prefill: { name: string; email: string }; theme: { color: string } }) => { open: () => void } }).Razorpay
+      if (!Razorpay) {
+        setError('Razorpay checkout failed to load. Please refresh and try again.')
+        setSubscribing(false)
+        return
       }
+
+      const rzp = new Razorpay({
+        key: data.keyId,
+        subscription_id: data.subscriptionId,
+        name: 'ChessDuo Premium',
+        description: 'Unlimited move insights & AI analysis',
+        handler: function () {
+          setIsPremium(true)
+          setSubscriptionStatus('active')
+        },
+        prefill: {
+          name: 'ChessDuo Player',
+          email: '',
+        },
+        theme: { color: '#F59E0B' },
+      })
+      rzp.open()
     } catch {
       setError('Failed to create subscription')
     } finally {
