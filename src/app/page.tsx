@@ -126,6 +126,8 @@ export default function SetupPage() {
         setPlayerId(null)
         setUsername('')
         setNeedsUsername(null)
+        setJoinError(null)
+        setJoinCode('')
       }
     })
 
@@ -300,6 +302,9 @@ export default function SetupPage() {
     setUsername('')
     setProfileOpen(false)
     setFriendsOpen(false)
+    setJoinError(null)
+    setJoinCode('')
+    autoJoinAttemptedRef.current = null
   }
 
   const handleJoinByCode = async () => {
