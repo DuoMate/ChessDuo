@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Idempotent: add columns that may be missing on existing tables
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS insights_reveals_used INTEGER DEFAULT 0;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_customer_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_subscription_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';
 
         -- Create rooms table
         CREATE TABLE IF NOT EXISTS rooms (

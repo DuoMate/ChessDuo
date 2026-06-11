@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { INSIGHTS_FREE_LIMIT } from '@/features/shared/gameConstants'
 
 const STORAGE_KEY = 'chessduo_insights'
 
@@ -34,7 +35,7 @@ export async function getUserInsightsState(userId: string): Promise<{
       return {
         revealsUsed: local.revealsUsed,
         isPremium: local.isPremium,
-        revealsRemaining: Math.max(0, 3 - local.revealsUsed),
+        revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
       }
     }
 
@@ -58,14 +59,14 @@ export async function getUserInsightsState(userId: string): Promise<{
     return {
       revealsUsed,
       isPremium,
-      revealsRemaining: Math.max(0, 3 - revealsUsed),
+      revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - revealsUsed),
     }
   } catch (e) {
     console.error('[Insights] Failed to get user insights:', e)
     return {
       revealsUsed: local.revealsUsed,
       isPremium: local.isPremium,
-      revealsRemaining: Math.max(0, 3 - local.revealsUsed),
+      revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
     }
   }
 }
@@ -90,7 +91,7 @@ export async function incrementInsightsReveals(userId: string): Promise<number> 
 
   trySyncToServer(userId, nextLocal)
 
-  return Math.max(0, 3 - nextLocal)
+  return Math.max(0, INSIGHTS_FREE_LIMIT - nextLocal)
 }
 
 export function setUserPremium(userId: string, isPremium: boolean) {

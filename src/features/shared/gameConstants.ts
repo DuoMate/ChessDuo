@@ -7,3 +7,5 @@ export const DEFAULT_MOVE_TIMER_SECONDS = 10
 export const ROOM_EXPIRY_MS = 24 * 60 * 60 * 1000
 
 export const DEFAULT_POLLING_INTERVAL_MS = 2000
+
+export const INSIGHTS_FREE_LIMIT = 3
