@@ -132,8 +132,9 @@ export class OnlineGame {
       if (players.length === 0) return true
       const sorted = [...players].sort()
       return this._playerId === sorted[0]
-    } catch {
-      return true
+    } catch (e) {
+      console.error('[OnlineGame] isCoordinator error:', e)
+      return false
     }
   }
 
@@ -172,8 +173,9 @@ export class OnlineGame {
       if (players.length === 0) return true
       const sorted = [...players].sort()
       return this._playerId === sorted[0]
-    } catch {
-      return true
+    } catch (e) {
+      console.error('[OnlineGame] isBlackCoordinator error:', e)
+      return false
     }
   }
 
@@ -354,7 +356,7 @@ export class OnlineGame {
         console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
         try {
           supabase.removeChannel(this._channel!)
-        } catch {}
+        } catch { console.error('[OnlineGame] Failed to remove channel') }
         this._channel = supabase.channel(`room:${room.id}`, {
           config: { presence: { key: playerId } }
         })
@@ -506,13 +508,13 @@ export class OnlineGame {
       for (let i = whiteHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
-        } catch (e) {}
+        } catch (e) { console.error('[OnlineGame] Failed to add bot_teammate to WHITE:', e) }
       }
 
       for (let i = blackHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
-        } catch (e) {}
+        } catch (e) { console.error('[OnlineGame] Failed to add bot_opponent to BLACK:', e) }
       }
 
       // Start the game
@@ -587,12 +589,12 @@ export class OnlineGame {
       for (let i = whiteHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
-        } catch (e) {}
+        } catch (e) { console.error('[OnlineGame] Failed to add bot_teammate to WHITE during sync:', e) }
       }
       for (let i = blackHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
-        } catch (e) {}
+        } catch (e) { console.error('[OnlineGame] Failed to add bot_opponent to BLACK during sync:', e) }
       }
 
       console.log('[ONLINE] Game state synced successfully')
@@ -960,6 +962,14 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason
+    // Fallback: if no turns resolved but board has moves, derive from board history
+    if (this.stats.movesPlayed === 0) {
+      const boardMoves = this.gameState.board.history({ verbose: true }).length
+      if (boardMoves > 0) {
+        this.stats.movesPlayed = boardMoves
+        this.stats.syncRate = 1.0
+      }
+    }
     this.stopMatchTimer()
     if (this._timerSyncInterval) {
       clearInterval(this._timerSyncInterval)
@@ -1118,7 +1128,7 @@ export class OnlineGame {
         this.notifyStateChange()
         return { winnerId: 'player1', winningMove: player1Move }
       }
-    } catch {}
+    } catch { console.error('[OnlineGame] Failed to check isCheckmate (1)') }
     
     try {
       const mateCheck2 = new Chess(turnStartFen)
@@ -1141,7 +1151,7 @@ export class OnlineGame {
         this.notifyStateChange()
         return { winnerId: 'player2', winningMove: player2Move }
       }
-    } catch {}
+    } catch { console.error('[OnlineGame] Failed to check isCheckmate (2)') }
     
     const chess = new Chess(turnStartFen)
     const verboseMoves = chess.moves({ verbose: true })

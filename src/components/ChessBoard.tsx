@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
-import { Chess } from 'chess.js'
+import { Chess, Square } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
@@ -157,6 +157,29 @@ export function ChessBoard({
     if (enabled) {
       const handleMoveInput = (event: InputEvent): boolean => {
         if (event.type === INPUT_EVENT_TYPE.moveInputStarted) {
+          const { squareFrom } = event
+          boardRef.current?.removeMarkers(MARKER_TYPE.dot)
+
+          if (squareFrom) {
+            try {
+              const chess = new Chess(fenRef.current)
+              const piece = chess.get(squareFrom as Square)
+              if (piece) {
+                const moves = chess.moves({ square: squareFrom as Square, verbose: true })
+                for (const move of moves) {
+                  boardRef.current?.addMarker(MARKER_TYPE.dot, move.to)
+                }
+              }
+            } catch {
+              // ignore — marker dots are cosmetic only
+            }
+          }
+
+          return true
+        }
+
+        if (event.type === INPUT_EVENT_TYPE.moveInputCanceled) {
+          boardRef.current?.removeMarkers(MARKER_TYPE.dot)
           return true
         }
 
@@ -181,6 +204,8 @@ export function ChessBoard({
         }
 
         if (event.type === INPUT_EVENT_TYPE.moveInputFinished) {
+          boardRef.current?.removeMarkers(MARKER_TYPE.dot)
+
           const { squareFrom, squareTo } = event
           if (squareFrom && squareTo) {
             try {

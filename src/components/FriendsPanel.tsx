@@ -53,7 +53,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
         if (parsed.type === 'challenge' && parsed.roomId) {
           map.set(c.senderId, { roomId: parsed.roomId, roomCode: parsed.roomCode, time: parsed.time || 600 })
         }
-      } catch {}
+      } catch { console.error('[FriendsPanel] Failed to parse challenge content') }
     }
     setPendingChallenges(map)
   }, [playerId])

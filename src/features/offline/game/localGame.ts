@@ -192,6 +192,10 @@ export class LocalGame {
     return 'selecting'
   }
 
+  setTurnState(_state: string): void {
+    // No-op in offline mode — turn state is derived, not set
+  }
+
   getTurnStartFen(): string {
     return this.gameState.getTurnStartFen()
   }
@@ -313,7 +317,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player1' as const, winningMove: player1Move }
         }
-      } catch {}
+      } catch { console.error('[LocalGame] Checkmate evaluation failed (1)') }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -333,7 +337,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player2' as const, winningMove: player2Move }
         }
-      } catch {}
+      } catch { console.error('[LocalGame] Checkmate evaluation failed (2)') }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })
@@ -503,7 +507,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch {}
+      } catch { console.error('[LocalGame] Checkmate evaluation failed (3)') }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -523,7 +527,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch {}
+      } catch { console.error('[LocalGame] Checkmate evaluation failed (4)') }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })
@@ -707,6 +711,14 @@ export class LocalGame {
     if (this.gameState.getPlayers(Team.WHITE).includes(playerId as Player)) return 'WHITE'
     if (this.gameState.getPlayers(Team.BLACK).includes(playerId as Player)) return 'BLACK'
     return null
+  }
+
+  isCoordinator(): boolean {
+    return false
+  }
+
+  getCoordinatorId(): string {
+    return ''
   }
 
   getGameOverReason(): string | null {

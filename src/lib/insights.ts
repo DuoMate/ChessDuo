@@ -6,14 +6,14 @@ function getLocalState(userId: string): { revealsUsed: number; isPremium: boolea
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
     if (raw) return JSON.parse(raw)
-  } catch {}
+  } catch { console.error('[Insights] Failed to read from localStorage') }
   return { revealsUsed: 0, isPremium: false }
 }
 
 function setLocalState(userId: string, state: { revealsUsed: number; isPremium: boolean }) {
   try {
     localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(state))
-  } catch {}
+  } catch { console.error('[Insights] Failed to write to localStorage') }
 }
 
 export async function getUserInsightsState(userId: string): Promise<{
@@ -79,7 +79,7 @@ async function trySyncToServer(userId: string, revealsUsed: number) {
     if (error) {
       console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
     }
-  } catch {}
+  } catch { console.error('[Insights] Failed to sync to server') }
 }
 
 export async function incrementInsightsReveals(userId: string): Promise<number> {
@@ -101,7 +101,7 @@ export function setUserPremium(userId: string, isPremium: boolean) {
         .from('profiles')
         .update({ is_premium: isPremium })
         .eq('id', userId)
-  } catch {}
+  } catch { console.error('[Insights] Failed to update premium status') }
 }
 
 export function isUserPremium(userId: string): boolean {

@@ -647,6 +647,24 @@ describe('OnlineGame', () => {
       expect(() => game.stopEngineTimer()).not.toThrow()
     })
 
+    it('setGameOverTimeup derives movesPlayed from board history when stats are 0', () => {
+      const game = new OnlineGame(600)
+      ;(game as any).gameState.board.move('e4')
+      ;(game as any).gameState.board.move('e5')
+      expect((game as any).stats.movesPlayed).toBe(0)
+      game.setGameOverTimeup('White wins on time', 'timeout')
+      const stats = game.getStats()
+      expect(stats.movesPlayed).toBe(2)
+    })
+
+    it('setGameOverTimeup does not override movesPlayed when stats already have moves', () => {
+      const game = new OnlineGame(600)
+      ;(game as any).stats.movesPlayed = 5
+      game.setGameOverTimeup('White wins on time', 'timeout')
+      const stats = game.getStats()
+      expect(stats.movesPlayed).toBe(5)
+    })
+
     it('getOtherPlayerId returns empty string when no other players', () => {
       const game = new OnlineGame(600)
       const otherId = game.getOtherPlayerId()

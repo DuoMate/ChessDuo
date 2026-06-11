@@ -72,6 +72,38 @@ const emptyMovesGame: CompletedGame = {
   white_moves: 0,
 }
 
+const emptyFenGame: CompletedGame = {
+  ...mockGame,
+  id: 'test-game-empty-fen',
+  move_comparisons: [
+    {
+      turn: 1,
+      team: 'WHITE',
+      winningMove: 'e4',
+      winningMoveUci: 'e2e4',
+      shadowMove: null,
+      shadowMoveUci: null,
+      isSync: true,
+      player1Accuracy: 95,
+      player2Accuracy: 95,
+      fenAfter: '',
+    },
+    {
+      turn: 2,
+      team: 'WHITE',
+      winningMove: 'Nf3',
+      winningMoveUci: 'g1f3',
+      shadowMove: null,
+      shadowMoveUci: null,
+      isSync: true,
+      player1Accuracy: 90,
+      player2Accuracy: 85,
+      fenAfter: 'rnbqkbnr/pppppppp/8/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 1',
+    },
+  ],
+  white_moves: 2,
+}
+
 describe('ReplayView Component', () => {
   test('renders winner result', () => {
     render(<ReplayView game={mockGame} />)
@@ -128,5 +160,11 @@ describe('ReplayView Component', () => {
   test('renders game mode indicator', () => {
     render(<ReplayView game={mockGame} />)
     expect(screen.getByText('Offline')).toBeDefined()
+  })
+
+  test('filters out move entries with empty fenAfter', () => {
+    render(<ReplayView game={emptyFenGame} />)
+    expect(screen.getByText('Nf3')).toBeDefined()
+    expect(screen.queryByText('e4')).toBeNull()
   })
 })

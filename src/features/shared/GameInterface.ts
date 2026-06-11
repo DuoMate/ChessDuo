@@ -23,6 +23,7 @@ export interface GameInterface {
   getSelectedMove(player: Player): string | null
   getTurnStartFen(): string
   getTurnState(): string
+  setTurnState(state: string): void
 
   getMatchTimeRemaining(): number
   setMatchTimeRemaining(seconds: number): void
@@ -45,6 +46,10 @@ export interface GameInterface {
   isFourPlayer(): boolean
   /** Get the team for a given player ID */
   getPlayerTeam(playerId: string): 'WHITE' | 'BLACK' | null
+  /** Whether this client is the turn coordinator */
+  isCoordinator(): boolean
+  /** Get the ID of the turn coordinator */
+  getCoordinatorId(): string
   /** Saved move history from DB (populated after reconnection sync) */
   readonly savedMoveHistory: Array<{ team: string; move: string }>
 }

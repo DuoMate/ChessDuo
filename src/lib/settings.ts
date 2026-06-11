@@ -29,14 +29,14 @@ function loadSettings(): Settings {
         theme: parsed.theme === 'light' ? 'light' : (parsed.theme === 'dark' ? 'dark' : DEFAULTS.theme),
       }
     }
-  } catch {}
+  } catch { console.error('[Settings] Failed to parse localStorage') }
   return { ...DEFAULTS }
 }
 
 function saveSettings(settings: Settings): void {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-  } catch {}
+  } catch { console.error('[Settings] Failed to write to localStorage') }
 }
 
 export function getSetting<K extends keyof Settings>(key: K): Settings[K] {

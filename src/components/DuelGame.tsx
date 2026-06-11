@@ -53,6 +53,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [waiting, setWaiting] = useState(true)
   const gameRef = useRef<DuelGameEngine | null>(null)
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const moveEntriesRef = useRef<Array<{ accuracy: number; fenAfter: string }>>([])
+  const moveAccuracyRef = useRef<number | null>(null)
+  const opponentAccuracyRef = useRef<number | null>(null)
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
 
@@ -76,8 +79,14 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       setWinner(state.winner)
       setGameResult(state.gameResult)
       setMoveHistory(state.moveHistory)
-      if (state.moveAccuracy !== null) setMoveAccuracy(state.moveAccuracy)
-      if (state.opponentAccuracy !== null) setOpponentAccuracy(state.opponentAccuracy)
+      if (state.moveAccuracy !== null) {
+        setMoveAccuracy(state.moveAccuracy)
+        moveAccuracyRef.current = state.moveAccuracy
+      }
+      if (state.opponentAccuracy !== null) {
+        setOpponentAccuracy(state.opponentAccuracy)
+        opponentAccuracyRef.current = state.opponentAccuracy
+      }
       if (state.status === 'playing') setWaiting(false)
     })
 
@@ -117,27 +126,37 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       gameOverReason: gameResult || null,
       stats: {
         whiteMovesPlayed: moveHistory.length,
-        whiteSyncRate: 100,
+        whiteSyncRate: 1.0,
         whiteConflicts: 0,
-        player1Accuracy: moveAccuracy ?? 0,
-        player2Accuracy: opponentAccuracy ?? 0,
+        player1Accuracy: moveAccuracyRef.current ?? 0,
+        player2Accuracy: opponentAccuracyRef.current ?? 0,
         totalMoves: moveHistory.length,
       },
       isOnline: true,
       roomId,
-      moveComparisons: moveHistory.map((move, i) => ({
-        turn: i + 1,
-        team: i % 2 === 0 ? 'WHITE' : 'BLACK',
-        winningMove: move,
-        winningMoveUci: move,
-        isSync: true,
-        player1Accuracy: 0,
-        player2Accuracy: 0,
-        fenAfter: '',
-      })),
+      moveComparisons: moveHistory.map((move, i) => {
+        const entry = moveEntriesRef.current[i]
+        return {
+          turn: i + 1,
+          team: i % 2 === 0 ? 'WHITE' : 'BLACK',
+          winningMove: move,
+          winningMoveUci: move,
+          isSync: true,
+          player1Accuracy: entry?.accuracy ?? 0,
+          player2Accuracy: 0,
+          fenAfter: entry?.fenAfter ?? '',
+        }
+      }),
     })
     toast.gameOver(gameResult || 'Game Over')
   }, [status, winner, gameResult, moveHistory, moveAccuracy, opponentAccuracy, roomId])
+
+  const captureMoveEntry = useCallback((accuracy: number) => {
+    const fenAfter = gameRef.current?.fen
+    if (fenAfter) {
+      moveEntriesRef.current = [...moveEntriesRef.current, { accuracy, fenAfter }]
+    }
+  }, [])
 
   const handleMove = useCallback(async (uci: string, promotion?: PromotionPiece) => {
     const game = gameRef.current
@@ -148,6 +167,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         const result = await game.makeMove(uci.replace('-', '') + 'q')
         if (result.success && result.accuracy !== undefined) {
           setMoveAccuracy(result.accuracy)
+          captureMoveEntry(result.accuracy)
         }
         return
       }
@@ -159,8 +179,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     const result = await game.makeMove(uci.replace('-', ''))
     if (result.success && result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
+      captureMoveEntry(result.accuracy)
     }
-  }, [settings.autoQueen])
+  }, [settings.autoQueen, captureMoveEntry])
 
   const handlePromotionSelect = useCallback(async (piece: PromotionPiece) => {
     if (!pendingPromotion) return
@@ -172,8 +193,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     const result = await game.makeMove(uci)
     if (result.success && result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
+      captureMoveEntry(result.accuracy)
     }
-  }, [pendingPromotion])
+  }, [pendingPromotion, captureMoveEntry])
 
   const isMyTurn = status === 'playing' && ((currentTurn === 'w' && team === 'WHITE') || (currentTurn === 'b' && team === 'BLACK'))
 

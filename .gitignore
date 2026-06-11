@@ -21,6 +21,12 @@
 /.next/
 /out/
 
+# opennext cloudflare build output
+.open-next/
+
+# wrangler local state
+.wrangler/
+
 # production
 /build
 
