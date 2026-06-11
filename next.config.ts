@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig =
+  process.env.NEXT_OUTPUT === "export"
+    ? { output: "export" }
+    : {};
 
 export default nextConfig;
 
