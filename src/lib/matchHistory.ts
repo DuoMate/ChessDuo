@@ -27,14 +27,14 @@ function getLocalHistory(): CompletedGame[] {
   try {
     const raw = localStorage.getItem(HISTORY_KEY)
     if (raw) return JSON.parse(raw)
-  } catch { console.error('[MatchHistory] Failed to read from localStorage') }
+  } catch (e) { console.error('[MatchHistory] Failed to read from localStorage:', e) }
   return []
 }
 
 function saveLocalHistory(games: CompletedGame[]) {
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(games.slice(0, 50)))
-  } catch { console.error('[MatchHistory] Failed to write to localStorage') }
+  } catch (e) { console.error('[MatchHistory] Failed to write to localStorage:', e) }
 }
 
 function makeLocalGameEntry(data: MatchSummaryData): CompletedGame {

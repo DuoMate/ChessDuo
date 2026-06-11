@@ -188,7 +188,7 @@ export class DuelGame {
     this._channel!.subscribe(async (status) => {
       if (status === 'CHANNEL_ERROR') {
         console.warn('[DUEL] Channel error — reconnecting...')
-        try { supabase.removeChannel(this._channel!) } catch { console.error('[DuelGame] Failed to remove channel') }
+        try { supabase.removeChannel(this._channel!) } catch (e) { console.error('[DuelGame] Failed to remove channel:', e) }
         this._channel = supabase.channel(`room:${roomId}`, {
           config: { presence: { key: this._playerId } }
         })
@@ -276,7 +276,7 @@ export class DuelGame {
       }
 
       this.notify()
-    } catch { console.error('[DuelGame] Failed to sync game to DB') }
+    } catch (e) { console.error('[DuelGame] Failed to sync game to DB:', e) }
   }
 
   private async handleTimeout() {
