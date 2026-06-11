@@ -46,7 +46,8 @@ function GameContent() {
       }
       setValidated(true)
     }).catch(() => {
-      setValidated(true)
+      const redirectUrl = encodeURIComponent(`/game?mode=${mode}&room=${roomId}&code=${roomCode}&team=${team}&playerId=${playerId}&time=${timeLimit}${challengeId ? `&challengeId=${challengeId}` : ''}${fourplayer ? '&fourplayer=1' : ''}`)
+      router.replace(`/?redirect=${redirectUrl}`)
     })
   }, [mode, playerId, roomId, roomCode, team, timeLimit, challengeId, fourplayer, router])
 

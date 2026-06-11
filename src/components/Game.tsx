@@ -11,7 +11,7 @@ import { Team } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
-import { supabase } from '@/lib/supabase'
+import { supabase, Room } from '@/lib/supabase'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
@@ -241,7 +241,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Initialize AudioContext on first user gesture for browsers
   useEffect(() => {
     const resumeAudio = () => {
-      const engine = (window as any).__soundEngineInstance
+      const engine = (window as { __soundEngineInstance?: { getContext: () => { resume: () => Promise<void> } } }).__soundEngineInstance
       if (engine?.getContext) {
         engine.getContext().resume().catch(() => {})
       }
@@ -511,12 +511,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     const comp = g.lastMoveComparison as MoveComparison | null
     if (comp && moveHistoryRef.current.length === 0 ||
-        (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as any))) {
+        (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
       const entry: MoveEntry = {
         turn: moveHistoryRef.current.length + 1,
         team: prevTurn || currentTurn,
         winningMove: comp.winningMove,
-        winningMoveUci: (comp as any).winningMove || '',
+        winningMoveUci: comp.winningMove || '',
         shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
         shadowMoveUci: '',
         isSync: comp.isSync,
@@ -546,7 +546,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
       DEBUG && console.log('[Game] ✅ Calling joinRoom with:', { roomId, playerId, team })
-      onlineGame.joinRoom({ id: roomId } as any, playerId, team)
+      onlineGame.joinRoom({ id: roomId } as Room, playerId, team)
     } else {
       DEBUG && console.log('[Game] ❌ joinRoom NOT called - conditions not met')
     }
@@ -845,7 +845,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     DEBUG && console.log(`[OPPONENT] Bot evaluation took: ${Date.now() - startTime}ms`)
     
     if (!botUciMove) {
-      console.warn('[OPPONENT] Bot could not find a move')
+      DEBUG && console.warn('[OPPONENT] Bot could not find a move')
       opponentInProgressRef.current = false
       return
     }
@@ -884,14 +884,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       DEBUG && console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn}, myTeam: ${myTeam})`)
 
       if (currentTurn !== myTeam) {
-        console.warn(`[HUMAN] BLOCKED - Not ${myTeam}'s turn! Current: ${currentTurn}`)
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Not ${myTeam}'s turn! Current: ${currentTurn}`)
         return
       }
 
       // Block if player already submitted a move this turn
       const allPending = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       if (allPending && allPending.has(playerId)) {
-        console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
         return
       }
 
@@ -937,7 +937,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // Check if turn already changed (another client resolved)
         if (g.currentTurn !== myTeam) {
           DEBUG && console.log(`[STATE] Turn changed, another client resolved`)
-          g.setTurnState('selecting' as any)
+          g.setTurnState('selecting')
           return
         }
 
@@ -1032,7 +1032,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
       } catch (e) {
-        console.warn('[HUMAN] Invalid move:', uciMove, e)
+        DEBUG && console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
     } else if (!isOnline && gameRef.current && teammateBot) {
       // Offline mode - existing logic with bots as teammates and opponents
@@ -1043,7 +1043,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       DEBUG && console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
 
       if (currentTurn !== Team.WHITE) {
-        console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
         return
       }
 
@@ -1088,7 +1088,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         try {
           teammateUciMove = await teammateBot.selectMoveAsync(g.board.fen())
         } catch (error) {
-          console.warn('[TEAMMATE] Error selecting move:', error)
+          DEBUG && console.warn('[TEAMMATE] Error selecting move:', error)
         }
         DEBUG && console.log(`[TEAMMATE] Bot evaluation took: ${Date.now() - teammateStart}ms`)
 
@@ -1111,7 +1111,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
           DEBUG && console.log(`[TEAMMATE] Selected move: ${teammateSanMove}`)
         } else {
-          console.warn('[TEAMMATE] No move selected, syncing with human move')
+          DEBUG && console.warn('[TEAMMATE] No move selected, syncing with human move')
           teammateSanMove = sanMove
           teammateMoveInfo = moveInfo
           if (moveInfo) {
@@ -1140,12 +1140,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // Track move comparison for offline games (online handled in setOnStateChange callback)
         const comp = g.lastMoveComparison as MoveComparison | null
         if (comp && (moveHistoryRef.current.length === 0 ||
-            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as any))) {
+            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
             team: currentTurn,
             winningMove: comp.winningMove,
-            winningMoveUci: (comp as any).winningMove || '',
+            winningMoveUci: comp.winningMove || '',
             shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
             shadowMoveUci: '',
             isSync: comp.isSync,
@@ -1167,7 +1167,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           await handleResolutionComplete()
         }
       } catch (e) {
-        console.warn('[HUMAN] Invalid move:', uciMove, e)
+        DEBUG && console.warn('[HUMAN] Invalid move:', uciMove, e)
       }
     }
   }, [isOnline, onlineGame, game, playerId, teammateBot, checkAndResolve])

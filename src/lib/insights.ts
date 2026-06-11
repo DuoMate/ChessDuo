@@ -6,14 +6,14 @@ function getLocalState(userId: string): { revealsUsed: number; isPremium: boolea
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
     if (raw) return JSON.parse(raw)
-  } catch { console.error('[Insights] Failed to read from localStorage') }
+  } catch (e) { console.error('[Insights] Failed to read from localStorage:', e) }
   return { revealsUsed: 0, isPremium: false }
 }
 
 function setLocalState(userId: string, state: { revealsUsed: number; isPremium: boolean }) {
   try {
     localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(state))
-  } catch { console.error('[Insights] Failed to write to localStorage') }
+  } catch (e) { console.error('[Insights] Failed to write to localStorage:', e) }
 }
 
 export async function getUserInsightsState(userId: string): Promise<{
@@ -60,7 +60,8 @@ export async function getUserInsightsState(userId: string): Promise<{
       isPremium,
       revealsRemaining: Math.max(0, 3 - revealsUsed),
     }
-  } catch {
+  } catch (e) {
+    console.error('[Insights] Failed to get user insights:', e)
     return {
       revealsUsed: local.revealsUsed,
       isPremium: local.isPremium,
@@ -79,7 +80,7 @@ async function trySyncToServer(userId: string, revealsUsed: number) {
     if (error) {
       console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
     }
-  } catch { console.error('[Insights] Failed to sync to server') }
+  } catch (e) { console.error('[Insights] Failed to sync to server:', e) }
 }
 
 export async function incrementInsightsReveals(userId: string): Promise<number> {
@@ -101,7 +102,7 @@ export function setUserPremium(userId: string, isPremium: boolean) {
         .from('profiles')
         .update({ is_premium: isPremium })
         .eq('id', userId)
-  } catch { console.error('[Insights] Failed to update premium status') }
+  } catch (e) { console.error('[Insights] Failed to update premium status:', e) }
 }
 
 export function isUserPremium(userId: string): boolean {

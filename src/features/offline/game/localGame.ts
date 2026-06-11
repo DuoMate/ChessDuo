@@ -317,7 +317,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player1' as const, winningMove: player1Move }
         }
-      } catch { console.error('[LocalGame] Checkmate evaluation failed (1)') }
+      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (1):', e) }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -337,7 +337,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player2' as const, winningMove: player2Move }
         }
-      } catch { console.error('[LocalGame] Checkmate evaluation failed (2)') }
+      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })
@@ -507,7 +507,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch { console.error('[LocalGame] Checkmate evaluation failed (3)') }
+      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (3):', e) }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -527,7 +527,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch { console.error('[LocalGame] Checkmate evaluation failed (4)') }
+      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (4):', e) }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })
@@ -626,7 +626,8 @@ export class LocalGame {
       if (matchedMove) {
         return { from: matchedMove.from, to: matchedMove.to }
       }
-    } catch {
+    } catch (e) {
+      console.error('[LocalGame] getMoveParts error:', e)
       return null
     }
     return null

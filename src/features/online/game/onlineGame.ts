@@ -9,6 +9,7 @@ import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
+const DEBUG = process.env.NODE_ENV === 'development'
 
 interface MovePayload {
   playerId: string
@@ -129,11 +130,11 @@ export class OnlineGame {
   isCoordinator(): boolean {
     try {
       const players = this.gameState.getPlayers(Team.WHITE)
-      if (players.length === 0) return true
+      if (players.length === 0) return false
       const sorted = [...players].sort()
       return this._playerId === sorted[0]
     } catch (e) {
-      console.error('[OnlineGame] isCoordinator error:', e)
+      DEBUG && console.error('[OnlineGame] isCoordinator error:', e)
       return false
     }
   }
@@ -143,7 +144,8 @@ export class OnlineGame {
       const players = this.gameState.getPlayers(Team.WHITE)
       const sorted = [...players].sort()
       return sorted[0] || ''
-    } catch {
+    } catch (e) {
+      DEBUG && console.error('[OnlineGame] getCoordinatorId error:', e)
       return ''
     }
   }
@@ -174,7 +176,7 @@ export class OnlineGame {
       const sorted = [...players].sort()
       return this._playerId === sorted[0]
     } catch (e) {
-      console.error('[OnlineGame] isBlackCoordinator error:', e)
+      DEBUG && console.error('[OnlineGame] isBlackCoordinator error:', e)
       return false
     }
   }
@@ -187,7 +189,8 @@ export class OnlineGame {
       if (matchedMove) {
         return { from: matchedMove.from, to: matchedMove.to }
       }
-    } catch {
+    } catch (e) {
+      DEBUG && console.error('[OnlineGame] getMoveParts error:', e)
       return null
     }
     return null
@@ -196,10 +199,10 @@ export class OnlineGame {
   get pendingOverlay(): { from: string; to: string; piece: string; color: string } | null {
     // Always show teammate's pending move if it exists
     const allMoves = this.gameState.getAllPendingMoves()
-    console.log('[PENDING] allMoves:', Array.from(allMoves.entries()), 'myId:', this._playerId)
+    DEBUG && console.log('[PENDING] allMoves:', Array.from(allMoves.entries()), 'myId:', this._playerId)
     for (const [player, pending] of allMoves) {
       if (player !== this._playerId) {
-        console.log('[PENDING] Found teammate move:', player, pending)
+        DEBUG && console.log('[PENDING] Found teammate move:', player, pending)
         
         // Determine piece from board position if not known
         let piece = pending.piece
@@ -207,7 +210,8 @@ export class OnlineGame {
           try {
             const boardPiece = this.gameState.board.get(pending.from as any)
             piece = boardPiece?.type || 'p'
-          } catch {
+          } catch (e) {
+            DEBUG && console.error('[OnlineGame] Failed to get board piece:', e)
             piece = 'p'
           }
         }
@@ -220,17 +224,17 @@ export class OnlineGame {
 
   // Event-based waiting - no timeouts
   waitForTeammateLock(): Promise<void> {
-    console.log('[STATE] waitForTeammateLock called, current state:', this.turnState)
+    DEBUG && console.log('[STATE] waitForTeammateLock called, current state:', this.turnState)
     return new Promise((resolve) => {
       // If already in locked state (teammate locked before we started waiting), resolve immediately
       if (this.turnState === 'locked') {
-        console.log('[STATE] Already locked, resolving immediately')
+        DEBUG && console.log('[STATE] Already locked, resolving immediately')
         resolve()
         return
       }
       // If teammate already locked, transition to locked and resolve
       if (this.gameState.isPendingMoveLocked(this.getOtherPlayerId() as Player)) {
-        console.log('[STATE] Teammate already locked, transitioning to locked')
+        DEBUG && console.log('[STATE] Teammate already locked, transitioning to locked')
         this.turnState = 'locked'
         resolve()
         return
@@ -242,14 +246,14 @@ export class OnlineGame {
 
   // Wait for turn to change (used by non-coordinator)
   waitForTurnChange(): Promise<void> {
-    console.log('[STATE] waitForTurnChange called')
+    DEBUG && console.log('[STATE] waitForTurnChange called')
     return new Promise((resolve) => {
       this.resolveTurnChange = resolve
     })
   }
 
   setTurnState(state: 'selecting' | 'waiting_for_teammate' | 'locked' | 'resolving') {
-    console.log('[STATE] setTurnState:', this.turnState, '->', state)
+    DEBUG && console.log('[STATE] setTurnState:', this.turnState, '->', state)
     this.turnState = state
   }
 
@@ -263,7 +267,7 @@ export class OnlineGame {
   }
 
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
-    console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
+    DEBUG && console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
     
     if (this._channel) {
       await supabase.removeChannel(this._channel)
@@ -292,12 +296,12 @@ export class OnlineGame {
         status: 'ready'
       }, { onConflict: 'room_id,player_id' })
       if (error) {
-        console.warn('[ONLINE] Failed to register in room_players:', error.message)
+        DEBUG && console.warn('[ONLINE] Failed to register in room_players:', error.message)
       } else {
-        console.log('[ONLINE] Registered in room_players')
+        DEBUG && console.log('[ONLINE] Registered in room_players')
       }
     } catch (e) {
-      console.warn('[ONLINE] Could not register in room_players:', e)
+      DEBUG && console.warn('[ONLINE] Could not register in room_players:', e)
     }
 
     this._channel = supabase.channel(`room:${room.id}`, {
@@ -311,7 +315,7 @@ export class OnlineGame {
         .on('presence', { event: 'sync' }, () => {
           const state = this._channel?.presenceState() || {}
           const playersOnline = Object.keys(state)
-          console.log('[ONLINE] Presence sync:', playersOnline)
+          DEBUG && console.log('[ONLINE] Presence sync:', playersOnline)
           
           if (playersOnline.length >= 2) {
             if (this._status !== GameStatus.PLAYING) {
@@ -322,7 +326,7 @@ export class OnlineGame {
           }
         })
         .on('presence', { event: 'join' }, ({ newPresences }) => {
-          console.log('[ONLINE] Player joined:', newPresences)
+          DEBUG && console.log('[ONLINE] Player joined:', newPresences)
           const state = this._channel?.presenceState() || {}
           if (Object.keys(state).length >= 2 && this._status !== GameStatus.PLAYING) {
             this.startGameWhenReady()
@@ -351,12 +355,12 @@ export class OnlineGame {
     setupListeners()
 
     this._channel!.subscribe(async (status: string) => {
-      console.log('[ONLINE] Channel subscription status:', status)
+      DEBUG && console.log('[ONLINE] Channel subscription status:', status)
       if (status === 'CHANNEL_ERROR') {
-        console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
+        DEBUG && console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
         try {
           supabase.removeChannel(this._channel!)
-        } catch { console.error('[OnlineGame] Failed to remove channel') }
+        } catch (e) { DEBUG && console.error('[OnlineGame] Failed to remove channel:', e) }
         this._channel = supabase.channel(`room:${room.id}`, {
           config: { presence: { key: playerId } }
         })
@@ -364,7 +368,7 @@ export class OnlineGame {
         this._channel!.subscribe(async (s: string) => {
           if (s === 'SUBSCRIBED') {
             await this._channel?.track({ player_id: playerId, team, status: 'connected' })
-            console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
+            DEBUG && console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
             if (this._status === GameStatus.PLAYING) {
               await this.syncGameState()
             }
@@ -378,7 +382,7 @@ export class OnlineGame {
           team: team,
           status: 'connected'
         })
-        console.log('[ONLINE] Player tracked:', playerId)
+        DEBUG && console.log('[ONLINE] Player tracked:', playerId)
       }
     })
 
@@ -397,7 +401,7 @@ export class OnlineGame {
 
       const existing = await loadGameState(this._room!.id)
       if (existing) {
-        console.log('[ONLINE] Polling fallback: game already exists, syncing...')
+        DEBUG && console.log('[ONLINE] Polling fallback: game already exists, syncing...')
         await this.syncGameState()
         this._pollingInterval = null
         return
@@ -410,7 +414,7 @@ export class OnlineGame {
       if (!error) {
         const humanPlayers = (data || []).filter(p => !p.player_id.startsWith('bot_'))
         if (humanPlayers.length >= 2) {
-          console.log('[ONLINE] Polling fallback: game start triggered from DB')
+          DEBUG && console.log('[ONLINE] Polling fallback: game start triggered from DB')
           await this.startGameWhenReady()
           this._pollingInterval = null
           return
@@ -430,18 +434,18 @@ export class OnlineGame {
 
     this._status = GameStatus.READY
     this.notifyStateChange()
-    console.log('[ONLINE] joinRoom completed, status:', this._status)
+    DEBUG && console.log('[ONLINE] joinRoom completed, status:', this._status)
   }
 
   async startGameWhenReady(): Promise<void> {
     // Prevent double-start and race conditions
     if (this._status === GameStatus.PLAYING) {
-      console.log('[ONLINE] Game already started, skipping...')
+      DEBUG && console.log('[ONLINE] Game already started, skipping...')
       return
     }
     
     if (this.starting) {
-      console.log('[ONLINE] Game start already in progress, skipping...')
+      DEBUG && console.log('[ONLINE] Game start already in progress, skipping...')
       return
     }
     
@@ -456,12 +460,12 @@ export class OnlineGame {
           existing = await loadGameState(this._room.id)
           if (existing) break
           if (attempt < 2) {
-            console.log(`[ONLINE] loadGameState returned null, retrying (${attempt + 1}/3)...`)
+            DEBUG && console.log(`[ONLINE] loadGameState returned null, retrying (${attempt + 1}/3)...`)
             await new Promise(r => setTimeout(r, 1000))
           }
         }
         if (existing) {
-          console.log('[ONLINE] Game already exists in DB, syncing as late joiner (status:', existing.status, ')')
+          DEBUG && console.log('[ONLINE] Game already exists in DB, syncing as late joiner (status:', existing.status, ')')
           // Create game state for sync to operate on — needed before broadcast
           // event handlers (handleTeammateMove etc.) can fire during DB queries
           this.gameState = new GameState(this._timeLimitSeconds)
@@ -491,7 +495,7 @@ export class OnlineGame {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
         } catch (e) {
-          console.log('[ONLINE] Player already exists or team full:', e)
+          DEBUG && console.log('[ONLINE] Player already exists or team full:', e)
         }
       }
 
@@ -499,7 +503,7 @@ export class OnlineGame {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
         } catch (e) {
-          console.log('[ONLINE] Player already exists or team full:', e)
+          DEBUG && console.log('[ONLINE] Player already exists or team full:', e)
         }
       }
 
@@ -508,13 +512,13 @@ export class OnlineGame {
       for (let i = whiteHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
-        } catch (e) { console.error('[OnlineGame] Failed to add bot_teammate to WHITE:', e) }
+        } catch (e) { DEBUG && console.error('[OnlineGame] Failed to add bot_teammate to WHITE:', e) }
       }
 
       for (let i = blackHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
-        } catch (e) { console.error('[OnlineGame] Failed to add bot_opponent to BLACK:', e) }
+        } catch (e) { DEBUG && console.error('[OnlineGame] Failed to add bot_opponent to BLACK:', e) }
       }
 
       // Start the game
@@ -522,8 +526,8 @@ export class OnlineGame {
       this._status = GameStatus.PLAYING
       this.startPendingTurn()
       this.notifyStateChange()
-      console.log('[ONLINE] Game started successfully')
-      console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
+      DEBUG && console.log('[ONLINE] Game started successfully')
+      DEBUG && console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
       
       // Persist initial game state with timer
       if (this._room) {
@@ -533,14 +537,14 @@ export class OnlineGame {
       
       this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
     } catch (e) {
-      console.error('[ONLINE] Failed to start game:', e)
+      DEBUG && console.error('[ONLINE] Failed to start game:', e)
     } finally {
       this.starting = false
     }
   }
 
   private async syncGameState(): Promise<void> {
-    console.log('[ONLINE] Syncing game state (late joiner)...')
+    DEBUG && console.log('[ONLINE] Syncing game state (late joiner)...')
     try {
       // Query room_players to get all human players
       const { data: players } = await supabase
@@ -572,7 +576,7 @@ export class OnlineGame {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
         } catch (e) {
-          // Already exists or team full (shouldn't happen after bot removal)
+          DEBUG && console.error('[OnlineGame] Failed to add white human during sync:', e)
         }
       }
 
@@ -580,7 +584,7 @@ export class OnlineGame {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
         } catch (e) {
-          // Already exists or team full
+          DEBUG && console.error('[OnlineGame] Failed to add black human during sync:', e)
         }
       }
 
@@ -589,15 +593,15 @@ export class OnlineGame {
       for (let i = whiteHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_teammate_${i + 1}` as Player, Team.WHITE)
-        } catch (e) { console.error('[OnlineGame] Failed to add bot_teammate to WHITE during sync:', e) }
+        } catch (e) { DEBUG && console.error('[OnlineGame] Failed to add bot_teammate to WHITE during sync:', e) }
       }
       for (let i = blackHumans.length; i < 2; i++) {
         try {
           this.gameState.addPlayer(`bot_opponent_${i + 1}` as Player, Team.BLACK)
-        } catch (e) { console.error('[OnlineGame] Failed to add bot_opponent to BLACK during sync:', e) }
+        } catch (e) { DEBUG && console.error('[OnlineGame] Failed to add bot_opponent to BLACK during sync:', e) }
       }
 
-      console.log('[ONLINE] Game state synced successfully')
+      DEBUG && console.log('[ONLINE] Game state synced successfully')
 
       // Recover game state from DB (survives refresh/OS kill)
       if (this._room) {
@@ -617,7 +621,7 @@ export class OnlineGame {
               this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
               this.startMatchTimer()
             }
-            console.log('[ONLINE] Restored match timer:', { 
+            DEBUG && console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
               remaining: Math.floor(remaining), 
               total: saved.matchTimeLimitSeconds 
@@ -625,7 +629,7 @@ export class OnlineGame {
           }
           
           if (saved.moveHistory.length > 0) {
-            console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
+            DEBUG && console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
             // Store move history for UI reference (move playback panel)
             this._savedMoveHistory = saved.moveHistory.map((m: any) => ({
               team: m.team,
@@ -634,13 +638,13 @@ export class OnlineGame {
             try {
               this.gameState.resetBoard(saved.fen)
             } catch (e) {
-              console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
+              DEBUG && console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
               this.gameState.startMatch()
               for (const entry of saved.moveHistory) {
                 try {
                   this.gameState.board.move(entry.move)
                 } catch (me) {
-                  console.warn('[ONLINE] Could not replay move:', entry.move, me)
+                  DEBUG && console.warn('[ONLINE] Could not replay move:', entry.move, me)
                 }
               }
             }
@@ -651,7 +655,8 @@ export class OnlineGame {
                 const lastHistoryMove = verboseHistory[verboseHistory.length - 1]
                 this._lastMove = { from: lastHistoryMove.from, to: lastHistoryMove.to }
               }
-            } catch {
+            } catch (e) {
+              DEBUG && console.error('[OnlineGame] Failed to restore lastMove:', e)
               this._lastMove = null
             }
           } else {
@@ -660,13 +665,13 @@ export class OnlineGame {
           this.startPendingTurn()
           this.notifyStateChange()
         } else {
-          console.warn('[ONLINE] syncGameState: no saved game found, keeping current state')
+          DEBUG && console.warn('[ONLINE] syncGameState: no saved game found, keeping current state')
           // Don't start a fresh game — the DB write may not have completed yet.
           // The next presence sync or polling interval will retry.
         }
       }
     } catch (e) {
-      console.error('[ONLINE] Failed to sync game state:', e)
+      DEBUG && console.error('[ONLINE] Failed to sync game state:', e)
     }
   }
 
@@ -729,7 +734,7 @@ export class OnlineGame {
   }
 
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
-    console.log('[ONLINE] Teammate moved:', payload)
+    DEBUG && console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
       // In 4-player mode, only react if the player is on our team
       if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
@@ -740,7 +745,7 @@ export class OnlineGame {
       // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
       // This ensures pendingOverlay shows the teammate's move
       if (this.turnState === 'selecting') {
-        console.log('[STATE] Teammate moved first, transitioning to waiting_for_teammate')
+        DEBUG && console.log('[STATE] Teammate moved first, transitioning to waiting_for_teammate')
         this.turnState = 'waiting_for_teammate'
       }
       
@@ -749,7 +754,7 @@ export class OnlineGame {
   }
 
   private handleTeammateLocked(payload: { playerId: string }) {
-    console.log('[ONLINE] Teammate locked:', payload)
+    DEBUG && console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
       // In 4-player mode, only react if the player is on our team
       if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
@@ -759,7 +764,7 @@ export class OnlineGame {
       
       // Resolve the waitForTeammateLock Promise
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
-        console.log('[STATE] Teammate locked, transitioning to resolving state')
+        DEBUG && console.log('[STATE] Teammate locked, transitioning to resolving state')
         this.turnState = 'resolving'
         this.notifyStateChange()
         this.resolveTeammateLocked()
@@ -772,7 +777,7 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
-    console.log('[TURN-RESOLVED] Received broadcast:', {
+    DEBUG && console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,
       hasComparison: !!payload.comparison,
@@ -786,11 +791,11 @@ export class OnlineGame {
 
     const isOwnBroadcast = !!(payload.coordinatorId && payload.coordinatorId === this._playerId)
     if (isOwnBroadcast) {
-      console.log('[TURN-RESOLVED] Own broadcast — skipping redundant resolve, running cleanup only')
+      DEBUG && console.log('[TURN-RESOLVED] Own broadcast — skipping redundant resolve, running cleanup only')
     }
     
     if (payload.comparison) {
-      console.log('[TURN-RESOLVED] Comparison received:', {
+      DEBUG && console.log('[TURN-RESOLVED] Comparison received:', {
         player1Move: payload.comparison.player1Move,
         player2Move: payload.comparison.player2Move,
         isSync: payload.comparison.isSync,
@@ -799,7 +804,7 @@ export class OnlineGame {
       this._lastMoveComparison = payload.comparison
       if (payload.coordinatorId) {
         this._player1Id = payload.coordinatorId
-        console.log('[PLAYER1-ID] Set from coordinator:', payload.coordinatorId)
+        DEBUG && console.log('[PLAYER1-ID] Set from coordinator:', payload.coordinatorId)
       }
       if (payload.winningTeam === Team.WHITE) {
         this._whiteComparison = payload.comparison
@@ -818,16 +823,16 @@ export class OnlineGame {
       const result = this.gameState.resolve(payload.winningMove)
       
       if (result) {
-        console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
+        DEBUG && console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
       } else {
-        console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
+        DEBUG && console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
         
         // Phase is not LOCKED (already resolved by coordinator) - try to apply move directly to board
         try {
           this.gameState.board.move(payload.winningMove)
-          console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
+          DEBUG && console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
         } catch (e) {
-          console.log('[ONLINE] Could not apply move directly:', e)
+          DEBUG && console.log('[ONLINE] Could not apply move directly:', e)
         }
         
         // Sync turn with board - FEN position 7 indicates 'w' or 'b'
@@ -835,7 +840,7 @@ export class OnlineGame {
         const boardTurn = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
         if (this.gameState.currentTeam !== boardTurn) {
           this.gameState.setCurrentTeam(boardTurn)
-          console.log('[ONLINE] Synced turn to match board:', boardTurn)
+          DEBUG && console.log('[ONLINE] Synced turn to match board:', boardTurn)
         }
       }
     }
@@ -849,20 +854,20 @@ export class OnlineGame {
       this.resolveTurnChange = null
     }
     
-    console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
+    DEBUG && console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
     }
     this.turnState = 'selecting'
     this.notifyStateChange()
-    console.log('[STATE] Turn resolved, reset to selecting')
+    DEBUG && console.log('[STATE] Turn resolved, reset to selecting')
   }
 
   private canBroadcast(event: string): boolean {
     const now = Date.now()
     const last = this._broadcastThrottle.get(event) || 0
     if (now - last < this.BROADCAST_MIN_INTERVAL_MS) {
-      console.warn(`[RATE-LIMIT] Broadcast throttled for event: ${event}`)
+      DEBUG && console.warn(`[RATE-LIMIT] Broadcast throttled for event: ${event}`)
       return false
     }
     this._broadcastThrottle.set(event, now)
@@ -904,7 +909,7 @@ export class OnlineGame {
       this._whiteComparison = null
       this._blackComparison = null
       this._lastMoveComparison = null
-      console.log('[STATE-SYNC] New WHITE turn: resetting internal comparison refs (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
+      DEBUG && console.log('[STATE-SYNC] New WHITE turn: resetting internal comparison refs (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
     }
     const fen = this.gameState.fen
     this.gameState.startPendingTurn(fen)
@@ -1000,7 +1005,7 @@ export class OnlineGame {
     this.gameState = new GameState(timeLimitSeconds)
     this._timeLimitSeconds = timeLimitSeconds
     this._status = GameStatus.WAITING
-    console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
+    DEBUG && console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
     this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
   }
 
@@ -1023,7 +1028,7 @@ export class OnlineGame {
     const currentTeam = this.gameState.currentTeam
     
     if (currentTeam === Team.WHITE && !this.isCoordinator()) {
-      console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
+      DEBUG && console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
       if (this.turnState !== 'resolving') {
         this.turnState = 'resolving'
         this.notifyStateChange()
@@ -1033,7 +1038,7 @@ export class OnlineGame {
     
     // In 4-player mode, BLACK turn also needs a coordinator (first BLACK player)
     if (currentTeam === Team.BLACK && this.isFourPlayer() && !this.isBlackCoordinator()) {
-      console.log('[ONLINE] Not BLACK coordinator — waiting for BLACK coordinator broadcast')
+      DEBUG && console.log('[ONLINE] Not BLACK coordinator — waiting for BLACK coordinator broadcast')
       if (this.turnState !== 'resolving') {
         this.turnState = 'resolving'
         this.notifyStateChange()
@@ -1042,7 +1047,7 @@ export class OnlineGame {
     }
     
     this.turnState = 'resolving'
-    console.log('[STATE] Resolving, set turnState to resolving')
+    DEBUG && console.log('[STATE] Resolving, set turnState to resolving')
     this.notifyStateChange()
     
     const allPendingMoves = this.gameState.getAllPendingMoves()
@@ -1062,7 +1067,7 @@ export class OnlineGame {
           move1 = pending
           player1Id = player
           this._player1Id = player // Track player1 for this client
-          console.log('[PLAYER1-ID] Set player1Id to:', player)
+          DEBUG && console.log('[PLAYER1-ID] Set player1Id to:', player)
         } else {
           move2 = pending
           player2Id = player
@@ -1079,7 +1084,7 @@ export class OnlineGame {
     }
 
     if (!move1 || !move2) {
-      console.log('[RESOLVE] Pending moves debug:', {
+      DEBUG && console.log('[RESOLVE] Pending moves debug:', {
         allPlayers: Array.from(allPendingMoves.keys()),
         currentTeam,
         myPlayerId: this._playerId,
@@ -1097,9 +1102,9 @@ export class OnlineGame {
     const player2To = move2.to
     const isSync = player1Move === player2Move
 
-    console.log(`\n${'='.repeat(60)}`)
-    console.log(`[ONLINE RESOLVE] ${currentTeam} team to move`)
-    console.log(`[MOVES] ${player1Id}: ${player1Move} (${player1From}${player1To}) | ${player2Id}: ${player2Move} (${player2From}${player2To})`)
+    DEBUG && console.log(`\n${'='.repeat(60)}`)
+    DEBUG && console.log(`[ONLINE RESOLVE] ${currentTeam} team to move`)
+    DEBUG && console.log(`[MOVES] ${player1Id}: ${player1Move} (${player1From}${player1To}) | ${player2Id}: ${player2Move} (${player2From}${player2To})`)
     
     const turnStartFen = this.gameState.fen
     
@@ -1128,7 +1133,7 @@ export class OnlineGame {
         this.notifyStateChange()
         return { winnerId: 'player1', winningMove: player1Move }
       }
-    } catch { console.error('[OnlineGame] Failed to check isCheckmate (1)') }
+    } catch (e) { DEBUG && console.error('[OnlineGame] Failed to check isCheckmate (1):', e) }
     
     try {
       const mateCheck2 = new Chess(turnStartFen)
@@ -1151,7 +1156,7 @@ export class OnlineGame {
         this.notifyStateChange()
         return { winnerId: 'player2', winningMove: player2Move }
       }
-    } catch { console.error('[OnlineGame] Failed to check isCheckmate (2)') }
+    } catch (e) { DEBUG && console.error('[OnlineGame] Failed to check isCheckmate (2):', e) }
     
     const chess = new Chess(turnStartFen)
     const verboseMoves = chess.moves({ verbose: true })
@@ -1178,7 +1183,7 @@ export class OnlineGame {
     const player2Loss = Math.abs(bestMoveScore - player2Score)
     
     if (isSync) {
-      console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
+      DEBUG && console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
     }
 
     const player1Accuracy = calculateAccuracy(player1Loss)
@@ -1186,10 +1191,10 @@ export class OnlineGame {
     const player1Category = getAccuracyCategory(player1Loss)
     const player2Category = getAccuracyCategory(player2Loss)
 
-    console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
-    console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
-    console.log(`  [${player1Id}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
-    console.log(`  [${player2Id}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
+    DEBUG && console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
+    DEBUG && console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
+    DEBUG && console.log(`  [${player1Id}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
+    DEBUG && console.log(`  [${player2Id}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
 
     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
     const winningScore = winningMove === player1Move ? player1Score : player2Score
@@ -1199,7 +1204,7 @@ export class OnlineGame {
     const loserFrom = loserId === 'player2' ? player2From : (loserId === 'player1' ? player1From : '')
     const loserTo = loserId === 'player2' ? player2To : (loserId === 'player1' ? player1To : '')
 
-    console.log(`[RESULT] Winner: ${winnerId} with move: ${winningMove} (accuracy: ${winnerId === 'player1' ? player1Accuracy : player2Accuracy}%)`)
+    DEBUG && console.log(`[RESULT] Winner: ${winnerId} with move: ${winningMove} (accuracy: ${winnerId === 'player1' ? player1Accuracy : player2Accuracy}%)`)
     
     // Store the comparison for UI
     this._lastMoveComparison = {
@@ -1229,12 +1234,12 @@ export class OnlineGame {
     }
 
     // FIX: Store comparison for the correct team based on currentTeam
-    console.log(`[RESULT] Storing comparison for team: ${currentTeam}`)
+    DEBUG && console.log(`[RESULT] Storing comparison for team: ${currentTeam}`)
     if (currentTeam === Team.WHITE) {
-      console.log(`[RESULT] Storing WHITE comparison:`, { player1Move, player2Move, isSync })
+      DEBUG && console.log(`[RESULT] Storing WHITE comparison:`, { player1Move, player2Move, isSync })
       this._whiteComparison = this._lastMoveComparison
     } else {
-      console.log(`[RESULT] Storing BLACK comparison:`, { player1Move, player2Move, isSync })
+      DEBUG && console.log(`[RESULT] Storing BLACK comparison:`, { player1Move, player2Move, isSync })
       this._blackComparison = this._lastMoveComparison
     }
 
