@@ -128,7 +128,7 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl overflow-y-auto ${
+        className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden ${
           isMobile ? 'w-full max-h-[90vh]' : 'max-w-2xl w-full max-h-[90vh]'
         }`}
       >
@@ -156,63 +156,65 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
           </button>
         </div>
 
-        {/* Body */}
-        <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 ${isMobile ? 'p-3' : 'p-4'}`}>
-          {/* Board */}
-          <div className={`${isMobile ? 'w-full max-w-[min(85vw,400px)] mx-auto' : 'w-[400px] flex-shrink-0'} aspect-square`}>
-            <ChessBoard
-              key={step}
-              fen={current.fen}
-              onMove={() => {}}
-              enabled={false}
-              orientation="white"
-              pendingOverlay={current.pendingOverlay}
-              myPendingOverlay={current.myPendingOverlay}
-              highlightSquares={step === 2 && showEval ? current.highlightSquares : null}
-              lastMove={current.lastMove}
-            />
-          </div>
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto">
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 ${isMobile ? 'p-3' : 'p-4'}`}>
+            {/* Board */}
+            <div className={`${isMobile ? 'w-full max-w-[min(85vw,400px)] mx-auto' : 'w-[400px] flex-shrink-0'} aspect-square`}>
+              <ChessBoard
+                key={step}
+                fen={current.fen}
+                onMove={() => {}}
+                enabled={false}
+                orientation="white"
+                pendingOverlay={current.pendingOverlay}
+                myPendingOverlay={current.myPendingOverlay}
+                highlightSquares={step === 2 && showEval ? current.highlightSquares : null}
+                lastMove={current.lastMove}
+              />
+            </div>
 
-          {/* Content */}
-          <div className={`flex-1 flex flex-col justify-center ${isMobile ? 'items-center text-center' : ''}`}>
-            {step === 2 && showEval ? (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key="result"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="w-full"
-                >
-                  <AccuracyBottomSheet
-                    comparison={MOCK_COMPARISON as any}
-                    isVisible={true}
-                    playerId="player2"
-                    player1Id="player1"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`step-${step}`}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  {step === 2 && !showEval && (
-                    <div className="mb-3">
-                      <EvaluatingLoader />
-                    </div>
-                  )}
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                    {current.title}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    {current.caption}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            )}
+            {/* Content */}
+            <div className={`flex-1 flex flex-col justify-center ${isMobile ? 'items-center text-center' : ''}`}>
+              {step === 2 && showEval ? (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key="result"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full"
+                  >
+                    <AccuracyBottomSheet
+                      comparison={MOCK_COMPARISON as any}
+                      isVisible={true}
+                      playerId="player2"
+                      player1Id="player1"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`step-${step}`}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    {step === 2 && !showEval && (
+                      <div className="mb-3">
+                        <EvaluatingLoader />
+                      </div>
+                    )}
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                      {current.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {current.caption}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              )}
+            </div>
           </div>
         </div>
 
