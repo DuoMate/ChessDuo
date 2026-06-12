@@ -225,18 +225,18 @@ export default function PremiumPage() {
                     </button>
                   </div>
 
-                  <div className="bg-white dark:bg-white/[0.03] border-2 border-yellow-300 dark:border-yellow-500/20 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all relative">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-gray-900 text-xs px-2 py-0.5 rounded-full font-bold">
+                  <div className="bg-white dark:bg-white/[0.03] border-2 border-green-400/40 dark:border-green-500/25 rounded-2xl p-6 text-center hover:border-green-500 dark:hover:border-green-400/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(34,197,94,0.08)] transition-all relative">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                       Best Value
                     </div>
                     <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Annual</h3>
                     <p className="text-3xl font-black text-yellow-500 mb-1">₹999</p>
                     <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">per year</p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold mb-4">₹83.25/mo (save 16%)</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-4">₹83.25/mo (save 16%)</p>
                     <button
                       onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL!)}
                       disabled={subscribing}
-                      className="w-full px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] disabled:opacity-50 min-h-[44px]"
+                      className="w-full px-10 py-3 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(34,197,94,0.15)] disabled:opacity-50 min-h-[44px]"
                     >
                       {subscribing ? 'Creating...' : 'Subscribe Annual'}
                     </button>
