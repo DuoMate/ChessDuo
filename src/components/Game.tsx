@@ -1221,11 +1221,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (isOnline && onlineGameRef.current) {
       await onlineGameRef.current.abandonMatch()
     }
-    if (isOnline) {
-      router.push('/')
-    } else {
-      window.location.reload()
-    }
+    router.push('/')
   }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
@@ -1233,8 +1229,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       await onlineGameRef.current.abandonMatch()
     }
     setShowLeaveModal(false)
-    confirmNavLeave()
-  }, [isOnline, confirmNavLeave])
+    if (isOnline) {
+      confirmNavLeave()
+    } else {
+      router.push('/')
+    }
+  }, [isOnline, confirmNavLeave, router])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
@@ -1296,7 +1296,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.status === GameStatus.GAME_OVER && (
         <GameOverModal 
           winner={gameState.winner || 'DRAW'}
-          onPlayAgain={isOnline ? () => router.push('/') : () => window.location.reload()}
+          onPlayAgain={() => router.push('/')}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
         />

@@ -354,7 +354,7 @@ export function ChessBoard({
                 y: getSquarePosition(myPendingOverlay.to).y,
                 opacity: 1
               }}
-              exit={{ opacity: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0 } }}
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="absolute flex items-center justify-center font-bold select-none"
               style={{ 
