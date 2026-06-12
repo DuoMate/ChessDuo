@@ -114,8 +114,10 @@ export default function SetupPage() {
         setPlayerId(session.user.id)
         setUsername('')
         setJoinError(null)
+        setJoinCode('')
         if (_event === 'SIGNED_IN') {
           localStorage.removeItem('chessduo_history')
+          localStorage.removeItem('chessduo_tour_completed')
         }
         fetchUsername(session.user.id).then(name => {
           if (!mountedRef.current) return
