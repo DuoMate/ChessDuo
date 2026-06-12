@@ -1,17 +1,16 @@
-import { supabase } from './supabase'
 import { INSIGHTS_FREE_LIMIT } from '@/features/shared/gameConstants'
 
 const STORAGE_KEY = 'chessduo_insights'
 
-function getLocalState(userId: string): { revealsUsed: number; isPremium: boolean } {
+function getLocalState(userId: string): { revealsUsed: number } {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
     if (raw) return JSON.parse(raw)
   } catch (e) { console.error('[Insights] Failed to read from localStorage:', e) }
-  return { revealsUsed: 0, isPremium: false }
+  return { revealsUsed: 0 }
 }
 
-function setLocalState(userId: string, state: { revealsUsed: number; isPremium: boolean }) {
+function setLocalState(userId: string, state: { revealsUsed: number }) {
   try {
     localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(state))
   } catch (e) { console.error('[Insights] Failed to write to localStorage:', e) }
@@ -24,88 +23,21 @@ export async function getUserInsightsState(userId: string): Promise<{
 }> {
   const local = getLocalState(userId)
 
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('insights_reveals_used, is_premium')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (error || !data) {
-      return {
-        revealsUsed: local.revealsUsed,
-        isPremium: local.isPremium,
-        revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
-      }
-    }
-
-    const serverUsed = data.insights_reveals_used ?? 0
-    const serverPremium = data.is_premium ?? false
-
-    // Merge: use the higher reveal count (whichever is more recent)
-    const revealsUsed = Math.max(local.revealsUsed, serverUsed)
-    const isPremium = local.isPremium || serverPremium
-
-    // Sync merged state back to localStorage
-    if (revealsUsed !== local.revealsUsed || isPremium !== local.isPremium) {
-      setLocalState(userId, { revealsUsed, isPremium })
-    }
-
-    // If server had an older count, try to sync local state back to server
-    if (local.revealsUsed > serverUsed) {
-      trySyncToServer(userId, local.revealsUsed)
-    }
-
-    return {
-      revealsUsed,
-      isPremium,
-      revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - revealsUsed),
-    }
-  } catch (e) {
-    console.error('[Insights] Failed to get user insights:', e)
-    return {
-      revealsUsed: local.revealsUsed,
-      isPremium: local.isPremium,
-      revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
-    }
+  return {
+    revealsUsed: local.revealsUsed,
+    isPremium: false,
+    revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
   }
-}
-
-async function trySyncToServer(userId: string, revealsUsed: number) {
-  try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ insights_reveals_used: revealsUsed })
-        .eq('id', userId)
-
-    if (error) {
-      console.warn('[Insights] Sync to server failed:', error.message?.substring?.(0, 80) || error.code)
-    }
-  } catch (e) { console.error('[Insights] Failed to sync to server:', e) }
 }
 
 export async function incrementInsightsReveals(userId: string): Promise<number> {
   const local = getLocalState(userId)
   const nextLocal = local.revealsUsed + 1
-  setLocalState(userId, { ...local, revealsUsed: nextLocal })
-
-  trySyncToServer(userId, nextLocal)
+  setLocalState(userId, { revealsUsed: nextLocal })
 
   return Math.max(0, INSIGHTS_FREE_LIMIT - nextLocal)
 }
 
-export function setUserPremium(userId: string, isPremium: boolean) {
-  const local = getLocalState(userId)
-  setLocalState(userId, { ...local, isPremium })
-
-  try {
-      supabase
-        .from('profiles')
-        .update({ is_premium: isPremium })
-        .eq('id', userId)
-  } catch (e) { console.error('[Insights] Failed to update premium status:', e) }
-}
-
-export function isUserPremium(userId: string): boolean {
-  return getLocalState(userId).isPremium
+export function isUserPremium(_userId: string): boolean {
+  return false
 }
