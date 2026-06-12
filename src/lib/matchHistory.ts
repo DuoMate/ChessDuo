@@ -1,7 +1,21 @@
-import { supabase, Database } from './supabase'
-
-export type CompletedGame = Database['public']['Tables']['completed_games']['Row']
-export type CompletedGameInsert = Database['public']['Tables']['completed_games']['Insert']
+export interface CompletedGame {
+  id: string
+  room_id: string | null
+  winner: string
+  game_result: string
+  game_over_reason: string | null
+  white_moves: number
+  white_sync_rate: number
+  white_conflicts: number
+  player1_accuracy: number
+  player2_accuracy: number
+  total_moves: number
+  is_online: boolean
+  move_comparisons: unknown[]
+  challenge_id: string | null
+  played_at: string
+  created_at: string
+}
 
 export interface MatchSummaryData {
   winner: 'WHITE' | 'BLACK' | 'DRAW'
@@ -59,87 +73,18 @@ function makeLocalGameEntry(data: MatchSummaryData): CompletedGame {
 }
 
 export async function saveCompletedGame(data: MatchSummaryData): Promise<void> {
-  // Always save locally first
   const localEntry = makeLocalGameEntry(data)
   const existing = getLocalHistory()
   existing.unshift(localEntry)
   saveLocalHistory(existing)
-
-  // Try server save
-  try {
-    const { error } = await supabase
-      .from('completed_games')
-      .insert({
-        winner: data.winner,
-        game_result: data.gameResult,
-        game_over_reason: data.gameOverReason,
-        white_moves: data.stats.whiteMovesPlayed,
-        white_sync_rate: data.stats.whiteSyncRate,
-        white_conflicts: data.stats.whiteConflicts,
-        player1_accuracy: Math.round(data.stats.player1Accuracy),
-        player2_accuracy: Math.round(data.stats.player2Accuracy),
-        total_moves: data.stats.totalMoves,
-        is_online: data.isOnline,
-        room_id: data.roomId || null,
-        move_comparisons: data.moveComparisons || [],
-        challenge_id: data.challengeId || null,
-        played_at: new Date().toISOString(),
-      })
-
-    if (error) {
-      console.warn('[MatchHistory] Server save failed, game saved locally:', error.message?.substring?.(0, 80) || error.code)
-    } else {
-      console.log('[MatchHistory] Game saved to server')
-    }
-  } catch (e) {
-    console.warn('[MatchHistory] Server save exception, game saved locally:', e)
-  }
 }
 
 export async function getMatchHistory(limit = 20): Promise<CompletedGame[]> {
-  try {
-    const { data, error } = await supabase
-      .from('completed_games')
-      .select('*')
-      .order('played_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.warn('[MatchHistory] Server fetch failed, using local:', error.message?.substring?.(0, 80) || error.code)
-      return getLocalHistory().slice(0, limit)
-    }
-
-    if (data && data.length > 0) {
-      return data
-    }
-
-    return []
-  } catch (e) {
-    console.warn('[MatchHistory] Server error, using local:', e)
-    return getLocalHistory().slice(0, limit)
-  }
+  return getLocalHistory().slice(0, limit)
 }
 
 export async function getCompletedGame(gameId: string): Promise<CompletedGame | null> {
-  try {
-    const { data, error } = await supabase
-      .from('completed_games')
-      .select('*')
-      .eq('id', gameId)
-      .single()
-
-    if (error) {
-      const local = getLocalHistory().find(g => g.id === gameId)
-      if (local) return local
-      console.warn('[MatchHistory] Game not found:', error.message?.substring?.(0, 80) || error.code)
-      return null
-    }
-
-    return data
-  } catch (e) {
-    console.warn('[MatchHistory] Server error, trying local:', e)
-    return getLocalHistory().find(g => g.id === gameId) || null
-  }
+  return getLocalHistory().find(g => g.id === gameId) || null
 }
 
 export async function getPlayerStats(): Promise<{

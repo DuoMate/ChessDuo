@@ -132,6 +132,8 @@ export default function SetupPage() {
         setNeedsUsername(null)
         setJoinError(null)
         setJoinCode('')
+        localStorage.removeItem('chessduo_history')
+        clearInsightsKeys()
       }
     })
 
@@ -300,8 +302,19 @@ export default function SetupPage() {
     }
   }
 
+  function clearInsightsKeys() {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('chessduo_insights_')) {
+        localStorage.removeItem(key)
+      }
+    }
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    localStorage.removeItem('chessduo_history')
+    clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
     setProfileOpen(false)
