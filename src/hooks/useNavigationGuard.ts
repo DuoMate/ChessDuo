@@ -48,10 +48,6 @@ export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGua
     window.addEventListener('beforeunload', handleBeforeUnload)
     window.addEventListener('popstate', handlePopState)
 
-    if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', window.location.href)
-    }
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('popstate', handlePopState)

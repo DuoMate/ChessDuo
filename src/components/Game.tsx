@@ -220,7 +220,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const isMobile = useIsMobile()
 
-  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
+  useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
@@ -1218,23 +1218,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [gameState.pendingPromotion, executeMove])
 
   const handleResign = useCallback(async () => {
-    if (isOnline && onlineGameRef.current) {
-      await onlineGameRef.current.abandonMatch()
+    try {
+      if (isOnline && onlineGameRef.current) {
+        await onlineGameRef.current.abandonMatch()
+      }
+    } catch {
+      // Channel may be dead during refresh; navigation still proceeds
     }
     router.push('/')
   }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
-    if (isOnline && onlineGameRef.current) {
-      await onlineGameRef.current.abandonMatch()
+    try {
+      if (isOnline && onlineGameRef.current) {
+        await onlineGameRef.current.abandonMatch()
+      }
+    } catch {
+      // Channel may be dead during refresh; navigation still proceeds
     }
     setShowLeaveModal(false)
-    if (isOnline) {
-      confirmNavLeave()
-    } else {
-      router.push('/')
-    }
-  }, [isOnline, confirmNavLeave, router])
+    router.push('/')
+  }, [isOnline, router])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
