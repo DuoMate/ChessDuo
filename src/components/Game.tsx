@@ -375,15 +375,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
         
         // Get pendingOverlay for online mode - show teammate's pending move
-        // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
-        // In 4-player mode, only show moves from same-team players
+        // Only show moves from same-team players (not opponent bot/player moves)
         let pendingOverlay: PendingOverlay | null = null
         if (playerId) {
           const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const entries = Array.from(allMoves.entries()) as [string, any][]
-          const otherPlayerMoves = isFourPlayer
-            ? entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
-            : entries.filter(([p]) => p !== playerId)
+          const otherPlayerMoves = entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
           
           // Only show pendingOverlay if there's a teammate move (not my own)
           if (otherPlayerMoves.length > 0) {
@@ -612,15 +609,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
     
     // Get pendingOverlay for online mode - show teammate's pending move
-    // FIX: Only show teammate's move, not my own move (avoid duplicate shadow)
-    // In 4-player mode, only show moves from same-team players
+    // Only show moves from same-team players (not opponent bot/player moves)
     let pendingOverlay: PendingOverlay | null = null
     if (isOnline && playerId) {
       const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       const entries = Array.from(allMoves.entries()) as [string, any][]
-      const otherPlayerMoves = isFourPlayer
-        ? entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
-        : entries.filter(([p]) => p !== playerId)
+      const otherPlayerMoves = entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
       
       // Only show pendingOverlay if there's a teammate move (not my own)
       if (otherPlayerMoves.length > 0) {
