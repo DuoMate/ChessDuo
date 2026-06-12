@@ -155,7 +155,7 @@ export default function PremiumPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-[#0f1119] flex items-center justify-center">
         <p className="text-gray-500 dark:text-gray-400">Loading...</p>
       </div>
     )
@@ -163,103 +163,105 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">ChessDuo Premium</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
-            >
-              Home
-            </button>
-          </div>
+      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo Premium</h1>
+              <button
+                onClick={() => router.push('/')}
+                className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium"
+              >
+                Home
+              </button>
+            </div>
 
-          {isPremium ? (
-            <div className="space-y-4">
-              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6 text-center">
-                <div className="text-4xl mb-3">✅</div>
-                <h2 className="text-xl font-bold text-green-400 mb-2">You're Premium!</h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
-                  Unlimited move insights, AI analysis, and all premium features.
-                </p>
-                {subscriptionStatus === 'canceling' && (
-                  <p className="text-amber-400 text-xs mt-2">
-                    Your subscription will end at the current billing period.
+            {isPremium ? (
+              <div className="space-y-4">
+                <div className="bg-white dark:bg-white/[0.03] border-2 border-yellow-300 dark:border-yellow-500/20 rounded-2xl p-6 text-center">
+                  <div className="text-4xl mb-3">✅</div>
+                  <h2 className="text-xl font-black text-yellow-600 dark:text-yellow-400 mb-2">You&apos;re Premium!</h2>
+                  <p className="text-gray-700 dark:text-gray-400 text-sm mb-1 font-medium">
+                    Unlimited move insights, AI analysis, and all premium features.
                   </p>
+                  {subscriptionStatus === 'canceling' && (
+                    <p className="text-amber-500 dark:text-amber-400 text-xs mt-2 font-medium">
+                      Your subscription will end at the current billing period.
+                    </p>
+                  )}
+                </div>
+
+                {subscriptionStatus === 'active' && (
+                  <div className="text-center">
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="text-gray-700 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 text-sm transition-colors min-h-[44px] px-4 py-2 font-medium disabled:opacity-50"
+                    >
+                      {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {subscriptionStatus === 'active' && (
-                <div className="text-center">
-                  <button
-                    onClick={handleCancel}
-                    disabled={cancelling}
-                    className="px-4 py-2 text-sm text-gray-400 hover:text-red-400 border border-gray-600 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 mb-4 text-center">
-                  <p className="text-red-400 text-sm">{error}</p>
-                </div>
-              )}
-
-              <div className="grid gap-4 mb-6">
-                <div className="bg-white dark:bg-gray-800 border border-yellow-400/30 rounded-lg p-6 text-center hover:border-yellow-400/60 transition-colors">
-                  <h3 className="text-lg font-bold mb-1">Monthly</h3>
-                  <p className="text-3xl font-bold text-yellow-500 mb-1">₹99</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">per month</p>
-                  <button
-                    onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY!)}
-                    disabled={subscribing}
-                    className="w-full px-6 py-2.5 bg-yellow-500 text-gray-900 text-sm font-bold rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50"
-                  >
-                    {subscribing ? 'Creating...' : 'Subscribe Monthly'}
-                  </button>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 border border-yellow-400/30 rounded-lg p-6 text-center hover:border-yellow-400/60 transition-colors relative">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                    Best Value
+            ) : (
+              <>
+                {error && (
+                  <div className="mb-4 p-3 rounded-xl bg-red-100 dark:bg-red-500/10 border-2 border-red-300 dark:border-red-500/20 text-red-700 dark:text-red-400 text-sm text-center font-medium">
+                    {error}
                   </div>
-                  <h3 className="text-lg font-bold mb-1">Annual</h3>
-                  <p className="text-3xl font-bold text-yellow-500 mb-1">₹999</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">per year</p>
-                  <p className="text-xs text-green-500 mb-4">₹83.25/mo (save 16%)</p>
-                  <button
-                    onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL!)}
-                    disabled={subscribing}
-                    className="w-full px-6 py-2.5 bg-green-500 text-white text-sm font-bold rounded-lg hover:bg-green-400 transition-colors disabled:opacity-50"
-                  >
-                    {subscribing ? 'Creating...' : 'Subscribe Annual'}
-                  </button>
-                </div>
-              </div>
+                )}
 
-              <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-6">
-                <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-4">
-                  Unlock powerful move analysis for every game
-                </p>
-                <div className="grid gap-3">
-                  <FeatureRow icon="🔍" title="Unlimited Move Insights" desc="See why a move won or lost — every turn" />
-                  <FeatureRow icon="🤖" title="AI Position Analysis" desc="Stockfish-powered positional breakdown" />
-                  <FeatureRow icon="📊" title="Advanced Stats" desc="Per-player accuracy trends and comparisons" />
-                  <FeatureRow icon="🎯" title="Best Move Suggestions" desc="Engine-recommended alternatives" />
-                  <FeatureRow icon="♾️" title="No Reveal Limits" desc="Unlimited insights, every game" />
-                </div>
-              </div>
+                <div className="grid gap-4 mb-6">
+                  <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all">
+                    <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Monthly</h3>
+                    <p className="text-3xl font-black text-yellow-500 mb-1">₹99</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-4">per month</p>
+                    <button
+                      onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY!)}
+                      disabled={subscribing}
+                      className="w-full px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] disabled:opacity-50 min-h-[44px]"
+                    >
+                      {subscribing ? 'Creating...' : 'Subscribe Monthly'}
+                    </button>
+                  </div>
 
-              <div className="text-center text-xs text-gray-600 dark:text-gray-500">
-                3 free insights per account. No payment required to play.
-              </div>
-            </>
-          )}
+                  <div className="bg-white dark:bg-white/[0.03] border-2 border-yellow-300 dark:border-yellow-500/20 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all relative">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-gray-900 text-xs px-2 py-0.5 rounded-full font-bold">
+                      Best Value
+                    </div>
+                    <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Annual</h3>
+                    <p className="text-3xl font-black text-yellow-500 mb-1">₹999</p>
+                    <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">per year</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold mb-4">₹83.25/mo (save 16%)</p>
+                    <button
+                      onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL!)}
+                      disabled={subscribing}
+                      className="w-full px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] disabled:opacity-50 min-h-[44px]"
+                    >
+                      {subscribing ? 'Creating...' : 'Subscribe Annual'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6">
+                  <p className="text-gray-700 dark:text-gray-400 text-sm text-center mb-4 font-medium">
+                    Unlock powerful move analysis for every game
+                  </p>
+                  <div className="grid gap-3">
+                    <FeatureRow icon="🔍" title="Unlimited Move Insights" desc="See why a move won or lost — every turn" />
+                    <FeatureRow icon="🤖" title="AI Position Analysis" desc="Stockfish-powered positional breakdown" />
+                    <FeatureRow icon="📊" title="Advanced Stats" desc="Per-player accuracy trends and comparisons" />
+                    <FeatureRow icon="🎯" title="Best Move Suggestions" desc="Engine-recommended alternatives" />
+                    <FeatureRow icon="♾️" title="No Reveal Limits" desc="Unlimited insights, every game" />
+                  </div>
+                </div>
+
+                <div className="text-center text-xs text-gray-700 dark:text-gray-400 font-medium">
+                  3 free insights per account. No payment required to play.
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </ErrorBoundary>
@@ -268,11 +270,11 @@ export default function PremiumPage() {
 
 function FeatureRow({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
-    <div className="flex items-start gap-3 text-left p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50">
+    <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-gray-50 dark:bg-white/[0.04] border-2 border-gray-200 dark:border-white/[0.04]">
       <span className="text-lg flex-shrink-0">{icon}</span>
       <div>
-        <p className="text-gray-900 dark:text-white text-sm font-medium">{title}</p>
-        <p className="text-gray-500 text-xs">{desc}</p>
+        <p className="text-gray-900 dark:text-white text-sm font-semibold">{title}</p>
+        <p className="text-gray-700 dark:text-gray-400 text-xs font-medium">{desc}</p>
       </div>
     </div>
   )
