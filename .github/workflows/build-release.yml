@@ -45,6 +45,10 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
           NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID=${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+          NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY=${{ secrets.NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY }}
+          NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL=${{ secrets.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL }}
+          NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
           EOF
 
       - name: Init Capacitor Android project
@@ -54,7 +58,7 @@ jobs:
           source .env.production
           set +a
           echo "[DEBUG] NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID:0:20}..."
-          echo "[DEBUG] NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_ANDROID_CLIENT_ID:0:20}..."
+          echo "[DEBUG] NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-unset}"
           npx cap add android
 
       - name: Add OAuth deep link intent filter
