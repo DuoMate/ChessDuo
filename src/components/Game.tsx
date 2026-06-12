@@ -1065,7 +1065,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             ...prev,
             selectedMove: sanMove,
             pendingOverlay: null,
-            myPendingOverlay: { from: moveInfo.from, to: moveInfo.to, piece: moveInfo.piece, color: 'white' }
+            myPendingOverlay: null
           }))
         }
 
@@ -1128,6 +1128,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         DEBUG && console.log(`[RESOLVE] checkAndResolve returned: ${resolved}`)
 
         if (!resolved) {
+          setGameState(prev => ({ ...prev, pendingOverlay: null, myPendingOverlay: null }))
           return
         }
 
@@ -1162,6 +1163,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
       } catch (e) {
         DEBUG && console.warn('[HUMAN] Invalid move:', uciMove, e)
+        setGameState(prev => ({ ...prev, pendingOverlay: null, myPendingOverlay: null }))
       }
     }
   }, [isOnline, onlineGame, game, playerId, teammateBot, checkAndResolve])
