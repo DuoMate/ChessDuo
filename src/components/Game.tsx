@@ -220,7 +220,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const isMobile = useIsMobile()
 
-  useNavigationGuard({
+  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
@@ -1237,8 +1237,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       // Channel may be dead during refresh; navigation still proceeds
     }
     setShowLeaveModal(false)
-    router.push('/')
-  }, [isOnline, router])
+    confirmNavLeave()
+  }, [isOnline, confirmNavLeave])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
