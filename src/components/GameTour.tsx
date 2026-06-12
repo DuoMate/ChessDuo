@@ -160,7 +160,7 @@ export function GameTour({ open, onComplete, onSkip }: GameTourProps) {
         <div className="flex-1 overflow-y-auto">
           <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-4 ${isMobile ? 'p-3' : 'p-4'}`}>
             {/* Board */}
-            <div className={`${isMobile ? 'w-full max-w-[min(85vw,400px)] mx-auto' : 'w-[400px] flex-shrink-0'} aspect-square`}>
+            <div className={`${isMobile && step === 2 && showEval ? 'w-full max-w-[min(45vw,200px)] mx-auto' : isMobile ? 'w-full max-w-[min(85vw,400px)] mx-auto' : 'w-[400px] flex-shrink-0'} aspect-square`}>
               <ChessBoard
                 key={step}
                 fen={current.fen}
