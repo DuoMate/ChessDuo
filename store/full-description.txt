@@ -36,7 +36,7 @@ It's chess meets teamwork. Trust your partner. Or don't.
 📱 CROSS-PLATFORM — Play on web or Android. One account, all your stats sync.
 
 ═══ PRIVACY ═══
-No ads. No third-party tracking. Read our full policy at chessduo-fe.onrender.com/privacy.
+No ads. No third-party tracking. Read our full policy at chessduo.chessdoubles27.workers.dev/privacy.
 
 ═══ READY ═══
 Grab a friend, pick a mode, and discover what happens when two minds control one army.

@@ -6,21 +6,11 @@ A real-time 2v2 chess game where teammates make simultaneous moves and compete a
 
 | Service | URL | Description | Config |
 |---------|-----|-------------|--------|
-| **Frontend** | https://chessduo-fe.onrender.com | Next.js FE | `render.yaml` |
-- **Config**: Uses `render.yaml` in root
-- **Root**: `/` (root directory)
-- **How it works**: Standard Next.js build + start
-
-```yaml
-# render.yaml for FE
-rootDirectory: /
-buildCommand: npm run build
-startCommand: npm start
-```
+| **Frontend** | https://chessduo.chessdoubles27.workers.dev | Next.js FE (Cloudflare Workers) | `wrangler.jsonc` |
 
 ### Environment Variables
 
-#### FE (Frontend) - Add in Render Dashboard
+#### FE (Frontend) - Add in Cloudflare Dashboard
 
 | Variable | Value |
 |----------|-------|
@@ -152,8 +142,8 @@ ChessDuo/
 │   │   └── engine.ts # Stockfish wrapper
 │   └── package.json
 ├── docs/                   # Design docs
-├── render.yaml             # FE Render config
-├── Dockerfile             # BE Render config
+├── wrangler.jsonc          # Cloudflare Workers config
+├── server/Dockerfile       # Stockfish server Dockerfile
 └── supabase/
     └── tables.sql       # DB setup
 ```
