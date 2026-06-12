@@ -223,6 +223,10 @@ export default function SetupPage() {
           setJoinCode('')
         }
         setJoinLoading(false)
+        
+        const url = new URL(window.location.href)
+        url.searchParams.delete('code')
+        window.history.replaceState(null, '', url.toString())
       }
       doAutoJoin()
     }
