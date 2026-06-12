@@ -113,8 +113,7 @@ export async function getMatchHistory(limit = 20): Promise<CompletedGame[]> {
       return data
     }
 
-    // Server returned empty, fall back to local
-    return getLocalHistory().slice(0, limit)
+    return []
   } catch (e) {
     console.warn('[MatchHistory] Server error, using local:', e)
     return getLocalHistory().slice(0, limit)
