@@ -25,34 +25,29 @@
 
 ## Deployment Architecture
 
-This project uses **two separate Render services**:
+This project uses **Cloudflare Workers for the frontend** and **Render for the backend (Stockfish)**:
 
 | Service | URL | Build Config | Directory |
 |---------|-----|------------|-----------|
-| **Frontend** | https://chessduo-fe.onrender.com | `render.yaml` | `/` (root) |
+| **Frontend** | https://chessduo.chessdoubles27.workers.dev | `wrangler.jsonc` | `/` (root) |
 | **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
 
-### Frontend Deployment (render.yaml)
+### Frontend Deployment (Cloudflare Workers)
 
-```yaml
-rootDirectory: /
-buildCommand: npm run build
-startCommand: npm start
-healthCheckPath: /healthz
-```
+Deploys via `opennextjs-cloudflare` — see `deploy-cf-pages.yml` workflow.
 
-### Backend Deployment (Dockerfile)
+### Backend Deployment (Render, Dockerfile)
 
-Uses Docker to build Stockfish from `/server` directory.
+Uses Docker to build Stockfish from `/server` directory via Render Blueprint.
 
 ### Environment Variables
 
-**Frontend:**
+**Frontend (Cloudflare secrets):**
 - `NEXT_PUBLIC_SUPABASE_URL` → Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Supabase anon key
 - `NEXT_PUBLIC_STOCKFISH_SERVER_URL` → `https://chessduo-bllo.onrender.com`
 
-**Backend:**
+**Backend (Render):**
 - `PORT` → `3001`
 
 ---
@@ -173,7 +168,7 @@ Uses Docker to build Stockfish from `/server` directory.
 **Deliverable**: Web MVP complete; native iOS and Android apps pending (6.4-6.7)
 
 **Capacitor Setup (6.1 — Complete):**
-- `capacitor.config.ts` — WebView wrapper loading from `https://chessduo-fe.onrender.com`
+- `capacitor.config.ts` — WebView wrapper loading from the live Cloudflare Workers URL
 - `scripts/setup-capacitor.sh` — self-bootstrapping runbook (Java, Android SDK, Gradle, keystore)
 - `scripts/build-apk.sh` — one-command APK build with signing
 - `npm run cap:setup` → installs everything on any machine

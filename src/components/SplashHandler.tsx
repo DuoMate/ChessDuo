@@ -27,11 +27,7 @@ export function SplashHandler() {
           url: window.location.href,
           time: new Date().toISOString(),
         }
-        fetch('https://chessduo-fe.onrender.com/api/log-crash', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(errorData),
-        }).catch(() => {})
+        // Crash endpoint not available on current infra; logged client-side only
       } catch {
         // Ignore crash-report fetch failures
       }
