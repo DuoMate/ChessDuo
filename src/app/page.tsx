@@ -113,6 +113,7 @@ export default function SetupPage() {
       if (session?.user) {
         setPlayerId(session.user.id)
         setUsername('')
+        setJoinError(null)
         fetchUsername(session.user.id).then(name => {
           if (!mountedRef.current) return
           if (name) {
