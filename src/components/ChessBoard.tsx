@@ -305,75 +305,69 @@ export function ChessBoard({
         ref={overlayContainerRef}
         className="absolute inset-0 pointer-events-none"
       >
-        <AnimatePresence>
-          {pendingOverlay && !showRetraction && (
-            <motion.div
-              key={`pending-${pendingOverlay.from}-${pendingOverlay.to}`}
-              initial={{ 
-                x: getSquarePosition(pendingOverlay.from).x,
-                y: getSquarePosition(pendingOverlay.from).y,
-                opacity: 0
-              }}
-              animate={{ 
-                x: getSquarePosition(pendingOverlay.to).x,
-                y: getSquarePosition(pendingOverlay.to).y,
-                opacity: 0.4
-              }}
-              exit={{ opacity: 0, transition: { duration: 0 } }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="absolute flex items-center justify-center font-bold select-none"
-              style={{ 
-                width: '12.5%', 
-                height: '12.5%',
-                color: pendingOverlay.color === 'white' ? '#fff' : '#000',
-                textShadow: pendingOverlay.color === 'white' 
-                  ? '0 0 2px #000' 
-                  : '0 0 2px #fff',
-                filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
-                fontSize: overlayContainerRef.current
-                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
-                  : '28px',
-              }}
-            >
-              {getPieceChar(pendingOverlay.piece, pendingOverlay.color)}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {pendingOverlay && !showRetraction && (
+          <motion.div
+            key={`pending-${pendingOverlay.from}-${pendingOverlay.to}`}
+            initial={{ 
+              x: getSquarePosition(pendingOverlay.from).x,
+              y: getSquarePosition(pendingOverlay.from).y,
+              opacity: 0
+            }}
+            animate={{ 
+              x: getSquarePosition(pendingOverlay.to).x,
+              y: getSquarePosition(pendingOverlay.to).y,
+              opacity: 0.4
+            }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="absolute flex items-center justify-center font-bold select-none"
+            style={{ 
+              width: '12.5%', 
+              height: '12.5%',
+              color: pendingOverlay.color === 'white' ? '#fff' : '#000',
+              textShadow: pendingOverlay.color === 'white' 
+                ? '0 0 2px #000' 
+                : '0 0 2px #fff',
+              filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
+              fontSize: overlayContainerRef.current
+                ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
+                : '28px',
+            }}
+          >
+            {getPieceChar(pendingOverlay.piece, pendingOverlay.color)}
+          </motion.div>
+        )}
 
-        <AnimatePresence>
-          {myPendingOverlay && !showRetraction && (
-            <motion.div
-              key={`my-pending-${myPendingOverlay.from}-${myPendingOverlay.to}`}
-              initial={{ 
-                x: getSquarePosition(myPendingOverlay.from).x,
-                y: getSquarePosition(myPendingOverlay.from).y,
-                opacity: 0
-              }}
-              animate={{ 
-                x: getSquarePosition(myPendingOverlay.to).x,
-                y: getSquarePosition(myPendingOverlay.to).y,
-                opacity: 1
-              }}
-              exit={{ opacity: 0, transition: { duration: 0 } }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="absolute flex items-center justify-center font-bold select-none"
-              style={{ 
-                width: '12.5%', 
-                height: '12.5%',
-                color: myPendingOverlay.color === 'white' ? '#fff' : '#000',
-                textShadow: myPendingOverlay.color === 'white' 
-                  ? '0 0 2px #000' 
-                  : '0 0 2px #fff',
-                filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
-                fontSize: overlayContainerRef.current
-                  ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
-                  : '28px',
-              }}
-            >
-              {getPieceChar(myPendingOverlay.piece, myPendingOverlay.color)}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {myPendingOverlay && !showRetraction && (
+          <motion.div
+            key={`my-pending-${myPendingOverlay.from}-${myPendingOverlay.to}`}
+            initial={{ 
+              x: getSquarePosition(myPendingOverlay.from).x,
+              y: getSquarePosition(myPendingOverlay.from).y,
+              opacity: 0
+            }}
+            animate={{ 
+              x: getSquarePosition(myPendingOverlay.to).x,
+              y: getSquarePosition(myPendingOverlay.to).y,
+              opacity: 1
+            }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="absolute flex items-center justify-center font-bold select-none"
+            style={{ 
+              width: '12.5%', 
+              height: '12.5%',
+              color: myPendingOverlay.color === 'white' ? '#fff' : '#000',
+              textShadow: myPendingOverlay.color === 'white' 
+                ? '0 0 2px #000' 
+                : '0 0 2px #fff',
+              filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
+              fontSize: overlayContainerRef.current
+                ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
+                : '28px',
+            }}
+          >
+            {getPieceChar(myPendingOverlay.piece, myPendingOverlay.color)}
+          </motion.div>
+        )}
 
         {pendingOverlay && (
           <AnimatePresence>
