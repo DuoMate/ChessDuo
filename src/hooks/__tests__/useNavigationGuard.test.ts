@@ -63,9 +63,9 @@ describe('useNavigationGuard', () => {
     expect(removeSpy).toHaveBeenCalledWith('popstate', expect.any(Function))
   })
 
-  it('registers pushState on mount', () => {
+  it('does not call pushState on mount', () => {
     const pushState = jest.spyOn(window.history, 'pushState')
     renderHook(() => useNavigationGuard({ enabled: true, onAttemptLeave: jest.fn() }))
-    expect(pushState).toHaveBeenCalled()
+    expect(pushState).not.toHaveBeenCalled()
   })
 })
