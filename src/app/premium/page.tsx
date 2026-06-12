@@ -7,6 +7,13 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js'
 
+function getApiBase(): string {
+  if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).Capacitor) {
+    return process.env.NEXT_PUBLIC_SITE_URL || ''
+  }
+  return ''
+}
+
 function loadRazorpayScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
@@ -81,7 +88,7 @@ export default function PremiumPage() {
     try {
       await loadRazorpayScript()
 
-      const res = await fetch('/api/razorpay/create-subscription', {
+      const res = await fetch(`${getApiBase()}/api/razorpay/create-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId }),
@@ -129,7 +136,7 @@ export default function PremiumPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/razorpay/cancel-subscription', {
+      const res = await fetch(`${getApiBase()}/api/razorpay/cancel-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
