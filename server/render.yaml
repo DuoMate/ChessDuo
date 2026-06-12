@@ -6,8 +6,8 @@ services:
     name: chessduo-stockfish
     region: oregon
     plan: free
-    rootDir: ../
-    dockerfilePath: ./server/Dockerfile
+    rootDir: ./
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: PORT
