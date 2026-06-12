@@ -14,6 +14,17 @@ function getApiBase(): string {
   return ''
 }
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+  } catch { /* session unavailable — API route falls back to cookie auth */ }
+  return headers
+}
+
 function loadRazorpayScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') {
@@ -88,9 +99,10 @@ export default function PremiumPage() {
     try {
       await loadRazorpayScript()
 
+      const headers = await getAuthHeaders()
       const res = await fetch(`${getApiBase()}/api/razorpay/create-subscription`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ planId }),
       })
 
@@ -136,9 +148,10 @@ export default function PremiumPage() {
     setError(null)
 
     try {
+      const headers = await getAuthHeaders()
       const res = await fetch(`${getApiBase()}/api/razorpay/cancel-subscription`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
       })
       const data = await res.json()
       if (data.error) {
