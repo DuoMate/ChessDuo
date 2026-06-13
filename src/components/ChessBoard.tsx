@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess, Square } from 'chess.js'
@@ -68,13 +68,10 @@ export function ChessBoard({
   const labelTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [containerReady, setContainerReady] = useState(false)
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      if (overlayContainerRef.current) {
-        setContainerReady(true)
-      }
-    })
-    return () => cancelAnimationFrame(frame)
+  useLayoutEffect(() => {
+    if (overlayContainerRef.current) {
+      setContainerReady(true)
+    }
   }, [])
 
   const clearLabelTimer = useCallback(() => {

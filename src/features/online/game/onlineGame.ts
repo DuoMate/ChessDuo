@@ -315,10 +315,11 @@ export class OnlineGame {
         .on('presence', { event: 'sync' }, () => {
           const state = this._channel?.presenceState() || {}
           const playersOnline = Object.keys(state)
-          DEBUG && console.log('[ONLINE] Presence sync:', playersOnline)
+          console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status)
           
           if (playersOnline.length >= 2) {
             if (this._status !== GameStatus.PLAYING) {
+              console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
               this.startGameWhenReady()
             } else {
               this.syncGameState()
@@ -326,9 +327,12 @@ export class OnlineGame {
           }
         })
         .on('presence', { event: 'join' }, ({ newPresences }) => {
-          DEBUG && console.log('[ONLINE] Player joined:', newPresences)
+          console.log('[ONLINE] Presence join — new:', newPresences?.length)
           const state = this._channel?.presenceState() || {}
-          if (Object.keys(state).length >= 2 && this._status !== GameStatus.PLAYING) {
+          const playersOnline = Object.keys(state)
+          console.log('[ONLINE] Presence join — players online:', playersOnline.length, 'status:', this._status)
+          if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
+            console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
             this.startGameWhenReady()
           }
         })
@@ -399,6 +403,8 @@ export class OnlineGame {
         return
       }
 
+      console.log('[ONLINE] Fallback poll running — elapsed:', elapsed, 'ms, status:', this._status)
+
       const existing = await loadGameState(this._room!.id)
       if (existing) {
         DEBUG && console.log('[ONLINE] Polling fallback: game already exists, syncing...')
@@ -413,12 +419,15 @@ export class OnlineGame {
         .eq('room_id', this._room!.id)
       if (!error) {
         const humanPlayers = (data || []).filter(p => !p.player_id.startsWith('bot_'))
+        console.log(`[ONLINE] Poll found ${humanPlayers.length} human(s) in room_players`, humanPlayers.map(p => p.player_id))
         if (humanPlayers.length >= 2) {
-          DEBUG && console.log('[ONLINE] Polling fallback: game start triggered from DB')
+          console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
           await this.startGameWhenReady()
           this._pollingInterval = null
           return
         }
+      } else {
+        console.warn('[ONLINE] Poll room_players query failed:', error.message)
       }
 
       elapsed += delay
@@ -438,14 +447,14 @@ export class OnlineGame {
   }
 
   async startGameWhenReady(): Promise<void> {
-    // Prevent double-start and race conditions
+    console.log('[ONLINE] startGameWhenReady called — status:', this._status, 'starting:', this.starting)
     if (this._status === GameStatus.PLAYING) {
-      DEBUG && console.log('[ONLINE] Game already started, skipping...')
+      console.log('[ONLINE] Game already started, skipping...')
       return
     }
     
     if (this.starting) {
-      DEBUG && console.log('[ONLINE] Game start already in progress, skipping...')
+      console.log('[ONLINE] Game start already in progress, skipping...')
       return
     }
     
@@ -526,8 +535,8 @@ export class OnlineGame {
       this._status = GameStatus.PLAYING
       this.startPendingTurn()
       this.notifyStateChange()
-      DEBUG && console.log('[ONLINE] Game started successfully')
-      DEBUG && console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
+      console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
+      console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
       
       // Persist initial game state with timer
       if (this._room) {
@@ -537,7 +546,7 @@ export class OnlineGame {
       
       this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
     } catch (e) {
-      DEBUG && console.error('[ONLINE] Failed to start game:', e)
+      console.error('[ONLINE] ❌ Failed to start game:', e)
     } finally {
       this.starting = false
     }
