@@ -714,6 +714,10 @@ export class LocalGame {
     return null
   }
 
+  getPlayers(team: Team): Player[] {
+    return this.gameState.getPlayers(team)
+  }
+
   isCoordinator(): boolean {
     return false
   }

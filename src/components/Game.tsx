@@ -232,6 +232,79 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
+  const playerId = playerIdFromProps || null
+  const [teamLabels, setTeamLabels] = useState<{ white: string; black: string; blackIsBot: boolean }>({ white: 'White Team', black: 'Black Team', blackIsBot: true })
+  const teamNamesFetchedRef = useRef(false)
+
+  const fetchTeamNames = useCallback(async () => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    if (!g || !playerId) return
+
+    const myTeam = g.getTeam() || myTeamRef.current
+
+    try {
+      const isHumanId = (id: string) => !id.startsWith('bot_') && !/^player\d+$/.test(id) && id.length > 8
+
+      const fetchUsernames = async (ids: string[]): Promise<Record<string, string>> => {
+        const humanIds = ids.filter(id => isHumanId(id) && id !== playerId)
+        if (humanIds.length === 0) return {}
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .in('id', humanIds)
+        const map: Record<string, string> = {}
+        if (data) data.forEach((p: { id: string; username: string }) => { map[p.id] = p.username || 'Player' })
+        return map
+      }
+
+      const whitePlayers = g.getPlayers(Team.WHITE)
+      const blackPlayers = g.getPlayers(Team.BLACK)
+      const blackHasBots = blackPlayers.some(id => !isHumanId(id))
+
+      const whiteUsernames = await fetchUsernames(whitePlayers)
+      const blackUsernames = await fetchUsernames(blackPlayers)
+
+      let whiteLabel = 'White Team'
+      let blackLabel = 'Black Team'
+      let blackIsBot = true
+
+      if (myTeam === 'WHITE') {
+        const teammateIds = whitePlayers.filter(id => id !== playerId && isHumanId(id))
+        const teammateNames = teammateIds.map(id => whiteUsernames[id] || 'Player')
+        whiteLabel = 'White Team (You)'
+        if (teammateNames.length > 0) whiteLabel += `, ${teammateNames.join(', ')}`
+
+        if (!blackHasBots) {
+          const oppNames = blackPlayers.filter(id => isHumanId(id)).map(id => blackUsernames[id] || 'Player')
+          blackLabel = oppNames.length > 0 ? `Black Team · ${oppNames.join(', ')}` : 'Black Team'
+          blackIsBot = false
+        } else {
+          blackLabel = 'Black Team (Bot)'
+        }
+      } else {
+        const oppIds = whitePlayers.filter(id => isHumanId(id))
+        const oppNames = oppIds.map(id => whiteUsernames[id] || 'Player')
+        whiteLabel = oppNames.length > 0 ? `White Team · ${oppNames.join(', ')}` : 'White Team'
+
+        const teammateIds = blackPlayers.filter(id => id !== playerId && isHumanId(id))
+        const teammateNames = teammateIds.map(id => blackUsernames[id] || 'Player')
+        blackLabel = 'Black Team (You)'
+        if (teammateNames.length > 0) blackLabel += `, ${teammateNames.join(', ')}`
+        blackIsBot = blackHasBots
+      }
+
+      setTeamLabels({ white: whiteLabel, black: blackLabel, blackIsBot })
+    } catch {
+      // fallback to default labels — supabase query may fail during development
+    }
+  }, [isOnline, playerId])
+
+  useEffect(() => {
+    if (gameState.status === GameStatus.PLAYING && !teamNamesFetchedRef.current) {
+      teamNamesFetchedRef.current = true
+      fetchTeamNames()
+    }
+  }, [gameState.status, fetchTeamNames])
 
   // Update sound engine when setting changes
   useEffect(() => {
@@ -346,11 +419,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const timer = setTimeout(() => router.push('/'), 3000)
     return () => clearTimeout(timer)
   }, [gameState.status, isOnline, router, toast])
-
-  // Player ID from URL props (passed from Room component)
-  // No need to get session - use the playerId directly from URL
-  const playerId = playerIdFromProps || null
-  DEBUG && console.log('[Game] Using playerId from props:', playerId)
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
@@ -1357,17 +1425,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <div className="flex flex-col items-center gap-1 mb-3">
           <div className="w-full flex justify-center">
             <TeamIndicator
-              whiteLabel={isFourPlayer
-                ? (myTeamRef.current === 'WHITE' ? 'White Team (You)' : 'White Team')
-                : 'White Team (You)'
-              }
-              blackLabel={isFourPlayer
-                ? (myTeamRef.current === 'BLACK' ? 'Black Team (You)' : 'Black Team')
-                : 'Black Team (Bot)'
-              }
+              whiteLabel={teamLabels.white}
+              blackLabel={teamLabels.black}
               activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
               isGameOver={gameState.status === GameStatus.GAME_OVER}
               isBotThinking={gameState.isBotThinking ?? false}
+              blackIsBot={teamLabels.blackIsBot}
             />
           </div>
           <div className="flex items-center gap-3 mt-1">

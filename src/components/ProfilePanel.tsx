@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
+import { supabase } from '@/lib/supabase'
 
 interface ProfilePanelProps {
   playerId: string
@@ -45,12 +47,25 @@ function RecentMatches({ games }: { games: CompletedGame[] }) {
 }
 
 export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePanelProps) {
+  const router = useRouter()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [recentGames, setRecentGames] = useState<CompletedGame[]>([])
   const [profileCopied, setProfileCopied] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
     getMatchHistory(5).then(setRecentGames).catch(() => setRecentGames([]))
+  }, [playerId])
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then((result) => {
+        if (result.data?.is_premium) setIsPremium(true)
+      }).catch(() => {})
   }, [playerId])
 
   useEffect(() => {
@@ -76,6 +91,15 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
       >
         📋 {profileCopied ? 'Link copied!' : 'Share Profile'}
       </button>
+
+      {!isPremium && (
+        <button
+          onClick={() => router.push('/premium')}
+          className="w-full min-h-[44px] p-3 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-semibold hover:from-yellow-500/30 hover:to-amber-500/30 transition-colors flex items-center justify-center gap-2"
+        >
+          ⭐ Upgrade to Premium
+        </button>
+      )}
 
       {recentGames.length > 0 && (
         <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">

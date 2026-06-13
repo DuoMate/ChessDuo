@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Crown, Bot, Swords } from 'lucide-react'
+import { Crown, Bot, Swords, User } from 'lucide-react'
 
 interface TeamIndicatorProps {
   whiteLabel: string
@@ -9,6 +9,8 @@ interface TeamIndicatorProps {
   activeTeam: 'WHITE' | 'BLACK'
   isGameOver: boolean
   isBotThinking: boolean
+  whiteIsBot?: boolean
+  blackIsBot?: boolean
 }
 
 export function TeamIndicator({
@@ -17,6 +19,8 @@ export function TeamIndicator({
   activeTeam,
   isGameOver,
   isBotThinking,
+  whiteIsBot = false,
+  blackIsBot = false,
 }: TeamIndicatorProps) {
   const whiteActive = activeTeam === 'WHITE' && !isGameOver
   const blackActive = activeTeam === 'BLACK' && !isGameOver
@@ -60,7 +64,11 @@ export function TeamIndicator({
             : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
         }`}
       >
-        <Bot size={20} className={blackActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500'} />
+        {blackIsBot ? (
+          <Bot size={20} className={blackActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500'} />
+        ) : (
+          <User size={20} className={blackActive ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500'} />
+        )}
         <span className="text-gray-700 dark:text-gray-300 font-semibold text-xs sm:text-sm truncate">{blackLabel}</span>
       </motion.div>
 

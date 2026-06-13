@@ -66,6 +66,16 @@ export function ChessBoard({
   const [retractionData, setRetractionData] = useState<{ from: string; to: string; piece: string; color: string } | null>(null)
   const [teammateLabelVisible, setTeammateLabelVisible] = useState(false)
   const labelTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [containerReady, setContainerReady] = useState(false)
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (overlayContainerRef.current) {
+        setContainerReady(true)
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
 
   const clearLabelTimer = useCallback(() => {
     if (labelTimerRef.current) {
@@ -305,6 +315,8 @@ export function ChessBoard({
         ref={overlayContainerRef}
         className="absolute inset-0 pointer-events-none"
       >
+        {containerReady && (
+          <>
         {pendingOverlay && !showRetraction && (
           <motion.div
             key={`pending-${pendingOverlay.from}-${pendingOverlay.to}`}
@@ -482,6 +494,8 @@ export function ChessBoard({
             </>
           )}
         </AnimatePresence>
+        </>
+        )}
       </div>
 
       {highlightSquares?.winnerFrom && highlightSquares?.winnerTo && !showRetraction && (
