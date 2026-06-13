@@ -165,7 +165,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           fenAfter: entry?.fenAfter ?? '',
         }
       }),
-    })
+    }, playerId)
     toast.gameOver(gameResult || 'Game Over')
   }, [status, winner, gameResult, moveHistory, moveAccuracy, opponentAccuracy, roomId])
 

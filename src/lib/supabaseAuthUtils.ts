@@ -139,7 +139,7 @@ async function authenticateWithGoogleCapacitorBrowser(): Promise<{
         redirectTo: APP_SCHEME,
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
+          prompt: 'select_account consent',
         },
       },
     })
@@ -168,7 +168,7 @@ async function authenticateWithGoogleWeb(): Promise<{
         redirectTo: window.location.origin,
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
+          prompt: 'select_account consent',
         },
       },
     })

@@ -25,8 +25,8 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
   useEffect(() => {
     if (!playerId) return
     Promise.all([
-      getMatchHistory(50),
-      getPlayerStats(),
+      getMatchHistory(50, playerId),
+      getPlayerStats(playerId),
     ]).then(([g, s]) => {
       setGames(g)
       setPlayerStats(s)

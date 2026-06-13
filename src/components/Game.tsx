@@ -221,7 +221,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const isMobile = useIsMobile()
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
-    enabled: gameState.status === GameStatus.PLAYING,
+    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
   const prevTurnRef = useRef<Team | null>(null)
@@ -399,12 +399,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       },
       isOnline: !!isOnline,
       moveComparisons: moveHistoryRef.current,
-    })
+    }, playerId || undefined)
 
     toast.gameOver(result)
 
     gameSavedRef.current = true
-  }, [gameState.status, isOnline, game, toast])
+  }, [gameState.status, isOnline, game, toast, playerId])
 
   // Auto-redirect to home when match is abandoned (teammate left)
   const abandonHandledRef = useRef(false)

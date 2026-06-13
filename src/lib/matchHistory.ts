@@ -35,19 +35,34 @@ export interface MatchSummaryData {
   challengeId?: string
 }
 
-const HISTORY_KEY = 'chessduo_history'
+const HISTORY_KEY_PREFIX = 'chessduo_history_'
 
-function getLocalHistory(): CompletedGame[] {
+function getHistoryKey(userId?: string): string {
+  return userId ? `${HISTORY_KEY_PREFIX}${userId}` : 'chessduo_history'
+}
+
+function getLocalHistory(userId?: string): CompletedGame[] {
   try {
-    const raw = localStorage.getItem(HISTORY_KEY)
+    const key = getHistoryKey(userId)
+    const raw = localStorage.getItem(key)
+    // Also check legacy key (pre-user-scoping) and migrate if found
+    if (!raw && userId) {
+      const legacy = localStorage.getItem('chessduo_history')
+      if (legacy) {
+        localStorage.setItem(key, legacy)
+        localStorage.removeItem('chessduo_history')
+        return JSON.parse(legacy)
+      }
+    }
     if (raw) return JSON.parse(raw)
   } catch (e) { console.error('[MatchHistory] Failed to read from localStorage:', e) }
   return []
 }
 
-function saveLocalHistory(games: CompletedGame[]) {
+function saveLocalHistory(games: CompletedGame[], userId?: string) {
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(games.slice(0, 50)))
+    const key = getHistoryKey(userId)
+    localStorage.setItem(key, JSON.stringify(games.slice(0, 50)))
   } catch (e) { console.error('[MatchHistory] Failed to write to localStorage:', e) }
 }
 
@@ -72,22 +87,22 @@ function makeLocalGameEntry(data: MatchSummaryData): CompletedGame {
   }
 }
 
-export async function saveCompletedGame(data: MatchSummaryData): Promise<void> {
+export async function saveCompletedGame(data: MatchSummaryData, userId?: string): Promise<void> {
   const localEntry = makeLocalGameEntry(data)
-  const existing = getLocalHistory()
+  const existing = getLocalHistory(userId)
   existing.unshift(localEntry)
-  saveLocalHistory(existing)
+  saveLocalHistory(existing, userId)
 }
 
-export async function getMatchHistory(limit = 20): Promise<CompletedGame[]> {
-  return getLocalHistory().slice(0, limit)
+export async function getMatchHistory(limit = 20, userId?: string): Promise<CompletedGame[]> {
+  return getLocalHistory(userId).slice(0, limit)
 }
 
-export async function getCompletedGame(gameId: string): Promise<CompletedGame | null> {
-  return getLocalHistory().find(g => g.id === gameId) || null
+export async function getCompletedGame(gameId: string, userId?: string): Promise<CompletedGame | null> {
+  return getLocalHistory(userId).find(g => g.id === gameId) || null
 }
 
-export async function getPlayerStats(): Promise<{
+export async function getPlayerStats(userId?: string): Promise<{
   totalGames: number
   wins: number
   losses: number
@@ -96,7 +111,7 @@ export async function getPlayerStats(): Promise<{
   avgAccuracy: number
   totalConflicts: number
 } | null> {
-  const games = await getMatchHistory(1000)
+  const games = await getMatchHistory(1000, userId)
   if (games.length === 0) return null
 
   let wins = 0
