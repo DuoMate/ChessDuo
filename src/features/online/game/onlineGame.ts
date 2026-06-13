@@ -296,12 +296,12 @@ export class OnlineGame {
         status: 'ready'
       }, { onConflict: 'room_id,player_id' })
       if (error) {
-        DEBUG && console.warn('[ONLINE] Failed to register in room_players:', error.message)
+        console.warn('[ONLINE] Failed to register in room_players:', error.message, error.code)
       } else {
-        DEBUG && console.log('[ONLINE] Registered in room_players')
+        console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
       }
     } catch (e) {
-      DEBUG && console.warn('[ONLINE] Could not register in room_players:', e)
+      console.warn('[ONLINE] Could not register in room_players:', e)
     }
 
     this._channel = supabase.channel(`room:${room.id}`, {
@@ -418,9 +418,25 @@ export class OnlineGame {
       if (!error && data) {
         const players = data as Array<{ player_id: string; team: string }>
         humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
-        console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, players.map(p => p.player_id))
+        console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
       } else {
-        console.warn('[ONLINE] Poll RPC failed:', error?.message)
+        console.warn('[ONLINE] Poll RPC failed:', error?.message || error)
+      }
+
+      // If RPC only found 1, fall back to direct query (may also hit RLS but worth trying)
+      if (humanCount < 2) {
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('room_players')
+          .select('player_id, team')
+          .eq('room_id', this._room!.id)
+        if (!fallbackErr && fallbackData) {
+          const fbPlayers = fallbackData as Array<{ player_id: string; team: string }>
+          const fbCount = fbPlayers.filter(p => !p.player_id.startsWith('bot_')).length
+          console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
+          if (fbCount > humanCount) humanCount = fbCount
+        } else {
+          console.warn('[ONLINE] Poll direct query fallback failed:', fallbackErr?.message)
+        }
       }
 
       if (humanCount >= 2) {
@@ -495,6 +511,7 @@ export class OnlineGame {
         .select('*')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
+      console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
 
       // Add human players to their respective teams
       const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
