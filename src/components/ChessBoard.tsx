@@ -66,11 +66,11 @@ export function ChessBoard({
   const [retractionData, setRetractionData] = useState<{ from: string; to: string; piece: string; color: string } | null>(null)
   const [teammateLabelVisible, setTeammateLabelVisible] = useState(false)
   const labelTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const [containerReady, setContainerReady] = useState(false)
+  const [overlayWidth, setOverlayWidth] = useState(0)
 
   useLayoutEffect(() => {
     if (overlayContainerRef.current) {
-      setContainerReady(true)
+      setOverlayWidth(overlayContainerRef.current.getBoundingClientRect().width)
     }
   }, [])
 
@@ -248,11 +248,9 @@ export function ChessBoard({
   }, [enabled, orientation])
 
   const getSquarePosition = (square: string): { x: number; y: number } => {
-    if (!overlayContainerRef.current) return { x: 0, y: 0 }
+    if (overlayWidth <= 0) return { x: 0, y: 0 }
     
-    const container = overlayContainerRef.current
-    const rect = container.getBoundingClientRect()
-    const squareSize = rect.width / 8
+    const squareSize = overlayWidth / 8
     
     const file = square.charCodeAt(0) - 'a'.charCodeAt(0)
     const rank = parseInt(square[1]) - 1
@@ -312,7 +310,7 @@ export function ChessBoard({
         ref={overlayContainerRef}
         className="absolute inset-0 pointer-events-none"
       >
-        {containerReady && (
+        {overlayWidth > 0 && (
           <>
         {pendingOverlay && !showRetraction && (
           <motion.div
@@ -337,8 +335,8 @@ export function ChessBoard({
                 ? '0 0 2px #000' 
                 : '0 0 2px #fff',
               filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
-              fontSize: overlayContainerRef.current
-                ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
+              fontSize: overlayWidth > 0
+                ? `${(overlayWidth / 8) * 0.65}px`
                 : '28px',
             }}
           >
@@ -369,8 +367,8 @@ export function ChessBoard({
                 ? '0 0 2px #000' 
                 : '0 0 2px #fff',
               filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
-              fontSize: overlayContainerRef.current
-                ? `${(overlayContainerRef.current.getBoundingClientRect().width / 8) * 0.65}px`
+              fontSize: overlayWidth > 0
+                ? `${(overlayWidth / 8) * 0.65}px`
                 : '28px',
             }}
           >
