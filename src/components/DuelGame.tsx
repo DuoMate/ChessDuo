@@ -18,6 +18,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
 import { saveCompletedGame } from '@/lib/matchHistory'
+import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 
@@ -51,6 +52,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [opponentAccuracy, setOpponentAccuracy] = useState<number | null>(null)
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null)
   const [waiting, setWaiting] = useState(true)
+  const [opponentUsername, setOpponentUsername] = useState('Opponent')
   const gameRef = useRef<DuelGameEngine | null>(null)
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const moveEntriesRef = useRef<Array<{ accuracy: number; fenAfter: string }>>([])
@@ -112,6 +114,22 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
     return () => clearAccuracyTimer()
   }, [showAccuracy, clearAccuracyTimer])
+
+  useEffect(() => {
+    if (status !== 'playing') return
+    const game = gameRef.current
+    if (!game) return
+    const opp = team === 'WHITE' ? game.blackPlayer : game.whitePlayer
+    if (!opp?.id) return
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', opp.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.username) setOpponentUsername(data.username)
+      }).catch(() => {})
+  }, [status, team])
 
   // Save completed duel games to history
   const gameSavedRef = useRef(false)
@@ -239,7 +257,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
         <div className="flex items-center justify-between mb-2">
             <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-              {team === 'WHITE' ? 'You (White)' : 'Opponent (White)'}
+              {team === 'WHITE' ? 'You (White)' : `${opponentUsername} (White)`}
             </span>
             <div className="flex items-center gap-3">
               <span className={`font-mono font-bold ${currentTurn === 'w' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -251,7 +269,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               </span>
             </div>
             <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-              {team === 'BLACK' ? 'You (Black)' : 'Opponent (Black)'}
+              {team === 'BLACK' ? 'You (Black)' : `${opponentUsername} (Black)`}
           </span>
         </div>
 

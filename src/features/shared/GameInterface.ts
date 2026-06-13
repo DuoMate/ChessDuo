@@ -50,6 +50,8 @@ export interface GameInterface {
   isCoordinator(): boolean
   /** Get the ID of the turn coordinator */
   getCoordinatorId(): string
+  /** Get all player IDs on a team */
+  getPlayers(team: Team): Player[]
   /** Saved move history from DB (populated after reconnection sync) */
   readonly savedMoveHistory: Array<{ team: string; move: string }>
 }

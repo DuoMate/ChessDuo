@@ -790,9 +790,6 @@ export default function SetupPage() {
       <ErrorBoundary>
         <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col relative overflow-hidden">
           {topBar}
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 text-[340px] leading-none opacity-[0.03] dark:opacity-[0.025] text-yellow-600 dark:text-yellow-400 select-none pointer-events-none">
-          {"\u265E"}
-        </div>
         <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.015] pointer-events-none"
           style={{
             backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px),
