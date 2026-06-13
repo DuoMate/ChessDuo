@@ -4,6 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { ErrorDetailModal } from '@/components/ErrorDetailModal'
+
+interface ErrorDetail {
+  title: string
+  message: string
+  details?: string
+}
 
 const RAZORPAY_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js'
 
@@ -52,6 +59,7 @@ export default function PremiumPage() {
   const [subscribing, setSubscribing] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetail, setErrorDetail] = useState<ErrorDetail | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -108,8 +116,12 @@ export default function PremiumPage() {
 
       const data = await res.json()
       if (data.error) {
-        setError(data.error)
         setSubscribing(false)
+        setErrorDetail({
+          title: 'Subscription Failed',
+          message: data.error,
+          details: `Status: ${res.status}\nResponse: ${JSON.stringify(data, null, 2)}`,
+        })
         return
       }
 
@@ -136,8 +148,13 @@ export default function PremiumPage() {
         theme: { color: '#F59E0B' },
       })
       rzp.open()
-    } catch {
-      setError('Failed to create subscription')
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      setErrorDetail({
+        title: 'Subscription Failed',
+        message: err.message || 'An unexpected error occurred',
+        details: err.stack || JSON.stringify(err, Object.getOwnPropertyNames(err), 2),
+      })
     } finally {
       setSubscribing(false)
     }
@@ -155,12 +172,21 @@ export default function PremiumPage() {
       })
       const data = await res.json()
       if (data.error) {
-        setError(data.error)
+        setErrorDetail({
+          title: 'Cancel Failed',
+          message: data.error,
+          details: `Status: ${res.status}\nResponse: ${JSON.stringify(data, null, 2)}`,
+        })
       } else {
         setSubscriptionStatus('canceling')
       }
-    } catch {
-      setError('Failed to cancel subscription')
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      setErrorDetail({
+        title: 'Cancel Failed',
+        message: err.message || 'An unexpected error occurred',
+        details: err.stack || JSON.stringify(err, Object.getOwnPropertyNames(err), 2),
+      })
     } finally {
       setCancelling(false)
     }
@@ -277,6 +303,16 @@ export default function PremiumPage() {
           </div>
         </div>
       </div>
+
+      {errorDetail && (
+        <ErrorDetailModal
+          open={true}
+          onClose={() => setErrorDetail(null)}
+          title={errorDetail.title}
+          message={errorDetail.message}
+          details={errorDetail.details}
+        />
+      )}
     </ErrorBoundary>
   )
 }
