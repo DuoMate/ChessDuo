@@ -250,54 +250,58 @@ export default function PremiumPage() {
                   </div>
                 )}
 
-                <div className="grid gap-4 mb-6">
-                  <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all">
-                    <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Monthly</h3>
-                    <p className="text-3xl font-black text-yellow-500 mb-1">₹99</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-4">per month</p>
-                    <button
-                      onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY!)}
-                      disabled={subscribing}
-                      className="w-full px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] disabled:opacity-50 min-h-[44px]"
-                    >
-                      {subscribing ? 'Creating...' : 'Subscribe Monthly'}
-                    </button>
-                  </div>
+                {subscribing ? (
+                  <ChessLoader />
+                ) : (
+                  <>
+                    <div className="grid gap-4 mb-6">
+                      <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all">
+                        <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Monthly</h3>
+                        <p className="text-3xl font-black text-yellow-500 mb-1">₹99</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-4">per month</p>
+                        <button
+                          onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY!)}
+                          className="w-full px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] min-h-[44px]"
+                        >
+                          Subscribe Monthly
+                        </button>
+                      </div>
 
-                  <div className="bg-white dark:bg-white/[0.03] border-2 border-green-400/40 dark:border-green-500/25 rounded-2xl p-6 text-center hover:border-green-500 dark:hover:border-green-400/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(34,197,94,0.08)] transition-all relative">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                      Best Value
+                      <div className="bg-white dark:bg-white/[0.03] border-2 border-green-400/40 dark:border-green-500/25 rounded-2xl p-6 text-center hover:border-green-500 dark:hover:border-green-400/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(34,197,94,0.08)] transition-all relative">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                          Best Value
+                        </div>
+                        <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Annual</h3>
+                        <p className="text-3xl font-black text-yellow-500 mb-1">₹999</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">per year</p>
+                        <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-4">₹83.25/mo (save 16%)</p>
+                        <button
+                          onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL!)}
+                          className="w-full px-10 py-3 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(34,197,94,0.15)] min-h-[44px]"
+                        >
+                          Subscribe Annual
+                        </button>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Annual</h3>
-                    <p className="text-3xl font-black text-yellow-500 mb-1">₹999</p>
-                    <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-1">per year</p>
-                    <p className="text-xs text-green-600 dark:text-green-400 font-semibold mb-4">₹83.25/mo (save 16%)</p>
-                    <button
-                      onClick={() => handleSubscribe(process.env.NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL!)}
-                      disabled={subscribing}
-                      className="w-full px-10 py-3 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl transition-colors shadow-md dark:shadow-[0_0_20px_rgba(34,197,94,0.15)] disabled:opacity-50 min-h-[44px]"
-                    >
-                      {subscribing ? 'Creating...' : 'Subscribe Annual'}
-                    </button>
-                  </div>
-                </div>
 
-                <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6">
-                  <p className="text-gray-700 dark:text-gray-400 text-sm text-center mb-4 font-medium">
-                    Unlock powerful move analysis for every game
-                  </p>
-                  <div className="grid gap-3">
-                    <FeatureRow icon="🔍" title="Unlimited Move Insights" desc="See why a move won or lost — every turn" />
-                    <FeatureRow icon="🤖" title="AI Position Analysis" desc="Stockfish-powered positional breakdown" />
-                    <FeatureRow icon="📊" title="Advanced Stats" desc="Per-player accuracy trends and comparisons" />
-                    <FeatureRow icon="🎯" title="Best Move Suggestions" desc="Engine-recommended alternatives" />
-                    <FeatureRow icon="♾️" title="No Reveal Limits" desc="Unlimited insights, every game" />
-                  </div>
-                </div>
+                    <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6">
+                      <p className="text-gray-700 dark:text-gray-400 text-sm text-center mb-4 font-medium">
+                        Unlock powerful move analysis for every game
+                      </p>
+                      <div className="grid gap-3">
+                        <FeatureRow icon="🔍" title="Unlimited Move Insights" desc="See why a move won or lost — every turn" />
+                        <FeatureRow icon="🤖" title="AI Position Analysis" desc="Stockfish-powered positional breakdown" />
+                        <FeatureRow icon="📊" title="Advanced Stats" desc="Per-player accuracy trends and comparisons" />
+                        <FeatureRow icon="🎯" title="Best Move Suggestions" desc="Engine-recommended alternatives" />
+                        <FeatureRow icon="♾️" title="No Reveal Limits" desc="Unlimited insights, every game" />
+                      </div>
+                    </div>
 
-                <div className="text-center text-xs text-gray-700 dark:text-gray-400 font-medium">
-                  3 free insights per account. No payment required to play.
-                </div>
+                    <div className="text-center text-xs text-gray-700 dark:text-gray-400 font-medium">
+                      3 free insights per account. No payment required to play.
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -325,6 +329,20 @@ function FeatureRow({ icon, title, desc }: { icon: string; title: string; desc: 
         <p className="text-gray-900 dark:text-white text-sm font-semibold">{title}</p>
         <p className="text-gray-700 dark:text-gray-400 text-xs font-medium">{desc}</p>
       </div>
+    </div>
+  )
+}
+
+function ChessLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="relative mb-6">
+        <div className="text-5xl animate-bounce">♞</div>
+        <div className="absolute inset-0 bg-yellow-500/20 dark:bg-yellow-400/20 blur-xl rounded-full scale-50 animate-pulse" />
+      </div>
+      <p className="text-gray-700 dark:text-gray-400 text-sm font-medium animate-pulse">
+        Setting up secure payment...
+      </p>
     </div>
   )
 }
