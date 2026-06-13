@@ -525,7 +525,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           lastMove: g.lastMove,
           matchTimeRemaining: g.getMatchTimeRemaining(),
           matchTimerActive: g.isMatchTimerActive(),
-          isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+          isLoading: g.status === GameStatus.WAITING ? prev.isLoading : false,
           pendingOverlay,
           myPendingOverlay,
           turnStatus
@@ -783,7 +783,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         matchTimerActive: g.isMatchTimerActive(),
         pendingOverlay,
         myPendingOverlay,
-        isLoading: g.status === GameStatus.PLAYING ? false : prev.isLoading,
+        isLoading: g.status === GameStatus.WAITING ? prev.isLoading : false,
         isBotThinking: isFourPlayer ? false : (currentTurn === Team.BLACK ? prev.isBotThinking : false),
         highlightSquares: null as HighlightSquares | null,
         turnStatus
