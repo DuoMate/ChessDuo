@@ -414,31 +414,13 @@ export class OnlineGame {
       }
 
       let humanCount = 1
-      try {
-        const apiBase = (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).Capacitor)
-          ? (process.env.NEXT_PUBLIC_SITE_URL || '')
-          : ''
-        const res = await fetch(`${apiBase}/api/game/room-players?roomId=${encodeURIComponent(this._room!.id)}`)
-        if (res.ok) {
-          const json = await res.json() as { count: number; players: Array<{ player_id: string; team: string }> }
-          humanCount = json.players.filter(p => !p.player_id.startsWith('bot_')).length
-          console.log(`[ONLINE] Poll found ${humanCount} human(s) via API`, json.players.map(p => p.player_id))
-        } else {
-          console.warn('[ONLINE] Poll API returned status:', res.status)
-        }
-      } catch {
-        console.warn('[ONLINE] Poll API call failed, falling back to direct query')
-        const { data, error } = await supabase
-          .from('room_players')
-          .select('*')
-          .eq('room_id', this._room!.id)
-        if (!error) {
-          const humans = (data || []).filter(p => !p.player_id.startsWith('bot_'))
-          humanCount = humans.length
-          console.log(`[ONLINE] Poll (fallback) found ${humanCount} human(s)`, humans.map(p => p.player_id))
-        } else {
-          console.warn('[ONLINE] Poll direct query failed:', error.message)
-        }
+      const { data, error } = await supabase.rpc('get_room_players', { p_room_id: this._room!.id })
+      if (!error && data) {
+        const players = data as Array<{ player_id: string; team: string }>
+        humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
+        console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, players.map(p => p.player_id))
+      } else {
+        console.warn('[ONLINE] Poll RPC failed:', error?.message)
       }
 
       if (humanCount >= 2) {

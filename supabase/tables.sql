@@ -301,9 +301,27 @@ AS $$
                                                                                                   WHERE room_id = check_room_id
                                                                                                         AND player_id = auth.uid()::text
                                                                                                           )
-                                                                                                          $$;
+                                                                                                           $$;
 
-                                                                                                          -- room_players: must be room member to view players list
+                                                                                                           -- RPC: query room_players without RLS (SECURITY DEFINER = owner privileges)
+                                                                                                           CREATE OR REPLACE FUNCTION public.get_room_players(p_room_id UUID)
+                                                                                                           RETURNS TABLE(player_id TEXT, team TEXT)
+                                                                                                           LANGUAGE plpgsql
+                                                                                                           SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+BEGIN
+  IF NOT public.is_room_member(p_room_id) THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+    SELECT rp.player_id, rp.team
+    FROM room_players rp
+    WHERE rp.room_id = p_room_id;
+END;
+$$;
+
+                                                                                                           -- room_players: must be room member to view players list
                                                                                                           CREATE POLICY "Room members can view players" ON room_players
                                                                                                             FOR SELECT USING (
                                                                                                                 auth.uid() IS NOT NULL
