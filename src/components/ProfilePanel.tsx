@@ -54,7 +54,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
   const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
-    getMatchHistory(5).then(setRecentGames).catch(() => setRecentGames([]))
+    getMatchHistory(5, playerId).then(setRecentGames).catch(() => setRecentGames([]))
   }, [playerId])
 
   useEffect(() => {

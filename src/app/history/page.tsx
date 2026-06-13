@@ -44,8 +44,8 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (!playerId) return
-    getMatchHistory(50).then(setGames).catch(() => setGames([]))
-    getPlayerStats().then(setPlayerStats).catch(() => setPlayerStats(null))
+    getMatchHistory(50, playerId).then(setGames).catch(() => setGames([]))
+    getPlayerStats(playerId).then(setPlayerStats).catch(() => setPlayerStats(null))
   }, [playerId])
 
   if (loading) {

@@ -320,6 +320,7 @@ export default function SetupPage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('chessduo_history')
+    localStorage.removeItem('chessduo_settings')
     clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
@@ -381,6 +382,12 @@ export default function SetupPage() {
         .from('room_players')
         .select('*')
         .eq('room_id', room.id)
+
+      if (existingPlayers?.some(p => p.player_id === pid)) {
+        setJoinError('You are already in this room from another session')
+        setJoinLoading(false)
+        return
+      }
 
       const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
       const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')

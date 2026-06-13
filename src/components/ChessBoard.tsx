@@ -247,6 +247,15 @@ export function ChessBoard({
     }
   }, [enabled, orientation])
 
+  const getSquarePercent = (square: string, orientation: string): { left: string; top: string } => {
+    const file = square.charCodeAt(0) - 'a'.charCodeAt(0)
+    const rank = 8 - parseInt(square[1])
+    const isFlipped = orientation === 'black'
+    const l = `${(isFlipped ? (7 - file) : file) * 12.5}%`
+    const t = `${(isFlipped ? (7 - rank) : rank) * 12.5}%`
+    return { left: l, top: t }
+  }
+
   const getSquarePosition = (square: string): { x: number; y: number } => {
     if (overlayWidth <= 0) return { x: 0, y: 0 }
     
@@ -312,22 +321,18 @@ export function ChessBoard({
       >
         {overlayWidth > 0 && (
           <>
-        {pendingOverlay && !showRetraction && (
+        {pendingOverlay && !showRetraction && (() => {
+          const toPos = getSquarePercent(pendingOverlay.to, orientation)
+          return (
           <motion.div
             key={`pending-${pendingOverlay.from}-${pendingOverlay.to}`}
-            initial={{ 
-              x: getSquarePosition(pendingOverlay.from).x,
-              y: getSquarePosition(pendingOverlay.from).y,
-              opacity: 0
-            }}
-            animate={{ 
-              x: getSquarePosition(pendingOverlay.to).x,
-              y: getSquarePosition(pendingOverlay.to).y,
-              opacity: 0.4
-            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.4 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute flex items-center justify-center font-bold select-none"
             style={{ 
+              left: toPos.left,
+              top: toPos.top,
               width: '12.5%', 
               height: '12.5%',
               color: pendingOverlay.color === 'white' ? '#fff' : '#000',
@@ -342,24 +347,21 @@ export function ChessBoard({
           >
             {getPieceChar(pendingOverlay.piece, pendingOverlay.color)}
           </motion.div>
-        )}
+          )
+        })()}
 
-        {myPendingOverlay && !showRetraction && (
+        {myPendingOverlay && !showRetraction && (() => {
+          const myPos = getSquarePercent(myPendingOverlay.to, orientation)
+          return (
           <motion.div
             key={`my-pending-${myPendingOverlay.from}-${myPendingOverlay.to}`}
-            initial={{ 
-              x: getSquarePosition(myPendingOverlay.from).x,
-              y: getSquarePosition(myPendingOverlay.from).y,
-              opacity: 0
-            }}
-            animate={{ 
-              x: getSquarePosition(myPendingOverlay.to).x,
-              y: getSquarePosition(myPendingOverlay.to).y,
-              opacity: 1
-            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute flex items-center justify-center font-bold select-none"
             style={{ 
+              left: myPos.left,
+              top: myPos.top,
               width: '12.5%', 
               height: '12.5%',
               color: myPendingOverlay.color === 'white' ? '#fff' : '#000',
@@ -374,20 +376,23 @@ export function ChessBoard({
           >
             {getPieceChar(myPendingOverlay.piece, myPendingOverlay.color)}
           </motion.div>
-        )}
+          )
+        })()}
 
         {pendingOverlay && (
           <AnimatePresence>
-            {teammateLabelVisible && (
+            {teammateLabelVisible && pendingOverlay && (() => {
+              const labelPos = getSquarePercent(pendingOverlay.to, orientation)
+              return (
               <motion.div
                 key="teammate-label"
                 initial={{
-                  y: getSquarePosition(pendingOverlay.to).y,
+                  y: 0,
                   opacity: 0,
                   scale: 0.5
                 }}
                 animate={{
-                  y: getSquarePosition(pendingOverlay.to).y - 26,
+                  y: -26,
                   opacity: 1,
                   scale: 1
                 }}
@@ -398,7 +403,8 @@ export function ChessBoard({
                 transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 className="absolute pointer-events-none select-none z-20"
                 style={{
-                  left: getSquarePosition(pendingOverlay.to).x,
+                  left: labelPos.left,
+                  top: labelPos.top,
                   width: '12.5%',
                 }}
               >
@@ -414,7 +420,8 @@ export function ChessBoard({
                   </div>
                 </div>
               </motion.div>
-            )}
+              )
+            })()}
           </AnimatePresence>
         )}
 
