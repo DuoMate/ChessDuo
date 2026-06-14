@@ -288,6 +288,17 @@ export class OnlineGame {
 
     // Re-register in room_players on reconnect (ensures auth.uid() matches for RLS)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[ONLINE][DIAG] joinRoom upsert:', {
+        playerId,
+        team,
+        roomId: room.id,
+        authUserId: session?.user?.id,
+        authUserIdMatches: session?.user?.id === playerId,
+        hasSession: !!session,
+        sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none',
+      })
+
       const { error } = await supabase.from('room_players').upsert({
         room_id: room.id,
         player_id: playerId,
