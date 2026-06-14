@@ -52,6 +52,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
   const [recentGames, setRecentGames] = useState<CompletedGame[]>([])
   const [profileCopied, setProfileCopied] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
+  const [checkingPremium, setCheckingPremium] = useState(true)
 
   useEffect(() => {
     getMatchHistory(5, playerId).then(setRecentGames).catch(() => setRecentGames([]))
@@ -65,7 +66,10 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
       .maybeSingle()
       .then((result) => {
         if (result.data?.is_premium) setIsPremium(true)
-      }).catch(() => {})
+        setCheckingPremium(false)
+      }).catch(() => {
+        setCheckingPremium(false)
+      })
   }, [playerId])
 
   useEffect(() => {
@@ -92,7 +96,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
         📋 {profileCopied ? 'Link copied!' : 'Share Profile'}
       </button>
 
-      {!isPremium && (
+      {!checkingPremium && !isPremium && (
         <button
           onClick={() => router.push('/premium')}
           className="w-full min-h-[44px] p-3 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-semibold hover:from-yellow-500/30 hover:to-amber-500/30 transition-colors flex items-center justify-center gap-2"
