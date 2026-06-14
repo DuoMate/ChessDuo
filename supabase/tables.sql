@@ -330,10 +330,7 @@ $$;
                                                                                                                       );
 
 CREATE POLICY "Authenticated users can join rooms" ON room_players
-  FOR INSERT WITH CHECK (
-      auth.role() = 'authenticated'
-        AND auth.uid()::text = player_id
-          );
+  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
 
                                                                                                                                   CREATE POLICY "Players can leave rooms" ON room_players
                                                                                                                                     FOR DELETE USING (
