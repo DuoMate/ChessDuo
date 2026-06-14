@@ -1,4 +1,5 @@
 import { INSIGHTS_FREE_LIMIT } from '@/features/shared/gameConstants'
+import { supabase } from '@/lib/supabase'
 
 const STORAGE_KEY = 'chessduo_insights'
 
@@ -23,9 +24,21 @@ export async function getUserInsightsState(userId: string): Promise<{
 }> {
   const local = getLocalState(userId)
 
+  let isPremium = false
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', userId)
+      .maybeSingle()
+    isPremium = data?.is_premium === true
+  } catch (e) {
+    console.error('[Insights] Failed to fetch premium status:', e)
+  }
+
   return {
     revealsUsed: local.revealsUsed,
-    isPremium: false,
+    isPremium,
     revealsRemaining: Math.max(0, INSIGHTS_FREE_LIMIT - local.revealsUsed),
   }
 }

@@ -150,10 +150,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const router = useRouter()
   DEBUG && console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, fourplayer })
   
-  const [game] = useState(() => mode !== 'online' ? new LocalGame() : null)
+  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimitSeconds) : null)
   const [onlineGame] = useState(() => {
     DEBUG && console.log('[Game] Creating OnlineGame, mode:', mode)
-    return mode === 'online' ? new OnlineGame() : null
+    return mode === 'online' ? new OnlineGame(timeLimitSeconds) : null
   })
   const isOnline = mode === 'online'
   DEBUG && console.log('[Game] isOnline:', isOnline, 'onlineGame:', !!onlineGame)
@@ -200,7 +200,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     moveAccuracy: 100,
     moveAccuracyP2: 100,
     totalMoves: 0,
-    matchTimeRemaining: 600,
+    matchTimeRemaining: timeLimitSeconds || 600,
     matchTimerActive: false,
     pendingOverlay: null,
     myPendingOverlay: null,
@@ -515,22 +515,31 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           turnStatus = 'opponent_turn'
         }
 
-        setGameState(prev => ({
-          ...prev,
-          status: g.status,
-          fen: g.fen,
-          currentTurn: g.currentTurn,
-          isMyTurn: isMyTurnToAct,
-          capturedByWhite: captured.white,
-          capturedByBlack: captured.black,
-          lastMove: g.lastMove,
-          matchTimeRemaining: g.getMatchTimeRemaining(),
-          matchTimerActive: g.isMatchTimerActive(),
-          isLoading: g.status === GameStatus.WAITING ? prev.isLoading : false,
-          pendingOverlay,
-          myPendingOverlay,
-          turnStatus
-        }))
+        setGameState(prev => {
+          const winner = g.status === GameStatus.GAME_OVER
+            ? (g.getResult().includes('White wins') ? 'WHITE' as const
+              : g.getResult().includes('Black wins') ? 'BLACK' as const
+              : 'DRAW' as const)
+            : prev.winner
+
+          return {
+            ...prev,
+            status: g.status,
+            fen: g.fen,
+            currentTurn: g.currentTurn,
+            isMyTurn: isMyTurnToAct,
+            capturedByWhite: captured.white,
+            capturedByBlack: captured.black,
+            lastMove: g.lastMove,
+            matchTimeRemaining: g.getMatchTimeRemaining(),
+            matchTimerActive: g.isMatchTimerActive(),
+            isLoading: g.status === GameStatus.WAITING ? prev.isLoading : false,
+            pendingOverlay,
+            myPendingOverlay,
+            turnStatus,
+            winner
+          }
+        })
         
         if (pendingOverlay?.showTeammateLabel) {
           const labelKey = `${pendingOverlay.from}-${pendingOverlay.to}`
