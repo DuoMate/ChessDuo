@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
+import { Chess } from 'chess.js'
 import { StockfishEngine } from './engine'
+import { PolyglotBook } from './polyglot'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -22,7 +24,59 @@ function findStockfishPath(): string {
 export const STOCKFISH_PATH = findStockfishPath()
 console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 
-const engine = new StockfishEngine()
+const engine = new StockfishEngine(STOCKFISH_PATH)
+
+// Load Polyglot opening book (optional — falls through to Stockfish if not found)
+const bookPath = process.env.POLYGLOT_BOOK_PATH || ''
+if (bookPath) {
+  try {
+    const book = new PolyglotBook(bookPath)
+    if (book.isLoaded()) {
+      engine.setBook(book)
+      console.log(`[SERVER] Opening book active: ${bookPath}`)
+    }
+  } catch (err) {
+    console.warn('[SERVER] Failed to load opening book, using Stockfish only:', err)
+  }
+} else {
+  console.log('[SERVER] No POLYGLOT_BOOK_PATH set — using Stockfish only')
+}
+
+// Warm cache: pre-evaluate common opening positions after engine is ready
+const WARMUP_FENS = [
+  'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
+  'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1',
+  'rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1',
+  'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1',
+  'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+  'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+  'rnbqkbnr/1ppppppp/8/p7/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2',
+  'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1',
+  'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 1',
+  'rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 1',
+]
+
+async function warmCache(eng: StockfishEngine): Promise<void> {
+  console.log(`[WARMUP] Pre-evaluating ${WARMUP_FENS.length} common openings...`)
+  let done = 0
+  for (const fen of WARMUP_FENS) {
+    try {
+      const chess = new Chess(fen)
+      const legalMoves = chess.moves({ verbose: true }).map(m => m.from + m.to)
+      const uniqueMoves = [...new Set(legalMoves)]
+      if (uniqueMoves.length > 0) {
+        await eng.evaluateMoves(fen, uniqueMoves)
+      }
+      done++
+    } catch (err) {
+      console.warn(`[WARMUP] Skipped ${fen}:`, err)
+    }
+  }
+  console.log(`[WARMUP] Complete — ${done}/${WARMUP_FENS.length} positions cached`)
+}
+
+// Start warmup after engine is initialized (delay to ensure UCI is ready)
+setTimeout(() => warmCache(engine), 4000)
 
 app.get('/health', (_, res) => {
   res.json({ status: 'ok' })
