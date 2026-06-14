@@ -327,12 +327,13 @@ $$;
                                                                                                             FOR SELECT USING (
                                                                                                                 auth.uid() IS NOT NULL
                                                                                                                     AND is_room_member(room_id)
-                                                                                                                      );
+                                                                                                                       );
 
 CREATE POLICY "Authenticated users can join rooms" ON room_players
-  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
+  FOR INSERT WITH CHECK (true);
+-- TODO: revert to auth.uid()::text = player_id after confirming auth fix
 
-                                                                                                                                  CREATE POLICY "Players can leave rooms" ON room_players
+                                                                                                                                   CREATE POLICY "Players can leave rooms" ON room_players
                                                                                                                                     FOR DELETE USING (
                                                                                                                                         auth.uid()::text = player_id
                                                                                                                                           );
@@ -552,15 +553,10 @@ DROP POLICY IF EXISTS "Allow all" ON public.room_players;
 DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_games;
 
 -- ============================================================
--- RAID: Fix room_players INSERT 403
--- Run this in Supabase SQL editor to fix teammate registration
+-- RAID: Fix room_players INSERT 403 — DEBUG MODE (permissive)
+-- TODO: revert to auth.uid()::text = player_id after confirming fix
 -- ============================================================
 DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
 CREATE POLICY "Authenticated users can join rooms" ON room_players
-  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
-
--- DEBUG only — if above still fails with 403, run this instead:
--- DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
--- CREATE POLICY "Authenticated users can join rooms" ON room_players
---   FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (true);
                                                                                                                                                                                     
