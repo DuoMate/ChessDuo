@@ -493,4 +493,63 @@ CREATE POLICY "Participants can update duel games" ON duel_games
 
 -- Add message_type to messages for challenge vs chat distinction
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type TEXT DEFAULT 'chat' CHECK (message_type IN ('chat', 'challenge'));
+
+-- ============================================
+-- Account Deletion Function
+-- ============================================
+-- Deploy: Run this if not already deployed.
+-- Called by /api/delete-account endpoint via supabase.rpc().
+-- SECURITY DEFINER runs with owner privileges (bypasses RLS).
+CREATE OR REPLACE FUNCTION public.delete_my_account()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+DECLARE
+  my_id TEXT;
+BEGIN
+  my_id := auth.uid()::text;
+
+  IF my_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  DELETE FROM messages WHERE sender_id = my_id OR receiver_id = my_id;
+  DELETE FROM friendships WHERE sender_id = my_id OR receiver_id = my_id;
+  DELETE FROM challenge_links WHERE creator_id = my_id;
+  DELETE FROM duel_games WHERE player_white = my_id OR player_black = my_id;
+  DELETE FROM profiles WHERE id = my_id;
+
+  DELETE FROM room_players WHERE player_id = my_id;
+
+  DELETE FROM completed_games
+    WHERE room_id IN (SELECT id FROM rooms WHERE created_by = my_id);
+
+  DELETE FROM rooms WHERE created_by = my_id;
+
+  DELETE FROM auth.users WHERE id = my_id::uuid;
+END;
+$$;
+
+-- Only authenticated users should call delete_my_account
+REVOKE EXECUTE ON FUNCTION public.delete_my_account() FROM anon;
+
+-- ============================================
+-- Security Advisory Fixes
+-- Fixes flagged by Supabase Database Advisor.
+-- Can be safely re-run (uses IF EXISTS).
+-- ============================================
+
+-- Drop dashboard-added "Allow all" on rooms
+-- SQL-defined policies already cover SELECT/INSERT/UPDATE.
+DROP POLICY IF EXISTS "Allow all" ON public.rooms;
+
+-- Drop dashboard-added "Allow all" on room_players
+-- SQL-defined policies cover SELECT/INSERT/DELETE/UPDATE.
+DROP POLICY IF EXISTS "Allow all" ON public.room_players;
+
+-- Drop dashboard-added "Anyone can insert completed games"
+-- SQL-defined "Authenticated users can insert" is the correct policy.
+DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_games;
                                                                                                                                                                                     
