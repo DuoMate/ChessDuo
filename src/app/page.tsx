@@ -117,7 +117,6 @@ export default function SetupPage() {
         setJoinCode('')
         if (_event === 'SIGNED_IN') {
           localStorage.removeItem('chessduo_history')
-          localStorage.removeItem('chessduo_tour_completed')
         }
         fetchUsername(session.user.id).then(name => {
           if (!mountedRef.current) return
@@ -321,6 +320,7 @@ export default function SetupPage() {
     await supabase.auth.signOut()
     localStorage.removeItem('chessduo_history')
     localStorage.removeItem('chessduo_settings')
+    localStorage.removeItem('chessduo_tour_completed')
     clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
