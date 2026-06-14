@@ -308,6 +308,48 @@ export class OnlineGame {
       }, { onConflict: 'room_id,player_id' })
       if (error) {
         console.warn('[ONLINE] Failed to register in room_players:', error.message, error.code)
+
+        // Raw fetch fallback — isolates whether @supabase/ssr client is the culprit
+        try {
+          const { data: { session: rawSession } } = await supabase.auth.getSession()
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+          const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+          const token = rawSession?.access_token || ''
+
+          const res = await fetch(
+            `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': anonKey,
+                'Authorization': token ? `Bearer ${token}` : '',
+                'Prefer': 'resolution=merge-duplicates',
+              },
+              body: JSON.stringify({
+                room_id: room.id,
+                player_id: playerId,
+                team,
+                slot: 0,
+                status: 'ready',
+              }),
+            }
+          )
+          console.log('[ONLINE][DIAG] Raw fetch fallback result:', {
+            status: res.status,
+            ok: res.ok,
+            statusText: res.statusText,
+            hasToken: !!token,
+          })
+          if (!res.ok) {
+            const body = await res.text()
+            console.warn('[ONLINE][DIAG] Raw fetch fallback body:', body)
+          } else {
+            console.log('[ONLINE][DIAG] Raw fetch fallback SUCCESS — supabase client is broken for this call')
+          }
+        } catch (e2) {
+          console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
+        }
       } else {
         console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
       }
