@@ -347,6 +347,37 @@ export class OnlineGame {
           } else {
             console.log('[ONLINE][DIAG] Raw fetch fallback SUCCESS — supabase client is broken for this call')
           }
+
+          // Anonymous fetch test — proves if WITH CHECK (true) policy is working at all
+          const anonRes = await fetch(
+            `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': anonKey,
+                'Prefer': 'resolution=merge-duplicates',
+              },
+              body: JSON.stringify({
+                room_id: room.id,
+                player_id: 'anon-test-' + Date.now(),
+                team: 'WHITE',
+                slot: 0,
+                status: 'ready',
+              }),
+            }
+          )
+          console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
+            status: anonRes.status,
+            ok: anonRes.ok,
+            statusText: anonRes.statusText,
+          })
+          if (!anonRes.ok) {
+            const anonBody = await anonRes.text()
+            console.warn('[ONLINE][DIAG] Anon fetch body:', anonBody)
+          } else {
+            console.log('[ONLINE][DIAG] Anon fetch SUCCESS — policy works, auth token issue')
+          }
         } catch (e2) {
           console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
         }
