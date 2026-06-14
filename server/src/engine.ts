@@ -1,5 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
-import { STOCKFISH_PATH } from './index'
+import { LRUCache } from 'lru-cache'
+import { PolyglotBook } from './polyglot'
 
 interface PendingJob {
   fen: string
@@ -23,9 +24,22 @@ export class StockfishEngine {
   private initializationComplete = false
   private timeoutId: NodeJS.Timeout | null = null
   private readonly EVAL_TIMEOUT_MS = 4000
+  private cache: LRUCache<string, { move: string; score: number }[]>
+  private book: PolyglotBook | null = null
 
-  constructor() {
+  constructor(private stockfishPath: string) {
+    this.cache = new LRUCache({ max: 5000, ttl: 1000 * 60 * 15 })
     this.spawn()
+  }
+
+  /** Set an opening book for ultra-fast common position lookups */
+  setBook(book: PolyglotBook): void {
+    this.book = book
+  }
+
+  /** Returns current cache size for diagnostics */
+  getCacheSize(): number {
+    return this.cache.size
   }
 
   private spawn(): void {
@@ -35,7 +49,7 @@ export class StockfishEngine {
     }
 
     console.log('[ENGINE] Spawning Stockfish process...')
-    this.proc = spawn(STOCKFISH_PATH, [], {
+    this.proc = spawn(this.stockfishPath, [], {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
@@ -215,8 +229,39 @@ export class StockfishEngine {
   }
 
   evaluateMoves(fen: string, moves: string[], movetime = 500) {
+    // 1. Check opening book — instant, no Stockfish needed
+    if (this.book) {
+      const bookMoves = this.book.lookup(fen)
+      if (bookMoves) {
+        const results = bookMoves.map(m => ({
+          move: m.move,
+          score: m.weight > 0 ? Math.round(m.weight / 10) : 0
+        }))
+        console.log(`[BOOK] Hit — ${results.length} moves`)
+        return Promise.resolve(results)
+      }
+    }
+
+    // 2. Check LRU cache — stores previous Stockfish evaluations
+    const cacheKey = `${fen}:${[...moves].sort().join(',')}`
+    const cached = this.cache.get(cacheKey)
+    if (cached) {
+      console.log(`[CACHE] Hit — ${cached.length} moves`)
+      return Promise.resolve(cached)
+    }
+
+    console.log(`[ENGINE] Miss — queuing ${moves.length} moves`)
+
+    // 3. Queue Stockfish evaluation
     return new Promise<{ move: string; score: number }[]>((resolve, reject) => {
-      this.queue.push({ fen, moves, movetime, resolve, reject })
+      this.queue.push({
+        fen, moves, movetime,
+        resolve: (results) => {
+          this.cache.set(cacheKey, results)
+          resolve(results)
+        },
+        reject
+      })
       this.processNext()
     })
   }
