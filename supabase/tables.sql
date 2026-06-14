@@ -160,10 +160,10 @@ ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS challenge_id UUID REFERENCE
 ALTER TABLE completed_games ADD COLUMN IF NOT EXISTS move_comparisons JSONB DEFAULT '[]'::jsonb;
 
 -- Create indexes
-CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
-CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id);
-CREATE INDEX IF NOT EXISTS idx_games_room ON games(room_id);
-CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON completed_games(played_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rooms_code ON public.rooms(code);
+CREATE INDEX IF NOT EXISTS idx_room_players_room ON public.room_players(room_id);
+CREATE INDEX IF NOT EXISTS idx_games_room ON public.games(room_id);
+CREATE INDEX IF NOT EXISTS idx_completed_games_played_at ON public.completed_games(played_at DESC);
 CREATE INDEX IF NOT EXISTS idx_friendships_sender ON friendships(sender_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_receiver ON friendships(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
@@ -224,28 +224,28 @@ DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
                                                                             -- rooms
-                                                                            DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON rooms;
-                                                                            DROP POLICY IF EXISTS "Anyone can create rooms" ON rooms;
-                                                                            DROP POLICY IF EXISTS "Authenticated users can create rooms" ON rooms;
-                                                                            DROP POLICY IF EXISTS "Room creator can update" ON rooms;
+                                                                            DROP POLICY IF EXISTS "Rooms are viewable by everyone" ON public.rooms;
+                                                                            DROP POLICY IF EXISTS "Anyone can create rooms" ON public.rooms;
+                                                                            DROP POLICY IF EXISTS "Authenticated users can create rooms" ON public.rooms;
+                                                                            DROP POLICY IF EXISTS "Room creator can update" ON public.rooms;
                                                                             -- room_players
-                                                                            DROP POLICY IF EXISTS "Room players are viewable by everyone" ON room_players;
-                                                                            DROP POLICY IF EXISTS "Room members can view players" ON room_players;
-                                                                            DROP POLICY IF EXISTS "Anyone can join rooms" ON room_players;
-                                                                            DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
-                                                                            DROP POLICY IF EXISTS "Players can update own record" ON room_players;
-                                                                            DROP POLICY IF EXISTS "Players can leave rooms" ON room_players;
+                                                                            DROP POLICY IF EXISTS "Room players are viewable by everyone" ON public.room_players;
+                                                                            DROP POLICY IF EXISTS "Room members can view players" ON public.room_players;
+                                                                            DROP POLICY IF EXISTS "Anyone can join rooms" ON public.room_players;
+                                                                            DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
+                                                                            DROP POLICY IF EXISTS "Players can update own record" ON public.room_players;
+                                                                            DROP POLICY IF EXISTS "Players can leave rooms" ON public.room_players;
                                                                             -- games
-                                                                            DROP POLICY IF EXISTS "Room participants can view game" ON games;
-                                                                            DROP POLICY IF EXISTS "Anyone can view game state" ON games;
-                                                                            DROP POLICY IF EXISTS "Room members can view game" ON games;
-                                                                            DROP POLICY IF EXISTS "Anyone can insert game state" ON games;
-                                                                            DROP POLICY IF EXISTS "Room members can insert game" ON games;
-                                                                            DROP POLICY IF EXISTS "Anyone can update game state" ON games;
-                                                                            DROP POLICY IF EXISTS "Room members can update game" ON games;
+                                                                            DROP POLICY IF EXISTS "Room participants can view game" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Anyone can view game state" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Room members can view game" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Anyone can insert game state" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Room members can insert game" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Anyone can update game state" ON public.games;
+                                                                            DROP POLICY IF EXISTS "Room members can update game" ON public.games;
                                                                              -- completed_games
-                                                                             DROP POLICY IF EXISTS "Authenticated users can view completed games" ON completed_games;
-                                                                             DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON completed_games;
+                                                                             DROP POLICY IF EXISTS "Authenticated users can view completed games" ON public.completed_games;
+                                                                             DROP POLICY IF EXISTS "Authenticated users can insert completed games" ON public.completed_games;
                                                                              -- friendships
                                                                              DROP POLICY IF EXISTS "Users can view own friendships" ON friendships;
                                                                              DROP POLICY IF EXISTS "Users can send friend requests" ON friendships;
@@ -281,13 +281,13 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
                                                                                   FOR UPDATE USING (auth.uid()::text = id);
 
                                                                                   -- rooms: public discovery via room codes, authenticated creation/edit
-                                                                                  CREATE POLICY "Rooms are viewable by everyone" ON rooms
+                                                                                  CREATE POLICY "Rooms are viewable by everyone" ON public.rooms
                                                                                     FOR SELECT USING (true);
 
-                                                                                    CREATE POLICY "Authenticated users can create rooms" ON rooms
+                                                                                    CREATE POLICY "Authenticated users can create rooms" ON public.rooms
                                                                                       FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
-                                                                                      CREATE POLICY "Room creator can update" ON rooms
+                                                                                      CREATE POLICY "Room creator can update" ON public.rooms
                                                                                         FOR UPDATE USING (auth.uid()::text = created_by);
 
                                                                                         -- Helper function: checks room membership without RLS (avoids recursion)
@@ -323,39 +323,39 @@ END;
 $$;
 
                                                                                                            -- room_players: must be room member to view players list
-                                                                                                          CREATE POLICY "Room members can view players" ON room_players
+                                                                                                          CREATE POLICY "Room members can view players" ON public.room_players
                                                                                                             FOR SELECT USING (
                                                                                                                 auth.uid() IS NOT NULL
                                                                                                                     AND is_room_member(room_id)
                                                                                                                        );
 
-CREATE POLICY "Authenticated users can join rooms" ON room_players
+CREATE POLICY "Authenticated users can join rooms" ON public.room_players
   FOR INSERT WITH CHECK (true);
 -- TODO: revert to auth.uid()::text = player_id after confirming auth fix
 
-                                                                                                                                   CREATE POLICY "Players can leave rooms" ON room_players
+                                                                                                                                   CREATE POLICY "Players can leave rooms" ON public.room_players
                                                                                                                                     FOR DELETE USING (
                                                                                                                                         auth.uid()::text = player_id
                                                                                                                                           );
 
-                                                                                                                                          CREATE POLICY "Players can update own record" ON room_players
+                                                                                                                                          CREATE POLICY "Players can update own record" ON public.room_players
                                                                                                                                             FOR UPDATE USING (auth.uid()::text = player_id);
 
                                                                                                                                             -- games: must be room member for all operations
-CREATE POLICY "Room members can view game" ON games
+CREATE POLICY "Room members can view game" ON public.games
   FOR SELECT USING (is_room_member(room_id));
 
-CREATE POLICY "Room members can insert game" ON games
+CREATE POLICY "Room members can insert game" ON public.games
   FOR INSERT WITH CHECK (is_room_member(room_id));
 
-CREATE POLICY "Room members can update game" ON games
+CREATE POLICY "Room members can update game" ON public.games
   FOR UPDATE USING (is_room_member(room_id));
 
                                                                                                                                                                      -- completed_games: authenticated users can view and insert
-                                                                                                                                                                     CREATE POLICY "Authenticated users can view completed games" ON completed_games
+                                                                                                                                                                     CREATE POLICY "Authenticated users can view completed games" ON public.completed_games
                                                                                                                                                                        FOR SELECT USING (auth.role() = 'authenticated');
 
-                                                                                                                                                                       CREATE POLICY "Authenticated users can insert completed games" ON completed_games
+                                                                                                                                                                       CREATE POLICY "Authenticated users can insert completed games" ON public.completed_games
                                                                                                                                                                          FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Function to auto-create profile on signup
@@ -556,7 +556,7 @@ DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_ga
 -- RAID: Fix room_players INSERT 403 — DEBUG MODE (permissive)
 -- TODO: revert to auth.uid()::text = player_id after confirming fix
 -- ============================================================
-DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
-CREATE POLICY "Authenticated users can join rooms" ON room_players
+DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
+CREATE POLICY "Authenticated users can join rooms" ON public.room_players
   FOR INSERT WITH CHECK (true);
                                                                                                                                                                                     
