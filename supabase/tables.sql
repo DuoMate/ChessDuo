@@ -362,7 +362,10 @@ CREATE POLICY "Room members can update game" ON games
 -- Function to auto-create profile on signup
 -- Client validates username uniqueness before signup, so this just inserts directly
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+AS $$
  DECLARE
    base_username TEXT;
  BEGIN
@@ -377,7 +380,7 @@ RETURNS TRIGGER AS $$
   END IF;
    RETURN NEW;
  END;
- $$ LANGUAGE plpgsql SECURITY DEFINER;
+ $$ LANGUAGE plpgsql;
 
                                                                                                                                                                          -- Trigger for new user signup
                                                                                                                                                                          DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

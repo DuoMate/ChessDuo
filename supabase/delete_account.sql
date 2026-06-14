@@ -34,3 +34,8 @@ BEGIN
   DELETE FROM auth.users WHERE id = my_id::uuid;
 END;
 $$;
+
+-- Only authenticated users should be able to call this function.
+-- Revoking EXECUTE from anon ensures unauthenticated requests
+-- are rejected at the database level.
+REVOKE EXECUTE ON FUNCTION public.delete_my_account() FROM anon;
