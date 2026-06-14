@@ -56,6 +56,7 @@ export default function PremiumPage() {
   const [isPremium, setIsPremium] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [checkingPremium, setCheckingPremium] = useState(true)
   const [subscribing, setSubscribing] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,7 +83,10 @@ export default function PremiumPage() {
   }, [])
 
   useEffect(() => {
-    if (!playerId) return
+    if (!playerId) {
+      setCheckingPremium(false)
+      return
+    }
     supabase
       .from('profiles')
       .select('is_premium, subscription_status')
@@ -93,7 +97,10 @@ export default function PremiumPage() {
         const data = result.data
         if (data?.is_premium) setIsPremium(true)
         if (data?.subscription_status) setSubscriptionStatus(data.subscription_status)
-      }).catch(() => {})
+        setCheckingPremium(false)
+      }).catch(() => {
+        if (mountedRef.current) setCheckingPremium(false)
+      })
   }, [playerId])
 
   const handleSubscribe = useCallback(async (planId: string) => {
@@ -201,10 +208,10 @@ export default function PremiumPage() {
     }
   }, [])
 
-  if (loading) {
+  if (loading || checkingPremium) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0f1119] flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+        <ChessLoader />
       </div>
     )
   }
