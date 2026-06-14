@@ -228,6 +228,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
   const teammateLabelShownRef = useRef(0)
+  const lastTeammateLabelMoveKeyRef = useRef<string | null>(null)
   const [matchTimerStarted, setMatchTimerStarted] = useState(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
@@ -532,7 +533,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }))
         
         if (pendingOverlay?.showTeammateLabel) {
-          teammateLabelShownRef.current += 1
+          const labelKey = `${pendingOverlay.from}-${pendingOverlay.to}`
+          if (labelKey !== lastTeammateLabelMoveKeyRef.current) {
+            teammateLabelShownRef.current += 1
+            lastTeammateLabelMoveKeyRef.current = labelKey
+          }
         }
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
@@ -792,7 +797,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     })
     
     if (pendingOverlay?.showTeammateLabel) {
-      teammateLabelShownRef.current += 1
+      const labelKey = `${pendingOverlay.from}-${pendingOverlay.to}`
+      if (labelKey !== lastTeammateLabelMoveKeyRef.current) {
+        teammateLabelShownRef.current += 1
+        lastTeammateLabelMoveKeyRef.current = labelKey
+      }
     }
     
     // Accuracy transition detection (for coordinator who uses updateStateRef)
@@ -1164,13 +1173,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             g.setPendingMove('player2', teammateSanMove, from, to, piece)
             g.lockPendingMove('player2')
 
+            const botMoveKey = `${from}-${to}`
+            const isNewBotMove = botMoveKey !== lastTeammateLabelMoveKeyRef.current
             setGameState(prev => ({
               ...prev,
               pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: teammateLabelShownRef.current < 3 },
               myPendingOverlay: null
             }))
-            if (teammateLabelShownRef.current < 3) {
+            if (teammateLabelShownRef.current < 3 && isNewBotMove) {
               teammateLabelShownRef.current += 1
+              lastTeammateLabelMoveKeyRef.current = botMoveKey
             }
           }
 
