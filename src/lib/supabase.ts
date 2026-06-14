@@ -13,6 +13,7 @@ function getSupabaseClient() {
   
   if (supabaseInstance) return supabaseInstance
   supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  console.log('[supabase][DIAG] Client created:', { url: supabaseUrl, anonKeyLen: supabaseAnonKey.length })
   return supabaseInstance
 }
 
