@@ -645,7 +645,6 @@ export class OnlineGame {
             this.gameState.setMatchTimerActive(true)
             if (this.isCoordinator()) {
               this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
-              this.startMatchTimer()
             }
             DEBUG && console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
