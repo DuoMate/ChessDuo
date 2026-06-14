@@ -367,8 +367,23 @@ CREATE POLICY "Room members can update game" ON public.games
                                                                                                                                                                      CREATE POLICY "Authenticated users can view completed games" ON public.completed_games
                                                                                                                                                                        FOR SELECT USING (auth.role() = 'authenticated');
 
-                                                                                                                                                                       CREATE POLICY "Authenticated users can insert completed games" ON public.completed_games
-                                                                                                                                                                         FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+                                                                                                        CREATE POLICY "Authenticated users can insert completed games" ON public.completed_games
+                                                                                                          FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- ============================================================
+-- Table-level privileges (idempotent)
+-- RLS policies only RESTRICT existing privileges — they cannot
+-- grant privileges the role doesn't already have. These GRANTs
+-- ensure anon & authenticated have base INSERT/SELECT/UPDATE/DELETE.
+-- ============================================================
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.rooms TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.room_players TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.games TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.completed_games TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.profiles TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.friendships TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.messages TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.challenge_links TO anon, authenticated;
 
 -- Function to auto-create profile on signup
 -- Client validates username uniqueness before signup, so this just inserts directly
@@ -568,6 +583,12 @@ DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_ga
 -- RAID: Fix room_players INSERT 403 — DEBUG MODE (permissive)
 -- TODO: revert to auth.uid()::text = player_id after confirming fix
 -- ============================================================
+-- Table privileges: RLS policies only add restrictions, they cannot
+-- grant INSERT if the role never had it. Ensure anon & authenticated
+-- have base table rights (idempotent — no-op if already granted).
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.room_players TO anon, authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.games TO anon, authenticated;
+
 DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
 CREATE POLICY "Authenticated users can join rooms" ON public.room_players
   FOR INSERT WITH CHECK (true);
