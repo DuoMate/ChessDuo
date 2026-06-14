@@ -580,16 +580,22 @@ DROP POLICY IF EXISTS "Allow all" ON public.room_players;
 DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_games;
 
 -- ============================================================
--- RAID: Fix room_players INSERT 403 — DEBUG MODE (permissive)
--- TODO: revert to auth.uid()::text = player_id after confirming fix
+-- RAID: Restore "Allow all" policies + fix INSERT
+-- The security fix dropped dashboard-added "Allow all" policies.
+-- PostgreSQL OR's permissive policies together, so "Allow all"
+-- coexists safely with the specific policies below.
 -- ============================================================
--- Table privileges: RLS policies only add restrictions, they cannot
--- grant INSERT if the role never had it. Ensure anon & authenticated
--- have base table rights (idempotent — no-op if already granted).
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.room_players TO anon, authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.games TO anon, authenticated;
 
+-- Re-create "Allow all" (the policy that worked for 3 months)
+DROP POLICY IF EXISTS "Allow all" ON public.room_players;
+CREATE POLICY "Allow all" ON public.room_players FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all" ON public.games;
+CREATE POLICY "Allow all" ON public.games FOR ALL USING (true) WITH CHECK (true);
+
+-- Fix INSERT policy back to proper auth check
 DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
 CREATE POLICY "Authenticated users can join rooms" ON public.room_players
-  FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
                                                                                                                                                                                     
