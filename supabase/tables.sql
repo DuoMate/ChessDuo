@@ -550,4 +550,17 @@ DROP POLICY IF EXISTS "Allow all" ON public.room_players;
 -- Drop dashboard-added "Anyone can insert completed games"
 -- SQL-defined "Authenticated users can insert" is the correct policy.
 DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_games;
+
+-- ============================================================
+-- RAID: Fix room_players INSERT 403
+-- Run this in Supabase SQL editor to fix teammate registration
+-- ============================================================
+DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
+CREATE POLICY "Authenticated users can join rooms" ON room_players
+  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
+
+-- DEBUG only — if above still fails with 403, run this instead:
+-- DROP POLICY IF EXISTS "Authenticated users can join rooms" ON room_players;
+-- CREATE POLICY "Authenticated users can join rooms" ON room_players
+--   FOR INSERT WITH CHECK (true);
                                                                                                                                                                                     
