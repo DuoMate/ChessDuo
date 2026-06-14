@@ -42,11 +42,15 @@ export async function POST(request: Request) {
         const userId = sub?.notes?.user_id
         if (!userId || !sub?.id) break
 
+        const paymentEntity = (event.payload as any)?.payment?.entity
+        const paymentId = paymentEntity?.id || null
+
         await supabase
           .from('profiles')
           .update({
             is_premium: true,
             rzp_subscription_id: sub.id,
+            rzp_payment_id: paymentId,
             rzp_customer_id: sub.customer_id || null,
             subscription_status: 'active',
           })
