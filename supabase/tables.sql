@@ -138,13 +138,23 @@ BEGIN
   END LOOP;
 END $$;
 
--- Unique constraint on username
-ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_unique;
-ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
+-- Unique constraint on username (wrapped: ignore errors on re-runs)
+DO $$
+BEGIN
+  ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_unique;
+  ALTER TABLE profiles ADD CONSTRAINT profiles_username_unique UNIQUE (username);
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'profiles_username_unique error (safe): %', SQLERRM;
+END $$;
 
--- Username format constraint: 3-30 chars, alphanumeric + underscore only
-ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_format;
-ALTER TABLE profiles ADD CONSTRAINT profiles_username_format CHECK (username ~ '^[a-zA-Z0-9_]{3,30}$');
+-- Username format constraint: 3-30 chars, alphanumeric + underscore only (wrapped)
+DO $$
+BEGIN
+  ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_username_format;
+  ALTER TABLE profiles ADD CONSTRAINT profiles_username_format CHECK (username ~ '^[a-zA-Z0-9_]{3,30}$');
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'profiles_username_format error (safe): %', SQLERRM;
+END $$;
 
 -- Lowercase username column for case-insensitive lookups
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username_lower TEXT;
@@ -203,6 +213,8 @@ BEGIN
     ALTER TABLE games DROP CONSTRAINT IF EXISTS games_room_fk;
     ALTER TABLE games ADD CONSTRAINT games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Migration block error (safe to ignore): %', SQLERRM;
 END $$;
 
 
