@@ -383,6 +383,7 @@ export function ChessBoard({
           <AnimatePresence>
             {teammateLabelVisible && pendingOverlay && (() => {
               const labelPos = getSquarePercent(pendingOverlay.to, orientation)
+              const centerLeft = `${parseFloat(labelPos.left) + 6.25}%`
               return (
               <motion.div
                 key="teammate-label"
@@ -403,12 +404,11 @@ export function ChessBoard({
                 transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 className="absolute pointer-events-none select-none z-20"
                 style={{
-                  left: labelPos.left,
+                  left: centerLeft,
                   top: labelPos.top,
-                  width: '12.5%',
                 }}
               >
-                <div className="flex justify-center">
+                <div style={{ transform: 'translateX(-50%)' }}>
                   <div
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-full whitespace-nowrap
                       bg-gradient-to-r from-amber-500/90 to-amber-400/90
