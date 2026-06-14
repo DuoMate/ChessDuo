@@ -19,6 +19,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS insights_reveals_used INTEGER DEFA
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_customer_id TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_subscription_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_payment_id TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';
 
         -- Create rooms table

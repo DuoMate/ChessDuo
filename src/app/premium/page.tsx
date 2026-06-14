@@ -137,9 +137,18 @@ export default function PremiumPage() {
         subscription_id: data.subscriptionId,
         name: 'ChessDuo Premium',
         description: 'Unlimited move insights & AI analysis',
-        handler: function () {
+        handler: async function (response: { razorpay_payment_id: string; razorpay_subscription_id: string }) {
           setIsPremium(true)
           setSubscriptionStatus('active')
+          await supabase
+            .from('profiles')
+            .update({
+              is_premium: true,
+              rzp_subscription_id: response.razorpay_subscription_id,
+              rzp_payment_id: response.razorpay_payment_id,
+              subscription_status: 'active',
+            })
+            .eq('id', playerId)
         },
         prefill: {
           name: 'ChessDuo Player',

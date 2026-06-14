@@ -30,6 +30,7 @@ export type Database = {
           is_premium: boolean
           rzp_customer_id: string | null
           rzp_subscription_id: string | null
+          rzp_payment_id: string | null
           subscription_status: string
           created_at: string
         }
@@ -41,6 +42,7 @@ export type Database = {
           is_premium?: boolean
           rzp_customer_id?: string | null
           rzp_subscription_id?: string | null
+          rzp_payment_id?: string | null
           subscription_status?: string
         }
         Update: {
@@ -51,6 +53,7 @@ export type Database = {
           is_premium?: boolean
           rzp_customer_id?: string | null
           rzp_subscription_id?: string | null
+          rzp_payment_id?: string | null
           subscription_status?: string
         }
       }
