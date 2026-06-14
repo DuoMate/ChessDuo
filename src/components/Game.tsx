@@ -234,6 +234,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
   const playerId = playerIdFromProps || null
+  const playerIdRef = useRef(playerId)
+  playerIdRef.current = playerId
+  const teamRef = useRef<string | undefined>(team)
+  teamRef.current = team
   const [teamLabels, setTeamLabels] = useState<{ white: string; black: string; blackIsBot: boolean }>({ white: 'White Team', black: 'Black Team', blackIsBot: true })
   const teamNamesFetchedRef = useRef(false)
 
@@ -439,17 +443,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const captured = g.getCapturedPieces()
         DEBUG && console.log('[Game] New state:', { status: g.status, fen: g.fen, turn: g.currentTurn })
         
-        // Determine viewer's team
-        const myTeam = team || (g as GameInterface).getTeam()
+        // Determine viewer's team (use refs to avoid stale closure)
+        const currentPlayerId = playerIdRef.current
+        const currentTeam = teamRef.current
+        const myTeam = currentTeam || (g as GameInterface).getTeam()
         if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
         
         // Get pendingOverlay for online mode - show teammate's pending move
         // Only show moves from same-team players (not opponent bot/player moves)
         let pendingOverlay: PendingOverlay | null = null
-        if (playerId) {
+        if (currentPlayerId) {
           const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const entries = Array.from(allMoves.entries()) as [string, any][]
-          const otherPlayerMoves = entries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+          const otherPlayerMoves = entries.filter(([p]) => p !== currentPlayerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
           
           // Only show pendingOverlay if there's a teammate move (not my own)
           if (otherPlayerMoves.length > 0) {
@@ -473,9 +479,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // FIX: Only show if I have a pending move that is NOT locked (still selecting)
         // If I've already locked my move, don't show myPendingOverlay (avoid duplicate)
         let myPendingOverlay: PendingOverlay | null = null
-        if (playerId) {
+        if (currentPlayerId) {
           const allMoves = (g as GameInterface).getAllPendingMoves() as Map<string, any>
-          const myPending = allMoves.get(playerId)
+          const myPending = allMoves.get(currentPlayerId)
           // Only show myPendingOverlay if I have a move AND it's not locked yet
           if (myPending && !myPending.locked && myPending.from && myPending.to) {
             let piece = myPending.piece
@@ -498,14 +504,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           ? g.currentTurn === myTeam
           : g.currentTurn === Team.WHITE
         let turnStatus: GameState['turnStatus'] = 'waiting'
-        if (g.status === GameStatus.PLAYING && isMyTurnToAct && playerId) {
+        if (g.status === GameStatus.PLAYING && isMyTurnToAct && currentPlayerId) {
           const ts = (g as GameInterface).getTurnState()
           const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
           const localOtherPlayer = isFourPlayer
-            ? localEntries.filter(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
-            : localEntries.filter(([p]) => p !== playerId)
-          const localMyPending = allMovesLocal.get(playerId)
+            ? localEntries.filter(([p]) => p !== currentPlayerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+            : localEntries.filter(([p]) => p !== currentPlayerId)
+          const localMyPending = allMovesLocal.get(currentPlayerId)
           const localTeammateLocked = localOtherPlayer.length > 0 && localOtherPlayer[0][1]?.locked
           if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
           else if (localTeammateLocked) turnStatus = 'teammate_locked'
@@ -831,7 +837,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     }
     prevTurnRef.current = currentTurn
-  }, [isOnline, game])
+  }, [isOnline, game, playerId, team])
 
   const updateStateRef = useRef(updateState)
   useEffect(() => {
