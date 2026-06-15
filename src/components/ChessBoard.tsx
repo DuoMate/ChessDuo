@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess, Square } from 'chess.js'
@@ -65,7 +65,6 @@ export function ChessBoard({
   const [showRetraction, setShowRetraction] = useState(false)
   const [retractionData, setRetractionData] = useState<{ from: string; to: string; piece: string; color: string } | null>(null)
   const [teammateLabelVisible, setTeammateLabelVisible] = useState(false)
-  const labelTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [overlayWidth, setOverlayWidth] = useState(0)
 
   useLayoutEffect(() => {
@@ -73,14 +72,7 @@ export function ChessBoard({
       setOverlayWidth(overlayContainerRef.current.getBoundingClientRect().width)
     }
   }, [])
-
-  const clearLabelTimer = useCallback(() => {
-    if (labelTimerRef.current) {
-      clearTimeout(labelTimerRef.current)
-      labelTimerRef.current = null
-    }
-  }, [])
-
+ 
   useEffect(() => {
     onMoveRef.current = onMove
   }, [onMove])
@@ -291,16 +283,10 @@ export function ChessBoard({
   useEffect(() => {
     if (pendingOverlay?.showTeammateLabel) {
       setTeammateLabelVisible(true)
-      clearLabelTimer()
-      labelTimerRef.current = setTimeout(() => {
-        setTeammateLabelVisible(false)
-      }, 2500)
     } else {
       setTeammateLabelVisible(false)
-      clearLabelTimer()
     }
-    return () => clearLabelTimer()
-  }, [pendingOverlay, clearLabelTimer])
+  }, [pendingOverlay])
 
   const handleRetractionComplete = () => {
     setShowRetraction(false)
