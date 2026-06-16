@@ -6,6 +6,13 @@ import { getRazorpay } from '@/lib/razorpay'
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
+    )
+
     let userId: string | undefined
 
     const authHeader = request.headers.get('Authorization')
@@ -20,12 +27,6 @@ export async function POST(request: Request) {
     }
 
     if (!userId) {
-      const cookieStore = await cookies()
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
-      )
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) userId = session.user.id
     }
@@ -34,10 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const { data: profile } = await supabase
       .from('profiles')
       .select('rzp_subscription_id, subscription_status')
       .eq('id', userId)
@@ -51,10 +49,7 @@ export async function POST(request: Request) {
 
     await razorpay.subscriptions.cancel(profile.rzp_subscription_id, true)
 
-    await createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    await supabase
       .from('profiles')
       .update({ subscription_status: 'canceling' })
       .eq('id', userId)

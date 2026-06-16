@@ -87,6 +87,7 @@ export default function PremiumPage() {
       setCheckingPremium(false)
       return
     }
+    setCheckingPremium(true)
     supabase
       .from('profiles')
       .select('is_premium, subscription_status')
