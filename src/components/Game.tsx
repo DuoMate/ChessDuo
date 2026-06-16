@@ -470,8 +470,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   piece = 'p'
                 }
               }
-              const moveKey = `${teammatePending.from}-${teammatePending.to}`
-              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && g.currentTurn === myTeam && moveKey !== lastTeammateLabelMoveKeyRef.current }
+              pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: g.currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && g.currentTurn === myTeam }
             }
           }
         }
@@ -719,8 +718,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               piece = 'p'
             }
           }
-          const moveKey = `${teammatePending.from}-${teammatePending.to}`
-          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && currentTurn === myTeam && moveKey !== lastTeammateLabelMoveKeyRef.current }
+          pendingOverlay = { from: teammatePending.from, to: teammatePending.to, piece, color: currentTurn === Team.WHITE ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 && currentTurn === myTeam }
         }
       }
     }
@@ -1195,7 +1193,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             const isNewBotMove = botMoveKey !== lastTeammateLabelMoveKeyRef.current
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: teammateLabelShownRef.current < 3 && isNewBotMove },
+              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: teammateLabelShownRef.current < 3 },
               myPendingOverlay: null
             }))
             if (teammateLabelShownRef.current < 3 && isNewBotMove) {
