@@ -132,4 +132,56 @@ describe('TeamIndicator Component', () => {
     )
     expect(screen.getByText('Black to move')).toBeDefined()
   })
+
+  test('team label spans use break-words instead of truncate for full name visibility', () => {
+    render(
+      <TeamIndicator
+        whiteLabel="White Team (You), Alice"
+        blackLabel="Black Team, Bob"
+        activeTeam="WHITE"
+        isGameOver={false}
+        isBotThinking={false}
+      />
+    )
+    const whiteLabel = screen.getByText('White Team (You), Alice')
+    expect(whiteLabel.className).toContain('break-words')
+    expect(whiteLabel.className).not.toContain('truncate')
+    const blackLabel = screen.getByText('Black Team, Bob')
+    expect(blackLabel.className).toContain('break-words')
+    expect(blackLabel.className).not.toContain('truncate')
+  })
+
+  test('team panel containers have max-w-[40%] to prevent overflow', () => {
+    render(
+      <TeamIndicator
+        whiteLabel="White"
+        blackLabel="Black"
+        activeTeam="WHITE"
+        isGameOver={false}
+        isBotThinking={false}
+      />
+    )
+    const whiteLabel = screen.getByText('White')
+    const whitePanel = whiteLabel.closest('[class*="rounded-xl"]')
+    expect(whitePanel?.className).toContain('max-w-[40%]')
+    const blackLabel = screen.getByText('Black')
+    const blackPanel = blackLabel.closest('[class*="rounded-xl"]')
+    expect(blackPanel?.className).toContain('max-w-[40%]')
+  })
+
+  test('team icons have shrink-0 to prevent icon compression with long names', () => {
+    render(
+      <TeamIndicator
+        whiteLabel="White Team (You), VeryLongUsername"
+        blackLabel="Black Team, AnotherLongName"
+        activeTeam="WHITE"
+        isGameOver={false}
+        isBotThinking={false}
+      />
+    )
+    const whiteLabel = screen.getByText('White Team (You), VeryLongUsername')
+    const whitePanel = whiteLabel.closest('[class*="rounded-xl"]')
+    const crownIcon = whitePanel?.querySelector('svg')
+    expect(crownIcon?.className.baseVal || crownIcon?.getAttribute('class') || '').toContain('shrink-0')
+  })
 })

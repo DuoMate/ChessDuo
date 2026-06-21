@@ -633,6 +633,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
       console.log('[Game][DIAG] ✅ Calling joinRoom with:', { roomId, playerId, team })
       onlineGame.joinRoom({ id: roomId } as Room, playerId, team)
+      const actualTeam = onlineGame.getTeam()
+      if (actualTeam) myTeamRef.current = actualTeam as 'WHITE' | 'BLACK'
     } else {
       console.log('[Game][DIAG] ❌ joinRoom NOT called - conditions not met')
     }
@@ -1109,9 +1111,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             }
           } catch (e: any) {
             if (e?.message === 'NOT_COORDINATOR') {
-              DEBUG && console.log(`[RESOLVE] Not coordinator — waiting for broadcast`)
+              DEBUG && console.log(`[RESOLVE] Not coordinator — setting up recovery timeout`)
+              const turnAtCatch = g.currentTurn
+              const timeoutMs = 30000
+              setTimeout(() => {
+                const gNow = onlineGameRef.current
+                if (!gNow) return
+                if (gNow.currentTurn === turnAtCatch && gNow.getTurnState() !== 'selecting') {
+                  DEBUG && console.warn(`[RESOLVE] Coordinator timeout — forcing state refresh`)
+                  gNow.setTurnState('selecting')
+                  gNow.startPendingTurn?.()
+                  updateStateRef.current()
+                }
+              }, timeoutMs)
             } else {
               DEBUG && console.log(`[RESOLVE] Resolve failed:`, e)
+              toast.warning('Move evaluation failed. Please try again.')
+              updateStateRef.current()
             }
           }
         } else {

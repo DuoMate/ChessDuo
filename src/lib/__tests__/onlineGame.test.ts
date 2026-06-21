@@ -825,4 +825,41 @@ describe('OnlineGame', () => {
       expect(setGameOverTimeupSpy).not.toHaveBeenCalled()
     })
   })
+
+  describe('_finishResolution', () => {
+    it('should persist game state and broadcast turn_resolved', async () => {
+      const game = new OnlineGame()
+      ;(game as any)._playerId = 'player1'
+      ;(game as any)._room = { id: 'room-123' }
+      ;(game as any)._status = GameStatus.PLAYING
+      ;(game as any)._channel = { send: jest.fn().mockResolvedValue(null) }
+      ;(game as any)._lastMoveComparison = { winnerId: 'player1', winningMove: 'e2e4' }
+
+      await (game as any)._finishResolution(Team.WHITE, 'e2e4')
+
+      const channel = (game as any)._channel
+      expect(channel.send).toHaveBeenCalled()
+      const sendArgs = channel.send.mock.calls[0][0]
+      expect(sendArgs.type).toBe('broadcast')
+      expect(sendArgs.event).toBe('turn_resolved')
+      expect(sendArgs.payload.winningTeam).toBe(Team.WHITE)
+      expect(sendArgs.payload.winningMove).toBe('e2e4')
+      expect(sendArgs.payload.comparison).toBeDefined()
+      expect(sendArgs.payload.coordinatorId).toBe('player1')
+    })
+
+    it('should broadcast without throttle check', async () => {
+      const game = new OnlineGame()
+      ;(game as any)._playerId = 'player1'
+      ;(game as any)._room = { id: 'room-123' }
+      ;(game as any)._status = GameStatus.PLAYING
+      ;(game as any)._channel = { send: jest.fn().mockResolvedValue(null) }
+      ;(game as any)._lastMoveComparison = { winnerId: 'player1', winningMove: 'e2e4' }
+      ;(game as any)._broadcastThrottle = new Map([['turn_resolved', Date.now()]])
+
+      await (game as any)._finishResolution(Team.WHITE, 'e2e4')
+
+      expect((game as any)._channel.send).toHaveBeenCalledTimes(1)
+    })
+  })
 })

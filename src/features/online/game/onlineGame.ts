@@ -1133,6 +1133,48 @@ export class OnlineGame {
     return this.gameState.getSelectedMove(player)
   }
 
+  private async _finishResolution(currentTeam: Team, winningMove: string): Promise<void> {
+    // Persist game state for recovery from refresh/OS kill
+    if (this._room) {
+      const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
+      saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
+        team: currentTeam,
+        move: winningMove,
+        fen_before: fenBefore,
+        fen_after: this.gameState.fen,
+        timestamp: new Date().toISOString()
+      }, this._status)
+    }
+
+    // Broadcast turn_resolved to all non-coordinator clients
+    if (this._channel) {
+      await this._channel.send({
+        type: 'broadcast',
+        event: 'turn_resolved',
+        payload: {
+          winningTeam: currentTeam,
+          winningMove,
+          comparison: this._lastMoveComparison,
+          coordinatorId: this._playerId,
+          matchTimeRemaining: this.gameState.getMatchTimeRemaining()
+        }
+      })
+    }
+
+    if (this.gameState.board.isGameOver()) {
+      this._status = GameStatus.GAME_OVER
+      if (this._timerSyncInterval) {
+        clearInterval(this._timerSyncInterval)
+        this._timerSyncInterval = null
+      }
+      if (this._pollingInterval) {
+        clearInterval(this._pollingInterval)
+        this._pollingInterval = null
+      }
+      this.stopMatchTimer()
+    }
+  }
+
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
     
@@ -1237,9 +1279,15 @@ export class OnlineGame {
           loserFrom: player2From, loserTo: player2To,
           alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
         }
+        this.stats.movesPlayed++
+        this.stats.conflicts++
+        this.stats.syncRate = (this.stats.syncRate * (this.stats.movesPlayed - 1)) / this.stats.movesPlayed
+        this.stats.player1Accuracy = ((this.stats.player1Accuracy * (this.stats.movesPlayed - 1)) + 100) / this.stats.movesPlayed
+        this.stats.player2Accuracy = ((this.stats.player2Accuracy * (this.stats.movesPlayed - 1)) + 0) / this.stats.movesPlayed
         this.gameState.resolve(player1Move)
         if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
         this.notifyStateChange()
+        await this._finishResolution(currentTeam, player1Move)
         return { winnerId: 'player1', winningMove: player1Move }
       }
     } catch (e) { DEBUG && console.error('[OnlineGame] Failed to check isCheckmate (1):', e) }
@@ -1260,9 +1308,15 @@ export class OnlineGame {
           loserFrom: player1From, loserTo: player1To,
           alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
         }
+        this.stats.movesPlayed++
+        this.stats.conflicts++
+        this.stats.syncRate = (this.stats.syncRate * (this.stats.movesPlayed - 1)) / this.stats.movesPlayed
+        this.stats.player1Accuracy = ((this.stats.player1Accuracy * (this.stats.movesPlayed - 1)) + 0) / this.stats.movesPlayed
+        this.stats.player2Accuracy = ((this.stats.player2Accuracy * (this.stats.movesPlayed - 1)) + 100) / this.stats.movesPlayed
         this.gameState.resolve(player2Move)
         if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
         this.notifyStateChange()
+        await this._finishResolution(currentTeam, player2Move)
         return { winnerId: 'player2', winningMove: player2Move }
       }
     } catch (e) { DEBUG && console.error('[OnlineGame] Failed to check isCheckmate (2):', e) }
@@ -1371,45 +1425,7 @@ export class OnlineGame {
 
     this.gameState.resolve(winningMove)
 
-    if (this._channel && this.canBroadcast('turn_resolved')) {
-      await this._channel.send({
-        type: 'broadcast',
-        event: 'turn_resolved',
-        payload: { 
-          winningTeam: currentTeam, 
-          winningMove,
-          comparison: this._lastMoveComparison,
-          coordinatorId: this._playerId,
-          matchTimeRemaining: this.gameState.getMatchTimeRemaining()
-        }
-      })
-    }
-
-    // Persist game state for recovery from refresh/OS kill
-    if (this._room) {
-      const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
-      saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
-        team: currentTeam,
-        move: winningMove,
-        fen_before: fenBefore,
-        fen_after: this.gameState.fen,
-        timestamp: new Date().toISOString()
-      }, this._status)
-    }
-
-    if (this.gameState.board.isGameOver()) {
-      this._status = GameStatus.GAME_OVER
-    if (this._timerSyncInterval) {
-      clearInterval(this._timerSyncInterval)
-      this._timerSyncInterval = null
-    }
-    this.stopMatchTimer()
-      if (this._pollingInterval) {
-        clearInterval(this._pollingInterval)
-        this._pollingInterval = null
-      }
-      this.stopMatchTimer()
-    }
+    await this._finishResolution(currentTeam, winningMove)
 
     return { winnerId, winningMove }
   }

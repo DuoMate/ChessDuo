@@ -41,6 +41,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const authCompletedRef = useRef<string | null>(null)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
@@ -52,6 +53,8 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   }, [onAuthComplete])
 
   const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string) => {
+    if (authCompletedRef.current === userId) return
+    authCompletedRef.current = userId
     const { data } = await supabase
       .from('profiles')
       .select('username')

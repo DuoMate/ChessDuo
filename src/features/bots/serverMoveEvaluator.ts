@@ -1,4 +1,5 @@
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
+const FETCH_TIMEOUT_MS = 15000
 import { evaluationCache } from '../shared/evaluationCache'
 
 interface EvaluateResponse {
@@ -6,6 +7,12 @@ interface EvaluateResponse {
   score: number
   depth: number
   timeMs: number
+}
+
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId))
 }
 
 export class ServerMoveEvaluator {
@@ -59,13 +66,13 @@ export class ServerMoveEvaluator {
       try {
         console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
-        const response = await fetch(`${this.serverUrl}/evaluate-moves`, {
+        const response = await fetchWithTimeout(`${this.serverUrl}/evaluate-moves`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ fen, moves, movetime: 500 })
-        })
+        }, FETCH_TIMEOUT_MS)
 
         if (response.ok) {
           const data = await response.json()
@@ -110,13 +117,13 @@ export class ServerMoveEvaluator {
     for (let attempt = 0; attempt < retries; attempt++) {
       const attemptStart = Date.now()
       try {
-        const response = await fetch(`${this.serverUrl}/evaluate`, {
+        const response = await fetchWithTimeout(`${this.serverUrl}/evaluate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ fen, depth, uciElo })
-        })
+        }, FETCH_TIMEOUT_MS)
 
         if (!response.ok) {
           throw new Error(`Evaluation failed: ${response.statusText}`)
@@ -181,13 +188,13 @@ export class ServerMoveEvaluator {
     for (let attempt = 0; attempt < 3; attempt++) {
       const attemptStart = Date.now()
       try {
-        const response = await fetch(`${this.serverUrl}/play-move`, {
+        const response = await fetchWithTimeout(`${this.serverUrl}/play-move`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ fen, uciElo, movetime })
-        })
+        }, FETCH_TIMEOUT_MS)
 
         if (!response.ok) {
           throw new Error(`Play move failed: ${response.statusText}`)
