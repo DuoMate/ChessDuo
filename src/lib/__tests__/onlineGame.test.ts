@@ -862,4 +862,65 @@ describe('OnlineGame', () => {
       expect((game as any)._channel.send).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('lastMoveComparison — team-aware getter', () => {
+    it('returns WHITE comparison when currentTeam is BLACK (WHITE just finished)', () => {
+      const game = new OnlineGame()
+      const whiteComp = { winnerId: 'player1', winningMove: 'e2e4', player1Accuracy: 95, player2Accuracy: 70 }
+      ;(game as any)._whiteComparison = whiteComp
+      ;(game as any)._blackComparison = null
+      ;(game as any).gameState.setCurrentTeam(Team.BLACK)
+
+      expect(game.lastMoveComparison).toBe(whiteComp)
+    })
+
+    it('returns BLACK comparison when currentTeam is WHITE (BLACK just finished)', () => {
+      const game = new OnlineGame()
+      const blackComp = { winnerId: 'player3', winningMove: 'e7e5', player1Accuracy: 88, player2Accuracy: 72 }
+      ;(game as any)._whiteComparison = null
+      ;(game as any)._blackComparison = blackComp
+      ;(game as any).gameState.setCurrentTeam(Team.WHITE)
+
+      expect(game.lastMoveComparison).toBe(blackComp)
+    })
+
+    it('returns null when no comparison is stored for the team that just finished', () => {
+      const game = new OnlineGame()
+      ;(game as any)._whiteComparison = null
+      ;(game as any)._blackComparison = null
+      ;(game as any).gameState.setCurrentTeam(Team.BLACK)
+
+      expect(game.lastMoveComparison).toBeNull()
+    })
+  })
+
+  describe('startPendingTurn — targeted comparison clearing', () => {
+    it('clears only WHITE comparison when WHITE turn starts, preserves BLACK', () => {
+      const game = new OnlineGame()
+      const whiteComp = { winnerId: 'p1', winningMove: 'e2e4', player1Accuracy: 90, player2Accuracy: 80 }
+      const blackComp = { winnerId: 'p3', winningMove: 'e7e5', player1Accuracy: 85, player2Accuracy: 75 }
+      ;(game as any)._whiteComparison = whiteComp
+      ;(game as any)._blackComparison = blackComp
+      ;(game as any).gameState.setCurrentTeam(Team.WHITE)
+
+      ;(game as any).startPendingTurn()
+
+      expect((game as any)._whiteComparison).toBeNull()
+      expect((game as any)._blackComparison).toBe(blackComp)
+    })
+
+    it('clears only BLACK comparison when BLACK turn starts, preserves WHITE', () => {
+      const game = new OnlineGame()
+      const whiteComp = { winnerId: 'p1', winningMove: 'e2e4', player1Accuracy: 90, player2Accuracy: 80 }
+      const blackComp = { winnerId: 'p3', winningMove: 'e7e5', player1Accuracy: 85, player2Accuracy: 75 }
+      ;(game as any)._whiteComparison = whiteComp
+      ;(game as any)._blackComparison = blackComp
+      ;(game as any).gameState.setCurrentTeam(Team.BLACK)
+
+      ;(game as any).startPendingTurn()
+
+      expect((game as any)._blackComparison).toBeNull()
+      expect((game as any)._whiteComparison).toBe(whiteComp)
+    })
+  })
 })

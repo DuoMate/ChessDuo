@@ -92,7 +92,10 @@ export class OnlineGame {
   }
 
   get lastMoveComparison(): MoveComparison | null {
-    return this._lastMoveComparison
+    if (this.gameState.currentTeam === Team.WHITE) {
+      return this._blackComparison
+    }
+    return this._whiteComparison
   }
 
   getStats() {
@@ -1013,12 +1016,11 @@ export class OnlineGame {
 
   startPendingTurn(): void {
     if (this.gameState.currentTeam === Team.WHITE) {
-      const hadWhite = !!this._whiteComparison
-      const hadBlack = !!this._blackComparison
       this._whiteComparison = null
+      DEBUG && console.log('[STATE-SYNC] New WHITE turn: resetting WHITE comparison ref')
+    } else {
       this._blackComparison = null
-      this._lastMoveComparison = null
-      DEBUG && console.log('[STATE-SYNC] New WHITE turn: resetting internal comparison refs (hadWhite:', hadWhite, 'hadBlack:', hadBlack, ')')
+      DEBUG && console.log('[STATE-SYNC] New BLACK turn: resetting BLACK comparison ref')
     }
     const fen = this.gameState.fen
     this.gameState.startPendingTurn(fen)

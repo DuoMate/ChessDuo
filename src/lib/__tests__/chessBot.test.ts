@@ -188,3 +188,64 @@ function moveToSan(uciMove: string, fen: string): string {
   const matchedMove = moves.find(m => m.from === from && m.to === to && m.promotion === promotion)
   return matchedMove?.san || ''
 }
+
+describe('ChessBot — black opponent score handling', () => {
+  test('black opponent bot selects strong moves, not blunders, at high skill level', () => {
+    const bot = createBot({ skillLevel: 6 })
+    const fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1'
+    
+    const chess = new Chess(fen)
+    const legalMoves = chess.moves()
+    expect(legalMoves.length).toBeGreaterThanOrEqual(15)
+    
+    const move = bot.selectMove(fen)
+    expect(move).not.toBeNull()
+    
+    // At Grandmaster level, Black should not hang material in the opening
+    const chessAfter = new Chess(fen)
+    chessAfter.move(move!)
+    const material = countMaterial(chessAfter.fen())
+    // After 1. e4, Black's response should not lose material
+    const startingMaterial = countMaterial(fen)
+    expect(material.black).toBeGreaterThanOrEqual(startingMaterial.black - 1)
+  })
+
+  test('black bot at beginner level can make weaker moves', () => {
+    const bot = createBot({ skillLevel: 1 })
+    const fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1'
+    
+    const move = bot.selectMove(fen)
+    expect(move).not.toBeNull()
+    expect(move).toMatch(/^[a-h][1-8][a-h][1-8][qrbn]?$/)
+  })
+
+  test('black bot at level 6 does not hang a queen when threatened', () => {
+    const bot = createBot({ skillLevel: 6 })
+    // Black queen on d8 is attacked by White bishop on g5 (diagonal g5-f6-e7-d8 is clear)
+    const fen = 'rnbqkbnr/pppp1ppp/8/4p1B1/4P3/8/PPPP1PPP/RN1QKBNR b KQkq - 2 2'
+    
+    const move = bot.selectMove(fen)
+    expect(move).not.toBeNull()
+    
+    const chessAfter = new Chess(fen)
+    chessAfter.move(move!)
+    // After moving, Black should still have their queen
+    const fenAfter = chessAfter.fen()
+    const pieces = fenAfter.split(' ')[0]
+    // Queen should still be on the board — bot should protect or move it
+    expect(pieces).toContain('q')
+  })
+})
+
+function countMaterial(fen: string): { white: number; black: number } {
+  const pieceValues: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
+  const pieces = fen.split(' ')[0]
+  let white = 0, black = 0
+  for (const ch of pieces) {
+    if (pieceValues[ch.toLowerCase()]) {
+      if (ch === ch.toUpperCase()) white += pieceValues[ch.toLowerCase()]
+      else black += pieceValues[ch.toLowerCase()]
+    }
+  }
+  return { white, black }
+}

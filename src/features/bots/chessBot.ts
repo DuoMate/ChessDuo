@@ -147,7 +147,8 @@ export class ChessBot {
         const chess = new Chess(fen)
         try {
           chess.move(move)
-          return { move, score: this.fallbackEvaluate(chess.fen()) }
+          const rawScore = this.fallbackEvaluate(chess.fen())
+          return { move, score: isBlackTurn ? -rawScore : rawScore }
         } catch {
           return { move, score: isBlackTurn ? 1000 : -1000 }
         }
@@ -382,8 +383,9 @@ export class ChessBot {
     }
 
     const temperature = 30
-    const maxScore = Math.max(...moves.map(m => m.score))
-    const weights = moves.map(m => Math.exp((m.score - maxScore) / temperature))
+    const scores = moves.map(m => isBlackTurn ? -m.score : m.score)
+    const maxScore = Math.max(...scores)
+    const weights = scores.map(s => Math.exp((s - maxScore) / temperature))
     const total = weights.reduce((a, b) => a + b, 0)
 
     let r = Math.random() * total
