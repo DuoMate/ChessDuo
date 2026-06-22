@@ -144,7 +144,7 @@ export class StockfishEngine {
 
   private startEvaluation(): void {
     const moveNumber = this.getMoveNumber(this.currentFen)
-    const movetime = moveNumber < 10 ? 800 : 1200
+    const movetime = moveNumber < 10 ? 3000 : 5000
 
     console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${movetime}ms)`)
 

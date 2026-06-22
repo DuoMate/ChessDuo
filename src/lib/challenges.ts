@@ -1,4 +1,5 @@
 import { supabase, ChallengeLink } from './supabase'
+import { getAppBaseUrl } from './appUrl'
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -76,7 +77,7 @@ export async function createChallenge(
 }
 
 export function getChallengeUrl(code: string): string {
-  return `${window.location.origin}/challenge/${code}`
+  return `${getAppBaseUrl()}/challenge/${code}`
 }
 
 export async function getChallengeByCode(code: string): Promise<ChallengeLink | null> {

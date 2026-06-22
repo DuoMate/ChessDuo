@@ -1,4 +1,5 @@
 import { supabase, Friendship } from './supabase'
+import { getAppBaseUrl } from './appUrl'
 
 export async function sendFriendRequest(senderId: string, receiverId: string): Promise<{ error: string | null }> {
   if (senderId === receiverId) return { error: 'Cannot add yourself as a friend' }
@@ -229,11 +230,11 @@ export async function isFriend(userId: string, otherUserId: string): Promise<boo
 }
 
 export function getInviteLink(userId: string): string {
-  return `${window.location.origin}/invite/${userId}`
+  return `${getAppBaseUrl()}/invite/${userId}`
 }
 
 export function getProfileLink(userId: string): string {
-  return `${window.location.origin}/profile/${userId}`
+  return `${getAppBaseUrl()}/profile/${userId}`
 }
 
 export async function getFriendStats(friendId: string): Promise<{
