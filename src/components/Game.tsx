@@ -12,6 +12,7 @@ import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
+import { getAppBaseUrl } from '@/lib/appUrl'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
@@ -1081,11 +1082,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               
               const currentFen = g.board.fen()
               
-              ;(async () => {
-                const botUciMove = await bot.selectMoveAsync(currentFen)
+               ;(async () => {
+                const botUciMove = await bot.selectBestMove(currentFen)
                 DEBUG && console.log(`[RESOLVE] Bot selected move:`, botUciMove)
                 
-                if (botUciMove) {
+                if (!botUciMove) {
+                  const chess = new Chess(currentFen)
+                  const legalMoves = chess.moves({ verbose: true })
+                  if (legalMoves.length > 0) {
+                    const fallbackMove = legalMoves[0]
+                    const fallbackUci = fallbackMove.from + fallbackMove.to
+                    const sanMove = uciToSan(fallbackUci, currentFen)
+                    const moveInfo = getMoveFromUci(fallbackUci, currentFen)
+                    if (moveInfo) {
+                      g.setPendingMove('bot_opponent_1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                      g.setPendingMove('bot_opponent_2', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                      g.lockPendingMove('bot_opponent_1')
+                      g.lockPendingMove('bot_opponent_2')
+                    }
+                  }
+                } else if (botUciMove) {
                   const sanMove = uciToSan(botUciMove, currentFen)
                   const moveInfo = getMoveFromUci(botUciMove, currentFen)
                   
@@ -1189,7 +1205,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         let teammateMoveInfo: { from: string; to: string; piece: string } | null = null
 
         try {
-          teammateUciMove = await teammateBot.selectMoveAsync(g.board.fen())
+          teammateUciMove = await teammateBot.selectBestMove(g.board.fen())
         } catch (error) {
           DEBUG && console.warn('[TEAMMATE] Error selecting move:', error)
         }
@@ -1230,7 +1246,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
         g.lockPendingMove('player1')
-        toast.moveLocked()
 
         DEBUG && console.log(`[RESOLVE] Both moves locked, waiting...`)
         DEBUG && console.log(`[RESOLVE] isBothPendingLocked: ${g.isBothPendingLocked()}`)
@@ -1380,7 +1395,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Show lobby for online mode while waiting for game to start
   const inviteUrl = roomCode && typeof window !== 'undefined'
-    ? `${window.location.origin}/?code=${roomCode}`
+    ? `${getAppBaseUrl()}/?code=${roomCode}`
     : undefined
 
   if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {

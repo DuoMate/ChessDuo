@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getAppBaseUrl } from '@/lib/appUrl'
 import {
   getLobbyPlayers,
   joinLobby,
@@ -42,7 +43,7 @@ export function FourPlayerLobby({
   const [linkCopied, setLinkCopied] = useState(false)
 
   const inviteUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/?code=${roomCode}`
+    ? `${getAppBaseUrl()}/?code=${roomCode}`
     : null
 
   const fetchPlayers = useCallback(async () => {

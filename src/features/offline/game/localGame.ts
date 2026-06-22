@@ -342,12 +342,8 @@ export class LocalGame {
 
       const verboseMoves = chess.moves({ verbose: true })
 
-      const playerMoves = [player1Uci, player2Uci].filter(Boolean)
-      const supplementalMoves = verboseMoves
-        .map(m => m.from + m.to + (m.promotion || ''))
-        .filter(uci => !playerMoves.includes(uci))
-        .slice(0, 6 - playerMoves.length)
-      const topMovesUci = [...playerMoves, ...supplementalMoves]
+      const allLegalUci = verboseMoves.map(m => m.from + m.to + (m.promotion || ''))
+      const topMovesUci = allLegalUci
 
       const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
      
@@ -532,12 +528,8 @@ export class LocalGame {
 
       const verboseMoves = chess.moves({ verbose: true })
 
-      const playerMoves = [player1Uci, player2Uci].filter(Boolean)
-      const supplementalMoves = verboseMoves
-        .map(m => m.from + m.to + (m.promotion || ''))
-        .filter(uci => !playerMoves.includes(uci))
-        .slice(0, 6 - playerMoves.length)
-      const topMovesUci = [...playerMoves, ...supplementalMoves]
+      const allLegalUci = verboseMoves.map(m => m.from + m.to + (m.promotion || ''))
+      const topMovesUci = allLegalUci
 
       const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
      

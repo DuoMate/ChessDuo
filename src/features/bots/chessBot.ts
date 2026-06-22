@@ -68,6 +68,39 @@ export class ChessBot {
     }
   }
 
+  async selectBestMove(fen: string): Promise<string | null> {
+    try {
+      const chess = new Chess(fen)
+      const moves = chess.moves({ verbose: true })
+
+      if (moves.length === 0) {
+        return null
+      }
+
+      if (moves.length === 1) {
+        return this.moveToUci(moves[0])
+      }
+
+      if (!this.moveEvaluator) {
+        throw new Error('No evaluator configured')
+      }
+
+      const allUciMoves = moves.map(m => this.moveToUci(m))
+      const results = await this.moveEvaluator.evaluateMoves(allUciMoves, fen, 15, 2600)
+
+      if (results.length === 0) {
+        const randomMove = moves[Math.floor(Math.random() * moves.length)]
+        return this.moveToUci(randomMove)
+      }
+
+      const best = results.reduce((a, b) => a.score > b.score ? a : b, results[0])
+      return best.move
+    } catch (error) {
+      console.error('[ChessBot:Best] Move selection failed:', error)
+      return null
+    }
+  }
+
   selectMove(fen: string): string | null {
     try {
       const chess = new Chess(fen)
@@ -124,7 +157,7 @@ export class ChessBot {
     const topMovesLimit = difficulty.topMoves
     
     const uciMoves = moves.map(m => this.moveToUci(m))
-    const movesToEvaluate = uciMoves.slice(0, topMovesLimit)
+    const movesToEvaluate = uciMoves
     
     try {
       const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, 12, 2600)
