@@ -2,7 +2,7 @@ import { Chess } from 'chess.js'
 import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { GameStatus, MoveComparison } from '../../offline/game/localGame'
-import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
+import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
 import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
@@ -67,7 +67,7 @@ export class OnlineGame {
     player1Accuracy: 0,
     player2Accuracy: 0
   }
-  private evaluator: ServerMoveEvaluator
+  private evaluator: GameEvaluator
   private _broadcastThrottle: Map<string, number> = new Map()
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
@@ -1070,7 +1070,7 @@ export class OnlineGame {
     this.gameState.setMatchTimerActive(active)
   }
 
-  getEvaluator(): ServerMoveEvaluator {
+  getEvaluator(): GameEvaluator {
     return this.evaluator
   }
 
@@ -1117,7 +1117,7 @@ export class OnlineGame {
     this._timeLimitSeconds = timeLimitSeconds
     this._status = GameStatus.WAITING
     DEBUG && console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
-    this.evaluator = SERVER_URL ? new ServerMoveEvaluator(SERVER_URL) : new ServerMoveEvaluator('')
+    this.evaluator = createEvaluator(SERVER_URL)
   }
 
   getPlayers(team: Team): Player[] {

@@ -111,6 +111,14 @@ ok "All required env vars are set"
 # ─── Build Next.js static export ─────────────────
 log "Building Next.js static export..."
 rm -rf .next
+
+# Copy Stockfish WASM for in-device engine
+log "Copying Stockfish WASM assets..."
+mkdir -p public/stockfish
+cp node_modules/stockfish/bin/stockfish-18-lite-single.js public/stockfish/
+cp node_modules/stockfish/bin/stockfish-18-lite-single.wasm public/stockfish/
+ok "Stockfish WASM assets copied"
+
 # Move API routes out of src/app so they don't break static export
 if [ -d "src/app/api" ]; then
   mv src/app/api /tmp/chessduo-api-routes

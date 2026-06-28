@@ -1,6 +1,6 @@
 import { Chess, Move } from 'chess.js'
 import { getBookMove } from './openings'
-import { ServerMoveEvaluator } from './serverMoveEvaluator'
+import { createEvaluator, GameEvaluator } from '../mobile-engine/evaluatorFactory'
 import { DIFFICULTY, DESCRIPTIONS, DifficultyConfig } from './difficulty'
 import { DEBUG } from '../../lib/debug'
 
@@ -13,7 +13,7 @@ export interface BotConfig {
 
 export class ChessBot {
   private config: BotConfig
-  private moveEvaluator: any = null
+  private moveEvaluator: GameEvaluator | null = null
 
   constructor(config: BotConfig = { skillLevel: 3 }) {
     this.config = config
@@ -23,16 +23,18 @@ export class ChessBot {
       return
     }
     
-    if (SERVER_URL) {
-      DEBUG && console.log(`[ChessBot] Using server evaluator: ${SERVER_URL}`)
-      this.moveEvaluator = new ServerMoveEvaluator(SERVER_URL)
-    } else {
-      console.warn('[ChessBot] No server URL configured, bot will use fallback evaluation')
+    this.moveEvaluator = createEvaluator(SERVER_URL)
+    if (!this.moveEvaluator.isUsingStockfish()) {
+      console.warn('[ChessBot] No evaluator configured, bot will use fallback evaluation')
     }
   }
 
   isStockfishReady(): boolean {
     return this.moveEvaluator?.isUsingStockfish() ?? false
+  }
+
+  getEvaluator(): GameEvaluator | null {
+    return this.moveEvaluator
   }
 
   async selectMoveAsync(fen: string): Promise<string | null> {

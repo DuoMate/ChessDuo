@@ -2,7 +2,7 @@
 
 import { Chess } from 'chess.js'
 import { supabase } from './supabase'
-import { ServerMoveEvaluator } from '@/features/bots/serverMoveEvaluator'
+import { createEvaluator, GameEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { calculateAccuracy } from '@/features/shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -54,7 +54,7 @@ export class DuelGame {
   private _moveAccuracy: number | null = null
   private _opponentAccuracy: number | null = null
   private onStateChange: DuelEventCallback | null = null
-  private evaluator: ServerMoveEvaluator | null = null
+  private evaluator: GameEvaluator | null = null
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
 
   constructor(roomId: string, playerId: string, team: 'WHITE' | 'BLACK', timeLimit: number) {
@@ -65,9 +65,7 @@ export class DuelGame {
     this._timeLimit = timeLimit
     this._whiteTimeRemaining = timeLimit
     this._blackTimeRemaining = timeLimit
-    if (SERVER_URL) {
-      this.evaluator = new ServerMoveEvaluator(SERVER_URL)
-    }
+    this.evaluator = createEvaluator(SERVER_URL)
   }
 
   get status() { return this._status }

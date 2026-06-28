@@ -186,6 +186,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     DEBUG && console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
   })
+
+  // Check for mobile WASM engine errors
+  useEffect(() => {
+    const checkEvaluatorError = (botInstance: ReturnType<typeof createBot> | null) => {
+      if (!botInstance) return
+      const evaluator = botInstance.getEvaluator()
+      if (evaluator && 'getInitError' in evaluator) {
+        const err = (evaluator as any).getInitError()
+        if (err) {
+          toast.error(`Engine failed: ${err}`)
+        }
+      }
+    }
+    checkEvaluatorError(bot)
+    checkEvaluatorError(teammateBot)
+  }, [bot, teammateBot])
   const [gameState, setGameState] = useState<GameState>({
     status: GameStatus.WAITING,
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',

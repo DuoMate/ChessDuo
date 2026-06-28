@@ -1,6 +1,6 @@
 import { Chess, Move } from 'chess.js'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
-import { ServerMoveEvaluator } from '../../bots/serverMoveEvaluator'
+import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import { DEBUG } from '../../../lib/debug'
@@ -56,7 +56,7 @@ export interface MoveComparison {
 
 export class LocalGame {
   private gameState: GameState
-  private evaluator: ServerMoveEvaluator
+  private evaluator: GameEvaluator
   private _status: GameStatus
   private stats: GameStats
   private _lastMove: { from: string; to: string } | null = null
@@ -66,12 +66,11 @@ export class LocalGame {
   constructor(timeLimitSeconds: number = 600) {
     this.gameState = new GameState(timeLimitSeconds)
     
-    if (SERVER_URL) {
-      DEBUG && console.log(`[LocalGame] Using server evaluator: ${SERVER_URL}`)
-      this.evaluator = new ServerMoveEvaluator(SERVER_URL)
+    this.evaluator = createEvaluator(SERVER_URL)
+    if (this.evaluator.isUsingStockfish()) {
+      DEBUG && console.log(`[LocalGame] Using Stockfish evaluator`)
     } else {
-      console.warn('[LocalGame] No server URL configured - evaluations will fail')
-      this.evaluator = new ServerMoveEvaluator('')
+      console.warn('[LocalGame] No evaluator configured - evaluations will fail')
     }
     
     this._status = GameStatus.WAITING
@@ -217,7 +216,7 @@ export class LocalGame {
     this.gameState.setMatchTimerActive(active)
   }
 
-  getEvaluator(): ServerMoveEvaluator {
+  getEvaluator(): GameEvaluator {
     return this.evaluator
   }
 

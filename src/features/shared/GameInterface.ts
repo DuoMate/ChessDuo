@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js'
 import { GameStatus, MoveComparison } from '../offline/game/localGame'
 import { Team, Player, CapturedPieces, PendingMoveInfo } from '../game-engine/gameState'
-import type { ServerMoveEvaluator } from '../bots/serverMoveEvaluator'
+import type { GameEvaluator } from '../mobile-engine/evaluatorFactory'
 
 export interface GameInterface {
   readonly status: GameStatus
@@ -38,7 +38,7 @@ export interface GameInterface {
 
   getStats(): { movesPlayed: number; syncRate: number; conflicts: number; player1Accuracy: number; player2Accuracy: number }
   getCapturedPieces(): { white: string[]; black: string[] }
-  getEvaluator(): ServerMoveEvaluator
+  getEvaluator(): GameEvaluator
 
   /** Returns the viewer's team */
   getTeam(): 'WHITE' | 'BLACK'
