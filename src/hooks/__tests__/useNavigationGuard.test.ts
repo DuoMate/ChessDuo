@@ -63,9 +63,9 @@ describe('useNavigationGuard', () => {
     expect(removeSpy).toHaveBeenCalledWith('popstate', expect.any(Function))
   })
 
-  it('does not call pushState on mount', () => {
+  it('pushes a blocker history entry on mount when enabled', () => {
     const pushState = jest.spyOn(window.history, 'pushState')
     renderHook(() => useNavigationGuard({ enabled: true, onAttemptLeave: jest.fn() }))
-    expect(pushState).not.toHaveBeenCalled()
+    expect(pushState).toHaveBeenCalled()
   })
 })

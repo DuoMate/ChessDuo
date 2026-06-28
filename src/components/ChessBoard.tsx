@@ -401,7 +401,6 @@ export function ChessBoard({
                       shadow-[0_0_12px_rgba(251,191,36,0.4)] backdrop-blur-sm
                       border border-amber-300/30"
                   >
-                    <span className="text-[11px] leading-none">{'\u265E'}</span>
                     <span className="text-xs font-bold text-gray-900 tracking-wide">Teammate&apos;s move</span>
                   </div>
                 </div>

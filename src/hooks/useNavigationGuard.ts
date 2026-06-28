@@ -30,6 +30,11 @@ export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGua
   useEffect(() => {
     if (!enabled) return
 
+    // Push a blocker history entry so the first back press
+    // does not immediately navigate away from the game page
+    const currentPath = window.location.pathname + window.location.search
+    window.history.pushState(null, '', currentPath)
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!blockedRef.current) {
         e.preventDefault()
@@ -38,9 +43,8 @@ export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGua
     }
 
     const handlePopState = () => {
-      const currentPath = window.location.pathname + window.location.search
-      if (currentPath.startsWith('/game') && !blockedRef.current) {
-        window.history.pushState(null, '', currentPath)
+      if (!blockedRef.current) {
+        window.history.pushState(null, '', window.location.pathname + window.location.search)
         onAttemptLeaveRef.current()
       }
     }

@@ -39,6 +39,7 @@ import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================================
@@ -241,6 +242,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
+
+  const handleHardwareBack = useCallback(() => {
+    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY) {
+      setShowLeaveModal(true)
+      return true
+    }
+    return false
+  }, [gameState.status])
+  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY)
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])

@@ -2,7 +2,9 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ReactNode } from 'react'
+import { useCallback } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 interface SlideOverProps {
   open: boolean
@@ -13,6 +15,12 @@ interface SlideOverProps {
 
 export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
   const isMobile = useIsMobile()
+
+  const backHandler = useCallback(() => {
+    onClose()
+    return true
+  }, [onClose])
+  useCapacitorBackButton(backHandler, open)
 
   if (isMobile) {
     return (

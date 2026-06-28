@@ -1,8 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useCallback } from 'react'
 import { useSettings } from '@/lib/settings'
 import { ArrowLeft, Sun, Moon } from 'lucide-react'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 interface SettingsPanelProps {
   onClose: () => void
@@ -10,6 +12,12 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { autoQueen, lowTimeWarning, theme, setAutoQueen, setLowTimeWarning, setTheme } = useSettings()
+
+  const backHandler = useCallback(() => {
+    onClose()
+    return true
+  }, [onClose])
+  useCapacitorBackButton(backHandler, true)
 
   return (
     <motion.div
