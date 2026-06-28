@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { DEBUG } from './debug'
 
 let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
@@ -13,7 +14,7 @@ function getSupabaseClient() {
   
   if (supabaseInstance) return supabaseInstance
   supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
-  console.log('[supabase][DIAG] Client created:', { url: supabaseUrl, anonKeyLen: supabaseAnonKey.length })
+  DEBUG && console.log('[supabase][DIAG] Client created:', { url: supabaseUrl, anonKeyLen: supabaseAnonKey.length })
   return supabaseInstance
 }
 

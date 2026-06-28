@@ -3,6 +3,8 @@
  * Avoids redundant Stockfish HTTP calls for same position
  */
 
+import { DEBUG } from '../../lib/debug'
+
 class EvaluationCache {
   private cache: Map<string, Map<string, number>> = new Map()
   private accessOrder: string[] = []
@@ -13,7 +15,7 @@ class EvaluationCache {
     if (moveScores && moveScores.has(move)) {
       const score = moveScores.get(move)!
       this.touch(fen)
-      console.log(`[CACHE] Hit for FEN ${fen.substring(0, 30)}... move ${move}=${score}`)
+      DEBUG && console.log(`[CACHE] Hit for FEN ${fen.substring(0, 30)}... move ${move}=${score}`)
       return score
     }
     return null
@@ -25,7 +27,7 @@ class EvaluationCache {
         const oldest = this.accessOrder.shift()
         if (oldest) {
           this.cache.delete(oldest)
-          console.log(`[CACHE] Evicted oldest FEN: ${oldest.substring(0, 30)}...`)
+          DEBUG && console.log(`[CACHE] Evicted oldest FEN: ${oldest.substring(0, 30)}...`)
         }
       }
       this.cache.set(fen, new Map())
@@ -36,7 +38,7 @@ class EvaluationCache {
       moveScores.set(move, score)
     }
     this.touch(fen)
-    console.log(`[CACHE] Stored ${scores.length} scores for FEN ${fen.substring(0, 30)}...`)
+    DEBUG && console.log(`[CACHE] Stored ${scores.length} scores for FEN ${fen.substring(0, 30)}...`)
   }
 
   private touch(fen: string): void {
@@ -48,7 +50,7 @@ class EvaluationCache {
   clear(): void {
     this.cache.clear()
     this.accessOrder = []
-    console.log('[CACHE] Cleared all entries')
+    DEBUG && console.log('[CACHE] Cleared all entries')
   }
 
   get size(): number {

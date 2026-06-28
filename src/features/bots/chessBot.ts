@@ -2,6 +2,7 @@ import { Chess, Move } from 'chess.js'
 import { getBookMove } from './openings'
 import { ServerMoveEvaluator } from './serverMoveEvaluator'
 import { DIFFICULTY, DESCRIPTIONS, DifficultyConfig } from './difficulty'
+import { DEBUG } from '../../lib/debug'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 
@@ -23,7 +24,7 @@ export class ChessBot {
     }
     
     if (SERVER_URL) {
-      console.log(`[ChessBot] Using server evaluator: ${SERVER_URL}`)
+      DEBUG && console.log(`[ChessBot] Using server evaluator: ${SERVER_URL}`)
       this.moveEvaluator = new ServerMoveEvaluator(SERVER_URL)
     } else {
       console.warn('[ChessBot] No server URL configured, bot will use fallback evaluation')
@@ -51,7 +52,7 @@ export class ChessBot {
       if (bookMove && this.config.skillLevel <= 3) {
         const matchedMove = moves.find(m => m.san === bookMove || m.lan === bookMove || (m.from + m.to) === bookMove)
         if (matchedMove) {
-          console.log(`[ChessBot:Opening Book] Move: ${bookMove}`)
+          DEBUG && console.log(`[ChessBot:Opening Book] Move: ${bookMove}`)
           return this.moveToUci(matchedMove)
         }
       }
@@ -126,27 +127,27 @@ export class ChessBot {
     const isBlackTurn = new Chess(fen).turn() === 'b'
     
     if (moves.length === 1) {
-      console.log(`[ChessBot:L${this.config.skillLevel}] Only one move available: ${moves[0].san}`)
+      DEBUG && console.log(`[ChessBot:L${this.config.skillLevel}] Only one move available: ${moves[0].san}`)
       return moves[0]
     }
     
     const evalStart = Date.now()
     
-    console.log(`\n${'='.repeat(60)}`)
-    console.log(`[ChessBot:L${this.config.skillLevel}] ${DESCRIPTIONS[this.config.skillLevel]}`)
-    console.log(`[ChessBot] FEN: ${fen}`)
-    console.log(`[ChessBot] Evaluating ${moves.length} moves with full-strength Stockfish`)
-    console.log(`[ChessBot] Config: noise=${difficulty.noise}, topMoves=${difficulty.topMoves}, blunderChance=${difficulty.blunderChance}, weirdChance=${difficulty.weirdChance}`)
+    DEBUG && console.log(`\n${'='.repeat(60)}`)
+    DEBUG && console.log(`[ChessBot:L${this.config.skillLevel}] ${DESCRIPTIONS[this.config.skillLevel]}`)
+    DEBUG && console.log(`[ChessBot] FEN: ${fen}`)
+    DEBUG && console.log(`[ChessBot] Evaluating ${moves.length} moves with full-strength Stockfish`)
+    DEBUG && console.log(`[ChessBot] Config: noise=${difficulty.noise}, topMoves=${difficulty.topMoves}, blunderChance=${difficulty.blunderChance}, weirdChance=${difficulty.weirdChance}`)
 
     try {
       const evaluatedMoves = await this.evaluateMovesWithFallback(moves, fen)
       const selectedMove = this.applyHumanizedSelection(evaluatedMoves, fen, isBlackTurn)
-      console.log(`${'='.repeat(60)}\n`)
+      DEBUG && console.log(`${'='.repeat(60)}\n`)
       return selectedMove
     } catch (error) {
-      console.log(`[ChessBot] ERROR: ${error}`)
-      console.log(`[ChessBot] Falling back to first move`)
-      console.log(`${'='.repeat(60)}\n`)
+      DEBUG && console.log(`[ChessBot] ERROR: ${error}`)
+      DEBUG && console.log(`[ChessBot] Falling back to first move`)
+      DEBUG && console.log(`${'='.repeat(60)}\n`)
       return moves[0]
     }
   }
@@ -226,7 +227,7 @@ export class ChessBot {
     const difficulty = DIFFICULTY[this.config.skillLevel] || DIFFICULTY[4]
     const moveNumber = this.getMoveNumber(fen)
     
-    console.log(`[ChessBot:L${this.config.skillLevel}] Move number: ${moveNumber}`)
+    DEBUG && console.log(`[ChessBot:L${this.config.skillLevel}] Move number: ${moveNumber}`)
     
     const sortedMoves = [...evaluatedMoves]
     if (isBlackTurn) {
@@ -235,48 +236,48 @@ export class ChessBot {
       sortedMoves.sort((a, b) => b.score - a.score)
     }
     
-    console.log(`[ChessBot] All moves ranked:`)
+    DEBUG && console.log(`[ChessBot] All moves ranked:`)
     sortedMoves.forEach((m, i) => {
-      console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
+      DEBUG && console.log(`  ${i + 1}. ${m.move.san}: score=${m.score}`)
     })
 
     const validMoves = sortedMoves.filter(m => isFinite(m.score))
-    console.log(`[ChessBot] Filtered ${sortedMoves.length - validMoves.length} unevaluated moves (score=±Infinity)`)
+    DEBUG && console.log(`[ChessBot] Filtered ${sortedMoves.length - validMoves.length} unevaluated moves (score=±Infinity)`)
 
     if (validMoves.length === 0) {
       throw new Error('No valid moves to select from')
     }
 
     const topMoves = validMoves.slice(0, Math.min(difficulty.topMoves, validMoves.length))
-    console.log(`[ChessBot] Top ${topMoves.length} candidates: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
+    DEBUG && console.log(`[ChessBot] Top ${topMoves.length} candidates: ${topMoves.map(m => `${m.move.san}(${m.score})`).join(', ')}`)
 
     const movesWithNoise = this.addNoise(topMoves, difficulty.noise)
     movesWithNoise.sort((a, b) => isBlackTurn ? a.score - b.score : b.score - a.score)
-    console.log(`[ChessBot] After noise (sorted): ${movesWithNoise.map(m => `${m.move.san}(${m.score.toFixed(0)})`).join(', ')}`)
+    DEBUG && console.log(`[ChessBot] After noise (sorted): ${movesWithNoise.map(m => `${m.move.san}(${m.score.toFixed(0)})`).join(', ')}`)
 
     const guardrailMoves = this.applyScoreGuardrail(movesWithNoise, difficulty.maxDrop, isBlackTurn)
-    console.log(`[ChessBot] After guardrail (maxDrop=${difficulty.maxDrop}): ${guardrailMoves.map(m => m.move.san).join(', ')}`)
+    DEBUG && console.log(`[ChessBot] After guardrail (maxDrop=${difficulty.maxDrop}): ${guardrailMoves.map(m => m.move.san).join(', ')}`)
 
     if (guardrailMoves.length >= 2) {
       const best = guardrailMoves[0]
       const second = guardrailMoves[1]
       const dominanceThreshold = 80
       if (best.score - second.score > dominanceThreshold) {
-        console.log(`[ChessBot] DOMINANCE RULE: ${best.move.san} (${best.score})远超 ${second.move.san} (${second.score}), 强制选择`)
+        DEBUG && console.log(`[ChessBot] DOMINANCE RULE: ${best.move.san} (${best.score})远超 ${second.move.san} (${second.score}), 强制选择`)
         return best.move
       }
     }
 
     const filteredMoves = this.filterWeirdMoves(guardrailMoves, difficulty.weirdChance, moveNumber)
-    console.log(`[ChessBot] After weird filter: ${filteredMoves.map(m => m.move.san).join(', ')}`)
+    DEBUG && console.log(`[ChessBot] After weird filter: ${filteredMoves.map(m => m.move.san).join(', ')}`)
 
     const blunderMoves = this.maybeInjectBlunder(filteredMoves, difficulty.blunderChance, isBlackTurn)
     if (blunderMoves.length < filteredMoves.length) {
-      console.log(`[ChessBot] Blunder injected!`)
+      DEBUG && console.log(`[ChessBot] Blunder injected!`)
     }
 
     const finalMove = this.softmaxPick(blunderMoves, isBlackTurn)
-    console.log(`[ChessBot] SELECTED: ${finalMove.move.san}`)
+    DEBUG && console.log(`[ChessBot] SELECTED: ${finalMove.move.san}`)
     return finalMove.move
   }
 
@@ -299,7 +300,7 @@ export class ChessBot {
       return [moves[0]]
     }
 
-    console.log(`[ChessBot] Guardrail filtered ${moves.length - filtered.length} moves (best=${bestScore}, maxDrop=${maxDrop})`)
+    DEBUG && console.log(`[ChessBot] Guardrail filtered ${moves.length - filtered.length} moves (best=${bestScore}, maxDrop=${maxDrop})`)
     return filtered
   }
 
@@ -334,10 +335,10 @@ export class ChessBot {
       if (this.isWeirdMove(m.move.san)) {
         const roll = Math.random()
         if (roll > weirdChance) {
-          console.log(`[ChessBot] Filtered weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%, threshold=${(weirdChance * 100).toFixed(1)}%)`)
+          DEBUG && console.log(`[ChessBot] Filtered weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%, threshold=${(weirdChance * 100).toFixed(1)}%)`)
           return false
         }
-        console.log(`[ChessBot] Allowed weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%)`)
+        DEBUG && console.log(`[ChessBot] Allowed weird move: ${m.move.san} (roll=${(roll * 100).toFixed(1)}%)`)
       }
       return true
     })
@@ -371,7 +372,7 @@ export class ChessBot {
       const worstCount = Math.min(2, Math.ceil(moves.length / 2))
       const bottomMoves = moves.slice(-worstCount)
       const randomBlunder = bottomMoves[Math.floor(Math.random() * bottomMoves.length)]
-      console.log(`[ChessBot] Blunder triggered! Selecting from worst moves: ${bottomMoves.map(m => m.move.san).join(', ')}`)
+      DEBUG && console.log(`[ChessBot] Blunder triggered! Selecting from worst moves: ${bottomMoves.map(m => m.move.san).join(', ')}`)
       return [randomBlunder]
     }
     return moves
@@ -395,12 +396,12 @@ export class ChessBot {
     for (let i = 0; i < moves.length; i++) {
       r -= usableWeights[i]
       if (r <= 0) {
-        console.log(`[ChessBot] Weighted pick: ${moves[i].move.san} (weight=${usableWeights[i]}, cum=${total - r})`)
+        DEBUG && console.log(`[ChessBot] Weighted pick: ${moves[i].move.san} (weight=${usableWeights[i]}, cum=${total - r})`)
         return moves[i]
       }
     }
     
-    console.log(`[ChessBot] Weighted pick fallback: ${moves[0].move.san}`)
+    DEBUG && console.log(`[ChessBot] Weighted pick fallback: ${moves[0].move.san}`)
     return moves[0]
   }
 
@@ -425,12 +426,12 @@ export class ChessBot {
     for (let i = 0; i < moves.length; i++) {
       r -= weights[i]
       if (r <= 0) {
-        console.log(`[ChessBot] Softmax pick: ${moves[i].move.san} (weight=${weights[i].toFixed(2)}, temp=${temperature})`)
+        DEBUG && console.log(`[ChessBot] Softmax pick: ${moves[i].move.san} (weight=${weights[i].toFixed(2)}, temp=${temperature})`)
         return moves[i]
       }
     }
 
-    console.log(`[ChessBot] Softmax fallback: ${moves[0].move.san}`)
+    DEBUG && console.log(`[ChessBot] Softmax fallback: ${moves[0].move.san}`)
     return moves[0]
   }
 

@@ -1,6 +1,7 @@
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
 const FETCH_TIMEOUT_MS = 15000
 import { evaluationCache } from '../shared/evaluationCache'
+import { DEBUG } from '../../lib/debug'
 
 interface EvaluateResponse {
   fen: string
@@ -54,17 +55,17 @@ export class ServerMoveEvaluator {
     }
     
     if (uncachedMoves.length === 0 && cachedResults.length > 0) {
-      console.log(`[EVALUATOR] All ${moves.length} moves cached, skipping HTTP`)
+      DEBUG && console.log(`[EVALUATOR] All ${moves.length} moves cached, skipping HTTP`)
       return cachedResults
     }
     
-    console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}... (${cachedResults.length} cached, ${uncachedMoves.length} uncached)`)
+    DEBUG && console.log(`[EVALUATOR] Evaluating ${moves.length} moves: ${fen.substring(0, 60)}... (${cachedResults.length} cached, ${uncachedMoves.length} uncached)`)
 
     let lastError: Error | null = null
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
-        console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
+        DEBUG && console.log(`[EVALUATOR] Request attempt ${attempt + 1}/${retries}...`)
         
         const response = await fetchWithTimeout(`${this.serverUrl}/evaluate-moves`, {
           method: 'POST',
@@ -76,14 +77,14 @@ export class ServerMoveEvaluator {
 
         if (response.ok) {
           const data = await response.json()
-          console.log(`[EVALUATOR] Response received`)
+          DEBUG && console.log(`[EVALUATOR] Response received`)
 
           const results = data.moves.map((m: { move: string; score: number }) => {
-            console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
+            DEBUG && console.log(`[EVALUATOR] ${m.move} → score=${m.score}`)
             return { move: m.move, score: m.score }
           })
 
-          console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
+          DEBUG && console.log(`[EVALUATOR] All scores: ${results.map((r: { move: string; score: number }) => `${r.move}=${r.score}`).join(', ')}`)
           
           // Cache results for future reuse
           evaluationCache.setScores(fen, results)
@@ -91,11 +92,11 @@ export class ServerMoveEvaluator {
           return [...cachedResults, ...results]
         }
 
-        console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}`)
+        DEBUG && console.log(`[EVALUATOR] /evaluate-moves failed: ${response.statusText}`)
         throw new Error(`HTTP ${response.status}`)
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
-        console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
+        DEBUG && console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
         if (attempt < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
         }
@@ -110,7 +111,7 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Evaluating position: ${fen.substring(0, 60)}...`)
+    DEBUG && console.log(`[EVALUATOR] Evaluating position: ${fen.substring(0, 60)}...`)
 
     let lastError: Error | null = null
     
@@ -131,11 +132,11 @@ export class ServerMoveEvaluator {
 
         const data: EvaluateResponse = await response.json()
         const elapsed = Date.now() - attemptStart
-        console.log(`[EVALUATOR] Position score=${data.score} (depth=${data.depth}, time=${elapsed}ms)`)
+        DEBUG && console.log(`[EVALUATOR] Position score=${data.score} (depth=${data.depth}, time=${elapsed}ms)`)
         return data.score
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
-        console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
+        DEBUG && console.log(`[EVALUATOR] Attempt ${attempt + 1} failed: ${lastError.message}`)
         if (attempt < retries - 1) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
         }
@@ -181,7 +182,7 @@ export class ServerMoveEvaluator {
       throw new Error('Stockfish server URL not configured')
     }
 
-    console.log(`[EVALUATOR] Stockfish playing move from FEN: ${fen.substring(0, 60)}... (UCI_Elo: ${uciElo})`)
+    DEBUG && console.log(`[EVALUATOR] Stockfish playing move from FEN: ${fen.substring(0, 60)}... (UCI_Elo: ${uciElo})`)
 
     let lastError: Error | null = null
     
@@ -202,11 +203,11 @@ export class ServerMoveEvaluator {
 
         const data = await response.json()
         const elapsed = Date.now() - attemptStart
-        console.log(`[EVALUATOR] Stockfish played ${data.move} (time=${elapsed}ms, UCI_Elo=${data.uciElo})`)
+        DEBUG && console.log(`[EVALUATOR] Stockfish played ${data.move} (time=${elapsed}ms, UCI_Elo=${data.uciElo})`)
         return data.move
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
-        console.log(`[EVALUATOR] Play move attempt ${attempt + 1} failed: ${lastError.message}`)
+        DEBUG && console.log(`[EVALUATOR] Play move attempt ${attempt + 1} failed: ${lastError.message}`)
         if (attempt < 2) {
           await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)))
         }

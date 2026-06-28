@@ -6,6 +6,7 @@ import { PolyglotBook } from './polyglot'
 
 const app = express()
 const PORT = process.env.PORT || 3001
+const DEBUG = process.env.NODE_ENV !== 'production'
 
 app.use(cors())
 app.use(express.json())
@@ -22,7 +23,7 @@ function findStockfishPath(): string {
 }
 
 export const STOCKFISH_PATH = findStockfishPath()
-console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
+DEBUG && console.log(`[SERVER] Stockfish path: ${STOCKFISH_PATH}`)
 
 const engine = new StockfishEngine(STOCKFISH_PATH)
 
@@ -33,13 +34,13 @@ if (bookPath) {
     const book = new PolyglotBook(bookPath)
     if (book.isLoaded()) {
       engine.setBook(book)
-      console.log(`[SERVER] Opening book active: ${bookPath}`)
+      DEBUG && console.log(`[SERVER] Opening book active: ${bookPath}`)
     }
   } catch (err) {
     console.warn('[SERVER] Failed to load opening book, using Stockfish only:', err)
   }
 } else {
-  console.log('[SERVER] No POLYGLOT_BOOK_PATH set — using Stockfish only')
+  DEBUG && console.log('[SERVER] No POLYGLOT_BOOK_PATH set — using Stockfish only')
 }
 
 // Warm cache: pre-evaluate common opening positions after engine is ready
@@ -57,7 +58,7 @@ const WARMUP_FENS = [
 ]
 
 async function warmCache(eng: StockfishEngine): Promise<void> {
-  console.log(`[WARMUP] Pre-evaluating ${WARMUP_FENS.length} common openings...`)
+  DEBUG && console.log(`[WARMUP] Pre-evaluating ${WARMUP_FENS.length} common openings...`)
   let done = 0
   for (const fen of WARMUP_FENS) {
     try {
@@ -72,7 +73,7 @@ async function warmCache(eng: StockfishEngine): Promise<void> {
       console.warn(`[WARMUP] Skipped ${fen}:`, err)
     }
   }
-  console.log(`[WARMUP] Complete — ${done}/${WARMUP_FENS.length} positions cached`)
+  DEBUG && console.log(`[WARMUP] Complete — ${done}/${WARMUP_FENS.length} positions cached`)
 }
 
 // Start warmup after engine is initialized (delay to ensure UCI is ready)
@@ -131,5 +132,5 @@ app.post('/evaluate-moves', async (req: Request, res: Response) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
+  DEBUG && console.log(`🚀 Server running on port ${PORT}`)
 })

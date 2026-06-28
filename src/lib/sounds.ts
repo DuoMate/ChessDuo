@@ -3,6 +3,8 @@
  * No external audio files needed - generates sounds programmatically
  */
 
+import { DEBUG } from './debug'
+
 type SoundType = 'move' | 'capture' | 'check' | 'checkmate' | 'illegal' | 'lock' | 'resolution'
 
 class SoundEngine {
@@ -62,7 +64,7 @@ class SoundEngine {
       }
     } catch (e) {
       // Silently fail if audio not available
-      console.log('[Sound] Not available:', e)
+      DEBUG && console.log('[Sound] Not available:', e)
     }
   }
 

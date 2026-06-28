@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { DEBUG } from './debug'
 
 interface GameSaveData {
   room_id: string
@@ -49,7 +50,7 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
       .from('games')
       .upsert(upsertData, { onConflict: 'room_id' })
 
-    console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
+    DEBUG && console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
   } catch (e) {
     console.warn('[PERSIST] Failed to save game state:', e)
   }
@@ -75,7 +76,7 @@ export async function loadGameState(roomId: string): Promise<{
       return null
     }
 
-    console.log('[PERSIST] Loaded game state:', { roomId, fen: data.fen.substring(0, 30), turn: data.current_turn, moves: data.move_history?.length })
+    DEBUG && console.log('[PERSIST] Loaded game state:', { roomId, fen: data.fen.substring(0, 30), turn: data.current_turn, moves: data.move_history?.length })
     return {
       fen: data.fen,
       currentTurn: data.current_turn,

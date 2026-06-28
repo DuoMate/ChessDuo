@@ -2,6 +2,8 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import { LRUCache } from 'lru-cache'
 import { PolyglotBook } from './polyglot'
 
+const DEBUG = process.env.NODE_ENV !== 'production'
+
 interface PendingJob {
   fen: string
   moves: string[]
@@ -48,7 +50,7 @@ export class StockfishEngine {
       this.proc = null
     }
 
-    console.log('[ENGINE] Spawning Stockfish process...')
+    DEBUG && console.log('[ENGINE] Spawning Stockfish process...')
     this.proc = spawn(this.stockfishPath, [], {
       stdio: ['pipe', 'pipe', 'pipe']
     })
@@ -56,7 +58,7 @@ export class StockfishEngine {
     this.proc.stdout.on('data', (data: Buffer) => this.handleOutput(data))
     this.proc.stderr.on('data', (data: Buffer) => {
       const str = data.toString().trim()
-      if (str) console.log('[ENGINE STDERR]', str)
+      if (str) DEBUG && console.log('[ENGINE STDERR]', str)
     })
 
     this.proc.on('error', (err) => {
@@ -65,7 +67,7 @@ export class StockfishEngine {
     })
 
     this.proc.on('exit', (code) => {
-      console.log('[ENGINE] Process exited with code:', code)
+      DEBUG && console.log('[ENGINE] Process exited with code:', code)
       if (this.busy) this.handleCrash()
     })
 
@@ -89,7 +91,7 @@ export class StockfishEngine {
       if (!line.trim()) continue
 
       if (line.includes('uciok') && !this.initializationComplete) {
-        console.log('[ENGINE] UCI initialized')
+        DEBUG && console.log('[ENGINE] UCI initialized')
         this.initializationComplete = true
         this.processNext()
         continue
@@ -146,7 +148,7 @@ export class StockfishEngine {
     const moveNumber = this.getMoveNumber(this.currentFen)
     const movetime = moveNumber < 10 ? 3000 : 5000
 
-    console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${movetime}ms)`)
+    DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${movetime}ms)`)
 
     if (this.currentMoves.length > 0) {
       this.send(`go movetime ${movetime} searchmoves ${this.currentMoves.join(' ')}`)
@@ -237,7 +239,7 @@ export class StockfishEngine {
           move: m.move,
           score: m.weight > 0 ? Math.round(m.weight / 10) : 0
         }))
-        console.log(`[BOOK] Hit — ${results.length} moves`)
+        DEBUG && console.log(`[BOOK] Hit — ${results.length} moves`)
         return Promise.resolve(results)
       }
     }
@@ -246,11 +248,11 @@ export class StockfishEngine {
     const cacheKey = `${fen}:${[...moves].sort().join(',')}`
     const cached = this.cache.get(cacheKey)
     if (cached) {
-      console.log(`[CACHE] Hit — ${cached.length} moves`)
+      DEBUG && console.log(`[CACHE] Hit — ${cached.length} moves`)
       return Promise.resolve(cached)
     }
 
-    console.log(`[ENGINE] Miss — queuing ${moves.length} moves`)
+    DEBUG && console.log(`[ENGINE] Miss — queuing ${moves.length} moves`)
 
     // 3. Queue Stockfish evaluation
     return new Promise<{ move: string; score: number }[]>((resolve, reject) => {

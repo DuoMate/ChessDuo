@@ -7,9 +7,9 @@ import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { DEBUG } from '../../../lib/debug'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
-const DEBUG = process.env.NODE_ENV === 'development'
 
 interface MovePayload {
   playerId: string
@@ -292,7 +292,7 @@ export class OnlineGame {
     // Re-register in room_players on reconnect (ensures auth.uid() matches for RLS)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      console.log('[ONLINE][DIAG] joinRoom upsert:', {
+      DEBUG && console.log('[ONLINE][DIAG] joinRoom upsert:', {
         playerId,
         team,
         roomId: room.id,
@@ -338,7 +338,7 @@ export class OnlineGame {
               }),
             }
           )
-          console.log('[ONLINE][DIAG] Raw fetch fallback result:', {
+          DEBUG && console.log('[ONLINE][DIAG] Raw fetch fallback result:', {
             status: res.status,
             ok: res.ok,
             statusText: res.statusText,
@@ -348,7 +348,7 @@ export class OnlineGame {
             const body = await res.text()
             console.warn('[ONLINE][DIAG] Raw fetch fallback body:', body)
           } else {
-            console.log('[ONLINE][DIAG] Raw fetch fallback SUCCESS — supabase client is broken for this call')
+            DEBUG && console.log('[ONLINE][DIAG] Raw fetch fallback SUCCESS — supabase client is broken for this call')
           }
 
           // Anonymous fetch test — proves if WITH CHECK (true) policy is working at all
@@ -370,7 +370,7 @@ export class OnlineGame {
               }),
             }
           )
-          console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
+          DEBUG && console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
             status: anonRes.status,
             ok: anonRes.ok,
             statusText: anonRes.statusText,
@@ -379,13 +379,13 @@ export class OnlineGame {
             const anonBody = await anonRes.text()
             console.warn('[ONLINE][DIAG] Anon fetch body:', anonBody)
           } else {
-            console.log('[ONLINE][DIAG] Anon fetch SUCCESS — policy works, auth token issue')
+            DEBUG && console.log('[ONLINE][DIAG] Anon fetch SUCCESS — policy works, auth token issue')
           }
         } catch (e2) {
           console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
         }
       } else {
-        console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
+        DEBUG && console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
       }
     } catch (e) {
       console.warn('[ONLINE] Could not register in room_players:', e)
@@ -402,11 +402,11 @@ export class OnlineGame {
         .on('presence', { event: 'sync' }, () => {
           const state = this._channel?.presenceState() || {}
           const playersOnline = Object.keys(state)
-          console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status)
+          DEBUG && console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status)
           
           if (playersOnline.length >= 2) {
             if (this._status !== GameStatus.PLAYING) {
-              console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
+              DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
               this.startGameWhenReady()
             } else {
               this.syncGameState()
@@ -414,12 +414,12 @@ export class OnlineGame {
           }
         })
         .on('presence', { event: 'join' }, ({ newPresences }) => {
-          console.log('[ONLINE] Presence join — new:', newPresences?.length)
+          DEBUG && console.log('[ONLINE] Presence join — new:', newPresences?.length)
           const state = this._channel?.presenceState() || {}
           const playersOnline = Object.keys(state)
-          console.log('[ONLINE] Presence join — players online:', playersOnline.length, 'status:', this._status)
+          DEBUG && console.log('[ONLINE] Presence join — players online:', playersOnline.length, 'status:', this._status)
           if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
-            console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
+            DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
             this.startGameWhenReady()
           }
         })
@@ -490,7 +490,7 @@ export class OnlineGame {
         return
       }
 
-      console.log('[ONLINE] Fallback poll running — elapsed:', elapsed, 'ms, status:', this._status)
+      DEBUG && console.log('[ONLINE] Fallback poll running — elapsed:', elapsed, 'ms, status:', this._status)
 
       const existing = await loadGameState(this._room!.id)
       if (existing) {
@@ -505,7 +505,7 @@ export class OnlineGame {
       if (!error && data) {
         const players = data as Array<{ player_id: string; team: string }>
         humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
-        console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
+        DEBUG && console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
       } else {
         console.warn('[ONLINE] Poll RPC failed:', error?.message || error)
       }
@@ -519,7 +519,7 @@ export class OnlineGame {
         if (!fallbackErr && fallbackData) {
           const fbPlayers = fallbackData as Array<{ player_id: string; team: string }>
           const fbCount = fbPlayers.filter(p => !p.player_id.startsWith('bot_')).length
-          console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
+          DEBUG && console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
           if (fbCount > humanCount) humanCount = fbCount
         } else {
           console.warn('[ONLINE] Poll direct query fallback failed:', fallbackErr?.message)
@@ -527,7 +527,7 @@ export class OnlineGame {
       }
 
       if (humanCount >= 2) {
-        console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
+        DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
         await this.startGameWhenReady()
         this._pollingInterval = null
         return
@@ -550,14 +550,14 @@ export class OnlineGame {
   }
 
   async startGameWhenReady(): Promise<void> {
-    console.log('[ONLINE] startGameWhenReady called — status:', this._status, 'starting:', this.starting)
+    DEBUG && console.log('[ONLINE] startGameWhenReady called — status:', this._status, 'starting:', this.starting)
     if (this._status === GameStatus.PLAYING) {
-      console.log('[ONLINE] Game already started, skipping...')
+      DEBUG && console.log('[ONLINE] Game already started, skipping...')
       return
     }
     
     if (this.starting) {
-      console.log('[ONLINE] Game start already in progress, skipping...')
+      DEBUG && console.log('[ONLINE] Game start already in progress, skipping...')
       return
     }
     
@@ -598,7 +598,7 @@ export class OnlineGame {
         .select('*')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
-      console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
+      DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
 
       // Add human players to their respective teams
       const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
@@ -639,8 +639,8 @@ export class OnlineGame {
       this._status = GameStatus.PLAYING
       this.startPendingTurn()
       this.notifyStateChange()
-      console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
-      console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
+      DEBUG && console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
+      DEBUG && console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
       
       // Persist initial game state with timer
       if (this._room) {

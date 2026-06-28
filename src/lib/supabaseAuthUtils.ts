@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { Browser } from '@capacitor/browser'
 import { SocialLogin } from '@capgo/capacitor-social-login'
+import { DEBUG } from './debug'
 
 const APP_SCHEME = 'com.navron.chessduo://auth/callback'
 
@@ -39,7 +40,7 @@ async function authenticateWithGoogleNative(): Promise<{
       .replace(/\/$/, '')
       .trim()
 
-    console.log('[NativeAuth] Web Client ID is configured')
+    DEBUG && console.log('[NativeAuth] Web Client ID is configured')
     
     // Check if SocialLogin plugin is available
     if (typeof SocialLogin === 'undefined') {
@@ -47,7 +48,7 @@ async function authenticateWithGoogleNative(): Promise<{
       return { success: false, error: 'SocialLogin plugin not installed. Run: npm install @capgo/capacitor-social-login && npx cap sync' }
     }
 
-    console.log('[NativeAuth] Initializing SocialLogin...')
+    DEBUG && console.log('[NativeAuth] Initializing SocialLogin...')
     
     await SocialLogin.initialize({
       google: {
@@ -56,12 +57,12 @@ async function authenticateWithGoogleNative(): Promise<{
       },
     })
 
-    console.log('[NativeAuth] SocialLogin initialized successfully')
+    DEBUG && console.log('[NativeAuth] SocialLogin initialized successfully')
 
     const rawNonce = getUrlSafeNonce()
     const nonceDigest = await sha256Hash(rawNonce)
 
-    console.log('[NativeAuth] Calling SocialLogin.login...')
+    DEBUG && console.log('[NativeAuth] Calling SocialLogin.login...')
     
     const loginResult = await SocialLogin.login({
       provider: 'google',
@@ -70,7 +71,7 @@ async function authenticateWithGoogleNative(): Promise<{
       },
     })
 
-    console.log('[NativeAuth] Login completed')
+    DEBUG && console.log('[NativeAuth] Login completed')
 
     // Check for cancellation or error
     const result = loginResult.result as any
@@ -96,7 +97,7 @@ async function authenticateWithGoogleNative(): Promise<{
       return { success: false, error: 'No ID token received from Google. Check SHA-1 fingerprint and package name in Google Cloud Console.' }
     }
 
-    console.log('[NativeAuth] Exchanging ID token with Supabase...')
+    DEBUG && console.log('[NativeAuth] Exchanging ID token with Supabase...')
     
     const { data, error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
@@ -109,7 +110,7 @@ async function authenticateWithGoogleNative(): Promise<{
       return { success: false, error: `Supabase error: ${error.message}` }
     }
 
-    console.log('[NativeAuth] Successfully signed in with Supabase')
+    DEBUG && console.log('[NativeAuth] Successfully signed in with Supabase')
     
     return {
       success: true,
@@ -189,11 +190,11 @@ export async function authenticateWithGoogle(): Promise<{
   const isNative = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
   
   if (isNative) {
-    console.log('[Auth] Running on native platform, trying native SDK...')
+    DEBUG && console.log('[Auth] Running on native platform, trying native SDK...')
     const nativeResult = await authenticateWithGoogleNative()
     
     if (nativeResult.success) {
-      console.log('[Auth] Native SDK sign-in succeeded')
+      DEBUG && console.log('[Auth] Native SDK sign-in succeeded')
       return nativeResult
     }
     
@@ -204,10 +205,10 @@ export async function authenticateWithGoogle(): Promise<{
       window.alert(`Native Google Sign-In failed:\n\n${nativeResult.error}\n\nFalling back to browser sign-in...`)
     }
     
-    console.log('[Auth] Falling back to Capacitor Browser OAuth...')
+    DEBUG && console.log('[Auth] Falling back to Capacitor Browser OAuth...')
     return authenticateWithGoogleCapacitorBrowser()
   }
   
-  console.log('[Auth] Running on web platform')
+  DEBUG && console.log('[Auth] Running on web platform')
   return authenticateWithGoogleWeb()
 }

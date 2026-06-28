@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase, Room, RoomPlayer, Profile } from '@/lib/supabase'
 import { generateRoomCode } from '@/lib/roomActions'
+import { DEBUG } from '@/lib/debug'
 
 export { generateRoomCode }
 
@@ -23,7 +24,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     setLoading(true)
     setError(null)
     try {
-      console.log('[Room] Creating room...')
+      DEBUG && console.log('[Room] Creating room...')
       const code = generateRoomCode()
       
       // First, let's try to check if table exists by selecting
@@ -32,7 +33,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         .select('id')
         .limit(1)
       
-      console.log('[Room] Table test:', { testData, testError })
+      DEBUG && console.log('[Room] Table test:', { testData, testError })
       
       if (testError) {
         console.error('[Room] Table check failed:', testError)
@@ -81,7 +82,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
     setLoading(true)
     setError(null)
     try {
-      console.log('[Join] Looking for room:', joinCode.toUpperCase())
+      DEBUG && console.log('[Join] Looking for room:', joinCode.toUpperCase())
       
       // Try to find by code first (6-char code), then by ID (UUID)
       let rooms: any = null
@@ -111,14 +112,14 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         }
       }
 
-      console.log('[Join] Room query result:', { rooms, roomError })
+      DEBUG && console.log('[Join] Room query result:', { rooms, roomError })
 
       if (roomError || !rooms) {
         console.error('[Join] Room not found:', roomError)
         throw new Error('Room not found - check if code is correct')
       }
 
-      console.log('[Join] Room found:', rooms)
+      DEBUG && console.log('[Join] Room found:', rooms)
 
       if (rooms.status !== 'waiting') {
         throw new Error('Room is no longer available (status: ' + rooms.status + ')')
@@ -129,7 +130,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         .select('*')
         .eq('room_id', rooms.id)
 
-      console.log('[Join] Existing players:', { existingPlayers, playersError })
+      DEBUG && console.log('[Join] Existing players:', { existingPlayers, playersError })
 
       if (playersError) {
         console.error('[Join] Players query error:', playersError)
@@ -139,7 +140,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       const whiteSlots = existingPlayers?.filter(p => p.team === 'WHITE') || []
       const blackSlots = existingPlayers?.filter(p => p.team === 'BLACK') || []
 
-      console.log('[Join] Slots - White:', whiteSlots.length, 'Black:', blackSlots.length)
+      DEBUG && console.log('[Join] Slots - White:', whiteSlots.length, 'Black:', blackSlots.length)
 
       let team: 'WHITE' | 'BLACK' = 'WHITE'
       let slot = 0
@@ -154,7 +155,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
         throw new Error('Room is full')
       }
 
-      console.log('[Join] Joining as team:', team, 'slot:', slot)
+      DEBUG && console.log('[Join] Joining as team:', team, 'slot:', slot)
 
       // Check if player already in room
       const { data: existingPlayer, error: checkError } = await supabase
@@ -169,7 +170,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
       }
       
       if (existingPlayer) {
-        console.log('[Join] Already in room, joining existing')
+        DEBUG && console.log('[Join] Already in room, joining existing')
         onRoomJoined(rooms as Room, existingPlayer.team, playerId)
         return
       }
