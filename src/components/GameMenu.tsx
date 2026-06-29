@@ -36,11 +36,11 @@ export function GameMenu({ onResign, onOpenSettings }: GameMenuProps) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center transition-colors"
+        className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/80 transition-colors hover:bg-slate-100 dark:border-slate-700/70 dark:bg-slate-900/80 dark:hover:bg-slate-800"
         style={{ minHeight: '44px', minWidth: '44px' }}
         aria-label="Menu"
       >
-        {open ? <X size={18} className="text-gray-600 dark:text-gray-300" /> : <Menu size={18} className="text-gray-600 dark:text-gray-300" />}
+        {open ? <X size={18} className="text-slate-500 dark:text-slate-400" /> : <Menu size={18} className="text-slate-500 dark:text-slate-400" />}
       </button>
 
       <AnimatePresence>
@@ -50,23 +50,23 @@ export function GameMenu({ onResign, onOpenSettings }: GameMenuProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/95 shadow-[0_16px_60px_rgba(2,6,23,0.2)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90"
           >
             <button
               onClick={() => { onOpenSettings(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               style={{ minHeight: '44px' }}
             >
-              <Settings size={16} className="text-gray-500 dark:text-gray-400" />
+              <Settings size={16} className="text-slate-500 dark:text-slate-400" />
               Settings
             </button>
-            <div className="h-px bg-gray-200 dark:bg-gray-700" />
+            <div className="h-px bg-slate-200 dark:bg-slate-700" />
             <button
               onClick={() => { onResign(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
               style={{ minHeight: '44px' }}
             >
-              <Flag size={16} className="text-red-500 dark:text-red-400" />
+              <Flag size={16} className="text-rose-500 dark:text-rose-400" />
               Resign
             </button>
           </motion.div>

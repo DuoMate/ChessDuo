@@ -23,7 +23,7 @@ describe('GameLobby Component', () => {
   it('renders waiting state when isLoading is false', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" />)
     expect(screen.getByText('Connected')).toBeDefined()
-    expect(screen.getByText('Waiting for teammate')).toBeDefined()
+    expect(screen.getByText(/Waiting for your teammate/i)).toBeDefined()
   })
 
   it('renders room code in both joining and waiting phases', () => {
@@ -61,5 +61,11 @@ describe('GameLobby Component', () => {
   it('does not render room code section when roomCode is missing', () => {
     render(<GameLobby isLoading={false} />)
     expect(screen.queryByText(/Send this code/i)).toBeNull()
+  })
+
+  it('shows the refreshed welcome messaging for waiting players', () => {
+    render(<GameLobby isLoading={false} roomCode="ABC123" username="Mina" />)
+    expect(screen.getByText('Ready to play?')).toBeInTheDocument()
+    expect(screen.getByText(/Waiting for your teammate/i)).toBeInTheDocument()
   })
 })

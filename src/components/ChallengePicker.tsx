@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createChallenge } from '@/lib/challenges'
 import { sendMessage } from '@/lib/messages'
-import { Zap, Timer } from 'lucide-react'
+import { Sparkles, Timer, Zap } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface ChallengePickerProps {
@@ -48,20 +49,35 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
   }
 
   return (
-    <div className={`fixed inset-0 z-[60] bg-black/60 flex ${isMobile ? 'items-end' : 'items-center justify-center'} p-4`} onClick={onClose}>
-      <div className={`w-full ${isMobile ? 'max-w-full rounded-t-2xl' : 'max-w-sm rounded-2xl'} bg-game-surface border border-white/10 p-6 shadow-2xl`} onClick={(e) => e.stopPropagation()} style={isMobile ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Challenge {friendName}</h3>
-        <p className="text-gray-400 text-sm mb-4">Select game duration</p>
+    <div className={`fixed inset-0 z-[60] flex bg-slate-950/70 ${isMobile ? 'items-end' : 'items-center justify-center'} p-4 backdrop-blur-sm`} onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.98 }}
+        className={`w-full ${isMobile ? 'max-w-full rounded-t-[28px]' : 'max-w-sm rounded-[28px]'} border border-white/70 bg-white/90 p-6 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90`}
+        onClick={(e) => e.stopPropagation()}
+        style={isMobile ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
+        <div className="mb-4 flex items-center gap-2">
+          <div className="rounded-full border border-amber-500/20 bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Challenge {friendName}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Select game duration</p>
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           {TIME_OPTIONS.map((opt) => (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               key={opt.seconds}
               onClick={() => setSelectedTime(opt.seconds)}
-              className={`min-h-[60px] p-4 rounded-xl border text-center transition-all ${
+              className={`min-h-[60px] rounded-2xl border p-4 text-center transition-all ${
                 selectedTime === opt.seconds
-                  ? 'border-amber-400 bg-amber-500/10'
-                  : 'border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/15'
+                  ? 'border-amber-400 bg-amber-500/10 shadow-sm'
+                  : 'border-slate-200/80 bg-slate-50/80 hover:border-slate-300 dark:border-slate-700/70 dark:bg-slate-800/70 dark:hover:border-slate-600'
               }`}
             >
               <div className="mb-1 flex justify-center">
@@ -72,26 +88,27 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
                 )}
               </div>
               <div className="text-sm font-bold text-gray-900 dark:text-white">{opt.label}</div>
-            </button>
+            </motion.button>
           ))}
         </div>
 
         <div className="flex gap-3">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={handleCreate}
             disabled={creating}
-            className="flex-1 min-h-[44px] px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold rounded-xl hover:from-amber-400 hover:to-yellow-300 disabled:opacity-50 transition-all text-sm"
+            className="flex-1 min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating ? 'Creating...' : 'Send Challenge'}
-          </button>
+          </motion.button>
           <button
             onClick={onClose}
-            className="min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-colors text-sm"
+            className="min-h-[44px] rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Cancel
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

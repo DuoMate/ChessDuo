@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Crown, History, LogOut, Share2, Sparkles, ShieldCheck } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
@@ -19,24 +20,27 @@ function RecentMatches({ games }: { games: CompletedGame[] }) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-300">Recent Matches</h3>
-      <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
+      <div className="flex items-center gap-2">
+        <History size={14} className="text-amber-600 dark:text-amber-400" />
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent Matches</h3>
+      </div>
+      <div className="max-h-[180px] space-y-2 overflow-y-auto">
         {games.slice(0, 5).map((game) => {
           const winnerIcon = game.winner === 'DRAW' ? '🤝' : game.winner === 'WHITE' ? '🏆' : '💀'
           const isOnline = game.is_online
           return (
             <div
               key={game.id}
-              className="flex items-center justify-between px-3 py-2 bg-white/[0.03] rounded-lg border border-white/5 text-xs"
+              className="flex items-center justify-between rounded-2xl border border-slate-200/70 bg-white/70 px-3 py-2 text-xs shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span>{winnerIcon}</span>
-                <span className="text-gray-300 truncate">{game.game_result}</span>
-                {isOnline && <span className="text-xs text-yellow-500/70">online</span>}
+                <span className="truncate text-slate-700 dark:text-slate-200">{game.game_result}</span>
+                {isOnline && <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">online</span>}
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-gray-500">{game.total_moves} moves</span>
-                <span className="text-gray-600">{new Date(game.played_at).toLocaleDateString()}</span>
+                <span className="text-slate-500 dark:text-slate-400">{game.total_moves} moves</span>
+                <span className="text-slate-500 dark:text-slate-400">{new Date(game.played_at).toLocaleDateString()}</span>
               </div>
             </div>
           )
@@ -85,54 +89,54 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut }: ProfilePane
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+      <div className="rounded-[24px] border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80">
         <ProfileEditor playerId={playerId} />
       </div>
 
       <button
         onClick={copyProfileLink}
-        className="w-full min-h-[44px] p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors flex items-center justify-center gap-2"
+        className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
       >
-        📋 {profileCopied ? 'Link copied!' : 'Share Profile'}
+        <Share2 size={15} /> {profileCopied ? 'Link copied!' : 'Share Profile'}
       </button>
 
       {!checkingPremium && !isPremium && (
         <button
           onClick={() => router.push('/premium')}
-          className="w-full min-h-[44px] p-3 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-semibold hover:from-yellow-500/30 hover:to-amber-500/30 transition-colors flex items-center justify-center gap-2"
+          className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-indigo-500/15 p-3 text-sm font-semibold text-amber-700 transition-all hover:-translate-y-0.5 hover:from-amber-500/25 hover:to-indigo-500/25 dark:text-amber-300"
         >
-          ⭐ Upgrade to Premium
+          <Crown size={15} /> Upgrade to Premium
         </button>
       )}
 
       {recentGames.length > 0 && (
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+        <div className="rounded-[24px] border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80">
           <RecentMatches games={recentGames} />
         </div>
       )}
 
       <button
         onClick={onViewHistory}
-        className="w-full min-h-[44px] p-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:border-gray-600 text-sm transition-colors flex items-center justify-center gap-2"
+        className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 text-sm text-slate-700 transition-colors hover:border-amber-500/30 hover:text-amber-700 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:text-amber-400"
       >
-        📋 View All Match History →
+        <History size={15} /> View All Match History
       </button>
 
-      <div className="pt-2 border-t border-gray-700/50">
+      <div className="border-t border-slate-200/70 pt-2 dark:border-slate-700/70">
         <Link
           href="/delete-account"
-          className="w-full min-h-[44px] p-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 hover:text-red-400 hover:border-red-500/30 text-sm transition-colors flex items-center justify-center gap-2"
+          className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 text-sm text-slate-600 transition-colors hover:border-rose-400/40 hover:text-rose-600 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:text-rose-400"
         >
-          ⚙️ Manage Account
+          <ShieldCheck size={15} /> Manage Account
         </Link>
       </div>
 
       {onSignOut && (
         <button
           onClick={onSignOut}
-          className="w-full min-h-[44px] p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 hover:bg-red-500/20 text-sm transition-colors flex items-center justify-center gap-2"
+          className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400"
         >
-          🚪 Sign Out
+          <LogOut size={15} /> Sign Out
         </button>
       )}
     </div>

@@ -64,8 +64,8 @@ function TimerDisplay({ seconds, isActive, totalSeconds }: { seconds: number; is
   return (
     <motion.span
       className={`text-xs font-bold font-mono ${
-        !isActive ? 'text-gray-500 dark:text-gray-400' :
-        isCritical ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-gray-400 dark:text-gray-300'
+        !isActive ? 'text-slate-400 dark:text-slate-500' :
+        isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-400 dark:text-slate-300'
       }`}
       animate={isCritical ? { scale: [1, 1.08, 1] } : { scale: 1 }}
       transition={{ duration: 0.8, repeat: isCritical ? Infinity : 0 }}
@@ -80,19 +80,16 @@ function SelectedMoveBadge({ move }: { move: string }) {
 
   return (
     <motion.div
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-                 bg-amber-100 dark:bg-amber-500/10
-                 border border-amber-300 dark:border-amber-500/20
-                 shadow-sm"
+      className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 shadow-sm"
       initial={{ opacity: 0, scale: 0.85 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
       <span className="text-base">{pieceChar}</span>
-      <span className="text-sm font-bold font-mono text-amber-800 dark:text-amber-300">
+      <span className="font-mono text-sm font-bold text-amber-800 dark:text-amber-300">
         {move}
       </span>
-      <span className="hidden sm:inline text-xs text-amber-600/60 dark:text-amber-400/50 tracking-wide">
+      <span className="hidden text-xs tracking-wide text-amber-700/70 dark:text-amber-400/70 sm:inline">
         Move locked
       </span>
     </motion.div>
@@ -102,8 +99,7 @@ function SelectedMoveBadge({ move }: { move: string }) {
 function BotThinkingIndicator() {
   return (
     <motion.div
-      className="inline-flex items-center gap-2 px-3 py-1 rounded-full
-                 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20"
+      className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50/80 px-3 py-1 dark:border-indigo-500/20 dark:bg-indigo-500/10"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
@@ -111,13 +107,13 @@ function BotThinkingIndicator() {
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-blue-400 dark:bg-blue-300"
+            className="h-1.5 w-1.5 rounded-full bg-indigo-500 dark:bg-indigo-300"
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
           />
         ))}
       </span>
-      <span className="text-xs text-blue-600 dark:text-blue-300 font-medium">
+      <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">
         Bot is thinking...
       </span>
     </motion.div>
@@ -134,7 +130,7 @@ export function TurnStatusArea({ state, seconds, isActive, totalSeconds, selecte
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-yellow-500/15 dark:border-yellow-500/15"
+            className="rounded-[22px] border border-amber-500/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl dark:border-amber-500/20 dark:bg-slate-900/70"
           >
             <EvaluatingPulse />
           </motion.div>

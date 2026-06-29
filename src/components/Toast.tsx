@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AlertCircle, CheckCircle2, Info, XCircle } from 'lucide-react'
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error'
 
@@ -95,26 +96,26 @@ interface ToastItemProps {
 
 function ToastItem({ toast, onRemove }: ToastItemProps) {
   const config = {
-    info: { bg: 'bg-blue-900', border: 'border-blue-500', icon: 'ℹ️' },
-    success: { bg: 'bg-green-900', border: 'border-green-500', icon: '✓' },
-    warning: { bg: 'bg-yellow-900', border: 'border-yellow-500', icon: '⚠️' },
-    error: { bg: 'bg-red-900', border: 'border-red-500', icon: '✕' },
+    info: { bg: 'bg-white/90 dark:bg-slate-900/90', border: 'border-sky-200 dark:border-sky-500/30', text: 'text-slate-800 dark:text-slate-100', icon: Info, iconClass: 'text-sky-600 dark:text-sky-400' },
+    success: { bg: 'bg-emerald-50/95 dark:bg-emerald-950/70', border: 'border-emerald-200 dark:border-emerald-500/30', text: 'text-emerald-900 dark:text-emerald-100', icon: CheckCircle2, iconClass: 'text-emerald-600 dark:text-emerald-400' },
+    warning: { bg: 'bg-amber-50/95 dark:bg-amber-950/70', border: 'border-amber-200 dark:border-amber-500/30', text: 'text-amber-900 dark:text-amber-100', icon: AlertCircle, iconClass: 'text-amber-600 dark:text-amber-400' },
+    error: { bg: 'bg-rose-50/95 dark:bg-rose-950/70', border: 'border-rose-200 dark:border-rose-500/30', text: 'text-rose-900 dark:text-rose-100', icon: XCircle, iconClass: 'text-rose-600 dark:text-rose-400' },
   }
 
-  const { bg, border, icon } = config[toast.type]
+  const { bg, border, text, icon: Icon, iconClass } = config[toast.type]
 
   return (
     <motion.div
       initial={{ opacity: 0, x: 100, scale: 0.9 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 100, scale: 0.9 }}
-      className={`${bg} ${border} border-2 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3`}
+      className={`${bg} ${border} ${text} flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_12px_40px_rgba(2,6,23,0.16)] backdrop-blur-xl`}
     >
-      <span className="text-xl">{icon}</span>
-      <p className="text-white text-sm flex-1">{toast.message}</p>
+      <Icon size={18} className={iconClass} />
+      <p className="flex-1 text-sm">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="text-gray-400 hover:text-white text-xl leading-none"
+        className="text-xl leading-none text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
       >
         ×
       </button>

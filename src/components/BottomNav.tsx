@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { History, Home, UserRound, Volume2, VolumeX } from 'lucide-react'
 
 interface BottomNavProps {
   activeOverlay: 'none' | 'profile' | 'history'
@@ -25,31 +26,31 @@ export function BottomNav({
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed bottom-0 left-0 right-0 z-30 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 safe-area-bottom"
+      className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/85 safe-area-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around h-14 px-2">
         <NavButton
           label="Profile"
-          icon="👤"
+          icon={UserRound}
           active={activeOverlay === 'profile'}
           onClick={onProfileClick}
         />
         <NavButton
           label="History"
-          icon="📋"
+          icon={History}
           active={activeOverlay === 'history'}
           onClick={onHistoryClick}
         />
         <NavButton
           label={soundEnabled ? 'Mute' : 'Sound'}
-          icon={soundEnabled ? '🔊' : '🔇'}
+          icon={soundEnabled ? Volume2 : VolumeX}
           active={false}
           onClick={onSoundToggle}
         />
         <NavButton
           label="Home"
-          icon="🏠"
+          icon={Home}
           active={false}
           onClick={() => router.push('/')}
         />
@@ -60,31 +61,32 @@ export function BottomNav({
 
 function NavButton({
   label,
-  icon,
+  icon: Icon,
   active,
   onClick,
   disabled = false,
 }: {
   label: string
-  icon: string
+  icon: typeof Home
   active: boolean
   onClick: () => void
   disabled?: boolean
 }) {
   return (
-    <button
+    <motion.button
+      whileTap={{ scale: 0.96 }}
       onClick={onClick}
       disabled={disabled}
-      className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[44px] rounded-lg transition-colors ${
+      className={`flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-2xl px-3 py-1.5 transition-all ${
         disabled
-          ? 'text-gray-600 cursor-not-allowed'
+          ? 'cursor-not-allowed text-slate-400'
           : active
-            ? 'text-yellow-400 bg-yellow-400/10'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+            ? 'bg-amber-500/10 text-amber-600 shadow-sm dark:text-amber-400'
+            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white'
       }`}
     >
-      <span className="text-lg leading-none">{icon}</span>
-      <span className="text-xs leading-none">{label}</span>
-    </button>
+      <Icon size={18} strokeWidth={2} />
+      <span className="text-[11px] leading-none">{label}</span>
+    </motion.button>
   )
 }

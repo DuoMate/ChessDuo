@@ -31,7 +31,7 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
             stroke="currentColor"
             strokeWidth="3"
             fill="none"
-            className="text-gray-200 dark:text-gray-700 opacity-40"
+            className="text-slate-200 opacity-40 dark:text-slate-700"
           />
           <motion.circle
             cx="40" cy="40" r="34"
@@ -42,16 +42,16 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
             animate={{ strokeDashoffset: circumference - progress }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
             strokeLinecap="round"
-            className={isCritical ? 'text-red-500' : isWarning ? 'text-yellow-400' : 'text-yellow-500'}
+            className={isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-amber-600'}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.span
             className={`text-[11px] md:text-xs font-bold font-mono ${
-              !isActive ? 'text-gray-400 dark:text-gray-500' :
-              isCritical ? 'text-red-400' :
-              isWarning ? 'text-yellow-400' :
-              'text-yellow-300'
+              !isActive ? 'text-slate-400 dark:text-slate-500' :
+              isCritical ? 'text-rose-500' :
+              isWarning ? 'text-amber-500' :
+              'text-amber-600'
             }`}
             animate={isCritical ? { opacity: [1, 0.6, 1] } : { opacity: 1 }}
             transition={{ duration: 0.5, repeat: isCritical ? Infinity : 0 }}

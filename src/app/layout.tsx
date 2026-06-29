@@ -42,6 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${chakraPetch.variable} h-full antialiased`}
     >
       <head>
@@ -53,7 +54,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="/cm-chessboard/extensions/markers/markers.css" />
         <link rel="stylesheet" href="/cm-chessboard/extensions/promotion-dialog/promotion-dialog.css" />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-transparent transition-colors duration-300">
         <SplashHandler />
         <Providers>{children}</Providers>
       </body>

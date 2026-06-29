@@ -23,37 +23,37 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-[70] p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-xl"
+        className="w-full max-w-sm overflow-hidden rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between border-b border-slate-200/70 p-4 dark:border-slate-700/70">
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            className="flex items-center gap-1.5 text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             style={{ minHeight: '44px' }}
           >
             <ArrowLeft size={16} />
             <span className="text-sm">Back</span>
           </button>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Settings</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Settings</h2>
           <div className="w-16" />
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">Theme</p>
-              <p className="text-xs text-gray-500 mt-0.5">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Theme</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
             </div>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
               style={{ minHeight: '44px', minWidth: '44px' }}
               aria-label="Toggle theme"
             >
@@ -65,16 +65,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">Auto-Queen</p>
-              <p className="text-xs text-gray-500 mt-0.5">Automatically promote pawns to queen</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Queen</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Automatically promote pawns to queen</p>
             </div>
             <button
               onClick={() => setAutoQueen(!autoQueen)}
-              className={`w-12 h-7 rounded-full transition-colors relative ${autoQueen ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              className={`relative h-7 w-12 rounded-full transition-colors ${autoQueen ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
               style={{ minHeight: '44px', minWidth: '44px' }}
               aria-label="Toggle auto-queen"
             >
-              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 
@@ -82,16 +82,16 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">Low Time Warning</p>
-              <p className="text-xs text-gray-500 mt-0.5">Sound alert when time is running low</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Low Time Warning</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Sound alert when time is running low</p>
             </div>
             <button
               onClick={() => setLowTimeWarning(!lowTimeWarning)}
-              className={`w-12 h-7 rounded-full transition-colors relative ${lowTimeWarning ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              className={`relative h-7 w-12 rounded-full transition-colors ${lowTimeWarning ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
               style={{ minHeight: '44px', minWidth: '44px' }}
               aria-label="Toggle low time warning"
             >
-              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
+              <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
         </div>

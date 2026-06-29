@@ -3,31 +3,43 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --color-page-bg: #f8f9fa;
-  --color-page-fg: #171717;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f0f1f3;
-  --color-border: #e2e4e8;
-  --color-muted: #6b7280;
-  --color-muted-bg: #e5e7eb;
-  --color-accent-bg: #f3f4f6;
-  --color-input-bg: #ffffff;
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
+  --color-page-bg: #f4f6fb;
+  --color-page-fg: #111827;
+  --color-surface: rgba(255, 255, 255, 0.82);
+  --color-surface-strong: #ffffff;
+  --color-surface-hover: #eef2ff;
+  --color-border: rgba(148, 163, 184, 0.28);
+  --color-muted: #64748b;
+  --color-muted-bg: rgba(248, 250, 252, 0.95);
+  --color-accent-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(99, 102, 241, 0.16));
+  --color-input-bg: rgba(255, 255, 255, 0.86);
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-primary: #f59e0b;
+  --color-primary-strong: #d97706;
+  --color-secondary: #6366f1;
+  --color-success: #10b981;
+  --color-shadow: rgba(15, 23, 42, 0.12);
 }
 
 .dark {
-  --color-page-bg: #0f1119;
-  --color-page-fg: #ffffff;
-  --color-surface: #16191f;
-  --color-surface-hover: #1f2230;
-  --color-border: #2a2d35;
-  --color-muted: #9ca3af;
-  --color-muted-bg: #1f2230;
-  --color-accent-bg: rgba(255, 255, 255, 0.05);
-  --color-input-bg: #1f2230;
-  --color-danger: #ef4444;
-  --color-danger-hover: #dc2626;
+  --color-page-bg: #060816;
+  --color-page-fg: #f8fafc;
+  --color-surface: rgba(18, 23, 42, 0.9);
+  --color-surface-strong: #111827;
+  --color-surface-hover: #1f2937;
+  --color-border: rgba(148, 163, 184, 0.22);
+  --color-muted: #94a3b8;
+  --color-muted-bg: rgba(15, 23, 42, 0.9);
+  --color-accent-bg: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(129, 140, 248, 0.18));
+  --color-input-bg: rgba(15, 23, 42, 0.85);
+  --color-danger: #fb7185;
+  --color-danger-hover: #f43f5e;
+  --color-primary: #fbbf24;
+  --color-primary-strong: #f59e0b;
+  --color-secondary: #818cf8;
+  --color-success: #34d399;
+  --color-shadow: rgba(2, 6, 23, 0.45);
 }
 
 @theme inline {
@@ -36,16 +48,59 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-game: var(--font-chakra-petch), var(--font-geist-sans);
-  --color-game-gold: #fbbf24;
-  --color-game-winner: #34d399;
-  --color-game-loser: #f43f5e;
+  --color-game-gold: var(--color-primary);
+  --color-game-winner: var(--color-success);
+  --color-game-loser: #fb7185;
   --color-game-bg: var(--color-page-bg);
   --color-game-card: var(--color-surface);
   --color-game-surface: var(--color-muted-bg);
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  background: var(--color-page-bg);
+  margin: 0;
+  background: radial-gradient(circle at top left, rgba(245, 158, 11, 0.16), transparent 28%), radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.14), transparent 24%), var(--color-page-bg);
   color: var(--color-page-fg);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: rgba(245, 158, 11, 0.28);
+  color: var(--color-page-fg);
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply border border-white/70 bg-white/80 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80;
+  }
+
+  .soft-card {
+    @apply rounded-[24px] border border-slate-200/80 bg-slate-50/80 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70;
+  }
+
+  .surface-ring {
+    @apply ring-1 ring-slate-200/70 dark:ring-slate-700/70;
+  }
+}
+
+@keyframes gentleFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }

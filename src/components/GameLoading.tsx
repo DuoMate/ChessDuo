@@ -40,7 +40,7 @@ export function GameLoading({
   }, [])
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[600px] p-8">
+    <div className="flex min-h-[600px] flex-col items-center justify-center rounded-[32px] border border-white/70 bg-white/80 p-8 shadow-[0_24px_90px_rgba(2,6,23,0.14)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/80">
       {showChessIcon && (
         <div className="relative mb-8">
           <div ref={iconRef} className="inline-block">
@@ -54,22 +54,22 @@ export function GameLoading({
         <div ref={dot2Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
         <div ref={dot3Ref} className="w-3 h-3 bg-amber-500 rounded-full" />
       </div>
-      <p className="text-gray-400 text-lg">{message}</p>
+      <p className="text-lg text-slate-600 dark:text-slate-300">{message}</p>
       {roomCode && (
-        <div className="mt-6 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Room code</p>
-          <p className="text-xl font-mono font-bold text-amber-400 tracking-widest select-all">{roomCode}</p>
+        <div className="mt-6 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Room code</p>
+          <p className="select-all font-mono text-xl font-bold tracking-[0.25em] text-amber-600 dark:text-amber-400">{roomCode}</p>
           <button
             onClick={() => navigator.clipboard.writeText(roomCode)}
-            className="mt-2 text-xs text-gray-500 hover:text-amber-400 transition-colors inline-flex items-center gap-1 min-h-[44px]"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-xs text-slate-500 transition-colors hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
           >
             <Copy size={12} /> Copy code
           </button>
         </div>
       )}
       {inviteUrl && (
-        <div className="mt-3 px-5 py-3 bg-game-surface/60 rounded-xl border border-white/10 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Invite your friend</p>
+        <div className="mt-3 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Invite your friend</p>
           <div className="flex items-center gap-2 mb-2">
             <button
               onClick={() => {
@@ -79,19 +79,19 @@ export function GameLoading({
                   navigator.clipboard.writeText(inviteUrl)
                 }
               }}
-              className="flex-1 min-h-[44px] rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 font-medium text-xs transition-colors inline-flex items-center justify-center gap-1.5"
+              className="flex-1 min-h-[44px] rounded-2xl bg-amber-500/10 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
             >
               <Share2 size={14} /> Share link
             </button>
             <button
               onClick={() => navigator.clipboard.writeText(inviteUrl)}
-              className="min-h-[44px] min-w-[44px] rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors inline-flex items-center justify-center"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white"
               title="Copy link to clipboard"
             >
               <Copy size={14} />
             </button>
           </div>
-          <p className="text-xs text-gray-600">Room code: <span className="text-amber-400/70 font-mono">{roomCode}</span></p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Room code: <span className="font-mono text-amber-700 dark:text-amber-400">{roomCode}</span></p>
         </div>
       )}
     </div>

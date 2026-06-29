@@ -34,14 +34,14 @@ export function AnalyzingIndicator({ isVisible, phase = 'evaluating' }: Analyzin
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
-          className="flex items-center gap-3 px-4 py-2 bg-blue-900/50 border border-blue-500/50 rounded-lg"
+          className="flex items-center gap-3 rounded-[22px] border border-indigo-200/80 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl dark:border-indigo-500/20 dark:bg-slate-900/70"
         >
           <motion.div
-            className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full"
+            className="h-5 w-5 rounded-full border-2 border-indigo-500 border-t-transparent"
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
-          <span className="text-blue-300 font-medium">
+          <span className="font-medium text-indigo-700 dark:text-indigo-300">
             {messages[phase]}{dots}
           </span>
         </motion.div>
@@ -79,7 +79,7 @@ export function ThinkingDots({ isVisible, label = 'Thinking' }: ThinkingDotsProp
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="text-blue-400"
+          className="text-indigo-600 dark:text-indigo-300"
         >
           {label}{dots}
         </motion.span>

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 
@@ -233,130 +235,186 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     : email.trim() && password.length >= 6 && usernameStatus === 'available'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600 dark:text-yellow-400">
-          ChessDuo
-        </h1>
-
-        <button
-          onClick={handleGoogleSignIn}
-          disabled={googleLoading || loading}
-          className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-500 bg-white dark:bg-white text-gray-900 font-medium text-sm hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mb-5"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          {googleLoading ? 'Connecting...' : 'Sign in with Google'}
-        </button>
-
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"/>
-          <span className="text-gray-500 text-xs">or</span>
-          <div className="flex-1 border-t border-gray-300 dark:border-gray-600"/>
-        </div>
-
-        <h2 className="text-xl text-center mb-6 text-gray-900 dark:text-white">
-          {isLogin ? 'Welcome Back' : 'Create Account'}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Choose a username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                  required
-                  maxLength={30}
-                  autoComplete="username"
-                  className={`w-full p-3 pr-10 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border focus:outline-none transition-colors ${
-                    usernameStatus === 'available'
-                      ? 'border-green-500 focus:border-green-400'
-                      : usernameStatus === 'taken' || usernameStatus === 'invalid'
-                      ? 'border-red-500 focus:border-red-400'
-                      : 'border-gray-300 dark:border-gray-600 focus:border-yellow-400'
-                  }`}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {usernameStatus === 'checking' && (
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  )}
-                  {usernameStatus === 'available' && (
-                    <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && username.trim() && (
-                    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              {usernameMessage && username.trim() && (
-                <p className={`text-xs mt-1 ${
-                  usernameStatus === 'available' ? 'text-green-500' : 'text-red-500 dark:text-red-400'
-                }`}>
-                  {usernameMessage}
-                </p>
-              )}
-              {!usernameMessage && !username.trim() && (
-                <p className="text-gray-500 text-xs mt-1">
-                  3-30 characters, letters, numbers, and underscores only
-                </p>
-              )}
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_28%)] px-4 py-6 sm:px-6">
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-400/15 via-transparent to-indigo-500/15" />
+        <div className="relative">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 dark:text-amber-300">
+              <Sparkles size={12} />
+              Multiplayer Tag Team Chess
             </div>
-          )}
+          </div>
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
-            required
-            autoComplete="email"
-          />
+          <div className="text-center">
+            <h1 className="bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-500 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
+              ChessDuo
+            </h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {isLogin ? 'Sign in to continue your match.' : 'Create your account and invite a teammate.'}
+            </p>
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none"
-            required
-            minLength={6}
-            autoComplete={isLogin ? 'current-password' : 'new-password'}
-          />
-
-          {error && (
-            <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading || checkingUsername || !canSubmit}
-            className="w-full p-3 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50 transition-colors"
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-100 dark:hover:bg-slate-700/80"
           >
-            {loading ? 'Loading...' : isLogin ? 'Sign In' : 'Create Account'}
-          </button>
-        </form>
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            {googleLoading ? 'Connecting...' : 'Sign in with Google'}
+          </motion.button>
 
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => { setIsLogin(!isLogin); setError(null); setUsernameStatus('idle'); setUsernameMessage(null) }}
-            className="text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
-          >
-            {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-          </button>
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">or</span>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          </div>
+
+          <h2 className="mb-5 text-center text-xl font-semibold text-slate-900 dark:text-white">
+            {isLogin ? 'Welcome back' : 'Create account'}
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="username">
+                  Username
+                </label>
+                <div className="relative">
+                  <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="username"
+                    type="text"
+                    placeholder="Choose a username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                    required
+                    maxLength={30}
+                    autoComplete="username"
+                    className={`w-full rounded-2xl border bg-slate-50/80 py-3 pl-10 pr-10 text-sm text-slate-900 shadow-sm outline-none transition-all focus:ring-2 dark:bg-slate-800/70 dark:text-slate-100 ${
+                      usernameStatus === 'available'
+                        ? 'border-emerald-500 focus:border-emerald-400 focus:ring-emerald-500/20'
+                        : usernameStatus === 'taken' || usernameStatus === 'invalid'
+                          ? 'border-rose-500 focus:border-rose-400 focus:ring-rose-500/20'
+                          : 'border-slate-200 focus:border-amber-500 focus:ring-amber-500/20 dark:border-slate-700'
+                    }`}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {usernameStatus === 'checking' && (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                    )}
+                    {usernameStatus === 'available' && (
+                      <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {(usernameStatus === 'taken' || usernameStatus === 'invalid') && username.trim() && (
+                      <svg className="h-5 w-5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                {usernameMessage && username.trim() && (
+                  <p className={`mt-1 text-xs ${usernameStatus === 'available' ? 'text-emerald-500' : 'text-rose-500 dark:text-rose-400'}`}>
+                    {usernameMessage}
+                  </p>
+                )}
+                {!usernameMessage && !username.trim() && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    3-30 characters, letters, numbers, and underscores only
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="email">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-all focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="password">
+                Password
+              </label>
+              <div className="relative">
+                <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-all focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100"
+                  required
+                  minLength={6}
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                <ShieldCheck size={15} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={loading || checkingUsername || !canSubmit}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <>
+                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </motion.button>
+          </form>
+
+          <div className="mt-5 text-center">
+            <button
+              onClick={() => { setIsLogin(!isLogin); setError(null); setUsernameStatus('idle'); setUsernameMessage(null) }}
+              className="text-sm font-medium text-slate-500 transition-colors hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
+            >
+              {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+            </button>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -76,24 +76,24 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xl"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="bg-game-surface rounded-2xl p-6 max-w-sm w-full mx-auto border border-white/10 shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="mx-auto max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-[30px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85"
           >
             <div className="text-center mb-5">
               <motion.div
                 animate={{ y: [0, -4, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
               >
-                <Crown size={40} className="mx-auto text-amber-400 mb-2" />
+                <Crown size={40} className="mx-auto mb-2 text-amber-500" />
               </motion.div>
-              <h2 className="text-2xl font-bold text-amber-400 mb-1 font-game">ChessDuo</h2>
-              <p className="text-xs text-gray-500">Play smarter, together</p>
+              <h2 className="mb-1 text-2xl font-bold font-game text-amber-600 dark:text-amber-400">ChessDuo</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Play smarter, together</p>
             </div>
 
             <div className="space-y-3 mb-5">
@@ -103,12 +103,12 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 + i * 0.1 }}
-                  className="flex gap-3 p-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/5"
+                  className="flex gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-3 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70"
                 >
-                  <card.icon size={20} className="text-amber-600/80 dark:text-amber-400/80 flex-shrink-0 mt-0.5" />
+                  <card.icon size={20} className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                   <div>
-                    <h3 className="text-gray-900 dark:text-white font-semibold text-sm">{card.title}</h3>
-                    <p className="text-gray-400 text-xs leading-relaxed mt-0.5">{card.description}</p>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{card.title}</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{card.description}</p>
                   </div>
                 </motion.div>
               ))}
@@ -132,14 +132,14 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                 type="checkbox"
                 checked={dontShow}
                 onChange={(e) => setDontShow(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-amber-400 focus:ring-amber-400"
+                className="w-4 h-4 rounded border-slate-400 bg-slate-600 text-amber-400 focus:ring-amber-400 dark:border-slate-600 dark:bg-slate-700"
               />
-              <span className="text-xs text-gray-500">Don&apos;t show this again</span>
+              <span className="text-xs text-slate-500">Don&apos;t show this again</span>
             </label>
 
             <button
               onClick={handleDismiss}
-              className="w-full min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 font-bold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20"
+              className="w-full min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-sm hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20"
             >
               Got it!
             </button>

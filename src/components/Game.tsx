@@ -277,7 +277,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const fetchTeamNames = useCallback(async () => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
-    if (!g || !playerId) return
+    if (!g) return
+
+    if (!playerId) {
+      setTeamLabels({ white: 'White Team (You)', black: 'Black Team (Bot)', blackIsBot: true })
+      return
+    }
 
     const myTeam = g.getTeam() || myTeamRef.current
 

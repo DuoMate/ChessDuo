@@ -58,23 +58,23 @@ export function GameOverModal({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-xl"
       onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose() }}
     >
       <motion.div
         initial={{ scale: 0.5, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 250 }}
-        className="bg-game-surface p-6 rounded-2xl text-center border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-sm relative overflow-hidden"
+        className="relative w-full max-w-sm overflow-hidden rounded-[30px] border border-white/70 bg-white/90 p-6 text-center shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
       >
         {/* Close button */}
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 transition-colors"
+            className="absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
             aria-label="Close"
           >
-            <X size={16} className="text-gray-400" />
+            <X size={16} className="text-slate-400 dark:text-slate-500" />
           </button>
         )}
         {winner !== 'DRAW' && !isAbandoned && <Particles />}
@@ -92,15 +92,15 @@ export function GameOverModal({
             <Trophy size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
           )}
           {!isAbandoned && winner === 'BLACK' && (
-            <Trophy size={72} className="mx-auto text-gray-400" strokeWidth={1.5} />
+            <Trophy size={72} className="mx-auto text-slate-400 dark:text-slate-500" strokeWidth={1.5} />
           )}
           {!isAbandoned && winner === 'DRAW' && (
-            <Handshake size={72} className="mx-auto text-gray-400" strokeWidth={1.5} />
+            <Handshake size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
           )}
         </motion.div>
 
-        <h2 className={`text-2xl font-bold mt-4 mb-1 relative z-10 ${
-          isAbandoned ? 'text-amber-500 dark:text-amber-400' : winner === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'
+        <h2 className={`relative z-10 mt-4 mb-1 text-2xl font-bold ${
+          isAbandoned ? 'text-amber-500 dark:text-amber-400' : winner === 'WHITE' ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'
         } font-game`}>
           {isAbandoned && 'Match Abandoned'}
           {!isAbandoned && winner === 'WHITE' && 'White Team Wins!'}
@@ -108,7 +108,7 @@ export function GameOverModal({
           {!isAbandoned && winner === 'DRAW' && "It's a Draw!"}
         </h2>
 
-        <p className="text-gray-500 dark:text-gray-400 mb-2 relative z-10">
+        <p className="relative z-10 mb-2 text-sm text-slate-500 dark:text-slate-400">
           {isAbandoned ? 'Your teammate left the match' : 'Great game!'}
         </p>
 
@@ -116,7 +116,7 @@ export function GameOverModal({
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={onPlayAgain}
-          className="relative z-10 bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-900 px-8 py-3.5 rounded-xl font-bold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 inline-flex items-center gap-2 min-h-[44px]"
+          className="relative z-10 inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-8 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400"
         >
           <RotateCcw size={18} />
           {isAbandoned ? 'Go Home' : 'Play Again'}

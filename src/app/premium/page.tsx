@@ -211,7 +211,7 @@ export default function PremiumPage() {
 
   if (loading || checkingPremium) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] px-4 py-6 dark:bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.16),_transparent_28%)]">
         <ChessLoader />
       </div>
     )
@@ -219,10 +219,10 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
+      <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
+        <div className="flex flex-1 flex-col items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
+            <div className="mb-6 flex items-center justify-between rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
               <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo Premium</h1>
               <button
                 onClick={() => router.push('/')}
@@ -234,7 +234,7 @@ export default function PremiumPage() {
 
             {isPremium ? (
               <div className="space-y-4">
-                <div className="bg-white dark:bg-white/[0.03] border-2 border-yellow-300 dark:border-yellow-500/20 rounded-2xl p-6 text-center">
+                <div className="rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-6 text-center shadow-sm">
                   <div className="text-4xl mb-3">✅</div>
                   <h2 className="text-xl font-black text-yellow-600 dark:text-yellow-400 mb-2">You&apos;re Premium!</h2>
                   <p className="text-gray-700 dark:text-gray-400 text-sm mb-1 font-medium">
@@ -272,7 +272,7 @@ export default function PremiumPage() {
                 ) : (
                   <>
                     <div className="grid gap-4 mb-6">
-                      <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6 text-center hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(250,204,21,0.08)] transition-all">
+                      <div className="rounded-[24px] border border-slate-200/80 bg-white/85 p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40">
                         <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Monthly</h3>
                         <p className="text-3xl font-black text-yellow-500 mb-1">₹99</p>
                         <p className="text-xs text-gray-700 dark:text-gray-400 font-medium mb-4">per month</p>
@@ -284,7 +284,7 @@ export default function PremiumPage() {
                         </button>
                       </div>
 
-                      <div className="bg-white dark:bg-white/[0.03] border-2 border-green-400/40 dark:border-green-500/25 rounded-2xl p-6 text-center hover:border-green-500 dark:hover:border-green-400/40 hover:shadow-md dark:hover:shadow-[0_0_20px_rgba(34,197,94,0.08)] transition-all relative">
+                      <div className="relative rounded-[24px] border border-emerald-500/25 bg-emerald-500/10 p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-500 hover:shadow-md dark:border-emerald-500/20 dark:bg-emerald-500/10">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                           Best Value
                         </div>
@@ -301,7 +301,7 @@ export default function PremiumPage() {
                       </div>
                     </div>
 
-                    <div className="bg-white dark:bg-white/[0.03] border-2 border-gray-200 dark:border-white/8 rounded-2xl p-6">
+                    <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-6 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
                       <p className="text-gray-700 dark:text-gray-400 text-sm text-center mb-4 font-medium">
                         Unlock powerful move analysis for every game
                       </p>
@@ -340,7 +340,7 @@ export default function PremiumPage() {
 
 function FeatureRow({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
-    <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-gray-50 dark:bg-white/[0.04] border-2 border-gray-200 dark:border-white/[0.04]">
+    <div className="flex items-start gap-3 rounded-[18px] border border-slate-200/70 bg-white/70 p-3 text-left shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60">
       <span className="text-lg flex-shrink-0">{icon}</span>
       <div>
         <p className="text-gray-900 dark:text-white text-sm font-semibold">{title}</p>

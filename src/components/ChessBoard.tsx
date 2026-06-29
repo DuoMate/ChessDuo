@@ -296,9 +296,10 @@ export function ChessBoard({
 
   return (
     <div className="relative w-full pt-[100%]">
+      <div className="absolute inset-0 rounded-[24px] border border-slate-200/80 bg-white/70 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/70" />
       <div
         ref={containerRef}
-        className="absolute inset-0"
+        className="absolute inset-1 overflow-hidden rounded-[22px]"
       />
       
       <div

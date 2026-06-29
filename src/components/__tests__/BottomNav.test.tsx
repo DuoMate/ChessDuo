@@ -54,13 +54,15 @@ describe('BottomNav', () => {
   it('highlights active profile button', () => {
     render(<BottomNav {...defaultProps} activeOverlay="profile" />)
     const profileButton = screen.getByText('Profile').closest('button')
-    expect(profileButton?.className).toContain('text-yellow-400')
+    expect(profileButton?.className).toContain('bg-amber-500/10')
+    expect(profileButton?.className).toContain('text-amber-600')
   })
 
   it('highlights active history button', () => {
     render(<BottomNav {...defaultProps} activeOverlay="history" />)
     const historyButton = screen.getByText('History').closest('button')
-    expect(historyButton?.className).toContain('text-yellow-400')
+    expect(historyButton?.className).toContain('bg-amber-500/10')
+    expect(historyButton?.className).toContain('text-amber-600')
   })
 
   it('profile button is always enabled (guests can tap to see sign-in prompt)', () => {

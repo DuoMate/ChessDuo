@@ -18,6 +18,7 @@ import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { GameTour } from '@/components/GameTour'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { UserRound } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 
@@ -531,13 +532,14 @@ export default function SetupPage() {
   )
 
   const authOverlay = showAuthOverlay && (
-    <div className="fixed inset-0 z-[70]">
-      <div className="absolute top-4 left-4 z-10">
+    <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm">
+      <div className="absolute right-4 top-4 z-10">
         <button
           onClick={() => setShowAuthOverlay(false)}
-          className="text-gray-600 dark:text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white text-sm transition-colors min-h-[44px] px-3"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-white/20 bg-white/90 text-slate-700 shadow-lg transition-all hover:bg-white hover:text-slate-950 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white"
+          aria-label="Close sign in"
         >
-          {'\u2190'} Back
+          ✕
         </button>
       </div>
       <Auth
@@ -661,13 +663,13 @@ export default function SetupPage() {
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
                 {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B\u265B' : gameMode === 'fourplayer' ? '\u265B\u265C' : '\u2694'}
               </div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">
+              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">
                 {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'TWO PLAYER' : gameMode === 'fourplayer' ? 'FOUR PLAYER' : '1v1 DUEL'}
               </h1>
               {gameMode === 'duel' && duelFriend ? (
                 <p className="text-[12px] text-amber-500 dark:text-amber-400 font-semibold mt-1">vs {duelFriend.name}</p>
               ) : (
-                <p className="text-[11px] text-gray-700 dark:text-gray-400 tracking-[0.15em] uppercase mt-0.5 font-medium">Select game duration</p>
+                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select game duration</p>
               )}
             </div>
 
@@ -761,8 +763,8 @@ export default function SetupPage() {
                   ) : (
                     <>
                       <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-gray-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">{option.description}</div>
+                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
                     </>
                   )}
                 </button>
@@ -800,114 +802,118 @@ export default function SetupPage() {
   if (!gameMode) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col relative overflow-hidden">
+        <div className="relative flex min-h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
           {topBar}
-        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.015] pointer-events-none"
-          style={{
-            backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px),
-                              repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px)`
-          }}
-        />
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.08) 0%, transparent 70%)' }}
-        />
-        <div className="flex-1 flex flex-col items-center justify-start pt-8 pb-8">
-          <div className="max-w-md w-full relative z-10 px-4">
-            <div className="text-center mb-8">
-              <div className="text-[48px] mb-2 drop-shadow-[0_0_20px_rgba(250,204,21,0.3)] flex items-center justify-center gap-3">
-                <span className="text-yellow-600 dark:text-yellow-400">{"\u2654"}</span>
-                <span className="text-[36px] opacity-70 dark:opacity-60 text-gray-800 dark:text-white">{"\u265A"}</span>
-              </div>
-              <h1 className="text-[34px] font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 tracking-[0.25em] uppercase mt-1 font-semibold">Multiplayer Tag Team Chess</p>
-            </div>
-
-            <div className="mb-8">
-              <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.2em] uppercase mb-3 px-1">
-                Play Together
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <ModeCard
-                  icon={"\u2654\u265A"}
-                  title="Two Player"
-                  desc="(You + Friend) vs Bots"
-                  tag="Online"
-                  tagColor="blue"
-                  onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }}
-                />
-                <ModeCard
-                  icon={"\u2654\u2654\u265A\u265A"}
-                  title="Four Player"
-                  desc="2 Friends vs 2 Friends"
-                  tag="Online Lobby"
-                  tagColor="blue"
-                  onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('fourplayer') }}
-                />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.2em] uppercase mb-3 px-1">
-                More Modes
-              </div>
-              <div className="flex flex-col gap-3">
-                <ModeButton icon={"\u265E"} title="Offline Tag Team" desc="You + Bot vs Bots" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} />
-                <ModeButton icon={"\u2694"} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
-              </div>
-            </div>
-
-            {playerId && (
-              <div className="mb-6">
-                <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.2em] uppercase mb-3 px-1">
-                  Join a Room
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.015]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px),
+                                repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px)`,
+            }}
+          />
+          <div
+            className="pointer-events-none absolute left-1/2 top-5 h-80 w-80 -translate-x-1/2 rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.08) 0%, transparent 70%)' }}
+          />
+          <div className="flex flex-1 flex-col items-center justify-start pb-8 pt-8">
+            <div className="relative z-10 w-full max-w-md px-4">
+              <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
+                <div className="mb-8 text-center">
+                  <div className="mb-2 flex items-center justify-center gap-3 text-[48px] drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+                    <span className="text-yellow-600 dark:text-yellow-400">{"♔"}</span>
+                    <span className="text-[36px] text-gray-800 opacity-70 dark:text-white dark:opacity-60">{"♚"}</span>
+                  </div>
+                  <h1 className="text-[34px] font-black tracking-wider text-yellow-600 dark:text-yellow-400">ChessDuo</h1>
+                  <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.25em] text-gray-700 dark:text-gray-400">Multiplayer Tag Team Chess</p>
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="Enter room code"
-                    maxLength={8}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-sm placeholder:text-gray-500 dark:placeholder:text-gray-500 focus:border-yellow-500 dark:focus:border-yellow-500/60 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-yellow-100 dark:bg-yellow-500/15 border-2 border-yellow-400 dark:border-yellow-500/25 text-yellow-800 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-200 dark:hover:bg-yellow-500/25 active:bg-yellow-300 dark:active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
+
+                <div className="mb-8">
+                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
+                    Play Together
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <ModeCard
+                      icon={"♔♚"}
+                      title="Two Player"
+                      desc="(You + Friend) vs Bots"
+                      tag="Online"
+                      tagColor="blue"
+                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }}
+                    />
+                    <ModeCard
+                      icon={"♔♔♚♚"}
+                      title="Four Player"
+                      desc="2 Friends vs 2 Friends"
+                      tag="Online Lobby"
+                      tagColor="blue"
+                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('fourplayer') }}
+                    />
+                  </div>
                 </div>
-                {joinError && (
-                  <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>
+
+                <div className="mb-6">
+                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
+                    More Modes
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <ModeButton icon={"♞"} title="Offline Tag Team" desc="You + Bot vs Bots" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} />
+                    <ModeButton icon={"⚔"} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
+                  </div>
+                </div>
+
+                {playerId && (
+                  <div className="mb-6">
+                    <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
+                      Join a Room
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={joinCode}
+                        onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
+                        placeholder="Enter room code"
+                        maxLength={8}
+                        inputMode="text"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        disabled={joinLoading}
+                        className="flex-1 min-w-0 rounded-xl border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-500 focus:border-yellow-500 focus:bg-white focus:outline-none disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-gray-500 dark:focus:border-yellow-500/60 dark:focus:bg-white/[0.08]"
+                        style={{ minHeight: '44px' }}
+                      />
+                      <button
+                        onClick={handleJoinByCode}
+                        disabled={joinLoading || !joinCode.trim()}
+                        className="whitespace-nowrap rounded-xl border-2 border-yellow-400 bg-yellow-100 px-5 py-3 text-sm font-semibold text-yellow-800 transition-all hover:bg-yellow-200 active:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-30 dark:border-yellow-500/25 dark:bg-yellow-500/15 dark:text-yellow-400 dark:hover:bg-yellow-500/25 dark:active:bg-yellow-500/35"
+                        style={{ minHeight: '44px' }}
+                      >
+                        {joinLoading ? 'Joining...' : 'Join'}
+                      </button>
+                    </div>
+                    {joinError && (
+                      <p className="mt-1.5 text-[11px] font-medium text-red-600 dark:text-red-400">{joinError}</p>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
 
-            <div className="flex justify-center gap-6 text-[11px] pt-4 border-t border-gray-300 dark:border-white/10">
-              <button onClick={() => router.push('/history')} className="text-gray-700 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors min-h-[44px] flex items-center gap-1 font-medium">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                History
-              </button>
-              <button onClick={() => router.push('/premium')} className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 transition-all min-h-[44px] flex items-center gap-1 font-semibold">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                Premium
-              </button>
-              {!playerId && (
-                <button onClick={() => setShowAuthOverlay(true)} className="text-gray-700 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors min-h-[44px] flex items-center gap-1 font-medium">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                  Sign In
-                </button>
-              )}
+                <div className="flex justify-center gap-6 border-t border-slate-200/80 pt-4 text-[11px] dark:border-slate-700/70">
+                  <button onClick={() => router.push('/history')} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400">
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    History
+                  </button>
+                  <button onClick={() => router.push('/premium')} className="flex min-h-[44px] items-center gap-1 font-semibold text-yellow-600 transition-all hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300">
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                    Premium
+                  </button>
+                  {!playerId && (
+                    <button onClick={() => setShowAuthOverlay(true)} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                      Sign In
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
           {slideOvers}
           {authOverlay}
         </div>
@@ -927,8 +933,8 @@ export default function SetupPage() {
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
               <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">OFFLINE</h1>
-              <p className="text-[11px] text-gray-700 dark:text-gray-400 tracking-[0.15em] uppercase mt-0.5 font-medium">Select opponent skill level</p>
+              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">OFFLINE</h1>
+              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select opponent skill level</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
               {skillLevels.map((level: SkillLevel) => (
@@ -1056,19 +1062,19 @@ export default function SetupPage() {
               </div>
               <div className="space-y-3 text-sm text-gray-800 dark:text-gray-300 font-medium">
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-blue-200 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
                   <span>Create a room and get a shareable code</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-blue-200 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
                   <span>Share the code with 3 friends</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-blue-200 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
                   <span>All 4 players join and pick teams</span>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-blue-200 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
                   <span>Game starts when all seats are filled</span>
                 </div>
               </div>
@@ -1084,20 +1090,22 @@ export default function SetupPage() {
                   key={option.seconds}
                   onClick={() => handleStartFourPlayer(option.seconds)}
                   disabled={creatingTime !== null}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-blue-400 dark:hover:border-blue-500/40 hover:bg-blue-50 dark:hover:bg-blue-500/[0.05] hover:shadow-md'
-                  } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
+                   className={`p-5 rounded-2xl border transition-all duration-200 text-center ${
+                      creatingTime === option.seconds
+                        ? 'border-amber-400 bg-amber-500/10 shadow-sm'
+                        : 'border-slate-200/80 bg-white/85 shadow-sm hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
+                    } ${creatingTime !== null && creatingTime !== option.seconds ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                   {creatingTime === option.seconds ? (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">Creating...</span>
+                      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Creating...</span>
                     </div>
                   ) : (
                     <>
                       <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-gray-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">{option.description}</div>
+                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
                     </>
                   )}
                 </button>
@@ -1105,13 +1113,13 @@ export default function SetupPage() {
             </div>
 
             {joinError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-100 dark:bg-red-500/10 border-2 border-red-300 dark:border-red-500/20 text-red-700 dark:text-red-400 text-sm text-center font-medium">
+              <div className="mb-4 p-3 rounded-2xl bg-rose-100/80 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-sm text-center font-medium">
                 {joinError}
               </div>
             )}
 
             <div className="text-center">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+              <button onClick={() => setGameMode(null)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
                 {"\u2190"} Back to home
               </button>
             </div>
@@ -1141,18 +1149,18 @@ function ModeCard({ icon, title, desc, tag, tagColor, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-2 p-5 rounded-2xl border-2 border-blue-200 dark:border-blue-500/20 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/30 dark:to-gray-900/20 hover:border-blue-400 dark:hover:border-blue-500/40 hover:shadow-md dark:hover:shadow-blue-500/10 transition-all duration-200 group"
+      className="group flex flex-col items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-[0_16px_40px_rgba(245,158,11,0.12)] dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40"
     >
-      <div className="text-[28px] mb-1 drop-shadow-[0_0_8px_rgba(59,130,246,0.2)] dark:drop-shadow-[0_0_12px_rgba(59,130,246,0.3)]">
+       <div className="text-[28px] mb-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.2)] dark:drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
         {icon}
       </div>
       <div className="text-center">
-        <div className="font-bold text-[14px] text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+          <div className="font-bold text-[14px] text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
           {title}
         </div>
-        <div className="text-[11px] text-gray-700 dark:text-gray-400 mt-0.5 font-medium">{desc}</div>
-      </div>
-      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
+        </div>
+        <span className={`text-[9px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
         {tag}
       </span>
     </button>
@@ -1168,24 +1176,24 @@ function ModeButton({ icon, title, desc, onClick, highlight }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3.5 p-[18px] rounded-2xl border-2 transition-all duration-200 text-left group ${
+      className={`group flex items-center gap-3.5 rounded-[24px] border p-[18px] text-left shadow-sm transition-all duration-200 ${
         highlight
-          ? 'border-yellow-300 dark:border-yellow-500/15 bg-yellow-50 dark:bg-yellow-500/[0.03] hover:border-yellow-400 dark:hover:border-yellow-500/40 hover:bg-yellow-100 dark:hover:bg-yellow-500/[0.06] hover:shadow-md'
-          : 'border-gray-200 dark:border-white/8 bg-white dark:bg-white/[0.04] hover:border-yellow-400 dark:hover:border-yellow-500/30 hover:bg-yellow-50 dark:hover:bg-yellow-500/[0.04] hover:shadow-md dark:hover:shadow-yellow-500/5'
+          ? 'border-amber-500/20 bg-amber-500/10 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:border-amber-400'
+          : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
       }`}
     >
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-[28px] ${
-        highlight ? 'bg-yellow-200 dark:bg-yellow-500/10 border-2 border-yellow-300 dark:border-yellow-500/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'bg-yellow-100 dark:bg-yellow-500/8 border-2 border-yellow-200 dark:border-yellow-500/12 drop-shadow-[0_0_8px_rgba(250,204,21,0.15)]'
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-[28px] ${
+        highlight ? 'bg-amber-500/15 border border-amber-500/20 dark:border-amber-500/25 drop-shadow-[0_0_8px_rgba(251,191,36,0.2)]' : 'bg-amber-500/10 border border-amber-500/20 dark:border-amber-500/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.15)]'
       }`}>
         {icon}
       </div>
       <div className="flex-1">
-        <div className={`font-bold text-[15px] ${highlight ? 'text-yellow-700 dark:text-yellow-400 group-hover:text-yellow-800 dark:group-hover:brightness-110' : 'text-gray-900 dark:text-gray-100 group-hover:text-yellow-700 dark:group-hover:text-yellow-400'} transition-all`}>
+          <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
           {title}
         </div>
-        <div className="text-[11px] text-gray-700 dark:text-gray-400 mt-0.5 font-medium">{desc}</div>
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
       </div>
-      <span className="text-base text-yellow-600 dark:text-yellow-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
+      <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
     </button>
   )
 }
@@ -1204,11 +1212,11 @@ function TopBar({
 }) {
   const { theme, setTheme } = useSettings()
   return (
-    <div className="sticky top-0 z-30 flex items-center px-4 py-2 bg-white/95 dark:bg-[#0f1119]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
+    <div className="sticky top-0 z-30 flex items-center px-4 py-2 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 dark:bg-slate-950/80 dark:border-slate-700/70">
       <div className="flex-1 flex items-center">
         <button
           onClick={() => playerId ? onProfile() : onSignIn()}
-          className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-800 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.05] px-2"
+          className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
@@ -1221,13 +1229,13 @@ function TopBar({
 
         <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center gap-0.5 bg-gray-100 dark:bg-white/10 rounded-full p-1 border border-gray-300 dark:border-white/[0.08] transition-colors"
+            className="flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-slate-100 p-1 transition-colors dark:border-slate-700/70 dark:bg-slate-800"
             aria-label="Toggle theme"
           >
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 dark:text-gray-500'}`}>
+            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
               Light
             </span>
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-500'}`}>
+            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400'}`}>
               Dark
             </span>
           </button>
@@ -1236,12 +1244,12 @@ function TopBar({
       {playerId ? (
         <button
           onClick={onFriends}
-          className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-gray-800 dark:text-gray-300 hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-white/[0.05] px-2"
+          className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
         >
-          <span className="text-xl">👥</span>
+          <UserRound size={18} />
           <span className="text-sm hidden sm:inline font-medium">Friends</span>
           {unreadMessages > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[11px] font-bold rounded-full px-1">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-rose-500 text-white text-[11px] font-bold rounded-full px-1">
               {unreadMessages > 99 ? '99+' : unreadMessages}
             </span>
           )}

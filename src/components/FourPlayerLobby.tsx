@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { Crown, Copy, Share2, CheckCircle2, User, Loader2, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import {
@@ -264,13 +266,13 @@ export function FourPlayerLobby({
         const id = e.dataTransfer.getData('text/plain')
         if (id) handleDrop(id, team)
       }}
-      className={`flex-1 min-h-[140px] rounded-xl border-2 border-dashed p-3 transition-colors ${
+      className={`flex-1 min-h-[140px] rounded-2xl border-2 border-dashed p-3 transition-colors ${
         dragOverTeam === team
-          ? 'border-blue-400 bg-blue-50 dark:bg-blue-500/10'
-          : 'border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]'
+          ? 'border-indigo-400 bg-indigo-50/80 dark:bg-indigo-500/10'
+          : 'border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/70'
       }`}
     >
-      <p className="text-[10px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 mb-2">
+      <p className="text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-2">
         {team}
       </p>
       {(team === 'WHITE' ? whitePlayers : blackPlayers).map(p => (
@@ -283,46 +285,51 @@ export function FourPlayerLobby({
             e.dataTransfer.effectAllowed = 'move'
           }}
           onClick={() => isCreator && handleUnassign(p.playerId)}
-          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg mb-1.5 text-sm transition-colors cursor-default ${
+          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors cursor-default ${
             p.playerId === playerId
-              ? 'bg-blue-100 dark:bg-blue-500/15 border border-blue-300 dark:border-blue-500/30'
-              : 'bg-white dark:bg-white/[0.06] border border-gray-200 dark:border-white/10'
+              ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
+              : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
           } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
           title={isCreator ? 'Drag to other team or click to unassign' : ''}
         >
-          <span className="font-medium text-gray-900 dark:text-white truncate">
+          <span className="font-medium text-slate-900 dark:text-white truncate">
             {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
           </span>
           {isCreator && (
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 shrink-0">⠿</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">⠿</span>
           )}
         </div>
       ))}
-      {team === 'WHITE' && whitePlayers.length === 0 && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 italic">Drop players here</p>
+      {(team === 'WHITE' && whitePlayers.length === 0) && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 italic">Drop players here</p>
       )}
-      {team === 'BLACK' && blackPlayers.length === 0 && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 italic">Drop players here</p>
+      {(team === 'BLACK' && blackPlayers.length === 0) && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 italic">Drop players here</p>
       )}
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0f1119] flex items-center justify-center p-4">
-      <div className="max-w-lg w-full">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="w-full max-w-lg overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+      >
         {view === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading lobby...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading lobby...</p>
           </div>
         )}
 
         {view === 'error' && (
-          <div className="w-full px-5 py-4 bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/20 rounded-2xl text-center mb-4">
-            <p className="text-red-700 dark:text-red-400 text-sm font-medium mb-3">{error || 'Failed to load lobby'}</p>
+          <div className="mb-4 w-full rounded-[22px] border border-rose-200 bg-rose-50/80 px-5 py-4 text-center dark:border-rose-500/20 dark:bg-rose-500/10">
+            <p className="mb-3 text-sm font-medium text-rose-700 dark:text-rose-400">{error || 'Failed to load lobby'}</p>
             <button
               onClick={() => router.push('/')}
-              className="min-h-[44px] px-6 py-2 bg-red-100 dark:bg-red-500/20 hover:bg-red-200 dark:hover:bg-red-500/30 text-red-700 dark:text-red-400 font-medium rounded-xl transition-colors"
+              className="min-h-[44px] rounded-2xl bg-rose-100 px-6 py-2 font-medium text-rose-700 transition-colors hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/30"
             >
               Back to Home
             </button>
@@ -331,49 +338,73 @@ export function FourPlayerLobby({
 
         {view === 'starting' && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium">Starting game...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Starting game...</p>
           </div>
         )}
 
         {view === 'lobby' && (
           <div className="flex flex-col items-center">
-            <div className="text-center mb-4">
-              <div className="text-[42px] mb-2">♖♜</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">
-                Four Player Lobby
-              </h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">
-                2 Friends vs 2 Friends
-              </p>
+            <motion.div
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+              className="mb-3 inline-block"
+            >
+              <Crown size={36} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
+            </motion.div>
+
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 shadow-sm dark:text-amber-300">
+              <Sparkles size={12} />
+              2v2 Lobby
             </div>
 
-            <div className="w-full mb-3 text-center">
-              <p className="text-xs text-gray-800 dark:text-gray-300 tracking-[0.15em] uppercase font-semibold">
+            <h1 className="mt-2 text-2xl font-black tracking-wider text-amber-600 dark:text-amber-400">
+              Four Player Lobby
+            </h1>
+            <p className="mt-1 text-[12px] font-medium text-slate-500 dark:text-slate-400">
+              2 Friends vs 2 Friends
+            </p>
+
+            <div className="mt-5 mb-4 w-full text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
                 Room Code
               </p>
-              <p className="font-mono font-bold text-amber-500 dark:text-amber-400 tracking-[0.2em] select-all text-xl mt-1">
+              <p className="mt-1 select-all font-mono text-xl font-bold tracking-[0.2em] text-amber-600 dark:text-amber-400">
                 {roomCode}
               </p>
-              <div className="flex justify-center gap-2 mt-2">
-                <button onClick={handleCopyCode} className="min-h-[44px] px-5 py-2 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-all">
-                  {copied ? '✓ Copied' : 'Copy code'}
+              <div className="mt-2 flex justify-center gap-2">
+                <button
+                  onClick={handleCopyCode}
+                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-amber-400"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle2 size={14} className="text-emerald-500" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} /> Copy code
+                    </>
+                  )}
                 </button>
                 {inviteUrl && (
-                  <button onClick={handleShare} className="min-h-[44px] px-5 py-2 text-xs font-semibold rounded-xl bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 border border-amber-300 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 transition-all">
-                    Share link
+                  <button
+                    onClick={handleShare}
+                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
+                  >
+                    <Share2 size={14} /> Share link
                   </button>
                 )}
               </div>
             </div>
 
             {isCreator && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-3">
+              <p className="mb-3 text-xs font-medium text-indigo-600 dark:text-indigo-400">
                 You are the captain — drag players to teams
               </p>
             )}
 
-            <div className="w-full flex gap-3 mb-4">
+            <div className="mb-4 flex w-full gap-3">
               {renderDropZone('WHITE')}
               {renderDropZone('BLACK')}
             </div>
@@ -386,9 +417,9 @@ export function FourPlayerLobby({
                   const id = e.dataTransfer.getData('text/plain')
                   if (id) handleUnassign(id)
                 }}
-                className="w-full mb-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02] p-3"
+                className="mb-4 w-full rounded-2xl border-2 border-dashed border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/70"
               >
-                <p className="text-[10px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 mb-2">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Unassigned
                 </p>
                 {unassignedPlayers.map(p => (
@@ -401,18 +432,18 @@ export function FourPlayerLobby({
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onClick={() => handleClickCard(p)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-1.5 text-sm transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors ${
                       p.playerId === playerId
-                        ? 'bg-blue-100 dark:bg-blue-500/15 border border-blue-300 dark:border-blue-500/30'
-                        : 'bg-white dark:bg-white/[0.06] border border-gray-200 dark:border-white/10'
+                        ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
+                        : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
                     } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
                   >
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="font-medium text-gray-900 dark:text-white truncate">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                    <span className="font-medium text-slate-900 dark:text-white truncate">
                       {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
                     </span>
                     {isCreator && p.playerId !== playerId && (
-                      <span className="text-[10px] text-blue-500 ml-auto shrink-0">
+                      <span className="ml-auto shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400">
                         Click to assign
                       </span>
                     )}
@@ -421,7 +452,7 @@ export function FourPlayerLobby({
               </div>
             )}
 
-            <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-4">
+            <p className="mb-4 text-xs font-medium text-slate-500 dark:text-slate-400">
               {joinedCount < 4
                 ? `${joinedCount} of 4 joined — waiting for others...`
                 : teamsReady
@@ -430,29 +461,30 @@ export function FourPlayerLobby({
             </p>
 
             {error && (
-              <p className="text-red-600 dark:text-red-400 text-xs font-medium mb-3">{error}</p>
+              <p className="mb-3 text-xs font-medium text-rose-600 dark:text-rose-400">{error}</p>
             )}
 
             <div className="flex gap-3">
               <button
                 onClick={handleLeave}
-                className="min-h-[44px] px-5 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors font-medium rounded-xl hover:bg-gray-100 dark:hover:bg-white/5"
+                className="min-h-[44px] rounded-2xl px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 ← Leave lobby
               </button>
 
               {teamsReady && (
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
                   onClick={handleStart}
-                  className="min-h-[44px] px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-colors shadow-lg shadow-emerald-500/20"
+                  className="min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500"
                 >
                   ▶ Start Match
-                </button>
+                </motion.button>
               )}
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
