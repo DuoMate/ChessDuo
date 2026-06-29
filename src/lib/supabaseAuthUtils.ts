@@ -23,6 +23,7 @@ async function sha256Hash(message: string): Promise<string> {
 
 async function authenticateWithGoogleNative(): Promise<{
   success: boolean
+  cancelled?: boolean
   userId?: string
   email?: string
   error?: string
@@ -82,8 +83,7 @@ async function authenticateWithGoogleNative(): Promise<{
 
     const responseType = result.responseType || 'null'
     if (responseType === 'cancel') {
-      console.error('[NativeAuth] User cancelled sign-in')
-      return { success: false, error: 'Google Sign-In cancelled. This usually means:\n1. Google Sign-In API is not enabled\n2. OAuth consent screen is not configured\n3. Custom URI scheme not enabled\n\nCheck Google Cloud Console → APIs & Services → Credentials → Android Client → Enable custom URI scheme' }
+      return { success: false, cancelled: true }
     }
 
     if (responseType !== 'online') {
@@ -166,7 +166,7 @@ async function authenticateWithGoogleWeb(): Promise<{
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: window.location.href,
         queryParams: {
           access_type: 'offline',
           prompt: 'select_account consent',
@@ -196,6 +196,11 @@ export async function authenticateWithGoogle(): Promise<{
     if (nativeResult.success) {
       DEBUG && console.log('[Auth] Native SDK sign-in succeeded')
       return nativeResult
+    }
+    
+    // Silently return on user cancellation — no popup, no fallback
+    if (nativeResult.cancelled) {
+      return { success: false, error: '' }
     }
     
     console.error('[Auth] Native SDK failed:', nativeResult.error)

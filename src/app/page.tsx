@@ -172,6 +172,11 @@ export default function SetupPage() {
       setShowAuthOverlay(true)
     }
 
+    if (redirectParam && sessionChecked) {
+      setShowAuthOverlay(true)
+      return
+    }
+
     if (codeParam && sessionChecked && !playerId) {
       setShowAuthOverlay(true)
       return

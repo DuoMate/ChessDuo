@@ -500,7 +500,7 @@ export class OnlineGame {
         return
       }
 
-      let humanCount = 1
+      let humanCount = 0
       const { data, error } = await supabase.rpc('get_room_players', { p_room_id: this._room!.id })
       if (!error && data) {
         const players = data as Array<{ player_id: string; team: string }>
@@ -526,7 +526,8 @@ export class OnlineGame {
         }
       }
 
-      if (humanCount >= 2) {
+      const minHumans = this.isFourPlayer() ? 4 : 2
+      if (humanCount >= minHumans) {
         DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
         await this.startGameWhenReady()
         this._pollingInterval = null
@@ -603,6 +604,15 @@ export class OnlineGame {
       // Add human players to their respective teams
       const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
       const blackHumans = (players || []).filter(p => p.team === 'BLACK')
+
+      // Guard: require minimum human players before starting
+      const allHumans = (players || []).filter(p => !p.player_id.startsWith('bot_'))
+      const requiredHumans = this.isFourPlayer() ? 4 : 2
+      if (allHumans.length < requiredHumans) {
+        DEBUG && console.log(`[ONLINE] Not enough humans: ${allHumans.length}/${requiredHumans} — deferring start`)
+        this.starting = false
+        return
+      }
 
       for (const p of whiteHumans) {
         try {

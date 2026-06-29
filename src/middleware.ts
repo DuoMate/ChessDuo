@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    const redirectUrl = encodeURIComponent(request.nextUrl.toString())
+    const redirectUrl = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)
     return NextResponse.redirect(new URL(`/?redirect=${redirectUrl}`, request.url))
   }
 
