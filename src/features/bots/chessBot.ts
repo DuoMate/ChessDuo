@@ -88,6 +88,7 @@ export class ChessBot {
         throw new Error('No evaluator configured')
       }
 
+      const isBlackTurn = chess.turn() === 'b'
       const allUciMoves = moves.map(m => this.moveToUci(m))
       const results = await this.moveEvaluator.evaluateMoves(allUciMoves, fen, 15, 2600)
 
@@ -96,7 +97,24 @@ export class ChessBot {
         return this.moveToUci(randomMove)
       }
 
-      const best = results.reduce((a, b) => a.score > b.score ? a : b, results[0])
+      // Apply material-count heuristic to unscored moves.
+      // MultiPV=6 only scores 6 moves; the rest get score=0 from the
+      // server's null coalesce. This causes the reduce to pick random
+      // unscored moves over actually-evaluated negative-scoring moves
+      // (e.g., a 0-scored blunder beats a -50-scored piece-save).
+      const withFallback = results.map(r => {
+        if (r.score !== 0) return r
+        const moveObj = moves.find(m => this.moveToUci(m) === r.move)
+        if (!moveObj) return r
+        try {
+          const c = new Chess(fen)
+          c.move(moveObj)
+          const rawScore = this.fallbackEvaluate(c.fen())
+          return { move: r.move, score: isBlackTurn ? -rawScore : rawScore }
+        } catch { return r }
+      })
+
+      const best = withFallback.reduce((a, b) => a.score > b.score ? a : b, withFallback[0])
       return best.move
     } catch (error) {
       console.error('[ChessBot:Best] Move selection failed:', error)
@@ -512,5 +530,6 @@ export class ChessBot {
 export function createBot(config?: Partial<BotConfig>): ChessBot {
   return new ChessBot({
     skillLevel: config?.skillLevel ?? 3,
+    ...(config?.mockMoveEvaluator ? { mockMoveEvaluator: config.mockMoveEvaluator } : {}),
   })
 }

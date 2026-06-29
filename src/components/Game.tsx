@@ -165,28 +165,35 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // 4-player mode: all humans, no bots
   const isFourPlayer = fourplayer
 
+  // Bot ELO level for online mode (selectable in lobby, defaults to level prop or 4)
+  const [botEloLevel, setBotEloLevel] = useState(level || 4)
+
   // Create bot config (used for opponent bots in online mode, and both bots in offline)
   const botConfig = useMemo(() => {
     if (level && level >= 1 && level <= 6) {
-      DEBUG && console.log(`[Game] Using selected level: ${level} for opponent`)
+      DEBUG && console.log(`[Game] Using URL level: ${level}`)
       return createBotConfig(level, level)
+    }
+    if (isOnline && !isFourPlayer) {
+      DEBUG && console.log(`[Game] Using lobby-selected level: ${botEloLevel}`)
+      return createBotConfig(botEloLevel, botEloLevel)
     }
     DEBUG && console.log('[Game] No level selected, using default config')
     return getBotConfig()
-  }, [level])
+  }, [level, botEloLevel, isOnline, isFourPlayer])
 
-  const [bot] = useState(() => {
+  const bot = useMemo(() => {
     if (isFourPlayer || !botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.opponentSkillLevel })
     DEBUG && console.log(`[Game] Opponent bot created with level: ${botConfig.opponentSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
-  })
-  const [teammateBot] = useState(() => {
+  }, [isFourPlayer, botConfig])
+  const teammateBot = useMemo(() => {
     if (isFourPlayer || !botConfig) return null
     const botInstance = createBot({ skillLevel: botConfig.teammateSkillLevel })
     DEBUG && console.log(`[Game] Teammate bot created with level: ${botConfig.teammateSkillLevel}, description: ${botInstance.getSkillDescription()}`)
     return botInstance
-  })
+  }, [isFourPlayer, botConfig])
 
   // Check for mobile WASM engine errors
   useEffect(() => {
@@ -1430,6 +1437,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         roomCode={roomCode}
         inviteUrl={inviteUrl}
         isLoading={gameState.isLoading}
+        botEloLevel={isFourPlayer ? undefined : botEloLevel}
+        onBotEloSelect={isFourPlayer ? undefined : setBotEloLevel}
       />
     )
   }

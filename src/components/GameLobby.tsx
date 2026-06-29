@@ -4,15 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Timeline } from 'animejs'
 import { Crown, Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { BotEloSelector } from './BotEloSelector'
 
 interface GameLobbyProps {
   roomCode?: string
   inviteUrl?: string
   isLoading: boolean
   username?: string
+  botEloLevel?: number
+  onBotEloSelect?: (level: number) => void
 }
 
-export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobbyProps) {
+export function GameLobby({ roomCode, inviteUrl, isLoading, username, botEloLevel = 4, onBotEloSelect }: GameLobbyProps) {
   const iconRef = useRef<HTMLDivElement>(null)
   const dot1Ref = useRef<HTMLDivElement>(null)
   const dot2Ref = useRef<HTMLDivElement>(null)
@@ -163,6 +166,13 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
                 </button>
               </div>
             </>
+          )}
+
+          {/* Bot ELO selector — always visible so players can choose before or after teammate joins */}
+          {onBotEloSelect && (
+            <div className="mb-4">
+              <BotEloSelector selectedLevel={botEloLevel} onSelect={onBotEloSelect} />
+            </div>
           )}
 
           {/* Share link — always visible */}
