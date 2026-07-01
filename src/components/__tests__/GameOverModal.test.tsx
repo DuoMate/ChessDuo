@@ -50,4 +50,43 @@ describe('GameOverModal', () => {
     expect(screen.queryByText(/create a profile/i)).toBeNull()
     expect(screen.queryByText(/enjoyed the game/i)).toBeNull()
   })
+
+  it('renders Review Board button when onClose is provided', () => {
+    render(
+      <GameOverModal
+        winner="WHITE"
+        onPlayAgain={jest.fn()}
+        onClose={jest.fn()}
+      />
+    )
+    expect(screen.getByText('Review Board')).toBeDefined()
+  })
+
+  it('does not render Review Board button when onClose is not provided', () => {
+    render(
+      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} />
+    )
+    expect(screen.queryByText('Review Board')).toBeNull()
+  })
+
+  it('does not render Review Board for abandoned matches', () => {
+    render(
+      <GameOverModal
+        winner="WHITE"
+        onPlayAgain={jest.fn()}
+        onClose={jest.fn()}
+        gameOverReason="abandoned"
+      />
+    )
+    expect(screen.queryByText('Review Board')).toBeNull()
+  })
+
+  it('calls onClose when Review Board button is clicked', () => {
+    const onClose = jest.fn()
+    render(
+      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} onClose={onClose} />
+    )
+    fireEvent.click(screen.getByText('Review Board'))
+    expect(onClose).toHaveBeenCalled()
+  })
 })

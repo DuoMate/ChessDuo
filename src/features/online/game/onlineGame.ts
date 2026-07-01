@@ -423,6 +423,23 @@ export class OnlineGame {
             this.startGameWhenReady()
           }
         })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          DEBUG && console.log('[ONLINE] Presence leave —', leftPresences?.length, 'players left:', leftPresences?.map((p: { presence_ref?: string; player_id?: string }) => p.player_id || p.presence_ref))
+          if (this._status !== GameStatus.PLAYING) return
+          const state = this._channel?.presenceState() || {}
+          const playersOnline = Object.keys(state)
+          if (playersOnline.length < 2) {
+            DEBUG && console.log('[ONLINE] Only coordinator remaining — ending game')
+            this._status = GameStatus.GAME_OVER
+            this._gameOverResult = 'Game ended — opponent disconnected'
+            this._gameOverReason = 'disconnected'
+            this.stopMatchTimer()
+            if (this._timerSyncInterval) {
+              clearInterval(this._timerSyncInterval)
+              this._timerSyncInterval = null
+            }
+          }
+        })
         .on('broadcast', { event: 'player_move' }, ({ payload }) => {
           this.handleTeammateMove(payload as MovePayload)
         })

@@ -108,7 +108,7 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
   return (
     <div className="flex flex-col items-center">
       <span className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</span>
-      <div className="flex flex-wrap gap-0.5 md:gap-1 p-1.5 md:p-2 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 min-h-[36px] md:min-h-[44px] min-w-[60px] md:min-w-[80px] justify-center content-start">
+      <div className="flex flex-wrap gap-0.5 md:gap-1 p-1.5 md:p-2 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 min-h-[44px] md:min-h-[44px] min-w-[60px] md:min-w-[80px] justify-center content-start">
         {sortedPieces.length === 0 ? (
           <span className="text-gray-400 dark:text-gray-600 text-[11px] md:text-xs">No captures</span>
         ) : (
@@ -976,7 +976,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     DEBUG && console.log(`[OPPONENT] Bot evaluation took: ${Date.now() - startTime}ms`)
     
     if (!botUciMove) {
-      DEBUG && console.warn('[OPPONENT] Bot could not find a move')
+      DEBUG && console.warn('[OPPONENT] Bot could not find a move, using random legal move fallback')
+      const chess = new Chess(currentFen)
+      const legalMoves = chess.moves({ verbose: true })
+      if (legalMoves.length > 0) {
+        const fallback = legalMoves[Math.floor(Math.random() * legalMoves.length)]
+        const fallbackUci = fallback.from + fallback.to + (fallback.promotion || '')
+        const sanMove = uciToSan(fallbackUci, currentFen)
+        g.selectMove('player3', sanMove)
+        g.selectMove('player4', sanMove)
+        g.lockMove('player3')
+        g.lockMove('player4')
+        await g.resolveLegacy(true)
+        updateStateRef.current()
+      }
       opponentInProgressRef.current = false
       return
     }
@@ -1510,6 +1523,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onClick={() => setSoundEnabled(!soundEnabled)}
               className="hidden md:flex min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm items-center justify-center text-sm"
               title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+              aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
             >
               {soundEnabled ? '🔊' : '🔇'}
             </button>
@@ -1517,6 +1531,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onClick={() => setOverlayMode('profile')}
               className="min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-sm"
               title="Profile"
+              aria-label="Profile"
             >
               👤
             </button>

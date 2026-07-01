@@ -293,7 +293,11 @@ export default function SetupPage() {
     if (redirectUrlRef.current) {
       const url = redirectUrlRef.current
       redirectUrlRef.current = null
-      router.replace(url)
+      if (url.startsWith('/')) {
+        router.replace(url)
+      } else {
+        router.push('/')
+      }
     }
   }
 
@@ -309,7 +313,11 @@ export default function SetupPage() {
     if (redirectUrlRef.current) {
       const url = redirectUrlRef.current
       redirectUrlRef.current = null
-      router.replace(url)
+      if (url.startsWith('/')) {
+        router.replace(url)
+      } else {
+        router.push('/')
+      }
     }
   }
 
@@ -1152,7 +1160,7 @@ function ModeCard({ icon, title, desc, tag, tagColor, onClick }: {
         </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
         </div>
-        <span className={`text-[9px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
         {tag}
       </span>
     </button>

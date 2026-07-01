@@ -49,6 +49,13 @@ function GameContent() {
       const redirectUrl = encodeURIComponent(`/game?mode=${mode}&room=${roomId}&code=${roomCode}&team=${team}&playerId=${playerId}&time=${timeLimit}${challengeId ? `&challengeId=${challengeId}` : ''}${fourplayer ? '&fourplayer=1' : ''}`)
       router.replace(`/?redirect=${redirectUrl}`)
     })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        window.location.href = '/'
+      }
+    })
+    return () => { subscription?.unsubscribe() }
   }, [mode, playerId, roomId, roomCode, team, timeLimit, challengeId, fourplayer, router])
 
   if (!validated) {

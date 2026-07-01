@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, Handshake, RotateCcw, LogOut, X } from 'lucide-react'
+import { Trophy, Handshake, RotateCcw, LogOut, X, Eye } from 'lucide-react'
 
 interface GameOverModalProps {
   winner: 'WHITE' | 'BLACK' | 'DRAW'
@@ -121,6 +121,18 @@ export function GameOverModal({
           <RotateCcw size={18} />
           {isAbandoned ? 'Go Home' : 'Play Again'}
         </motion.button>
+
+        {onClose && !isAbandoned && (
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={onClose}
+            className="relative z-10 mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-3 text-sm font-medium text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+          >
+            <Eye size={18} />
+            Review Board
+          </motion.button>
+        )}
       </motion.div>
     </motion.div>
   )

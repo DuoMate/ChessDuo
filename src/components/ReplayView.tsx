@@ -8,6 +8,7 @@ import { CompletedGame } from '@/lib/matchHistory'
 import { MovePlayback, MoveEntry } from './MovePlayback'
 import { ChessBoard } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
+import { BottomNav } from './BottomNav'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -139,6 +140,15 @@ export function ReplayView({ game }: ReplayViewProps) {
           </div>
         )}
       </div>
+      {isMobile && (
+        <BottomNav
+          activeOverlay="none"
+          onProfileClick={() => router.push('/profile')}
+          onHistoryClick={() => router.push('/history')}
+          onSoundToggle={() => {}}
+          soundEnabled={true}
+        />
+      )}
     </div>
   )
 }

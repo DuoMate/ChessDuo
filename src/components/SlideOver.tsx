@@ -50,6 +50,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                 <button
                   onClick={onClose}
                   className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                  aria-label="Close"
                 >
                   ✕
                 </button>
@@ -89,6 +90,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                 <button
                   onClick={onClose}
                   className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                  aria-label="Close"
                 >
                   ✕
                 </button>

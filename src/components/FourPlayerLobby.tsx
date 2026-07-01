@@ -272,7 +272,7 @@ export function FourPlayerLobby({
           : 'border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/70'
       }`}
     >
-      <p className="text-[10px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-2">
+      <p className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-2">
         {team}
       </p>
       {(team === 'WHITE' ? whitePlayers : blackPlayers).map(p => (
@@ -296,7 +296,7 @@ export function FourPlayerLobby({
             {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
           </span>
           {isCreator && (
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">⠿</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">⠿</span>
           )}
         </div>
       ))}
@@ -419,7 +419,7 @@ export function FourPlayerLobby({
                 }}
                 className="mb-4 w-full rounded-2xl border-2 border-dashed border-slate-200/70 bg-slate-50/80 p-3 dark:border-slate-700/70 dark:bg-slate-800/70"
               >
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Unassigned
                 </p>
                 {unassignedPlayers.map(p => (
@@ -443,7 +443,7 @@ export function FourPlayerLobby({
                       {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
                     </span>
                     {isCreator && p.playerId !== playerId && (
-                      <span className="ml-auto shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400">
+                      <span className="ml-auto shrink-0 text-[11px] text-indigo-600 dark:text-indigo-400">
                         Click to assign
                       </span>
                     )}

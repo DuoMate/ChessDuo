@@ -27,7 +27,7 @@ export function BotEloSelector({ selectedLevel, onSelect }: BotEloSelectorProps)
             }`}
           >
             <div className="text-xs font-bold text-gray-900 dark:text-white">{level.label}</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-500 font-medium">{level.description}</div>
+            <div className="text-[11px] text-gray-500 dark:text-gray-500 font-medium">{level.description}</div>
           </button>
         ))}
       </div>

@@ -302,7 +302,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
                   blocked.map((b) => (
                     <div key={b.receiver_id} className="flex items-center justify-between py-2 border-b border-white/5">
                       <span className="text-gray-400 text-sm">{b.friend_username}</span>
-                      <button onClick={() => handleUnblock(b.receiver_id)} className="min-h-[36px] px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-lg hover:bg-gray-600 transition-colors">Unblock</button>
+                      <button onClick={() => handleUnblock(b.receiver_id)} className="min-h-[44px] px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-lg hover:bg-gray-600 transition-colors">Unblock</button>
                     </div>
                   ))
                 )}
@@ -343,7 +343,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`flex-1 min-h-[36px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+      className={`flex-1 min-h-[44px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
         active
           ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
           : 'text-gray-400 hover:text-gray-300 hover:bg-white/[0.03]'
@@ -408,7 +408,7 @@ function FriendList({
             {pendingChallenges?.has(friend.friend_id) && onAcceptChallenge && (
               <button
                 onClick={(e) => { e.stopPropagation(); onAcceptChallenge(friend) }}
-                className="min-h-[36px] px-3 py-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold rounded-lg hover:bg-yellow-500/25 transition-colors whitespace-nowrap"
+                className="min-h-[44px] px-3 py-1 bg-yellow-500/15 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-xs font-semibold rounded-lg hover:bg-yellow-500/25 transition-colors whitespace-nowrap"
               >
                 ⚡ Accept
               </button>

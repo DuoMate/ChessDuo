@@ -8,6 +8,7 @@ import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { MatchTimer } from './MatchTimer'
 import { GameOverModal } from './GameOverModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { BottomNav } from './BottomNav'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
@@ -39,6 +40,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('soundEnabled') !== 'false'
+  })
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
@@ -388,6 +393,15 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             onLeave()
           }}
           onCancel={() => setShowResignConfirm(false)}
+        />
+      )}
+      {isMobile && (
+        <BottomNav
+          activeOverlay="none"
+          onProfileClick={() => router.push('/profile')}
+          onHistoryClick={() => router.push('/history')}
+          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
+          soundEnabled={soundEnabled}
         />
       )}
     </div>

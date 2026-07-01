@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
 import { joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const FourPlayerLobbyComponent = dynamic(() => import('@/components/FourPlayerLobby').then(mod => ({ default: mod.FourPlayerLobby })), {
   loading: () => (
@@ -109,7 +110,9 @@ export default function FourPlayerPage() {
         </div>
       </div>
     }>
-      <FourPlayerContent />
+      <ErrorBoundary>
+        <FourPlayerContent />
+      </ErrorBoundary>
     </Suspense>
   )
 }

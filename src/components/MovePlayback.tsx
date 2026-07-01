@@ -43,8 +43,8 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden w-full">
-      <div className="p-2 border-b border-gray-700 flex items-center justify-between">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 overflow-hidden w-full">
+      <div className="p-2 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
         <h3 className="text-xs font-bold text-gray-400">Moves</h3>
         <div className="flex items-center gap-1">
           {!isLive && (
@@ -78,13 +78,13 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
                       : 'hover:bg-gray-700/30'
                   }`}
                 >
-                  <td className="py-1 px-2 text-gray-500 w-8 text-right font-mono">
+                  <td className="py-1 px-2 text-slate-500 dark:text-gray-500 w-8 text-right font-mono">
                     {m.turn}.
                   </td>
                   <td className="py-1 px-1 w-6 text-gray-500">
                     {m.team === 'WHITE' ? 'W' : 'B'}
                   </td>
-                  <td className="py-1 px-2 text-white">
+                  <td className="py-1 px-2 text-slate-900 dark:text-white">
                     {m.winningMove}
                     {!m.isSync && m.shadowMove && (
                       <span className="text-gray-600 line-through ml-1">

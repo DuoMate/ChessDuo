@@ -46,12 +46,12 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-3 gap-2"
         >
-          <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-xs text-gray-400">Games</p>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center border border-slate-200 dark:border-gray-700">
+            <p className="text-xs text-slate-500 dark:text-gray-400">Games</p>
             <p className="text-lg font-bold">{playerStats.totalGames}</p>
           </div>
-          <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-xs text-gray-400">W/L/D</p>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center border border-slate-200 dark:border-gray-700">
+            <p className="text-xs text-slate-500 dark:text-gray-400">W/L/D</p>
             <p className="text-sm font-bold">
               <span className="text-green-400">{playerStats.wins}</span>
               {'/'}
@@ -60,8 +60,8 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
               <span className="text-yellow-600 dark:text-yellow-400">{playerStats.draws}</span>
             </p>
           </div>
-          <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
-            <p className="text-xs text-gray-400">Avg Sync</p>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg text-center border border-slate-200 dark:border-gray-700">
+            <p className="text-xs text-slate-500 dark:text-gray-400">Avg Sync</p>
             <p className="text-lg font-bold">{Math.round(playerStats.avgSyncRate * 100)}%</p>
           </div>
         </motion.div>
@@ -69,8 +69,8 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
 
       {games.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">No matches yet</p>
-          <p className="text-gray-600 text-xs mt-1">Complete a game to see it here</p>
+          <p className="text-slate-500 dark:text-gray-500 text-sm">No matches yet</p>
+          <p className="text-slate-400 dark:text-gray-600 text-xs mt-1">Complete a game to see it here</p>
         </div>
       ) : (
         <div className="space-y-2 max-h-[50vh] overflow-y-auto">
@@ -80,7 +80,7 @@ export function HistoryPanel({ playerId }: HistoryPanelProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="bg-gray-800 p-3 rounded-lg border border-gray-700"
+              className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-slate-200 dark:border-gray-700"
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1.5">
