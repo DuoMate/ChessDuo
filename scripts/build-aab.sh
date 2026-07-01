@@ -16,9 +16,6 @@ err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-# ─── Auto-increment version ─────────────────────
-bash "$PROJECT_ROOT/scripts/bump-version.sh"
-
 # ─── Clean old build outputs ─────────────────────
 log "Cleaning old build outputs..."
 rm -rf android/app/build/outputs
