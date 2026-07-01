@@ -257,7 +257,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             <Swords size={18} className="text-amber-600 dark:text-amber-400" /> Duel
           </h1>
           <GameMenu
-            onResign={() => setShowResignConfirm(true)}
+            onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
             onOpenSettings={() => setShowSettings(true)}
           />
         </div>

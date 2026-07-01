@@ -1534,7 +1534,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               👤
             </button>
             <GameMenu
-              onResign={() => setShowResignConfirm(true)}
+              onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
               onOpenSettings={() => setShowSettings(true)}
             />
           </div>
