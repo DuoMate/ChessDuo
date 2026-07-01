@@ -44,7 +44,6 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
             >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/80">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-600 dark:text-amber-400">ChessDuo</p>
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{title}</h2>
                 </div>
                 <button
@@ -84,7 +83,6 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
             <div className="p-4">
               <div className="mb-4 flex items-center justify-between rounded-2xl border border-slate-200/70 bg-slate-50/80 px-3 py-3 dark:border-slate-700/70 dark:bg-slate-800/70">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.15em] text-amber-600 dark:text-amber-400">ChessDuo</p>
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{title}</h2>
                 </div>
                 <button
