@@ -5,6 +5,9 @@ on:
     branches: [prod]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   bump-and-build:
     if: github.actor != 'github-actions[bot]'
@@ -100,7 +103,9 @@ jobs:
       # This ensures the git repo is updated before the lengthy build,
       # and [skip ci] prevents recursive triggering.
       - name: Push version bump
-        run: git push
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push
 
       - name: Build AAB
         run: bash scripts/build-aab.sh
