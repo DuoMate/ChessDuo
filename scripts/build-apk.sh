@@ -16,6 +16,11 @@ err()  { echo -e "${RED}[ERR]${NC}  $1"; exit 1; }
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# ─── Clean old build outputs ─────────────────────
+log "Cleaning old build outputs..."
+rm -rf android/app/build/outputs
+ok "Old build outputs cleaned"
+
 # ─── Use Java 21 for Gradle compatibility ─────────
 if [ -f /usr/lib/jvm/java-21-openjdk-amd64/bin/java ]; then
     export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
