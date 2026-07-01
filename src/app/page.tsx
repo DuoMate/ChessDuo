@@ -533,20 +533,12 @@ export default function SetupPage() {
 
   const authOverlay = showAuthOverlay && (
     <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm">
-      <div className="absolute right-4 top-4 z-10">
-        <button
-          onClick={() => setShowAuthOverlay(false)}
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-white/20 bg-white/90 text-slate-700 shadow-lg transition-all hover:bg-white hover:text-slate-950 dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white"
-          aria-label="Close sign in"
-        >
-          ✕
-        </button>
-      </div>
       <Auth
         onAuthComplete={handleAuthComplete}
         defaultSignup={searchParams.get('signup') === '1'}
         redirectUrl={redirectUrlRef.current || undefined}
         onNeedUsername={handleNeedUsername}
+        onClose={() => setShowAuthOverlay(false)}
       />
     </div>
   )

@@ -34,6 +34,7 @@ export class BrowserMoveEvaluator {
   private worker: Worker | null = null
   private _initError: string | null = null
   private _ready = false
+  private _currentElo: number = 2600
 
   constructor() {
     try {
@@ -69,13 +70,13 @@ export class BrowserMoveEvaluator {
     move: string,
     fen: string,
     _depth: number = 15,
-    _uciElo: number = 2600,
+    uciElo: number = 2600,
   ): Promise<{ move: string; score: number }> {
     const Chess = (await import('chess.js')).Chess
     const chess = new Chess(fen)
     chess.move(move)
     const newFen = chess.fen()
-    const score = await this.evaluatePosition(newFen)
+    const score = await this.evaluatePosition(newFen, 15, uciElo)
     return { move, score }
   }
 
@@ -83,7 +84,7 @@ export class BrowserMoveEvaluator {
     moves: string[],
     fen: string,
     _depth: number = 15,
-    _uciElo: number = 2600,
+    uciElo: number = 2600,
     _retries: number = 3,
   ): Promise<{ move: string; score: number }[]> {
     this.ensureReady()
@@ -105,9 +106,9 @@ export class BrowserMoveEvaluator {
       return cachedResults
     }
 
-    DEBUG && console.log(`[BROWSER-EVAL] Evaluating ${moves.length} moves via UCI`)
+    DEBUG && console.log(`[BROWSER-EVAL] Evaluating ${moves.length} moves via UCI (uciElo=${uciElo})`)
 
-    const results = await this.uciEvaluate(fen, uncachedMoves)
+    const results = await this.uciEvaluate(fen, uncachedMoves, uciElo)
     evaluationCache.setScores(fen, results)
     return [...cachedResults, ...results]
   }
@@ -115,7 +116,7 @@ export class BrowserMoveEvaluator {
   async evaluatePosition(
     fen: string,
     _depth: number = 15,
-    _uciElo: number = 2600,
+    uciElo: number = 2600,
     _retries: number = 3,
   ): Promise<number> {
     this.ensureReady()
@@ -126,7 +127,7 @@ export class BrowserMoveEvaluator {
     const allMoves = chess.moves({ verbose: true }).map(m => m.from + m.to + (m.promotion || ''))
     if (allMoves.length === 0) return 0
 
-    const results = await this.uciEvaluate(fen, allMoves)
+    const results = await this.uciEvaluate(fen, allMoves, uciElo)
     if (results.length === 0) return 0
     return results.reduce((a, b) => a.score > b.score ? a : b, results[0]).score
   }
@@ -134,7 +135,7 @@ export class BrowserMoveEvaluator {
   async getBestScore(
     fen: string,
     _depth: number = 15,
-    _uciElo: number = 2600,
+    uciElo: number = 2600,
   ): Promise<{ move: string; score: number }> {
     this.ensureReady()
     if (!this.worker) throw new Error('Stockfish worker not available')
@@ -150,7 +151,7 @@ export class BrowserMoveEvaluator {
     }
 
     const allUci = moves.map(m => m.from + m.to + (m.promotion || ''))
-    const results = await this.uciEvaluate(fen, allUci)
+    const results = await this.uciEvaluate(fen, allUci, uciElo)
     if (results.length === 0) {
       const randomMove = moves[Math.floor(Math.random() * moves.length)]
       return { move: randomMove.from + randomMove.to + (randomMove.promotion || ''), score: 0 }
@@ -200,6 +201,7 @@ export class BrowserMoveEvaluator {
   private uciEvaluate(
     fen: string,
     moves: string[],
+    uciElo: number = 2600,
   ): Promise<{ move: string; score: number }[]> {
     return new Promise((resolve, reject) => {
       const scores: Record<string, number> = {}
@@ -242,6 +244,13 @@ export class BrowserMoveEvaluator {
       }
 
       this.worker!.addEventListener('message', handler)
+
+      if (this._currentElo !== uciElo) {
+        this._currentElo = uciElo
+        this.worker!.postMessage(`setoption name UCI_LimitStrength value true`)
+        this.worker!.postMessage(`setoption name UCI_Elo value ${uciElo}`)
+      }
+
       this.worker!.postMessage(`position fen ${fen}`)
       this.worker!.postMessage(`go movetime 3000${moves.length ? ' searchmoves ' + moves.join(' ') : ''}`)
     })

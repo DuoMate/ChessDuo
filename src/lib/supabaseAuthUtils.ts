@@ -204,14 +204,7 @@ export async function authenticateWithGoogle(): Promise<{
     }
     
     console.error('[Auth] Native SDK failed:', nativeResult.error)
-    
-    // Show error alert on native so user can see what's wrong
-    if (typeof window !== 'undefined' && window.alert) {
-      window.alert(`Native Google Sign-In failed:\n\n${nativeResult.error}\n\nFalling back to browser sign-in...`)
-    }
-    
-    DEBUG && console.log('[Auth] Falling back to Capacitor Browser OAuth...')
-    return authenticateWithGoogleCapacitorBrowser()
+    return { success: false, error: nativeResult.error || 'Native authentication failed' }
   }
   
   DEBUG && console.log('[Auth] Running on web platform')

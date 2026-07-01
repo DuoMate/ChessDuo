@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 
@@ -29,9 +29,10 @@ interface AuthProps {
   defaultSignup?: boolean
   redirectUrl?: string
   onNeedUsername?: (userId: string, suggestedName: string) => void
+  onClose?: () => void
 }
 
-export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNeedUsername }: AuthProps) {
+export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNeedUsername, onClose }: AuthProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -242,6 +243,15 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         transition={{ duration: 0.35, ease: 'easeOut' }}
         className="relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
       >
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+            aria-label="Close sign in"
+          >
+            <X size={16} className="text-slate-400 dark:text-slate-500" />
+          </button>
+        )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-400/15 via-transparent to-indigo-500/15" />
         <div className="relative">
           <div className="mb-6 flex items-center justify-between">

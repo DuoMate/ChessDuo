@@ -243,6 +243,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const isMobile = useIsMobile()
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
@@ -391,6 +392,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   useEffect(() => {
     if (gameState.status !== GameStatus.GAME_OVER) return
     if (gameSavedRef.current) return
+
+    setShowGameOverDismissed(false)
 
     const g = isOnline ? onlineGameRef.current : game
     if (!g) return
@@ -1469,10 +1472,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
       
-      {gameState.status === GameStatus.GAME_OVER && (
+      {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
         <GameOverModal 
           winner={gameState.winner || 'DRAW'}
           onPlayAgain={() => router.push('/')}
+          onClose={() => setShowGameOverDismissed(true)}
           gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
         />

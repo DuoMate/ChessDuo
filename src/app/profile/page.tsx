@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
+import { HomeButton } from '@/components/HomeButton'
 import { motion } from 'framer-motion'
 
 export default function ProfilePage() {
@@ -45,12 +46,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <p className="text-gray-400 mb-4">Sign in to view your profile</p>
-        <button
-          onClick={() => router.push('/')}
-          className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
-        >
-          Go Back
-        </button>
+        <HomeButton label="Go Home" />
       </div>
     )
   }
@@ -61,12 +57,7 @@ export default function ProfilePage() {
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Profile</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
-          >
-            ← Back
-          </button>
+          <HomeButton />
         </div>
 
         <motion.div

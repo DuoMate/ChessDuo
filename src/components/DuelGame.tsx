@@ -38,6 +38,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const toast = useGameToast()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
+  const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
@@ -136,6 +137,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   useEffect(() => {
     if (status !== 'game_over' || !winner || gameSavedRef.current) return
     gameSavedRef.current = true
+    setShowGameOverDismissed(false)
 
     const winningSide = winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'
     saveCompletedGame({
@@ -365,11 +367,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         )}
       </div>
 
-      {status === 'game_over' && winner && gameResult && (
+      {status === 'game_over' && winner && gameResult && !showGameOverDismissed && (
         <GameOverModal
           winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
           onPlayAgain={() => router.push('/')}
-          onClose={() => router.push('/')}
+          onClose={() => setShowGameOverDismissed(true)}
           gameResult={gameResult}
         />
       )}

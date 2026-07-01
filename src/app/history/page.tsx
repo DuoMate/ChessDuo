@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { HomeButton } from '@/components/HomeButton'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -64,12 +65,7 @@ export default function HistoryPage() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <h1 className="text-2xl font-bold mb-4">Match History</h1>
           <p className="text-gray-400 mb-4">Sign in to view your match history</p>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-2 bg-yellow-500 text-gray-900 rounded-lg font-bold hover:bg-yellow-400"
-          >
-            Go Back
-          </button>
+          <HomeButton label="Go Home" />
         </div>
       </ErrorBoundary>
     )
@@ -81,12 +77,7 @@ export default function HistoryPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Match History</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
-          >
-            ← Back
-          </button>
+          <HomeButton />
         </div>
 
         {playerStats && (

@@ -88,34 +88,8 @@ export class ChessBot {
         throw new Error('No evaluator configured')
       }
 
-      const isBlackTurn = chess.turn() === 'b'
-      const allUciMoves = moves.map(m => this.moveToUci(m))
-      const results = await this.moveEvaluator.evaluateMoves(allUciMoves, fen, 15, 2600)
-
-      if (results.length === 0) {
-        const randomMove = moves[Math.floor(Math.random() * moves.length)]
-        return this.moveToUci(randomMove)
-      }
-
-      // Apply material-count heuristic to unscored moves.
-      // MultiPV=6 only scores 6 moves; the rest get score=0 from the
-      // server's null coalesce. This causes the reduce to pick random
-      // unscored moves over actually-evaluated negative-scoring moves
-      // (e.g., a 0-scored blunder beats a -50-scored piece-save).
-      const withFallback = results.map(r => {
-        if (r.score !== 0) return r
-        const moveObj = moves.find(m => this.moveToUci(m) === r.move)
-        if (!moveObj) return r
-        try {
-          const c = new Chess(fen)
-          c.move(moveObj)
-          const rawScore = this.fallbackEvaluate(c.fen())
-          return { move: r.move, score: isBlackTurn ? -rawScore : rawScore }
-        } catch { return r }
-      })
-
-      const best = withFallback.reduce((a, b) => a.score > b.score ? a : b, withFallback[0])
-      return best.move
+      const selectedMove = await this.pickSmartMoveAsync(moves, fen)
+      return this.moveToUci(selectedMove)
     } catch (error) {
       console.error('[ChessBot:Best] Move selection failed:', error)
       return null
@@ -181,7 +155,7 @@ export class ChessBot {
     const movesToEvaluate = uciMoves
     
     try {
-      const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, 12, 2600)
+      const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, difficulty.depth, difficulty.elo)
       const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       const evaluatedMoves: { move: Move; score: number }[] = []
