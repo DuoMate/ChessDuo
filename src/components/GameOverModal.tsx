@@ -122,7 +122,7 @@ export function GameOverModal({
           {isAbandoned ? 'Go Home' : 'Play Again'}
         </motion.button>
 
-        {onClose && !isAbandoned && (
+        {onClose && (
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}

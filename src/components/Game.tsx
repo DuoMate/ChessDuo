@@ -453,19 +453,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameSavedRef.current = true
   }, [gameState.status, isOnline, game, toast, playerId])
 
-  // Auto-redirect to home when match is abandoned (teammate left)
-  const abandonHandledRef = useRef(false)
+  // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
+  const abandonNotifiedRef = useRef(false)
   useEffect(() => {
     if (!isOnline) return
     if (gameState.status !== GameStatus.GAME_OVER) return
     const reason = onlineGameRef.current?.getGameOverReason()
     if (reason !== 'abandoned') return
-    if (abandonHandledRef.current) return
-    abandonHandledRef.current = true
-    toast.warning('Match abandoned by teammate')
-    const timer = setTimeout(() => router.push('/'), 3000)
-    return () => clearTimeout(timer)
-  }, [gameState.status, isOnline, router, toast])
+    if (abandonNotifiedRef.current) return
+    abandonNotifiedRef.current = true
+    toast.warning('Match abandoned by teammate — you can review the board')
+  }, [gameState.status, isOnline, toast])
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
