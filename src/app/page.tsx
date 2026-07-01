@@ -820,8 +820,8 @@ export default function SetupPage() {
               <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
                 <div className="mb-8 text-center">
                   <div className="mb-2 flex items-center justify-center gap-3 text-[48px] drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
-                    <span className="text-yellow-600 dark:text-yellow-400">{"♔"}</span>
-                    <span className="text-[36px] text-gray-800 opacity-70 dark:text-white dark:opacity-60">{"♚"}</span>
+                    <span className="text-yellow-600 transition-[font-size] duration-300 dark:text-[36px] dark:text-yellow-400">{"♔"}</span>
+                    <span className="text-[36px] text-gray-800 opacity-70 transition-[font-size] duration-300 dark:text-[48px] dark:text-white dark:opacity-60">{"♚"}</span>
                   </div>
                   <h1 className="text-[34px] font-black tracking-wider text-yellow-600 dark:text-yellow-400">ChessDuo</h1>
                   <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.25em] text-gray-700 dark:text-gray-400">Multiplayer Tag Team Chess</p>
