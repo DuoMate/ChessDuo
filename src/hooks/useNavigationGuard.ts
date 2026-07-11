@@ -38,23 +38,23 @@ export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGua
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!blockedRef.current) {
         e.preventDefault()
-        onAttemptLeaveRef.current()
       }
     }
 
     const handlePopState = () => {
       if (!blockedRef.current) {
         window.history.pushState(null, '', window.location.pathname + window.location.search)
+        blockedRef.current = true
         onAttemptLeaveRef.current()
       }
     }
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener('beforeunload', handleBeforeUnload, { capture: true })
+    window.addEventListener('popstate', handlePopState, { capture: true })
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('popstate', handlePopState)
+      window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true })
+      window.removeEventListener('popstate', handlePopState, { capture: true })
     }
   }, [enabled])
 

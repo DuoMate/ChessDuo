@@ -247,7 +247,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const isMobile = useIsMobile()
 
   useNavigationGuard({
-    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
+    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
 

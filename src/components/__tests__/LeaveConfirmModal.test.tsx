@@ -35,27 +35,27 @@ describe('LeaveConfirmModal', () => {
     expect(onCancel).toHaveBeenCalled()
   })
 
-  it('calls onConfirm when OK is clicked', () => {
+  it('calls onConfirm when Leave is clicked', () => {
     const onConfirm = jest.fn()
     render(
       <LeaveConfirmModal open={true} onCancel={jest.fn()} onConfirm={onConfirm} />
     )
-    fireEvent.click(screen.getByText('OK'))
+    fireEvent.click(screen.getByText('Leave'))
     expect(onConfirm).toHaveBeenCalled()
   })
 
-  it('shows warning message about teammate being notified', () => {
+  it('shows detail text when provided', () => {
     render(
-      <LeaveConfirmModal open={true} onCancel={jest.fn()} onConfirm={jest.fn()} />
+      <LeaveConfirmModal open={true} onCancel={jest.fn()} onConfirm={jest.fn()} detail="Your teammate will be notified and the match will end." />
     )
     expect(screen.getByText(/teammate will be notified/i)).toBeDefined()
   })
 
-  it('has Cancel and OK buttons', () => {
+  it('has Cancel and Leave buttons', () => {
     render(
       <LeaveConfirmModal open={true} onCancel={jest.fn()} onConfirm={jest.fn()} />
     )
     expect(screen.getByText('Cancel').closest('button')).toBeDefined()
-    expect(screen.getByText('OK').closest('button')).toBeDefined()
+    expect(screen.getByText('Leave').closest('button')).toBeDefined()
   })
 })

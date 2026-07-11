@@ -17,6 +17,7 @@ import { GameMenu } from './GameMenu'
 const duelBoardStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' } as const
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
+import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useSettings } from '@/lib/settings'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
@@ -39,6 +40,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const toast = useGameToast()
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -69,7 +71,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: status === 'playing',
-    onAttemptLeave: () => toast.warning('You are leaving an active game!'),
+    onAttemptLeave: () => setShowLeaveModal(true),
   })
 
   useEffect(() => {
@@ -393,6 +395,20 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             onLeave()
           }}
           onCancel={() => setShowResignConfirm(false)}
+        />
+      )}
+      {showLeaveModal && (
+        <LeaveConfirmModal
+          open={showLeaveModal}
+          onConfirm={() => {
+            setShowLeaveModal(false)
+            confirmNavLeave()
+            onLeave()
+          }}
+          onCancel={() => setShowLeaveModal(false)}
+          title="Abort Match"
+          message="Are you sure you want to leave?"
+          detail="You will forfeit this duel."
         />
       )}
       {isMobile && (
