@@ -69,7 +69,7 @@ describe('GameOverModal', () => {
     expect(screen.queryByText('Review Board')).toBeNull()
   })
 
-  it('does not render Review Board for abandoned matches', () => {
+  it('renders Review Board for abandoned matches', () => {
     render(
       <GameOverModal
         winner="WHITE"
@@ -78,7 +78,7 @@ describe('GameOverModal', () => {
         gameOverReason="abandoned"
       />
     )
-    expect(screen.queryByText('Review Board')).toBeNull()
+    expect(screen.getByText('Review Board')).toBeDefined()
   })
 
   it('calls onClose when Review Board button is clicked', () => {

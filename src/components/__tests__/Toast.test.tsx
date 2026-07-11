@@ -128,7 +128,7 @@ describe('useGameToast', () => {
       return (
         <div>
           <span data-testid="toast-count">{toasts.length}</span>
-          <button data-testid="trigger" onClick={() => toast.warning('Match abandoned by teammate')}>
+          <button data-testid="trigger" onClick={() => toast.warning('Match abandoned by teammate — you can review the board')}>
             Trigger
           </button>
         </div>
@@ -143,7 +143,7 @@ describe('useGameToast', () => {
 
     act(() => { screen.getByTestId('trigger').click() })
     expect(screen.getByTestId('toast-count')).toHaveTextContent('1')
-    expect(lastMessage).toBe('Match abandoned by teammate')
+    expect(lastMessage).toBe('Match abandoned by teammate — you can review the board')
     expect(lastType).toBe('warning')
   })
 })

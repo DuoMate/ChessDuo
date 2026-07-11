@@ -21,6 +21,7 @@ export class StockfishEngine {
   private currentMoves: string[] = []
   private currentResolve: ((result: { move: string; score: number }[]) => void) | null = null
   private currentReject: ((err: Error) => void) | null = null
+  private currentMovetime: number = 3000
   private restartCount = 0
   private readonly MAX_RESTARTS = 3
   private initializationComplete = false
@@ -72,8 +73,6 @@ export class StockfishEngine {
     })
 
     this.send('uci')
-    this.send('setoption name UCI_LimitStrength true')
-    this.send('setoption name UCI_Elo 2600')
     this.send('setoption name MultiPV value 6')
     this.send('isready')
   }
@@ -146,11 +145,15 @@ export class StockfishEngine {
 
   private startEvaluation(): void {
     const moveNumber = this.getMoveNumber(this.currentFen)
-    const movetime = moveNumber < 10 ? 3000 : 5000
+    const minMovetime = moveNumber < 10 ? 3000 : 5000
+    const movetime = Math.max(this.currentMovetime, minMovetime)
 
     DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${movetime}ms)`)
 
-    if (this.currentMoves.length > 0) {
+    // When there are more moves than MultiPV, don't use searchmoves —
+    // Stockfish freely finds the best lines via MultiPV instead of
+    // returning score=0 for unexamined moves that drown out real scores.
+    if (this.currentMoves.length > 0 && this.currentMoves.length <= 10) {
       this.send(`go movetime ${movetime} searchmoves ${this.currentMoves.join(' ')}`)
     } else {
       this.send(`go movetime ${movetime}`)
@@ -224,13 +227,15 @@ export class StockfishEngine {
     this.currentMoves = job.moves
     this.currentResolve = job.resolve
     this.currentReject = job.reject
+    this.currentMovetime = job.movetime
     this.scores = {}
 
     this.send(`position fen ${job.fen}`)
     this.send('isready')
   }
 
-  evaluateMoves(fen: string, moves: string[], movetime = 500) {
+  evaluateMoves(fen: string, moves: string[], movetime = 3000) {
+
     // 1. Check opening book — instant, no Stockfish needed
     if (this.book) {
       const bookMoves = this.book.lookup(fen)
@@ -252,7 +257,7 @@ export class StockfishEngine {
       return Promise.resolve(cached)
     }
 
-    DEBUG && console.log(`[ENGINE] Miss — queuing ${moves.length} moves`)
+    DEBUG && console.log(`[ENGINE] Miss — queuing ${moves.length} moves (movetime=${movetime})`)
 
     // 3. Queue Stockfish evaluation
     return new Promise<{ move: string; score: number }[]>((resolve, reject) => {

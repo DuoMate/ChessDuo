@@ -156,7 +156,23 @@ export class ChessBot {
     
     try {
       const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, difficulty.depth, difficulty.elo)
-      const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
+
+      // Detect unexamined moves: the server returns score=0 for moves
+      // that were not in Stockfish's MultiPV output (default fallback).
+      // After normalization, these float above real scores (which went
+      // from negative to positive for the disadvantaged side), causing
+      // the bot to pick junk. Push them to the bottom via sentinel.
+      const hasRealScores = results.some(r => r.score !== 0)
+      const effectiveResults = results.map(r => ({
+        move: r.move,
+        score: hasRealScores && r.score === 0 ? -99999 : r.score
+      }))
+
+      const normalizedResults = effectiveResults.map(r => ({
+        move: r.move,
+        score: isBlackTurn ? -r.score : r.score
+      }))
+      const scoreMap = new Map<string, number>(normalizedResults.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       const evaluatedMoves: { move: Move; score: number }[] = []
       const unevaluatedMoves: Move[] = []
@@ -175,10 +191,10 @@ export class ChessBot {
         const chess = new Chess(fen)
         try {
           chess.move(move)
-          const rawScore = this.fallbackEvaluate(chess.fen())
-          return { move, score: isBlackTurn ? -rawScore : rawScore }
+          const score = this.fallbackEvaluate(chess.fen())
+          return { move, score }
         } catch {
-          return { move, score: isBlackTurn ? 1000 : -1000 }
+          return { move, score: isBlackTurn ? Infinity : -Infinity }
         }
       })
       
@@ -256,7 +272,7 @@ export class ChessBot {
       const best = guardrailMoves[0]
       const second = guardrailMoves[1]
       const dominanceThreshold = 80
-      if (best.score - second.score > dominanceThreshold) {
+      if (Math.abs(best.score - second.score) > dominanceThreshold) {
         DEBUG && console.log(`[ChessBot] DOMINANCE RULE: ${best.move.san} (${best.score})远超 ${second.move.san} (${second.score}), 强制选择`)
         return best.move
       }
@@ -438,17 +454,11 @@ export class ChessBot {
       try {
         const chess = new Chess(fen)
         chess.move(move)
-        const newFen = chess.fen()
         
-        let score = this.fallbackEvaluate(newFen)
-        
-        if (turn === 'b') {
-          score = -score
-        }
-        
+        const score = this.fallbackEvaluate(chess.fen())
         results.push({ move, score })
       } catch {
-        results.push({ move, score: -Infinity })
+        results.push({ move, score: turn === 'b' ? Infinity : -Infinity })
       }
     }
     

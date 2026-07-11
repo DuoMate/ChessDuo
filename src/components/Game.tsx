@@ -246,19 +246,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const isMobile = useIsMobile()
 
-  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
+  useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
 
   const handleHardwareBack = useCallback(() => {
-    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY) {
+    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING) {
       setShowLeaveModal(true)
       return true
     }
     return false
   }, [gameState.status])
-  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY)
+  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING)
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -453,19 +453,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameSavedRef.current = true
   }, [gameState.status, isOnline, game, toast, playerId])
 
-  // Auto-redirect to home when match is abandoned (teammate left)
-  const abandonHandledRef = useRef(false)
+  // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
+  const abandonNotifiedRef = useRef(false)
   useEffect(() => {
     if (!isOnline) return
     if (gameState.status !== GameStatus.GAME_OVER) return
     const reason = onlineGameRef.current?.getGameOverReason()
     if (reason !== 'abandoned') return
-    if (abandonHandledRef.current) return
-    abandonHandledRef.current = true
-    toast.warning('Match abandoned by teammate')
-    const timer = setTimeout(() => router.push('/'), 3000)
-    return () => clearTimeout(timer)
-  }, [gameState.status, isOnline, router, toast])
+    if (abandonNotifiedRef.current) return
+    abandonNotifiedRef.current = true
+    toast.warning('Match abandoned by teammate — you can review the board')
+  }, [gameState.status, isOnline, toast])
 
   // Set up state change callback for online mode - MUST be before joinRoom
   const onlineGameRef = useRef(onlineGame)
@@ -1415,16 +1413,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
-    try {
-      if (isOnline && onlineGameRef.current) {
-        await onlineGameRef.current.abandonMatch()
-      }
-    } catch {
-      // Channel may be dead during refresh; navigation still proceeds
+    if (roomCode) {
+      sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true')
+    }
+    if (isOnline && onlineGameRef.current) {
+      onlineGameRef.current.abandonMatch().catch(() => {})
     }
     setShowLeaveModal(false)
-    confirmNavLeave()
-  }, [isOnline, confirmNavLeave])
+    window.location.href = '/'
+  }, [isOnline, roomCode])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
@@ -1513,6 +1510,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             open={showLeaveModal}
             onConfirm={() => handleLeaveConfirm()}
             onCancel={() => setShowLeaveModal(false)}
+            title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
+            message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+            detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
           />
         )}
         {/* Header */}
@@ -1536,7 +1536,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               👤
             </button>
             <GameMenu
-              onResign={() => setShowResignConfirm(true)}
+              onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
               onOpenSettings={() => setShowSettings(true)}
             />
           </div>

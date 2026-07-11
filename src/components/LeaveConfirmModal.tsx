@@ -6,9 +6,12 @@ interface LeaveConfirmModalProps {
   open: boolean
   onCancel: () => void
   onConfirm: () => void
+  title?: string
+  message?: string
+  detail?: string
 }
 
-export function LeaveConfirmModal({ open, onCancel, onConfirm }: LeaveConfirmModalProps) {
+export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, detail }: LeaveConfirmModalProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -29,11 +32,11 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm }: LeaveConfirmMod
           >
             <div className="text-center mb-5">
               <div className="text-3xl mb-3">⚠</div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Abort Match</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Are you sure?</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                Your teammate will be notified and the match will end for both players.
-              </p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{title || 'Abort Match'}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{message || 'Are you sure?'}</p>
+              {detail && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{detail}</p>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -47,7 +50,7 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm }: LeaveConfirmMod
                 onClick={onConfirm}
                 className="flex-1 min-h-[44px] rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-500 transition-colors"
               >
-                OK
+                Leave
               </button>
             </div>
           </motion.div>

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Flag, Settings } from 'lucide-react'
 
 interface GameMenuProps {
-  onResign: () => void
+  onResign?: () => void
   onOpenSettings: () => void
 }
 
@@ -60,15 +60,19 @@ export function GameMenu({ onResign, onOpenSettings }: GameMenuProps) {
               <Settings size={16} className="text-slate-500 dark:text-slate-400" />
               Settings
             </button>
-            <div className="h-px bg-slate-200 dark:bg-slate-700" />
-            <button
-              onClick={() => { onResign(); setOpen(false) }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
-              style={{ minHeight: '44px' }}
-            >
-              <Flag size={16} className="text-rose-500 dark:text-rose-400" />
-              Resign
-            </button>
+            {onResign && (
+              <>
+                <div className="h-px bg-slate-200 dark:bg-slate-700" />
+                <button
+                  onClick={() => { onResign(); setOpen(false) }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                  style={{ minHeight: '44px' }}
+                >
+                  <Flag size={16} className="text-rose-500 dark:text-rose-400" />
+                  Resign
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

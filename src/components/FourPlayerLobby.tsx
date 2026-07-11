@@ -185,8 +185,9 @@ export function FourPlayerLobby({
   }
 
   const handleLeave = async () => {
+    sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true')
     await leaveFourPlayerRoom({ roomId, playerId })
-    router.push('/')
+    window.location.href = '/'
   }
 
   const handleCopyCode = () => {

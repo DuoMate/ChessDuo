@@ -39,4 +39,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 npx tsc --noEmit   # must pass
 npm test           # no new failures
 ```
+
+## Context System
+See `CONTEXT-SYSTEM.md` for full spec. Walk the hierarchy:
+```
+CONTEXT/RULES.md (business rules)
+  → CONTEXT/DESIGN.md (design system)
+    → src/CONTEXT.md (source overview)
+      → sub-module CONTEXT.md files
+```
+Read `<dir>/CONTEXT.md` before editing files in that directory. Update the relevant `CONTEXT.md` after making changes (add a Recent Changes entry).
 <!-- END:chessduo-conventions -->
