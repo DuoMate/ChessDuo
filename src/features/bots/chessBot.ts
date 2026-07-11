@@ -156,7 +156,11 @@ export class ChessBot {
     
     try {
       const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, difficulty.depth, difficulty.elo)
-      const scoreMap = new Map<string, number>(results.map((r: { move: string; score: number }) => [r.move, r.score]))
+      const normalizedResults = results.map(r => ({
+        move: r.move,
+        score: isBlackTurn ? -r.score : r.score
+      }))
+      const scoreMap = new Map<string, number>(normalizedResults.map((r: { move: string; score: number }) => [r.move, r.score]))
       
       const evaluatedMoves: { move: Move; score: number }[] = []
       const unevaluatedMoves: Move[] = []
