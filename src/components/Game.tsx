@@ -246,7 +246,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const isMobile = useIsMobile()
 
-  const { confirmLeave: confirmNavLeave } = useNavigationGuard({
+  useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
@@ -1413,21 +1413,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
-    if (gameState.status === GameStatus.WAITING) {
-      setShowLeaveModal(false)
-      router.push('/')
-      return
+    if (roomCode) {
+      sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true')
     }
-    try {
-      if (isOnline && onlineGameRef.current) {
-        await onlineGameRef.current.abandonMatch()
-      }
-    } catch {
-      // Channel may be dead during refresh; navigation still proceeds
+    if (isOnline && onlineGameRef.current) {
+      onlineGameRef.current.abandonMatch().catch(() => {})
     }
     setShowLeaveModal(false)
-    confirmNavLeave()
-  }, [isOnline, confirmNavLeave, gameState.status, router])
+    window.location.href = '/'
+  }, [isOnline, roomCode])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {

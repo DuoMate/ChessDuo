@@ -201,7 +201,7 @@ export default function SetupPage() {
       return
     }
 
-    if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam) {
+    if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam && !sessionStorage.getItem(`chessduo_left_${codeParam}`)) {
       const isValidRoomCode = /^[A-Z0-9]{6}$/.test(codeParam)
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeParam)
       if (!isValidRoomCode && !isValidUUID) {

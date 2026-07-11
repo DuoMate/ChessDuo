@@ -72,7 +72,7 @@ function DuelContent() {
         playerId={playerId}
         team={team}
         timeLimit={time}
-        onLeave={() => router.push('/')}
+        onLeave={() => { sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true'); window.location.href = '/' }}
       />
     </ErrorBoundary>
   )
