@@ -34,6 +34,10 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - `providers.tsx` is the single source of truth for client context. No other layout wrappers.
 - `middleware.ts` redirects unauthenticated users away from `/game`.
 - Home page MUST NOT return `null` during session check — always show loading UI.
+- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered, profile/messages icons), TimePills (horizontal time selector), GameModeCard (Quick Play/Duo/Four Players), BotDifficultySelector (global bot difficulty), PlayButton (green gradient CTA), and HomeBottomNav (Home/History/Friends/Profile tabs).
+
+## Recent Changes
+- **2026-07-11**: Complete home page UI revamp — new mockup-based layout with HeaderBar, TimePills, GameModeCard, BotDifficultySelector, PlayButton, and HomeBottomNav components. Dark theme (#0a0e1a background), blue accent for selected states, green gradient Play button. Added 3-minute time option. Bot difficulty now global on home page. Bottom nav on home page only.
 
 ## Dependencies
 - Next.js 16 App Router, Supabase Auth, Razorpay SDK

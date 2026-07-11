@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
@@ -16,9 +16,8 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
-
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { UserRound, Bot, Swords, Zap, Timer, Clock, Crown } from 'lucide-react'
+import { UserRound, Bot, Swords, Zap, Timer, Clock, Crown, ChevronRight, MessageCircle, Play, History, Users, User, Home as HomeIcon, MessageSquare, Settings } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -26,30 +25,29 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 export const dynamic = 'force-dynamic'
 
 type GameMode = 'offline' | 'online' | 'fourplayer' | 'duel' | null
+type SelectedGameMode = 'quick' | 'duo' | 'four' | null
 
 interface TimeOption {
   seconds: number
   label: string
-  description: string
 }
 
 const TIME_OPTIONS: TimeOption[] = [
-  { seconds: 300, label: '5 min', description: 'Blitz' },
-  { seconds: 600, label: '10 min', description: 'Rapid' },
-  { seconds: 900, label: '15 min', description: 'Rapid' },
-  { seconds: 1800, label: '30 min', description: 'Classical' },
+  { seconds: 180, label: '3' },
+  { seconds: 300, label: '5' },
+  { seconds: 600, label: '10' },
+  { seconds: 900, label: '15' },
+  { seconds: 1800, label: '30' },
 ]
 
-function timeChipIcon(seconds: number) {
-  const cls = 'mr-0.5 text-amber-600 dark:text-amber-400 shrink-0'
-  switch (seconds) {
-    case 300: return <Zap size={16} className={cls} />
-    case 600: return <Timer size={16} className={cls} />
-    case 900: return <Clock size={16} className={cls} />
-    case 1800: return <Clock size={16} className={cls} />
-    default: return <Timer size={16} className={cls} />
-  }
-}
+const DIFFICULTY_LEVELS = [
+  { level: 1, label: 'Beginner', icon: '♟' },
+  { level: 2, label: 'Novice', icon: '♞' },
+  { level: 3, label: 'Intermediate', icon: '♝' },
+  { level: 4, label: 'Advanced', icon: '♜' },
+  { level: 5, label: 'Expert', icon: '♛' },
+  { level: 6, label: 'Master', icon: '♚' },
+]
 
 export default function SetupPage() {
   const router = useRouter()
@@ -58,7 +56,7 @@ export default function SetupPage() {
   const [selectedTime, setSelectedTime] = useState<number>(DEFAULT_TEAM_TIMER_SECONDS)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
-  const [selectedLevel, setSelectedLevel] = useState<number>(4)
+  const [selectedLevel, setSelectedLevel] = useState<number>(3)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [creatingTime, setCreatingTime] = useState<number | null>(null)
@@ -90,6 +88,7 @@ export default function SetupPage() {
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
+  const [selectedGameMode, setSelectedGameMode] = useState<SelectedGameMode>('duo')
 
   useEffect(() => {
     mountedRef.current = true
@@ -151,8 +150,6 @@ export default function SetupPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Push browser history entry when entering game mode selection screen
-  // so mobile browser back button returns to home screen instead of exiting
   useEffect(() => {
     if (gameMode !== null) {
       window.history.pushState({ gameMode }, '', window.location.href)
@@ -252,7 +249,7 @@ export default function SetupPage() {
           setJoinCode('')
         }
         setJoinLoading(false)
-        
+
         const url = new URL(window.location.href)
         url.searchParams.delete('code')
         window.history.replaceState(null, '', url.toString())
@@ -285,7 +282,6 @@ export default function SetupPage() {
     }
   }, [playerId])
 
-  // Fetch friends list when entering duel mode
   useEffect(() => {
     if (gameMode === 'duel' && playerId && !duelFriend) {
       setDuelFriendsLoading(true)
@@ -552,26 +548,32 @@ export default function SetupPage() {
     }
   }
 
+  const handlePlay = () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
+
+    switch (selectedGameMode) {
+      case 'quick':
+        handleStartOffline()
+        break
+      case 'duo':
+        handleTwoPlayerClick()
+        break
+      case 'four':
+        handleStartFourPlayer(selectedTime)
+        break
+    }
+  }
+
   if (!sessionChecked) return <ErrorBoundary>{null}</ErrorBoundary>
 
   const showTopBar = !gameMode
-
-  const topBar = showTopBar && (
-    <TopBar
-      playerId={playerId}
-      unreadMessages={unreadMessages}
-      onProfile={() => setProfileOpen(true)}
-      onFriends={() => setFriendsOpen(true)}
-      onSignIn={() => setShowAuthOverlay(true)}
-    />
-  )
 
   const slideOvers = playerId && (
     <>
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
         <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} onSignOut={handleSignOut} />
       </SlideOver>
-        <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
         <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
       </SlideOver>
     </>
@@ -605,55 +607,55 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[42px] mb-2">{"\u2694"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">1v1 Duel</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">Choose a friend to challenge</p>
-            </div>
+        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
+          <HeaderBar />
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="text-[42px] mb-2">⚔️</div>
+                <h1 className="text-2xl font-black text-amber-500 tracking-wider">1v1 Duel</h1>
+                <p className="text-xs text-slate-400 mt-1 font-medium">Choose a friend to challenge</p>
+              </div>
 
-            {duelFriendsLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : duelFriends.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-[32px] mb-3">👥</div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No friends yet</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500">Add friends from the Friends panel to challenge them</p>
-              </div>
-            ) : (
-              <div className="space-y-2 mb-6">
-                {duelFriends.map((friend) => (
-                  <button
-                    key={friend.friend_id}
-                    onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
-                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-white/8 bg-white dark:bg-white/[0.03] hover:border-amber-400 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/[0.05] transition-all text-left group"
-                    style={{ minHeight: '60px' }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                      {friend.friend_username.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-gray-900 dark:text-white truncate">{friend.friend_username}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">Challenge to a 1v1 duel</div>
-                    </div>
-                    <span className="text-amber-500 dark:text-amber-400 text-lg opacity-0 group-hover:opacity-100 transition-opacity">{"\u2694"}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+              {duelFriendsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : duelFriends.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-[32px] mb-3">👥</div>
+                  <p className="text-slate-400 text-sm mb-2">No friends yet</p>
+                  <p className="text-[11px] text-slate-500">Add friends from the Friends panel to challenge them</p>
+                </div>
+              ) : (
+                <div className="space-y-2 mb-6">
+                  {duelFriends.map((friend) => (
+                    <button
+                      key={friend.friend_id}
+                      onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
+                      className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-800 bg-slate-900/60 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all text-left group"
+                      style={{ minHeight: '60px' }}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-400 flex-shrink-0">
+                        {friend.friend_username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-white truncate">{friend.friend_username}</div>
+                        <div className="text-[11px] text-slate-500">Challenge to a 1v1 duel</div>
+                      </div>
+                      <span className="text-amber-500 text-lg opacity-0 group-hover:opacity-100 transition-opacity">⚔️</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <div className="text-center">
-              <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {"\u2190"} Back to home
-              </button>
+              <div className="text-center">
+                <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-slate-400 hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+                  ← Back to home
+                </button>
+              </div>
             </div>
           </div>
-        </div>
           {slideOvers}
           {authOverlay}
         </div>
@@ -662,124 +664,150 @@ export default function SetupPage() {
   }
 
   // ============================================
-  // Home screen — Hero + Play Together + More Modes
+  // Offline mode — skill level selection
+  // ============================================
+  if (gameMode === 'offline') {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
+          <HeaderBar />
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="mb-2 flex items-center justify-center">
+                  <PlayerIcons left={['human', 'bot']} right={['bot', 'bot']} />
+                </div>
+                <h1 className="text-2xl font-black tracking-wider text-amber-500">QUICK PLAY</h1>
+                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-slate-400">Select opponent skill level</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                {skillLevels.map((level: SkillLevel) => (
+                  <button
+                    key={level.level}
+                    onClick={() => setSelectedLevel(level.level)}
+                    className={`p-5 rounded-2xl border-2 transition-all duration-200 text-center ${
+                      selectedLevel === level.level
+                        ? 'border-amber-500 bg-amber-500/10 shadow-md'
+                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-600 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="text-base font-bold mb-1 text-white">{level.label}</div>
+                    <div className="text-[11px] text-slate-400 font-medium">{level.description}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="text-center mb-4">
+                <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-slate-400 hover:text-white transition-colors underline font-medium">
+                  How to play?
+                </button>
+              </div>
+              <div className="text-center">
+                <button
+                  onClick={handleStartOffline}
+                  className="px-10 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-2xl text-base transition-colors shadow-md"
+                >
+                  Start Game
+                </button>
+              </div>
+              <div className="mt-8 text-center">
+                <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
+                  ← Back to home
+                </button>
+              </div>
+            </div>
+          </div>
+          {slideOvers}
+          {authOverlay}
+          {showOfflineDisclaimer && (
+            <WelcomeDisclaimer
+              open={showOfflineDisclaimer}
+              onDismiss={() => setShowOfflineDisclaimer(false)}
+              storageKey="chessduo_offline_disclaimer_dismissed"
+              mode="offline"
+            />
+          )}
+        </div>
+      </ErrorBoundary>
+    )
+  }
+
+  // ============================================
+  // Home screen — New mockup-based layout
   // ============================================
   if (!gameMode) {
     return (
       <ErrorBoundary>
-        <div className="relative flex min-h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
-          {topBar}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.015]"
-            style={{
-              backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px),
-                                repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px)`,
-            }}
-          />
-          <div
-            className="pointer-events-none absolute left-1/2 top-5 h-80 w-80 -translate-x-1/2 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.08) 0%, transparent 70%)' }}
-          />
-          <div className="flex flex-1 flex-col items-center justify-start pb-8 pt-8">
-            <div className="relative z-10 w-full max-w-md px-4">
-              <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
-                <div className="mb-8 text-center">
-                  <div className="mb-2 flex items-center justify-center">
-                    <Crown size={44} strokeWidth={1.5} className="text-amber-500 dark:text-amber-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]" />
-                  </div>
-                  <h1 className="text-[34px] font-black tracking-wider text-yellow-600 dark:text-yellow-400">ChessDuo</h1>
-                  <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.25em] text-gray-700 dark:text-gray-400">Multiplayer Tag Team Chess</p>
-                </div>
+        <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#0a0e1a] text-white">
+          <HeaderBar />
 
-                <TimeChip selectedTime={selectedTime} onSelect={setSelectedTime} />
+          <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
+            {/* Time Control */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Time Control</p>
+              <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
+            </div>
 
-                <div className="mb-8">
-                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                    Play Together
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <ModeButton
-                      icon={<PlayerIcons left={['human','human']} right={['bot','bot']} />}
-                      title="Two Player"
-                      tag="Online"
-                      tagColor="blue"
-                      onClick={() => handleTwoPlayerClick()}
-                      iconSpread
-                    />
-                    <ModeButton
-                      icon={<PlayerIcons left={['human','human']} right={['human','human']} />}
-                      title="Four Player"
-                      tag="Online Lobby"
-                      tagColor="blue"
-                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } handleStartFourPlayer(selectedTime) }}
-                      iconSpread
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                    More Modes
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <ModeButton icon={<PlayerIcons left={['human','bot']} right={['bot','bot']} />} title="Quick Play" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} iconSpread />
-                    <ModeButton icon={<Swords size={20} className="text-amber-600 dark:text-amber-400" />} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
-                  </div>
-                </div>
-
-                {playerId && (
-                  <div className="mb-6">
-                    <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                      Join a Room
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={joinCode}
-                        onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                        placeholder="Enter room code"
-                        maxLength={8}
-                        inputMode="text"
-                        autoCapitalize="characters"
-                        autoCorrect="off"
-                        disabled={joinLoading}
-                        className="flex-1 min-w-0 rounded-xl border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-500 focus:border-yellow-500 focus:bg-white focus:outline-none disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-gray-500 dark:focus:border-yellow-500/60 dark:focus:bg-white/[0.08]"
-                        style={{ minHeight: '44px' }}
-                      />
-                      <button
-                        onClick={handleJoinByCode}
-                        disabled={joinLoading || !joinCode.trim()}
-                        className="whitespace-nowrap rounded-xl border-2 border-yellow-400 bg-yellow-100 px-5 py-3 text-sm font-semibold text-yellow-800 transition-all hover:bg-yellow-200 active:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-30 dark:border-yellow-500/25 dark:bg-yellow-500/15 dark:text-yellow-400 dark:hover:bg-yellow-500/25 dark:active:bg-yellow-500/35"
-                        style={{ minHeight: '44px' }}
-                      >
-                        {joinLoading ? 'Joining...' : 'Join'}
-                      </button>
-                    </div>
-                    {joinError && (
-                      <p className="mt-1.5 text-[11px] font-medium text-red-600 dark:text-red-400">{joinError}</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-center gap-6 border-t border-slate-200/80 pt-4 text-[11px] dark:border-slate-700/70">
-                  <button onClick={() => router.push('/history')} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400">
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                    History
-                  </button>
-                  <button onClick={() => router.push('/premium')} className="flex min-h-[44px] items-center gap-1 font-semibold text-yellow-600 transition-all hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300">
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                    Premium
-                  </button>
-                  {!playerId && (
-                    <button onClick={() => setShowAuthOverlay(true)} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                      Sign In
-                    </button>
-                  )}
-                </div>
+            {/* Game Mode */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Game Mode</p>
+              <div className="space-y-2">
+                <GameModeCard
+                  mode="quick"
+                  selected={selectedGameMode === 'quick'}
+                  onClick={() => setSelectedGameMode('quick')}
+                  leftIcons={[{ type: 'human' as const }, { type: 'bot' as const }]}
+                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  title="Quick Play"
+                  subtitle="You + Bot vs Bot + Bot"
+                />
+                <GameModeCard
+                  mode="duo"
+                  selected={selectedGameMode === 'duo'}
+                  onClick={() => setSelectedGameMode('duo')}
+                  leftIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
+                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  title="Duo"
+                  subtitle="You + Friend vs Bot + Bot"
+                  showStar
+                />
+                <GameModeCard
+                  mode="four"
+                  selected={selectedGameMode === 'four'}
+                  onClick={() => setSelectedGameMode('four')}
+                  leftIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
+                  rightIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
+                  title="Four Players"
+                  subtitle="Friends vs Friends"
+                />
               </div>
             </div>
+
+            {/* Bot Difficulty */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Bot Difficulty</p>
+              <BotDifficultySelector
+                selectedLevel={selectedLevel}
+                onSelect={setSelectedLevel}
+              />
+            </div>
+
+            {/* Play Button */}
+            <PlayButton onClick={handlePlay} />
+
+            {/* Error message */}
+            {joinError && (
+              <p className="mt-3 text-center text-xs font-medium text-red-400">{joinError}</p>
+            )}
           </div>
+
+          {/* Bottom Navigation */}
+          <HomeBottomNav
+            onProfile={() => setProfileOpen(true)}
+            onHistory={() => router.push('/history')}
+            onFriends={() => setFriendsOpen(true)}
+            unreadMessages={unreadMessages}
+          />
+
           {slideOvers}
           {authOverlay}
           {showOnboarding && (
@@ -794,120 +822,291 @@ export default function SetupPage() {
     )
   }
 
-  // ============================================
-  // Offline mode — skill level selection
-  // ============================================
-  if (gameMode === 'offline') {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="mb-2 flex items-center justify-center drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
-                <PlayerIcons left={['human','bot']} right={['bot','bot']} />
-              </div>
-              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">QUICK PLAY</h1>
-              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select opponent skill level</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-              {skillLevels.map((level: SkillLevel) => (
-                <button
-                  key={level.level}
-                  onClick={() => setSelectedLevel(level.level)}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    selectedLevel === level.level
-                      ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-gray-400 dark:hover:border-white/15 hover:bg-gray-100 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <div className="text-base font-bold mb-1 text-gray-900 dark:text-white">{level.label}</div>
-                  <div className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">{level.description}</div>
-                </button>
-              ))}
-            </div>
-            <div className="text-center mb-4">
-              <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors underline font-medium">
-                How to play?
-              </button>
-            </div>
-            <div className="text-center">
-              <button
-                onClick={handleStartOffline}
-                className="px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl text-base transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)]"
-              >
-                Start Game
-              </button>
-            </div>
-            <div className="mt-8 text-center">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
-                {"\u2190"} Back to home
-              </button>
-            </div>
-          </div>
-        </div>
-        {slideOvers}
-        {authOverlay}
-          {showOfflineDisclaimer && (
-            <WelcomeDisclaimer
-              open={showOfflineDisclaimer}
-              onDismiss={() => setShowOfflineDisclaimer(false)}
-              storageKey="chessduo_offline_disclaimer_dismissed"
-              mode="offline"
-            />
-          )}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
   return <ErrorBoundary>{null}</ErrorBoundary>
 }
 
 // ============================================
-// Time Chip Component
+// Header Bar Component
 // ============================================
-function TimeChip({ selectedTime, onSelect }: {
+function HeaderBar() {
+  return (
+    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-[#0a0e1a]/90 backdrop-blur-xl">
+      <div className="flex items-center gap-2">
+        <Crown size={28} strokeWidth={1.5} className="text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+        <h1 className="text-2xl font-black tracking-tight">
+          <span className="text-white">Chess</span>
+          <span className="text-blue-500">Duo</span>
+        </h1>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Time Pills Component
+// ============================================
+function TimePills({ selectedTime, onSelect }: {
   selectedTime: number; onSelect: (seconds: number) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const selected = TIME_OPTIONS.find(o => o.seconds === selectedTime) || TIME_OPTIONS[1]
   return (
-    <div className="relative mb-6">
-      <button
-        onClick={() => setOpen(!open)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="w-full flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-amber-400 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-amber-500/40 dark:hover:text-amber-400"
-        style={{ minHeight: '44px' }}
-      >
-        {timeChipIcon(selected.seconds)}
-        <span>{selected.label}</span>
-        <svg className="ml-auto h-3 w-3 shrink-0 opacity-50" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M1 1l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-1 flex flex-col gap-0.5 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-800/95">
-          {TIME_OPTIONS.map((opt) => (
-            <button
-              key={opt.seconds}
-              onClick={() => { onSelect(opt.seconds); setOpen(false) }}
-              className={`flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-                selectedTime === opt.seconds
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
-                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'
-              }`}
-              style={{ minHeight: '44px' }}
-            >
-              {timeChipIcon(opt.seconds)}
-              <span>{opt.label}</span>
-              <span className="text-[11px] opacity-60">{opt.description}</span>
-            </button>
+    <div className="flex gap-2">
+      {TIME_OPTIONS.map((opt) => (
+        <button
+          key={opt.seconds}
+          onClick={() => onSelect(opt.seconds)}
+          className={`flex-1 flex items-center justify-center rounded-xl text-lg font-bold transition-all duration-200 ${
+            selectedTime === opt.seconds
+              ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]'
+              : 'bg-slate-900/60 text-slate-300 border border-slate-800 hover:border-slate-700'
+          }`}
+          style={{ minHeight: '48px', minWidth: '48px' }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ============================================
+// Game Mode Card Component
+// ============================================
+function GameModeCard({
+  mode,
+  selected,
+  onClick,
+  leftIcons,
+  rightIcons,
+  title,
+  subtitle,
+  showStar = false,
+}: {
+  mode: string
+  selected: boolean
+  onClick: () => void
+  leftIcons: Array<{ type: 'human' | 'bot' }>
+  rightIcons: Array<{ type: 'human' | 'bot' }>
+  title: string
+  subtitle: string
+  showStar?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+        selected
+          ? 'border-blue-500/60 bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+          : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+      }`}
+      style={{ minHeight: '60px' }}
+    >
+      {/* Team icons */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5">
+          {leftIcons.map((icon, i) => (
+            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-600/20">
+              {icon.type === 'human' ? (
+                <ColoredPersonIcon />
+              ) : (
+                <span className="text-base">🤖</span>
+              )}
+            </div>
           ))}
         </div>
-      )}
+        <span className="text-xs font-bold text-blue-400/60 mx-0.5">VS</span>
+        <div className="flex items-center gap-0.5">
+          {rightIcons.map((icon, i) => (
+            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-slate-700/40">
+              {icon.type === 'human' ? (
+                <ColoredPersonIcon />
+              ) : (
+                <span className="text-base">🤖</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-base text-white">{title}</span>
+          {showStar && <span className="text-amber-400 text-sm">★</span>}
+        </div>
+        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+      </div>
+
+      {/* Chevron */}
+      <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
+    </button>
+  )
+}
+
+// ============================================
+// Bot Difficulty Selector Component
+// ============================================
+function BotDifficultySelector({
+  selectedLevel,
+  onSelect,
+}: {
+  selectedLevel: number
+  onSelect: (level: number) => void
+}) {
+  const currentDifficulty = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel) || DIFFICULTY_LEVELS[2]
+  const totalDots = 6
+  const filledDots = selectedLevel
+
+  const goPrev = () => {
+    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
+    const prev = idx > 0 ? DIFFICULTY_LEVELS[idx - 1].level : DIFFICULTY_LEVELS[DIFFICULTY_LEVELS.length - 1].level
+    onSelect(prev)
+  }
+
+  const goNext = () => {
+    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
+    const next = idx < DIFFICULTY_LEVELS.length - 1 ? DIFFICULTY_LEVELS[idx + 1].level : DIFFICULTY_LEVELS[0].level
+    onSelect(next)
+  }
+
+  return (
+    <div className="p-3 rounded-2xl border border-slate-800 bg-slate-900/40 space-y-2.5">
+      {/* Difficulty picker row */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={goPrev}
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-white transition-colors"
+          aria-label="Previous difficulty"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 4l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+
+        <div className="flex items-center gap-2 text-white">
+          <span className="text-xl">{currentDifficulty.icon}</span>
+          <span className="font-bold text-base">{currentDifficulty.label}</span>
+        </div>
+
+        <button
+          onClick={goNext}
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-white transition-colors"
+          aria-label="Next difficulty"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex items-center justify-center gap-3">
+        <span className="text-xs text-slate-500">Easy</span>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: totalDots }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                i < filledDots ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]' : 'bg-slate-700 border border-slate-600'
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs text-slate-500">Hard</span>
+      </div>
     </div>
+  )
+}
+
+// ============================================
+// Play Button Component
+// ============================================
+function PlayButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-black text-xl tracking-wider transition-all duration-200 shadow-[0_0_24px_rgba(16,185,129,0.3)] hover:shadow-[0_0_32px_rgba(16,185,129,0.4)] active:scale-[0.98]"
+      style={{ minHeight: '56px' }}
+    >
+      <Play size={24} fill="currentColor" />
+      PLAY
+    </button>
+  )
+}
+
+// ============================================
+// Home Bottom Navigation Component
+// ============================================
+function HomeBottomNav({
+  onProfile,
+  onHistory,
+  onFriends,
+  unreadMessages,
+}: {
+  onProfile: () => void
+  onHistory: () => void
+  onFriends: () => void
+  unreadMessages: number
+}) {
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800 bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+        <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
+        <NavButton label="History" icon={History} onClick={onHistory} />
+        <NavButton label="Friends" icon={Users} onClick={onFriends} badge={unreadMessages} />
+        <NavButton label="Profile" icon={User} onClick={onProfile} />
+      </div>
+    </nav>
+  )
+}
+
+function NavButton({
+  label,
+  icon: Icon,
+  active = false,
+  onClick,
+  badge = 0,
+}: {
+  label: string
+  icon: typeof HomeIcon
+  active?: boolean
+  onClick: () => void
+  badge?: number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
+        active
+          ? 'text-blue-400'
+          : 'text-slate-500 hover:text-slate-300'
+      }`}
+    >
+      <div className="relative">
+        <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold rounded-full px-1">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </div>
+      <span className="text-[11px] leading-none">{label}</span>
+    </button>
+  )
+}
+
+// ============================================
+// Colored Person Icon Component
+// ============================================
+function ColoredPersonIcon() {
+  const gradientId = useId()
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={gradientId} x1="12" y1="0" x2="12" y2="24" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FBBF24"/>
+          <stop offset="1" stopColor="#F59E0B"/>
+        </linearGradient>
+      </defs>
+      <circle cx="12" cy="8" r="5" fill={`url(#${gradientId})`}/>
+      <path d="M20 21a8 8 0 0 0-16 0" fill="#818CF8"/>
+      <circle cx="12" cy="8" r="5" fill="none" stroke="#D97706" strokeWidth="0.75" opacity="0.3"/>
+    </svg>
   )
 }
 
@@ -927,20 +1126,20 @@ function PlayerIcons({ left, right }: {
             key={i}
             className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
               type === 'human'
-                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
-                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+                ? 'bg-amber-500/20 border-amber-500/30'
+                : 'bg-slate-700/50 border-slate-600/40'
             }`}
           >
             {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-300" />
             }
           </div>
         ))}
       </div>
       <div className="flex flex-col items-center gap-0.5">
-        <Swords size={18} strokeWidth={2} className="text-amber-500/60 dark:text-amber-400/50" />
-        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
+        <Swords size={18} strokeWidth={2} className="text-amber-400/50" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">VS</span>
       </div>
       <div className="flex items-center gap-1.5">
         {right.map((type, i) => (
@@ -948,157 +1147,16 @@ function PlayerIcons({ left, right }: {
             key={i}
             className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
               type === 'human'
-                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
-                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+                ? 'bg-amber-500/20 border-amber-500/30'
+                : 'bg-slate-700/50 border-slate-600/40'
             }`}
           >
             {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-300" />
             }
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-// ============================================
-// Mode Button Component
-// ============================================
-function ModeButton({ icon, title, desc, tag, tagColor, onClick, highlight, iconSpread }: {
-  icon: React.ReactNode; title: string; desc?: string; tag?: string; tagColor?: 'blue' | 'green' | 'pink'; onClick: () => void; highlight?: boolean; iconSpread?: boolean
-}) {
-  const tagStyles = {
-    blue: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
-    green: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
-    pink: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/20',
-  }
-
-  if (iconSpread) {
-    return (
-      <button
-        onClick={onClick}
-        className={`group flex flex-col rounded-[24px] border p-[18px] text-left shadow-sm transition-all duration-200 ${
-          highlight
-            ? 'border-amber-500/20 bg-amber-500/10 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:border-amber-400'
-            : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
-        }`}
-      >
-        <div className="flex items-center justify-center pb-3">
-          {icon}
-        </div>
-        <div className="flex items-center gap-3.5">
-          <div className="flex-1">
-            <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
-              {title}
-            </div>
-            {desc && (
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
-            )}
-          </div>
-          {tag && tagColor && (
-            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
-              {tag}
-            </span>
-          )}
-          <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
-        </div>
-      </button>
-    )
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group flex items-center gap-3.5 rounded-[24px] border p-[18px] text-left shadow-sm transition-all duration-200 ${
-        highlight
-          ? 'border-amber-500/20 bg-amber-500/10 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:border-amber-400'
-          : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
-      }`}
-    >
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-        highlight ? 'bg-amber-500/15 border border-amber-500/20 dark:border-amber-500/25 drop-shadow-[0_0_8px_rgba(251,191,36,0.2)]' : 'bg-amber-500/10 border border-amber-500/20 dark:border-amber-500/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.15)]'
-      }`}>
-        {icon}
-      </div>
-      <div className="flex-1">
-          <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
-          {title}
-        </div>
-        {desc && (
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
-        )}
-      </div>
-      {tag && tagColor && (
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
-          {tag}
-        </span>
-      )}
-      <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
-    </button>
-  )
-}
-
-// ============================================
-// Top Bar Component
-// ============================================
-function TopBar({
-  playerId, unreadMessages, onProfile, onFriends, onSignIn,
-}: {
-  playerId: string | null
-  unreadMessages: number
-  onProfile: () => void
-  onFriends: () => void
-  onSignIn: () => void
-}) {
-  const { theme, setTheme } = useSettings()
-  return (
-    <div className="sticky top-0 z-30 flex items-center px-4 py-2 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 dark:bg-slate-950/80 dark:border-slate-700/70">
-      <div className="flex-1 flex items-center">
-        <button
-          onClick={() => playerId ? onProfile() : onSignIn()}
-          className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-            <polyline points="10 17 15 12 10 7"/>
-            <line x1="15" y1="12" x2="3" y2="12"/>
-          </svg>
-          <span className="text-sm font-medium">{playerId ? 'Profile' : 'Sign In'}</span>
-        </button>
-      </div>
-
-        <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-slate-100 p-1 transition-colors dark:border-slate-700/70 dark:bg-slate-800"
-            aria-label="Toggle theme"
-          >
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
-              Light
-            </span>
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400'}`}>
-              Dark
-            </span>
-          </button>
-
-      <div className="flex-1 flex items-center justify-end">
-      {playerId ? (
-        <button
-          onClick={onFriends}
-          className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
-        >
-          <UserRound size={18} />
-          <span className="text-sm hidden sm:inline font-medium">Friends</span>
-          {unreadMessages > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-rose-500 text-white text-[11px] font-bold rounded-full px-1">
-              {unreadMessages > 99 ? '99+' : unreadMessages}
-            </span>
-          )}
-        </button>
-      ) : (
-        <div className="min-w-[44px]" />
-      )}
       </div>
     </div>
   )
