@@ -1,4 +1,4 @@
-@AGENTS.md
+Read @AGENTS.md for better context.
 
 **Project-specific**: Read [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) before writing any code. It contains mandatory patterns for game methods, styling, error handling, and directory conventions.
 
