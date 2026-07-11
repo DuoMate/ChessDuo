@@ -34,13 +34,13 @@ describe('WelcomeDisclaimer', () => {
     expect(localStorage.getItem('chessduo_welcome_dismissed')).toBe('true')
   })
 
-  it('shows online-specific text', () => {
+  it('shows online-specific caption', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="online" />)
-    expect(screen.getByText(/you & your teammate/i)).toBeDefined()
+    expect(screen.getByText(/two players, one board/i)).toBeDefined()
   })
 
-  it('shows offline-specific text', () => {
+  it('shows offline-specific caption', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
-    expect(screen.getByText(/you & a bot teammate/i)).toBeDefined()
+    expect(screen.getByText(/botmate/i)).toBeDefined()
   })
 })

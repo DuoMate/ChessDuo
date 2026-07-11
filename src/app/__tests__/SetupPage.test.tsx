@@ -124,10 +124,6 @@ jest.mock('@/components/WelcomeDisclaimer', () => ({
   WelcomeDisclaimer: () => <div data-testid="mock-disclaimer">Disclaimer</div>,
 }))
 
-jest.mock('@/components/GameTour', () => ({
-  GameTour: () => <div data-testid="mock-tour">Tour</div>,
-}))
-
 jest.mock('@/components/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))

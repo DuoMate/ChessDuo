@@ -16,9 +16,9 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
-import { GameTour } from '@/components/GameTour'
+
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { UserRound } from 'lucide-react'
+import { UserRound, Bot, Swords, Zap, Timer, Clock, Crown } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -30,22 +30,32 @@ type GameMode = 'offline' | 'online' | 'fourplayer' | 'duel' | null
 interface TimeOption {
   seconds: number
   label: string
-  icon: string
   description: string
 }
 
 const TIME_OPTIONS: TimeOption[] = [
-  { seconds: 300, label: '5 min', icon: '⚡', description: 'Blitz' },
-  { seconds: 600, label: '10 min', icon: '⏱', description: 'Rapid' },
-  { seconds: 900, label: '15 min', icon: '🕐', description: 'Rapid' },
-  { seconds: 1800, label: '30 min', icon: '🕒', description: 'Classical' },
+  { seconds: 300, label: '5 min', description: 'Blitz' },
+  { seconds: 600, label: '10 min', description: 'Rapid' },
+  { seconds: 900, label: '15 min', description: 'Rapid' },
+  { seconds: 1800, label: '30 min', description: 'Classical' },
 ]
+
+function timeChipIcon(seconds: number) {
+  const cls = 'mr-0.5 text-amber-600 dark:text-amber-400 shrink-0'
+  switch (seconds) {
+    case 300: return <Zap size={16} className={cls} />
+    case 600: return <Timer size={16} className={cls} />
+    case 900: return <Clock size={16} className={cls} />
+    case 1800: return <Clock size={16} className={cls} />
+    default: return <Timer size={16} className={cls} />
+  }
+}
 
 export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
-  const [selectedTime, setSelectedTime] = useState<number | null>(null)
+  const [selectedTime, setSelectedTime] = useState<number>(DEFAULT_TEAM_TIMER_SECONDS)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(4)
@@ -69,9 +79,6 @@ export default function SetupPage() {
     }
     return false
   })
-  const tourCompleted = typeof window !== 'undefined'
-    && localStorage.getItem('chessduo_tour_completed') === 'true'
-  const [showGameTour, setShowGameTour] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const skillLevels = getAvailableSkillLevels()
@@ -81,6 +88,7 @@ export default function SetupPage() {
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -152,7 +160,6 @@ export default function SetupPage() {
 
     const handlePopState = () => {
       if (gameMode !== null) {
-        setSelectedTime(null)
         setGameMode(null)
         setJoinCode('')
       }
@@ -165,7 +172,6 @@ export default function SetupPage() {
     () => {
       if (gameMode !== null) {
         setGameMode(null)
-        setSelectedTime(null)
         setJoinCode('')
         return true
       }
@@ -352,7 +358,6 @@ export default function SetupPage() {
     await supabase.auth.signOut()
     localStorage.removeItem('chessduo_history')
     localStorage.removeItem('chessduo_settings')
-    localStorage.removeItem('chessduo_tour_completed')
     clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
@@ -476,6 +481,21 @@ export default function SetupPage() {
     router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
+  const handleTwoPlayerClick = () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
+    if (showOnlineDisclaimer) {
+      setShowOnboarding(true)
+    } else {
+      handleStartOnline(selectedTime)
+    }
+  }
+
+  const handleOnboardingDismiss = () => {
+    setShowOnlineDisclaimer(false)
+    setShowOnboarding(false)
+    handleStartOnline(selectedTime)
+  }
+
   const handleStartFourPlayer = async (timeSeconds: number) => {
     if (!playerId) { setShowAuthOverlay(true); return }
     setCreatingTime(timeSeconds)
@@ -534,7 +554,7 @@ export default function SetupPage() {
 
   if (!sessionChecked) return <ErrorBoundary>{null}</ErrorBoundary>
 
-  const showTopBar = !gameMode || (gameMode && selectedTime === null)
+  const showTopBar = !gameMode
 
   const topBar = showTopBar && (
     <TopBar
@@ -642,179 +662,6 @@ export default function SetupPage() {
   }
 
   // ============================================
-  // Time selection screen
-  // ============================================
-  if (gameMode && selectedTime === null) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        
-        {gameMode === 'online' && showOnlineDisclaimer && !showGameTour && (
-          <WelcomeDisclaimer
-            open={showOnlineDisclaimer}
-            onDismiss={() => {
-              setShowOnlineDisclaimer(false)
-              if (!tourCompleted) {
-                setShowGameTour(true)
-              }
-            }}
-            mode="online"
-          />
-        )}
-        {gameMode === 'online' && showGameTour && (
-          <GameTour
-            open={showGameTour}
-            onComplete={() => {
-              setShowGameTour(false)
-              localStorage.setItem('chessduo_tour_completed', 'true')
-            }}
-            onSkip={() => {
-              setShowGameTour(false)
-              localStorage.setItem('chessduo_tour_completed', 'true')
-            }}
-          />
-        )}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-3">
-              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
-                {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B\u265B' : gameMode === 'fourplayer' ? '\u265B\u265C' : '\u2694'}
-              </div>
-              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">
-                {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'TWO PLAYER' : gameMode === 'fourplayer' ? 'FOUR PLAYER' : '1v1 DUEL'}
-              </h1>
-              {gameMode === 'duel' && duelFriend ? (
-                <p className="text-[12px] text-amber-500 dark:text-amber-400 font-semibold mt-1">vs {duelFriend.name}</p>
-              ) : (
-                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select game duration</p>
-              )}
-            </div>
-
-            {gameMode === 'online' && (
-              <div className="mb-4">
-                <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Have a room code?</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:border-yellow-500 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-yellow-100 dark:bg-yellow-500/15 border-2 border-yellow-400 dark:border-yellow-500/25 text-yellow-800 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-200 dark:hover:bg-yellow-500/25 active:bg-yellow-300 dark:active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
-                </div>
-                {joinError && <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>}
-              </div>
-            )}
-
-            {gameMode === 'fourplayer' && (
-              <div className="mb-4">
-                <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Have a room code?</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:border-blue-500 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinFourPlayerByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-blue-100 dark:bg-blue-500/15 border-2 border-blue-400 dark:border-blue-500/25 text-blue-800 dark:text-blue-400 font-semibold text-sm hover:bg-blue-200 dark:hover:bg-blue-500/25 active:bg-blue-300 dark:active:bg-blue-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
-                </div>
-                {joinError && <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {TIME_OPTIONS.map((option: TimeOption) => (
-                <button
-                  key={option.seconds}
-                  onClick={() => {
-                    if (gameMode === 'online') {
-                      handleStartOnline(option.seconds)
-                    } else if (gameMode === 'fourplayer') {
-                      handleStartFourPlayer(option.seconds)
-                    } else if (gameMode === 'duel') {
-                      handleStartDuel(option.seconds)
-                    } else {
-                      setSelectedTime(option.seconds)
-                    }
-                  }}
-                  disabled={creatingTime !== null}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    selectedTime === option.seconds
-                      ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-gray-400 dark:hover:border-white/15 hover:bg-gray-100 dark:hover:bg-white/[0.05]'
-                  } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                  {creatingTime === option.seconds ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">Creating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="text-center mb-4">
-              <p className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">Game ends when time runs out. Winner decided by board advantage.</p>
-            </div>
-
-            <div className="text-center mt-4">
-              <button onClick={() => {
-                if (gameMode === 'duel') {
-                  setDuelFriend(null)
-                  setSelectedTime(null)
-                } else {
-                  setGameMode(null)
-                }
-              }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {gameMode === 'duel' ? '\u2190 Back to friends' : '\u2190 Back to game mode'}
-              </button>
-            </div>
-          </div>
-        </div>
-          {slideOvers}
-          {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  // ============================================
   // Home screen — Hero + Play Together + More Modes
   // ============================================
   if (!gameMode) {
@@ -837,34 +684,35 @@ export default function SetupPage() {
             <div className="relative z-10 w-full max-w-md px-4">
               <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
                 <div className="mb-8 text-center">
-                  <div className="mb-2 flex items-center justify-center gap-3 text-[48px] drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
-                    <span className="text-yellow-600 transition-[font-size] duration-300 dark:text-[36px] dark:text-yellow-400">{"♔"}</span>
-                    <span className="text-[36px] text-gray-800 opacity-70 transition-[font-size] duration-300 dark:text-[48px] dark:text-white dark:opacity-60">{"♚"}</span>
+                  <div className="mb-2 flex items-center justify-center">
+                    <Crown size={44} strokeWidth={1.5} className="text-amber-500 dark:text-amber-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]" />
                   </div>
                   <h1 className="text-[34px] font-black tracking-wider text-yellow-600 dark:text-yellow-400">ChessDuo</h1>
                   <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.25em] text-gray-700 dark:text-gray-400">Multiplayer Tag Team Chess</p>
                 </div>
 
+                <TimeChip selectedTime={selectedTime} onSelect={setSelectedTime} />
+
                 <div className="mb-8">
                   <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
                     Play Together
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <ModeCard
-                      icon={"♔♚"}
+                  <div className="flex flex-col gap-3">
+                    <ModeButton
+                      icon={<PlayerIcons left={['human','human']} right={['bot','bot']} />}
                       title="Two Player"
-                      desc="(You + Friend) vs Bots"
                       tag="Online"
                       tagColor="blue"
-                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }}
+                      onClick={() => handleTwoPlayerClick()}
+                      iconSpread
                     />
-                    <ModeCard
-                      icon={"♔♔♚♚"}
+                    <ModeButton
+                      icon={<PlayerIcons left={['human','human']} right={['human','human']} />}
                       title="Four Player"
-                      desc="2 Friends vs 2 Friends"
                       tag="Online Lobby"
                       tagColor="blue"
-                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('fourplayer') }}
+                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } handleStartFourPlayer(selectedTime) }}
+                      iconSpread
                     />
                   </div>
                 </div>
@@ -874,8 +722,8 @@ export default function SetupPage() {
                     More Modes
                   </div>
                   <div className="flex flex-col gap-3">
-                    <ModeButton icon={"♞"} title="Offline Tag Team" desc="You + Bot vs Bots" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} />
-                    <ModeButton icon={"⚔"} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
+                    <ModeButton icon={<PlayerIcons left={['human','bot']} right={['bot','bot']} />} title="Quick Play" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} iconSpread />
+                    <ModeButton icon={<Swords size={20} className="text-amber-600 dark:text-amber-400" />} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
                   </div>
                 </div>
 
@@ -934,6 +782,13 @@ export default function SetupPage() {
           </div>
           {slideOvers}
           {authOverlay}
+          {showOnboarding && (
+            <WelcomeDisclaimer
+              open={showOnboarding}
+              onDismiss={handleOnboardingDismiss}
+              mode="online"
+            />
+          )}
         </div>
       </ErrorBoundary>
     )
@@ -950,8 +805,10 @@ export default function SetupPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="max-w-md w-full">
             <div className="text-center mb-6">
-              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
-              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">OFFLINE</h1>
+              <div className="mb-2 flex items-center justify-center drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
+                <PlayerIcons left={['human','bot']} right={['bot','bot']} />
+              </div>
+              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">QUICK PLAY</h1>
               <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select opponent skill level</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
@@ -984,8 +841,8 @@ export default function SetupPage() {
               </button>
             </div>
             <div className="mt-8 text-center">
-              <button onClick={() => setSelectedTime(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
-                {"\u2190"} Back to time
+              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
+                {"\u2190"} Back to home
               </button>
             </div>
           </div>
@@ -1005,192 +862,152 @@ export default function SetupPage() {
     )
   }
 
-  // ============================================
-  // Online mode — auto-creates room from time selection
-  // This code path is a fallback if selectedTime is somehow set
-  // ============================================
-  if (gameMode === 'online') {
-    if (!playerId) {
-      return (
-        <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white">
-            {topBar}
-            <div className="absolute top-4 left-4 z-10">
-              <button onClick={() => setSelectedTime(null)} className="text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 text-sm transition-colors">
-                {"\u2190"} Back
-              </button>
-            </div>
-            <Auth onAuthComplete={handleAuthComplete} />
-          </div>
-        </ErrorBoundary>
-      )
-    }
-
-    // Auto-create room and navigate to game
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center">
-          {topBar}
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-amber-600 dark:text-amber-400 text-sm">Creating room...</p>
-          </div>
-          {slideOvers}
-          {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  // ============================================
-  // Four Player mode — create lobby for 2v2 humans
-  // ============================================
-  if (gameMode === 'fourplayer') {
-    if (!playerId) {
-      return (
-        <ErrorBoundary>
-          <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white">
-            {topBar}
-            <div className="absolute top-4 left-4 z-10">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-3">
-                {"\u2190"} Back
-              </button>
-            </div>
-            <Auth onAuthComplete={handleAuthComplete} />
-          </div>
-        </ErrorBoundary>
-      )
-    }
-
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[42px] mb-2">{"\u265B\u265C"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">Four Player</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">2 Friends vs 2 Friends</p>
-            </div>
-
-            <div className="bg-blue-50 dark:bg-white/[0.04] border-2 border-blue-200 dark:border-white/10 rounded-2xl p-6 mb-6">
-              <div className="text-center mb-4">
-                <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase">How it works</div>
-              </div>
-              <div className="space-y-3 text-sm text-gray-800 dark:text-gray-300 font-medium">
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Create a room and get a shareable code</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                  <span>Share the code with 3 friends</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                  <span>All 4 players join and pick teams</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                  <span>Game starts when all seats are filled</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center mb-4">
-              <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Select game duration</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {TIME_OPTIONS.map((option) => (
-                <button
-                  key={option.seconds}
-                  onClick={() => handleStartFourPlayer(option.seconds)}
-                  disabled={creatingTime !== null}
-                   className={`p-5 rounded-2xl border transition-all duration-200 text-center ${
-                      creatingTime === option.seconds
-                        ? 'border-amber-400 bg-amber-500/10 shadow-sm'
-                        : 'border-slate-200/80 bg-white/85 shadow-sm hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
-                    } ${creatingTime !== null && creatingTime !== option.seconds ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  {creatingTime === option.seconds ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Creating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {joinError && (
-              <div className="mb-4 p-3 rounded-2xl bg-rose-100/80 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-sm text-center font-medium">
-                {joinError}
-              </div>
-            )}
-
-            <div className="text-center">
-              <button onClick={() => setGameMode(null)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {"\u2190"} Back to home
-              </button>
-            </div>
-          </div>
-        </div>
-        {slideOvers}
-          {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
   return <ErrorBoundary>{null}</ErrorBoundary>
 }
 
 // ============================================
-// Mode Card Component (for Play Together section)
+// Time Chip Component
 // ============================================
-function ModeCard({ icon, title, desc, tag, tagColor, onClick }: {
-  icon: string; title: string; desc: string; tag: string; tagColor: 'blue' | 'green' | 'pink'; onClick: () => void
+function TimeChip({ selectedTime, onSelect }: {
+  selectedTime: number; onSelect: (seconds: number) => void
 }) {
-  const tagStyles = {
-    blue: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
-    green: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
-    pink: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/20',
-  }
+  const [open, setOpen] = useState(false)
+  const selected = TIME_OPTIONS.find(o => o.seconds === selectedTime) || TIME_OPTIONS[1]
   return (
-    <button
-      onClick={onClick}
-      className="group flex flex-col items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-[0_16px_40px_rgba(245,158,11,0.12)] dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40"
-    >
-       <div className="text-[28px] mb-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.2)] dark:drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
-        {icon}
+    <div className="relative mb-6">
+      <button
+        onClick={() => setOpen(!open)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="w-full flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-amber-400 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-amber-500/40 dark:hover:text-amber-400"
+        style={{ minHeight: '44px' }}
+      >
+        {timeChipIcon(selected.seconds)}
+        <span>{selected.label}</span>
+        <svg className="ml-auto h-3 w-3 shrink-0 opacity-50" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M1 1l4 4 4-4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-1 flex flex-col gap-0.5 rounded-xl border border-slate-200/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-800/95">
+          {TIME_OPTIONS.map((opt) => (
+            <button
+              key={opt.seconds}
+              onClick={() => { onSelect(opt.seconds); setOpen(false) }}
+              className={`flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                selectedTime === opt.seconds
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50'
+              }`}
+              style={{ minHeight: '44px' }}
+            >
+              {timeChipIcon(opt.seconds)}
+              <span>{opt.label}</span>
+              <span className="text-[11px] opacity-60">{opt.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// Player Icons Component
+// ============================================
+function PlayerIcons({ left, right }: {
+  left: ('human' | 'bot')[]
+  right: ('human' | 'bot')[]
+}) {
+  const iconSize = 18
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5">
+        {left.map((type, i) => (
+          <div
+            key={i}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+              type === 'human'
+                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
+                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+            }`}
+          >
+            {type === 'human'
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
+            }
+          </div>
+        ))}
       </div>
-      <div className="text-center">
-          <div className="font-bold text-[14px] text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-          {title}
-        </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
-        </div>
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
-        {tag}
-      </span>
-    </button>
+      <div className="flex flex-col items-center gap-0.5">
+        <Swords size={18} strokeWidth={2} className="text-amber-500/60 dark:text-amber-400/50" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {right.map((type, i) => (
+          <div
+            key={i}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+              type === 'human'
+                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
+                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+            }`}
+          >
+            {type === 'human'
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
+            }
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
 // ============================================
 // Mode Button Component
 // ============================================
-function ModeButton({ icon, title, desc, onClick, highlight }: {
-  icon: string; title: string; desc: string; onClick: () => void; highlight?: boolean
+function ModeButton({ icon, title, desc, tag, tagColor, onClick, highlight, iconSpread }: {
+  icon: React.ReactNode; title: string; desc?: string; tag?: string; tagColor?: 'blue' | 'green' | 'pink'; onClick: () => void; highlight?: boolean; iconSpread?: boolean
 }) {
+  const tagStyles = {
+    blue: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+    green: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
+    pink: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/20',
+  }
+
+  if (iconSpread) {
+    return (
+      <button
+        onClick={onClick}
+        className={`group flex flex-col rounded-[24px] border p-[18px] text-left shadow-sm transition-all duration-200 ${
+          highlight
+            ? 'border-amber-500/20 bg-amber-500/10 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:border-amber-400'
+            : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
+        }`}
+      >
+        <div className="flex items-center justify-center pb-3">
+          {icon}
+        </div>
+        <div className="flex items-center gap-3.5">
+          <div className="flex-1">
+            <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
+              {title}
+            </div>
+            {desc && (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
+            )}
+          </div>
+          {tag && tagColor && (
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
+              {tag}
+            </span>
+          )}
+          <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
+        </div>
+      </button>
+    )
+  }
+
   return (
     <button
       onClick={onClick}
@@ -1200,7 +1017,7 @@ function ModeButton({ icon, title, desc, onClick, highlight }: {
           : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
       }`}
     >
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-[28px] ${
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${
         highlight ? 'bg-amber-500/15 border border-amber-500/20 dark:border-amber-500/25 drop-shadow-[0_0_8px_rgba(251,191,36,0.2)]' : 'bg-amber-500/10 border border-amber-500/20 dark:border-amber-500/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.15)]'
       }`}>
         {icon}
@@ -1209,8 +1026,15 @@ function ModeButton({ icon, title, desc, onClick, highlight }: {
           <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
           {title}
         </div>
-        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
+        {desc && (
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
+        )}
       </div>
+      {tag && tagColor && (
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
+          {tag}
+        </span>
+      )}
       <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
     </button>
   )
