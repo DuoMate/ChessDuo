@@ -144,12 +144,19 @@ export class StockfishEngine {
   }
 
   private startEvaluation(): void {
-    DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${this.currentMovetime}ms)`)
+    const moveNumber = this.getMoveNumber(this.currentFen)
+    const minMovetime = moveNumber < 10 ? 3000 : 5000
+    const movetime = Math.max(this.currentMovetime, minMovetime)
 
-    if (this.currentMoves.length > 0) {
-      this.send(`go movetime ${this.currentMovetime} searchmoves ${this.currentMoves.join(' ')}`)
+    DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${movetime}ms)`)
+
+    // When there are more moves than MultiPV, don't use searchmoves —
+    // Stockfish freely finds the best lines via MultiPV instead of
+    // returning score=0 for unexamined moves that drown out real scores.
+    if (this.currentMoves.length > 0 && this.currentMoves.length <= 10) {
+      this.send(`go movetime ${movetime} searchmoves ${this.currentMoves.join(' ')}`)
     } else {
-      this.send(`go movetime ${this.currentMovetime}`)
+      this.send(`go movetime ${movetime}`)
     }
 
     this.setTimeout()
