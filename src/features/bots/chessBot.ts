@@ -156,7 +156,19 @@ export class ChessBot {
     
     try {
       const results = await this.moveEvaluator.evaluateMoves(movesToEvaluate, fen, difficulty.depth, difficulty.elo)
-      const normalizedResults = results.map(r => ({
+
+      // Detect unexamined moves: the server returns score=0 for moves
+      // that were not in Stockfish's MultiPV output (default fallback).
+      // After normalization, these float above real scores (which went
+      // from negative to positive for the disadvantaged side), causing
+      // the bot to pick junk. Push them to the bottom via sentinel.
+      const hasRealScores = results.some(r => r.score !== 0)
+      const effectiveResults = results.map(r => ({
+        move: r.move,
+        score: hasRealScores && r.score === 0 ? -99999 : r.score
+      }))
+
+      const normalizedResults = effectiveResults.map(r => ({
         move: r.move,
         score: isBlackTurn ? -r.score : r.score
       }))
