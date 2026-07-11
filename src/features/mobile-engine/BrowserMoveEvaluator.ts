@@ -241,7 +241,8 @@ export class BrowserMoveEvaluator {
       this.worker!.addEventListener('message', handler)
 
       this.worker!.postMessage(`position fen ${fen}`)
-      this.worker!.postMessage(`go movetime 3000${moves.length ? ' searchmoves ' + moves.join(' ') : ''}`)
+      const useSearchmoves = moves.length > 0 && moves.length <= 10
+      this.worker!.postMessage(`go movetime 3000${useSearchmoves ? ' searchmoves ' + moves.join(' ') : ''}`)
     })
   }
 }
