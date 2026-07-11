@@ -8,7 +8,6 @@ interface PendingJob {
   fen: string
   moves: string[]
   movetime: number
-  uciElo: number
   resolve: (result: { move: string; score: number }[]) => void
   reject: (err: Error) => void
 }
@@ -22,7 +21,6 @@ export class StockfishEngine {
   private currentMoves: string[] = []
   private currentResolve: ((result: { move: string; score: number }[]) => void) | null = null
   private currentReject: ((err: Error) => void) | null = null
-  private currentElo: number = 2600
   private currentMovetime: number = 3000
   private restartCount = 0
   private readonly MAX_RESTARTS = 3
@@ -75,8 +73,6 @@ export class StockfishEngine {
     })
 
     this.send('uci')
-    this.send('setoption name UCI_LimitStrength true')
-    this.send(`setoption name UCI_Elo ${this.currentElo}`)
     this.send('setoption name MultiPV value 6')
     this.send('isready')
   }
@@ -148,7 +144,7 @@ export class StockfishEngine {
   }
 
   private startEvaluation(): void {
-    DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${this.currentMovetime}ms, elo=${this.currentElo})`)
+    DEBUG && console.log(`[ENGINE] Evaluating ${this.currentMoves.length} moves (${this.currentMovetime}ms)`)
 
     if (this.currentMoves.length > 0) {
       this.send(`go movetime ${this.currentMovetime} searchmoves ${this.currentMoves.join(' ')}`)
@@ -227,18 +223,11 @@ export class StockfishEngine {
     this.currentMovetime = job.movetime
     this.scores = {}
 
-    if (job.uciElo !== this.currentElo) {
-      this.currentElo = job.uciElo
-      this.send(`setoption name UCI_LimitStrength value true`)
-      this.send(`setoption name UCI_Elo value ${this.currentElo}`)
-    }
-
     this.send(`position fen ${job.fen}`)
     this.send('isready')
   }
 
-  evaluateMoves(fen: string, moves: string[], movetime = 3000, uciElo?: number) {
-    const elo = uciElo ?? this.currentElo
+  evaluateMoves(fen: string, moves: string[], movetime = 3000) {
 
     // 1. Check opening book — instant, no Stockfish needed
     if (this.book) {
@@ -254,19 +243,19 @@ export class StockfishEngine {
     }
 
     // 2. Check LRU cache — stores previous Stockfish evaluations
-    const cacheKey = `${fen}:${elo}:${[...moves].sort().join(',')}`
+    const cacheKey = `${fen}:${[...moves].sort().join(',')}`
     const cached = this.cache.get(cacheKey)
     if (cached) {
       DEBUG && console.log(`[CACHE] Hit — ${cached.length} moves`)
       return Promise.resolve(cached)
     }
 
-    DEBUG && console.log(`[ENGINE] Miss — queuing ${moves.length} moves (uciElo=${elo}, movetime=${movetime})`)
+    DEBUG && console.log(`[ENGINE] Miss — queuing ${moves.length} moves (movetime=${movetime})`)
 
     // 3. Queue Stockfish evaluation
     return new Promise<{ move: string; score: number }[]>((resolve, reject) => {
       this.queue.push({
-        fen, moves, movetime, uciElo: elo,
+        fen, moves, movetime,
         resolve: (results) => {
           this.cache.set(cacheKey, results)
           resolve(results)

@@ -57,8 +57,6 @@ describe('BrowserMoveEvaluator', () => {
       const calls = (mockWorker.postMessage as jest.Mock).mock.calls.map((c: string[]) => c[0])
       expect(calls).toContain('uci')
       expect(calls).toContain('setoption name MultiPV value 6')
-      expect(calls).toContain('setoption name UCI_LimitStrength value true')
-      expect(calls).toContain('setoption name UCI_Elo value 2600')
       expect(calls).toContain('isready')
     })
 

@@ -110,7 +110,7 @@ app.post('/evaluate', async (req: Request, res: Response) => {
 
 app.post('/evaluate-moves', async (req: Request, res: Response) => {
   try {
-    const { fen, moves, uciElo, movetime } = req.body
+    const { fen, moves, movetime } = req.body
 
     if (!fen) {
       return res.status(400).json({ error: 'Invalid request: fen required' })
@@ -118,7 +118,7 @@ app.post('/evaluate-moves', async (req: Request, res: Response) => {
 
     const start = Date.now()
 
-    const results = await engine.evaluateMoves(fen, moves || [], movetime ?? 3000, uciElo)
+    const results = await engine.evaluateMoves(fen, moves || [], movetime ?? 3000)
 
     res.json({
       success: true,
