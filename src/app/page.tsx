@@ -21,6 +21,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { UserRound } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -159,6 +160,23 @@ export default function SetupPage() {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [gameMode])
+
+  useCapacitorBackButton(
+    () => {
+      if (gameMode !== null) {
+        setGameMode(null)
+        setSelectedTime(null)
+        setJoinCode('')
+        return true
+      }
+      if (duelFriend) {
+        setDuelFriend(null)
+        return true
+      }
+      return false
+    },
+    gameMode !== null || !!duelFriend
+  )
 
   useEffect(() => {
     const signupParam = searchParams.get('signup')

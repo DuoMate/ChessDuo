@@ -252,13 +252,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const handleHardwareBack = useCallback(() => {
-    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY) {
+    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING) {
       setShowLeaveModal(true)
       return true
     }
     return false
   }, [gameState.status])
-  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY)
+  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING)
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -1413,6 +1413,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
+    if (gameState.status === GameStatus.WAITING) {
+      setShowLeaveModal(false)
+      router.push('/')
+      return
+    }
     try {
       if (isOnline && onlineGameRef.current) {
         await onlineGameRef.current.abandonMatch()
@@ -1422,7 +1427,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     setShowLeaveModal(false)
     confirmNavLeave()
-  }, [isOnline, confirmNavLeave])
+  }, [isOnline, confirmNavLeave, gameState.status, router])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
@@ -1511,6 +1516,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             open={showLeaveModal}
             onConfirm={() => handleLeaveConfirm()}
             onCancel={() => setShowLeaveModal(false)}
+            title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
+            message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+            detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
           />
         )}
         {/* Header */}

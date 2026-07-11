@@ -18,7 +18,7 @@ const onlineCards = [
     description: (
       <>
         <span className="text-amber-400/90 font-medium">You &amp; your teammate</span> play as{' '}
-        <span className="text-white font-semibold">WHITE</span> against a bot opponent.
+        <span className="text-amber-600 dark:text-amber-400 font-semibold">WHITE</span> against a bot opponent.
       </>
     ),
   },
@@ -41,8 +41,8 @@ const offlineCards = [
     description: (
       <>
         <span className="text-amber-400/90 font-medium">You &amp; a bot teammate</span> play as{' '}
-        <span className="text-white font-semibold">WHITE</span> against two bot opponents. Your bot teammate plays at the{' '}
-        <span className="text-white font-semibold">ELO level</span> you select.
+        <span className="text-amber-600 dark:text-amber-400 font-semibold">WHITE</span> against two bot opponents. Your bot teammate plays at the{' '}
+        <span className="text-amber-600 dark:text-amber-400 font-semibold">ELO level</span> you select.
       </>
     ),
   },
