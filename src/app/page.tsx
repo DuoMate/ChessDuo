@@ -769,29 +769,32 @@ if (!gameMode) {
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
                   onClick={() => setSelectedGameMode('quick')}
-                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'bot' as const }]}
-                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  onDoubleClick={handlePlay}
+                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
+                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
-                  subtitle="You + Bot vs Bot + Bot"
+                  subtitle="You + WhiteBot vs BlackBot"
+                  showStar
                 />
                 <GameModeCard
                   mode="duo"
                   selected={selectedGameMode === 'duo'}
                   onClick={() => setSelectedGameMode('duo')}
-                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
-                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  onDoubleClick={handlePlay}
+                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
-                  subtitle="You + Friend vs Bot + Bot"
-                  showStar
+                  subtitle="Human teammate vs 1 human opponent"
                 />
                 <GameModeCard
                   mode="four"
                   selected={selectedGameMode === 'four'}
                   onClick={() => setSelectedGameMode('four')}
-                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
-                  rightIcons={[{ type: 'human', avatar: 'rex' as const }, { type: 'human', avatar: 'zee' as const }]}
+                  onDoubleClick={handlePlay}
+                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                  rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                   title="Four Players"
-                  subtitle="Friends vs Friends"
+                  subtitle="2 human teammates vs 2 human opponents"
                 />
               </div>
             </div>
@@ -889,6 +892,7 @@ function GameModeCard({
   mode,
   selected,
   onClick,
+  onDoubleClick,
   leftIcons,
   rightIcons,
   title,
@@ -898,6 +902,7 @@ function GameModeCard({
   mode: string
   selected: boolean
   onClick: () => void
+  onDoubleClick?: () => void
   leftIcons: TeamIcon[]
   rightIcons: TeamIcon[]
   title: string
@@ -907,6 +912,7 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
         selected
           ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
