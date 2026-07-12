@@ -1489,34 +1489,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove])
 
-  // Show lobby for online mode while waiting for game to start
-  const inviteUrl = roomCode && typeof window !== 'undefined'
-    ? `${getAppBaseUrl()}/?code=${roomCode}`
-    : undefined
-
-  if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
-    return (
-      <GameLobby
-        roomCode={roomCode}
-        inviteUrl={inviteUrl}
-        isLoading={gameState.isLoading}
-        botEloLevel={isFourPlayer ? undefined : botEloLevel}
-        onBotEloSelect={isFourPlayer ? undefined : setBotEloLevel}
-      />
-    )
-  }
-
-  // Show loading state for offline mode while game initializes
-  if (gameState.isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <GameLoading 
-          message="Initializing game..." 
-        />
-      </div>
-    )
-  }
-
+  // Board-page derived state (must come before any early returns — Rules of Hooks)
   const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
     const ids = (isOnline && onlineGameRef.current ? onlineGameRef.current : gameRef.current)?.getPlayers(Team.WHITE) || []
     return ids.slice(0, 2).map((id, idx) => {
@@ -1586,6 +1559,34 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
   }, [moveHistoryRef.current.length])
+
+  // Show lobby for online mode while waiting for game to start
+  const inviteUrl = roomCode && typeof window !== 'undefined'
+    ? `${getAppBaseUrl()}/?code=${roomCode}`
+    : undefined
+
+  if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
+    return (
+      <GameLobby
+        roomCode={roomCode}
+        inviteUrl={inviteUrl}
+        isLoading={gameState.isLoading}
+        botEloLevel={isFourPlayer ? undefined : botEloLevel}
+        onBotEloSelect={isFourPlayer ? undefined : setBotEloLevel}
+      />
+    )
+  }
+
+  // Show loading state for offline mode while game initializes
+  if (gameState.isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <GameLoading
+          message="Initializing game..."
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
