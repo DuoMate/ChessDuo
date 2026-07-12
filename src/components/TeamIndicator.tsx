@@ -26,7 +26,7 @@ export function TeamIndicator({
   const blackActive = activeTeam === 'BLACK' && !isGameOver
 
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
+    <div className="relative flex items-center justify-center gap-2 sm:gap-3 mb-3">
       <motion.div
         animate={{
           boxShadow: whiteActive
