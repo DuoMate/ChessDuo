@@ -111,14 +111,12 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
           outcome={data.result === 'you_won' ? 'won' : data.result === 'teammate_won' ? 'lost' : 'tied'}
           tone="blue"
         />
-        <div className="flex flex-col items-center justify-center gap-1 px-1 min-w-[80px]">
+        <div className="flex flex-col items-center justify-center gap-2 px-1 min-w-[100px]">
           <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Engine Chose</span>
-          <div className="relative">
-            <Trophy size={14} className="absolute -top-1 left-1/2 -translate-x-1/2 text-amber-300" />
-            <div className="w-12 h-12 rounded-lg bg-slate-800/70 border border-emerald-500/30 flex items-center justify-center text-xl font-extrabold text-emerald-300">
-              {data.engineChoseMove.san}
-            </div>
-          </div>
+          <Trophy size={22} className="text-amber-300" />
+          <span className="text-2xl font-extrabold text-emerald-300">
+            {data.engineChoseMove.san}
+          </span>
           <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
             Played
           </span>
