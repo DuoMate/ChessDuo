@@ -771,7 +771,7 @@ if (!gameMode) {
                   onClick={() => setSelectedGameMode('quick')}
                   onDoubleClick={handlePlay}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                  rightIcons={[{ type: 'bot' }]}
+                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
                   subtitle="You + WhiteBot vs BlackBot"
                   showStar
