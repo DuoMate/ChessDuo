@@ -10,7 +10,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team (Bot)"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     expect(screen.getByText('White Team (You)')).toBeDefined()
@@ -24,7 +23,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     expect(screen.getByText('VS')).toBeDefined()
@@ -37,7 +35,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const whiteLabel = screen.getByText('White Team')
@@ -53,7 +50,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team"
         activeTeam="BLACK"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const blackLabel = screen.getByText('Black Team')
@@ -69,7 +65,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const blackLabel = screen.getByText('Black Team')
@@ -85,52 +80,25 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team"
         activeTeam="WHITE"
         isGameOver={true}
-        isBotThinking={false}
       />
     )
-    expect(screen.getByText('Game Over')).toBeDefined()
     const whiteLabel = screen.getByText('White Team')
     const whitePanel = whiteLabel.closest('[class*="rounded-xl"]')
     expect(whitePanel?.className).not.toContain('border-amber-400')
   })
 
-  test('shows "Your turn to move" when bot is thinking', () => {
-    render(
+  test('does not render turn status text — that lives in Game.tsx turnStatus pill', () => {
+    const { container } = render(
       <TeamIndicator
         whiteLabel="White Team"
         blackLabel="Black Team"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={true}
       />
     )
-    expect(screen.getByText('Your turn to move')).toBeDefined()
-  })
-
-  test('shows turn indicator text during normal play', () => {
-    render(
-      <TeamIndicator
-        whiteLabel="White Team"
-        blackLabel="Black Team"
-        activeTeam="WHITE"
-        isGameOver={false}
-        isBotThinking={false}
-      />
-    )
-    expect(screen.getByText('White to move')).toBeDefined()
-  })
-
-  test('shows Black to move when Black is active', () => {
-    render(
-      <TeamIndicator
-        whiteLabel="White Team"
-        blackLabel="Black Team"
-        activeTeam="BLACK"
-        isGameOver={false}
-        isBotThinking={false}
-      />
-    )
-    expect(screen.getByText('Black to move')).toBeDefined()
+    expect(container.textContent).not.toContain('Your turn to move')
+    expect(container.textContent).not.toContain('White to move')
+    expect(container.textContent).not.toContain('Game Over')
   })
 
   test('team label spans use break-words instead of truncate for full name visibility', () => {
@@ -140,7 +108,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team, Bob"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const whiteLabel = screen.getByText('White Team (You), Alice')
@@ -158,7 +125,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const whiteLabel = screen.getByText('White')
@@ -176,7 +142,6 @@ describe('TeamIndicator Component', () => {
         blackLabel="Black Team, AnotherLongName"
         activeTeam="WHITE"
         isGameOver={false}
-        isBotThinking={false}
       />
     )
     const whiteLabel = screen.getByText('White Team (You), VeryLongUsername')

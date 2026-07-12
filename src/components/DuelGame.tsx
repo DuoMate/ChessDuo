@@ -1,20 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChessBoard, PromotionPiece } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
 import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
-import { MatchTimer } from './MatchTimer'
 import { GameOverModal } from './GameOverModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { BottomNav } from './BottomNav'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
 import { GameMenu } from './GameMenu'
-
-const duelBoardStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' } as const
+import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
+import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -61,6 +59,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null)
   const [waiting, setWaiting] = useState(true)
   const [opponentUsername, setOpponentUsername] = useState('Opponent')
+  const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null)
+  const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
+  const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
   const gameRef = useRef<DuelGameEngine | null>(null)
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const moveEntriesRef = useRef<Array<{ accuracy: number; fenAfter: string }>>([])
@@ -123,6 +124,28 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     return () => clearAccuracyTimer()
   }, [showAccuracy, clearAccuracyTimer])
 
+  // Fetch current user profile (for BoardTopBar You tile)
+  useEffect(() => {
+    if (!playerId) {
+      setUserProfile({ username: null, avatarUrl: null })
+      return
+    }
+    let active = true
+    supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error || !data) return
+        setUserProfile({ username: data.username || null, avatarUrl: data.avatar_url || null })
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [playerId])
+
+  // Fetch opponent profile (username + avatar)
   useEffect(() => {
     if (status !== 'playing') return
     const game = gameRef.current
@@ -131,13 +154,57 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (!opp?.id) return
     supabase
       .from('profiles')
-      .select('username')
+      .select('username, avatar_url')
       .eq('id', opp.id)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.username) setOpponentUsername(data.username)
+        if (data?.avatar_url) setOpponentAvatar(data.avatar_url)
       }).catch(() => {})
   }, [status, team])
+
+  // BoardTopBar players (1v1: one player per team)
+  const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
+    if (team === 'WHITE') {
+      return [{
+        id: playerId,
+        label: userProfile.username || 'You',
+        type: 'human',
+        profileImageUrl: userProfile.avatarUrl,
+        isYou: true,
+        online: true,
+      }]
+    }
+    return [{
+      id: 'opponent-white',
+      label: opponentUsername,
+      type: 'human',
+      profileImageUrl: opponentAvatar,
+      isYou: false,
+      online: true,
+    }]
+  }, [team, playerId, userProfile, opponentUsername, opponentAvatar])
+
+  const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
+    if (team === 'BLACK') {
+      return [{
+        id: playerId,
+        label: userProfile.username || 'You',
+        type: 'human',
+        profileImageUrl: userProfile.avatarUrl,
+        isYou: true,
+        online: true,
+      }]
+    }
+    return [{
+      id: 'opponent-black',
+      label: opponentUsername,
+      type: 'human',
+      profileImageUrl: opponentAvatar,
+      isYou: false,
+      online: true,
+    }]
+  }, [team, playerId, userProfile, opponentUsername, opponentAvatar])
 
   // Save completed duel games to history
   const gameSavedRef = useRef(false)
@@ -229,7 +296,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   if (waiting) {
     return (
       <div className={`min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
-        {/* Mobile status bar removed - redundant */}
         <div className="text-center space-y-4">
           <div className="animate-pulse text-5xl flex justify-center">
             <Swords size={48} className="text-amber-600 dark:text-amber-400" />
@@ -251,56 +317,75 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     )
   }
 
+  // For 1v1, render the timer text inside the BoardTopBar so the
+  // single-shot 5:00 / 4:59 is visible.
+  const totalSeconds = timeLimit || 600
+  const remainingSeconds = team === 'WHITE' ? whiteTime : blackTime
+
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
-      <div className="max-w-xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold flex items-center gap-1.5">
-            <Swords size={18} className="text-amber-600 dark:text-amber-400" /> Duel
-          </h1>
-          <GameMenu
-            onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
-            onOpenSettings={() => setShowSettings(true)}
+    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
+        <div className="relative">
+          <BoardTopBar
+            whitePlayers={whitePlayers}
+            blackPlayers={blackPlayers}
+            matchTimeRemaining={remainingSeconds}
+            matchTimerActive={timerActive}
+            totalMatchSeconds={totalSeconds}
+            roundLabel={undefined}
+            currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
           />
+          <div className="absolute right-3 top-2 flex items-center gap-2">
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+              title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+              aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+            >
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
+            <GameMenu
+              onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
+              onOpenSettings={() => setShowSettings(true)}
+            />
+          </div>
         </div>
 
-        <div className="flex items-center justify-between mb-2">
-            <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-              {team === 'WHITE' ? 'You (White)' : `${opponentUsername} (White)`}
-            </span>
-            <div className="flex items-center gap-3">
-              <span className={`font-mono font-bold ${currentTurn === 'w' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                {Math.floor(whiteTime / 60)}:{(whiteTime % 60).toString().padStart(2, '0')}
-              </span>
-              <span className="text-gray-400 dark:text-gray-500">vs</span>
-              <span className={`font-mono font-bold ${currentTurn === 'b' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                {Math.floor(blackTime / 60)}:{(blackTime % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-            <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
-              {team === 'BLACK' ? 'You (Black)' : `${opponentUsername} (Black)`}
+        {/* Turn status pill */}
+        <div className="flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-semibold">
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            isMyTurn ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
+          }`} />
+          <span className={isMyTurn ? 'text-emerald-300' : 'text-slate-400'}>
+            {status === 'game_over' ? 'Game Over' : isMyTurn ? 'Your turn' : 'Opponent turn'}
           </span>
         </div>
 
-        <div className="relative w-full mx-auto aspect-square mb-2" style={duelBoardStyle}>
-          <div className="absolute inset-0">
-            {isMobile ? (
-              <MobileChessBoard
-                fen={fen}
-                onMove={handleMove}
-                enabled={isMyTurn && !pendingPromotion}
-                orientation={team === 'WHITE' ? 'white' : 'black'}
-                lastMove={lastMove}
-              />
-            ) : (
-              <ChessBoard
-                fen={fen}
-                onMove={handleMove}
-                enabled={isMyTurn && !pendingPromotion}
-                orientation={team === 'WHITE' ? 'white' : 'black'}
-                lastMove={lastMove}
-              />
-            )}
+        {/* Chess Board — 80% of viewport */}
+        <div className="flex justify-center">
+          <div
+            className="w-full aspect-square flex-shrink-0 relative"
+            style={{ maxWidth: 'min(95vw, 80vh, 600px)' }}
+          >
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
+              {isMobile ? (
+                <MobileChessBoard
+                  fen={fen}
+                  onMove={handleMove}
+                  enabled={isMyTurn && !pendingPromotion}
+                  orientation={team === 'WHITE' ? 'white' : 'black'}
+                  lastMove={lastMove}
+                />
+              ) : (
+                <ChessBoard
+                  fen={fen}
+                  onMove={handleMove}
+                  enabled={isMyTurn && !pendingPromotion}
+                  orientation={team === 'WHITE' ? 'white' : 'black'}
+                  lastMove={lastMove}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -313,7 +398,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               exit={{ opacity: 0, y: -10 }}
               className="text-center mb-2"
             >
-              <span className={`text-sm font-semibold ${moveAccuracy !== null ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400'}`}>
+              <span className={`text-sm font-semibold ${moveAccuracy !== null ? 'text-yellow-400' : 'text-slate-400'}`}>
                 {moveAccuracy !== null ? `Your move: ${moveAccuracy}% accuracy` : `Opponent move: ${opponentAccuracy}% accuracy`}
               </span>
             </motion.div>
@@ -322,19 +407,19 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
         {pendingPromotion && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-game-surface p-6 rounded-lg border border-gray-200 dark:border-white/10">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
+            <div className="bg-slate-900 p-6 rounded-lg border border-slate-700">
+              <h3 className="text-xl font-bold text-slate-100 mb-4 text-center">Promote Pawn</h3>
               <div className="flex gap-3 md:gap-4">
                 {(['q', 'r', 'b', 'n'] as PromotionPiece[]).map((piece) => (
                   <button
                     key={piece}
                     onClick={() => handlePromotionSelect(piece)}
-                    className="flex flex-col items-center p-3 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg border border-gray-200 dark:border-white/10 transition-colors min-h-[44px] min-w-[44px]"
+                    className="flex flex-col items-center p-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors min-h-[44px] min-w-[44px]"
                   >
-                    <span className="text-3xl md:text-4xl text-gray-900 dark:text-white mb-1">
+                    <span className="text-3xl md:text-4xl text-slate-100 mb-1">
                       {{ q: '♛', r: '♜', b: '♝', n: '♞' }[piece]}
                     </span>
-                    <span className="text-xs md:text-xs text-gray-400">
+                    <span className="text-xs text-slate-400">
                       {{ q: 'Queen', r: 'Rook', b: 'Bishop', n: 'Knight' }[piece]}
                     </span>
                   </button>
@@ -344,34 +429,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </div>
         )}
 
-        <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
-          <span>{moveHistory.length} move{moveHistory.length !== 1 ? 's' : ''}</span>
-          <div className="text-center">
-            {status === 'playing' && (
-              isMyTurn ? (
-                <span className="text-amber-500 dark:text-amber-400 font-semibold">Your turn</span>
-              ) : (
-                <span className="text-gray-500 dark:text-gray-400">Waiting for opponent...</span>
-              )
-            )}
-          </div>
-          <button onClick={onLeave} className="text-rose-400 hover:text-rose-300 transition-colors min-h-[44px] min-w-[44px]">
-            Leave
-          </button>
-        </div>
-
-        {moveHistory.length > 0 && (
-          <div className="mt-3 max-h-24 overflow-y-auto bg-gray-100/50 dark:bg-white/[0.02] rounded-lg border border-gray-200 dark:border-white/5 p-2">
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {moveHistory.map((move, i) => (
-                <span key={i} className="text-xs text-gray-500 dark:text-gray-400">
-                  <span className="text-gray-400 dark:text-gray-500">{Math.floor(i / 2) + 1}.{i % 2 === 0 ? '' : '..'}</span>
-                  {move}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Bottom nav */}
+        <BoardBottomNav
+          activeTab={activeBoardTab}
+          onTabChange={(t) => setActiveBoardTab(t)}
+          onSurrender={() => setShowResignConfirm(true)}
+        />
       </div>
 
       {status === 'game_over' && winner && gameResult && !showGameOverDismissed && (
@@ -409,15 +472,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           title="Abort Match"
           message="Are you sure you want to leave?"
           detail="You will forfeit this duel."
-        />
-      )}
-      {isMobile && (
-        <BottomNav
-          activeOverlay="none"
-          onProfileClick={() => router.push('/profile')}
-          onHistoryClick={() => router.push('/history')}
-          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
-          soundEnabled={soundEnabled}
         />
       )}
     </div>

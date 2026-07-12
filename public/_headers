@@ -1,2 +1,6 @@
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+
+/avatars/*
+  Cache-Control: public,max-age=31536000,immutable
+  Content-Type: image/webp

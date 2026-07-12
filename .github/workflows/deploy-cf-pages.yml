@@ -2,7 +2,7 @@ name: Deploy to Cloudflare Workers
 
 on:
   push:
-    branches: [prod, develop, cf-pages-migration]
+    branches: [prod, develop, ui_revamp]
   workflow_dispatch:
 
 jobs:

@@ -205,9 +205,9 @@ describe('SetupPage — joinError persistence', () => {
       render(<SetupPage />)
     })
 
-    // Home page should render — "Join a Room" section appears (player is logged in)
+    // Home page should render — verify by checking for Game Mode section
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter room code')).toBeDefined()
+      expect(screen.getByText('Game Mode')).toBeDefined()
     })
 
     // No error should be visible
@@ -235,7 +235,7 @@ describe('SetupPage — joinError persistence', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter room code')).toBeDefined()
+      expect(screen.getByText('Game Mode')).toBeDefined()
     })
 
     // Stale error from previous mount should NOT appear

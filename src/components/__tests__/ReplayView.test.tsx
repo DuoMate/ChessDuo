@@ -11,10 +11,23 @@ jest.mock('../../components/MobileChessBoard', () => ({
   MobileChessBoard: () => React.createElement('div', { 'data-testid': 'mobile-chess-board' }),
 }))
 
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: (props: { children?: React.ReactNode }) => React.createElement('div', null, props.children),
-  },
+jest.mock('framer-motion', () => {
+  const passthrough = (props: { children?: React.ReactNode }) => props.children as React.ReactElement
+  const motion = new Proxy({}, {
+    get: () => passthrough,
+  })
+  return {
+    motion,
+    AnimatePresence: passthrough,
+  }
+})
+
+jest.mock('../../components/TeamHexagon', () => ({
+  TeamHexagon: () => React.createElement('div', { 'data-testid': 'team-hexagon' }),
+}))
+
+jest.mock('../../components/BoardTopBar', () => ({
+  BoardTopBar: () => React.createElement('div', { 'data-testid': 'board-top-bar' }),
 }))
 
 jest.mock('next/navigation', () => ({

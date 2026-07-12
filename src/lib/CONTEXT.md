@@ -40,3 +40,6 @@ All utility modules, service integrations, and data access layers. Includes Supa
 ## Dependencies
 - `@supabase/supabase-js`, `chess.js`, `@capacitor/*` (optional)
 - Razorpay SDK, Stockfish WASM
+
+## Recent Changes
+- **2026-07-12**: `settings.ts` now exposes `confirmMove: boolean` (default `false`) and a `setConfirmMove` setter. Used by `Game.tsx` to gate the move-commit flow behind a "Confirm Move" button.
