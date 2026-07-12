@@ -467,7 +467,7 @@ export class OnlineGame {
       if (status === 'CHANNEL_ERROR') {
         DEBUG && console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
         try {
-          supabase.removeChannel(this._channel!)
+          await supabase.removeChannel(this._channel!)
         } catch (e) { DEBUG && console.error('[OnlineGame] Failed to remove channel:', e) }
         this._channel = supabase.channel(`room:${room.id}`, {
           config: { presence: { key: playerId } }

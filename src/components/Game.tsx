@@ -1590,18 +1590,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline])
+  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline, gameState.status])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
     const out: BoardTopBarPlayer[] = []
-    let hasBot = false
-    ids.slice(0, 2).forEach((id) => {
+    let botCount = 0
+    const maxSlots = isOnline ? 2 : 1
+    for (const id of ids) {
+      if (out.length >= maxSlots) break
       const isBot = isOfflineBotId(id)
       if (isBot) {
-        if (hasBot) return
+        botCount++
+        if (botCount > 1) continue
         out.push({
           id: 'black-bot',
           label: 'BlackBot',
@@ -1612,7 +1615,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           online: true,
           submitted: !!gameState.pendingOverlay,
         })
-        hasBot = true
       } else {
         const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
         out.push({
@@ -1626,9 +1628,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           submitted: !!gameState.pendingOverlay,
         })
       }
-    })
+    }
     return out
-  }, [teamLabels.black, gameState.pendingOverlay, isOnline])
+  }, [teamLabels.black, gameState.pendingOverlay, isOnline, gameState.status])
 
   const yourMoveForRow: PendingMove | null = (() => {
     if (heldMove) {

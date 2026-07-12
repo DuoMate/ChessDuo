@@ -27,6 +27,8 @@ All application source code for the Next.js frontend. Organized by App Router pa
 - Next.js 16, React 19, Tailwind CSS v4, Supabase JS SDK
 
 ## Recent Changes
-- **2026-07-12**: Board page UI revamp — dark glassmorphism theme, chess board sized to ~80% of viewport, new `BoardTopBar` / `BoardBottomNav` / `PendingMovesRow` / `ConfirmMoveButton` / `MoveResolvedCard` / `RoundHistorySidebar` components. New `confirmMove` setting (off by default). Applied to `Game.tsx`, `DuelGame.tsx`, and `ReplayView.tsx`.
+- **2026-07-12**: Board page UI revamp — dark glassmorphism theme, chess board sized to ~80% of viewport, new `BoardTopBar` / `BoardBottomNav` / `PendingMovesRow` / `ConfirmMoveButton` / `MoveResolvedInline` / `RoundHistorySidebar` components. New `confirmMove` setting (off by default). Applied to `Game.tsx`, `DuelGame.tsx`, and `ReplayView.tsx`.
 - **2026-07-12**: Added `confirmMove: boolean` to `useSettings()` (default false).
 - **2026-07-12**: Avatar styling unified on home page — `TeamIcon` type reverted, all icons `w-10 h-10 rounded-full` with `object-contain`, icon column fixed to `w-[200px]` for uniform text alignment. `bot.webp` regenerated as a clean square (160x168).
+- **2026-07-12**: Quick Play team composition simplified to `You + WhiteBot vs BlackBot` (one bot per side). The `LocalGame` engine still spawns 4 placeholders for compatibility with `startMatch()`'s 2-per-team invariant, but the `BoardTopBar` derivation collapses the visual to a single bot per side. Online / Duo / Four-Player modes keep all human tiles.
+- **2026-07-12**: Pending moves row shows `Your Move · <name>` and `Teammate · <name>` in Quick Play so the player can see whose move is whose at a glance.

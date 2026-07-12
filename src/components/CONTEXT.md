@@ -65,10 +65,19 @@ All React components — co-located by feature, not by type. Components handle r
 - Chess board sized to ~80% of viewport (`maxWidth: min(95vw, 80vh, 720px)`).
 - New layout shell: `BoardTopBar` (compact team avatars + center timer) → turn pill → board → `PendingMovesRow` → `ConfirmMoveButton` → `BoardBottomNav`.
 - New `confirmMove` setting (off by default) gates `handleMove` so the move is held until the user taps Confirm.
-- `MoveResolvedCard` modal auto-displays when `accuracyComparison` becomes available, with 3-column "Your Move / Engine Chose / Teammate" layout.
+- `MoveResolvedInline` (was `MoveResolvedCard`) renders below the `PendingMovesRow` when `accuracyComparison` is available, with insights-style phrasing (move impact, sync/winner line, blunder warning, quality verdict).
 - `RoundHistorySidebar` is a right-side slide-over opened by the Moves tab.
 - `BoardBottomNav` replaces the old `BottomNav` in `Game.tsx`. 5 tabs: Moves / Game / Surrender (center) / Insights / Chat. DuelGame and ReplayView use a simplified variant.
-- `AccuracyBottomSheet` removed from the board page (logic moved into `MoveResolvedCard`). `TeamIndicator` retained for backward compat but no longer rendered in `Game.tsx`.
+- `AccuracyBottomSheet` removed from the board page (logic moved into `MoveResolvedInline`). `TeamIndicator` retained for backward compat but no longer rendered in `Game.tsx`.
+
+### Quick Play team composition (visible layout)
+- White side: user (You) + 1 bot tile labelled "WhiteBot".
+- Black side: 1 bot tile labelled "BlackBot".
+- Even though the `LocalGame` engine still spawns 4 placeholders (`player1`-`player4`) for compatibility with `startMatch()`'s "2 players per team" invariant, the `BoardTopBar` derivation collapses the visual to a single bot per side. The two black bots would have played identical moves anyway, so the second one is hidden.
+
+### Online / Duo / 4-player modes
+- Duo / Four-Player: real online teammates or online opponent — labels are pulled from `teamLabels` parser (e.g. "Alice" / "Bob"). Multiple human tiles are kept.
+- DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Dependencies
 - `features/` for game logic, `hooks/` for React hooks, `lib/` for utilities
