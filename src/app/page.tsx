@@ -782,7 +782,7 @@ if (!gameMode) {
                   onClick={() => setSelectedGameMode('duo')}
                   onDoubleClick={handlePlay}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
+                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
                   subtitle="Human teammate vs 1 human opponent"
                 />
