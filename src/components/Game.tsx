@@ -14,10 +14,8 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
-import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
-import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
@@ -25,15 +23,20 @@ import { GameOnOverlay } from './GameOnOverlay'
 import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
-import { MovePlayback, MoveEntry } from './MovePlayback'
+import type { MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
-import { TeamIndicator } from './TeamIndicator'
 import { GameMenu } from './GameMenu'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
+import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
+import { ConfirmMoveButton } from './ConfirmMoveButton'
+import { MoveResolvedCard, type MoveResolutionData } from './MoveResolvedCard'
+import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
+import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
@@ -81,7 +84,6 @@ interface GameState {
 
 const DEBUG = process.env.NODE_ENV === 'development'
 
-const boardMaxStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' } as const
 const PIECE_SYMBOLS: Record<string, string> = {
   'p': '♟',
   'n': '♞',
@@ -268,6 +270,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
   const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
+  const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
+  const [showRoundHistory, setShowRoundHistory] = useState(false)
+  const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
@@ -1393,6 +1398,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [gameState.status, tickMatchTimer, matchTimerStarted])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
+    if (settings.confirmMove) {
+      setHeldMove({ move: uciMove, promotion })
+      return
+    }
     if (promotion) {
       if (settings.autoQueen) {
         executeMove(uciMove, 'q')
@@ -1406,7 +1415,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } else {
       executeMove(uciMove)
     }
-  }, [executeMove, settings.autoQueen])
+  }, [executeMove, settings.autoQueen, settings.confirmMove])
+
+  const handleConfirmHeldMove = useCallback(() => {
+    if (!heldMove) return
+    const { move, promotion } = heldMove
+    setHeldMove(null)
+    if (promotion) {
+      if (settings.autoQueen) {
+        executeMove(move, 'q')
+        return
+      }
+      const [from, to] = move.split('-')
+      setGameState(prev => ({ ...prev, pendingPromotion: { from, to } }))
+    } else {
+      executeMove(move)
+    }
+  }, [heldMove, executeMove, settings.autoQueen])
+
+  const handleCancelHeldMove = useCallback(() => {
+    setHeldMove(null)
+  }, [])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (gameState.pendingPromotion) {
@@ -1488,8 +1517,78 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     )
   }
 
+  const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
+    const ids = (isOnline && onlineGameRef.current ? onlineGameRef.current : gameRef.current)?.getPlayers(Team.WHITE) || []
+    return ids.slice(0, 2).map((id, idx) => {
+      const isHuman = !id.startsWith('bot_') && !/^bot\d+$/i.test(id) && !/^player\d+$/.test(id)
+      const teammates = teamLabels.white.split(',').map(s => s.trim())
+      const teammateName = teammates[1] ? teammates[1].replace(/[(),]/g, '').trim() : 'Teammate'
+      return {
+        id,
+        label: id === playerId ? 'You' : (isHuman && idx === 0 ? teammateName : 'Teammate'),
+        type: isHuman ? 'human' : 'bot',
+        avatar: 'ace' as const,
+        isYou: id === playerId,
+        online: true,
+        submitted: !!gameState.myPendingOverlay,
+      }
+    })
+  }, [teamLabels.white, playerId, gameState.myPendingOverlay, isOnline])
+
+  const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
+    const ids = (isOnline && onlineGameRef.current ? onlineGameRef.current : gameRef.current)?.getPlayers(Team.BLACK) || []
+    return ids.slice(0, 2).map((id, idx) => ({
+      id,
+      label: `Bot ${idx + 1}`,
+      type: 'bot',
+      online: true,
+      submitted: !!gameState.pendingOverlay,
+    }))
+  }, [gameState.pendingOverlay, isOnline])
+
+  const yourMoveForRow: PendingMove | null = heldMove
+    ? { san: heldMove.move.split('-').join(' '), piece: 'P', color: 'white' }
+    : gameState.myPendingOverlay
+      ? { san: gameState.myPendingOverlay.from + gameState.myPendingOverlay.to, piece: gameState.myPendingOverlay.piece, color: gameState.myPendingOverlay.color }
+      : null
+  const teammateMoveForRow: PendingMove | null = gameState.pendingOverlay
+    ? { san: gameState.pendingOverlay.from + gameState.pendingOverlay.to, piece: gameState.pendingOverlay.piece, color: gameState.pendingOverlay.color }
+    : null
+
+  const resolutionData: MoveResolutionData | null = accuracyComparison
+    ? {
+        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: 'white' },
+        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: 'black' },
+        engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
+        yourAccuracy: accuracyComparison.player1Accuracy || 0,
+        teammateAccuracy: accuracyComparison.player2Accuracy || 0,
+        result: accuracyComparison.winnerId === 'player1' ? 'you_won' : accuracyComparison.winnerId === 'player2' ? 'teammate_won' : 'draw',
+        scoreDelta: (accuracyComparison.winningScore - accuracyComparison.bestEngineScore) || 0,
+        evaluationAfter: accuracyComparison.winningScore || 0,
+        evaluationImproved: (accuracyComparison.winningScore || 0) > (accuracyComparison.bestEngineScore || 0),
+      }
+    : null
+
+  const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
+    const moves = moveHistoryRef.current
+    return moves.slice(-10).map((m, i) => {
+      const isWhite = m.team === 'WHITE'
+      const san = m.winningMoveUci || m.winningMove
+      const pieceChar = san ? san[0] : 'P'
+      return {
+        round: Math.floor(m.turn / 2) + 1,
+        playerLabel: isWhite ? 'You' : 'Teammate',
+        moveSan: m.winningMove,
+        pieceColor: isWhite ? 'white' : 'black',
+        pieceChar: pieceChar,
+        evalDelta: m.player1Accuracy - m.player2Accuracy,
+        isCurrent: i === moves.length - 1,
+      }
+    })
+  }, [moveHistoryRef.current.length])
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
@@ -1497,9 +1596,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
-      
+
       {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
-        <GameOverModal 
+        <GameOverModal
           winner={gameState.winner || 'DRAW'}
           onPlayAgain={() => router.push('/')}
           onClose={() => setShowGameOverDismissed(true)}
@@ -1507,8 +1606,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
         />
       )}
-        
-      <div className="max-w-4xl mx-auto">
+
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
         {showSettings && (
           <SettingsPanel onClose={() => setShowSettings(false)} />
         )}
@@ -1531,13 +1630,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
           />
         )}
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2 md:mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">ChessDuo</h1>
-          <div className="flex items-center gap-2">
+
+        {/* Compact top bar — header + team avatars + timer */}
+        <div className="relative">
+          <BoardTopBar
+            whitePlayers={whitePlayers}
+            blackPlayers={blackPlayers}
+            matchTimeRemaining={gameState.matchTimeRemaining}
+            matchTimerActive={gameState.matchTimerActive}
+            totalMatchSeconds={timeLimitSeconds || 600}
+            roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
+            currentTurn={gameState.currentTurn}
+          />
+          <div className="absolute right-3 top-2 flex items-center gap-2">
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="hidden md:flex min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm items-center justify-center text-sm"
+              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
               title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
               aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
             >
@@ -1545,7 +1653,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             </button>
             <button
               onClick={() => setOverlayMode('profile')}
-              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-sm"
+              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
               title="Profile"
               aria-label="Profile"
             >
@@ -1558,57 +1666,39 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {/* Unified info bar: TeamIndicator centered, turn status + timer below */}
-        <div className="flex flex-col items-center gap-1 mb-3">
-          <div className="w-full flex justify-center">
-            <TeamIndicator
-              whiteLabel={teamLabels.white}
-              blackLabel={teamLabels.black}
-              activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
-              isGameOver={gameState.status === GameStatus.GAME_OVER}
-              blackIsBot={teamLabels.blackIsBot}
-            />
-          </div>
-          <div className="flex items-center gap-3 mt-1">
-            <motion.div
-              key={gameState.turnStatus}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
-                gameState.status === GameStatus.GAME_OVER
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-400/30'
-                  : gameState.turnStatus === 'your_turn'
-                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-400 border border-green-400/30 animate-pulse'
-                  : gameState.turnStatus === 'evaluating'
-                  ? 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-700 dark:text-purple-300 border border-purple-400/30'
-                  : gameState.turnStatus === 'waiting_for_teammate'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/30'
-                  : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10'
-              }`}
-            >
-              {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
-               gameState.turnStatus === 'your_turn' ? 'Your turn' :
-               gameState.turnStatus === 'evaluating' ? 'Picking the best move...' :
-               gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
-               gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
-               'Waiting'}
-            </motion.div>
-            <MatchTimer
-              seconds={gameState.matchTimeRemaining}
-              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-              totalSeconds={timeLimitSeconds || 600}
-            />
-          </div>
+        {/* Turn status pill */}
+        <div className="flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-semibold">
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            gameState.turnStatus === 'your_turn' ? 'bg-emerald-400 animate-pulse'
+              : gameState.turnStatus === 'waiting_for_teammate' ? 'bg-amber-400 animate-pulse'
+              : gameState.turnStatus === 'evaluating' ? 'bg-purple-400 animate-pulse'
+              : 'bg-slate-500'
+          }`} />
+          <span className={
+            gameState.turnStatus === 'your_turn' ? 'text-emerald-300'
+              : gameState.turnStatus === 'waiting_for_teammate' ? 'text-amber-300'
+              : gameState.turnStatus === 'evaluating' ? 'text-purple-300'
+              : 'text-slate-400'
+          }>
+            {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
+             gameState.turnStatus === 'your_turn' ? 'Your turn' :
+             gameState.turnStatus === 'evaluating' ? 'Picking the best move...' :
+             gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
+             gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
+             'Waiting'}
+            {gameState.turnStatus === 'your_turn' && (
+              <span className="text-slate-400"> &middot; Both teams submit moves</span>
+            )}
+          </span>
         </div>
 
-        {/* Chess Board — centered */}
-        <div className="flex justify-center mb-3">
+        {/* Chess Board — 80% of viewport */}
+        <div className="flex justify-center px-3">
           <div
             className="w-full aspect-square flex-shrink-0 relative"
-            style={boardMaxStyle}
+            style={{ maxWidth: 'min(95vw, 80vh, 720px)' }}
           >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
               {(() => {
                 const currentTurn = gameState.currentTurn
                 const myTeamEnabled = isFourPlayer
@@ -1629,7 +1719,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     onAnimationComplete={handleResolutionComplete}
                   />
                 ) : (
-                  <ChessBoard 
+                  <ChessBoard
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
@@ -1646,119 +1736,58 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {/* Accuracy Panel — below board */}
-        <div className="flex justify-center mb-3">
-          <div
-            className="w-full"
-            style={boardMaxStyle}
-          >
-            {(() => {
-              const g = isOnline ? onlineGameRef.current : gameRef.current
-              return (
-                <>
-                  {!accuracyComparison && gameState.turnStatus === 'evaluating' && (
-                    <EvaluatingLoader />
-                  )}
-                  <AccuracyBottomSheet 
-                    comparison={accuracyComparison}
-                    isVisible={!!accuracyComparison}
-                    playerId={playerId}
-                    player1Id={isOnline ? onlineGameRef.current?.player1Id : null}
-                  />
-                </>
-              )
-            })()}
+        {/* Pending moves row */}
+        {gameState.status === GameStatus.PLAYING && (
+          <div className="py-2">
+            <PendingMovesRow
+              yourMove={yourMoveForRow}
+              teammateMove={teammateMoveForRow}
+              yourLabel="Your Move"
+              teammateLabel="Teammate"
+            />
           </div>
-        </div>
-
-        {/* Bottom bar: captured pieces + selected move */}
-        <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mb-3 px-2 py-2 rounded-xl bg-white/40 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">White</span>
-              <motion.div layout className="flex gap-0.5">
-                {gameState.capturedByWhite.length === 0 ? (
-                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
-                ) : (
-                  [...gameState.capturedByWhite].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
-                    <motion.span
-                      key={`w-${p}-${i}`}
-                      initial={{ scale: 0, rotate: -20 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="text-base md:text-xl leading-none"
-                    >
-                      {PIECE_SYMBOLS[p] || p}
-                    </motion.span>
-                  ))
-                )}
-              </motion.div>
-            </div>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Black</span>
-              <motion.div layout className="flex gap-0.5">
-                {gameState.capturedByBlack.length === 0 ? (
-                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
-                ) : (
-                  [...gameState.capturedByBlack].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
-                    <motion.span
-                      key={`b-${p}-${i}`}
-                      initial={{ scale: 0, rotate: 20 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="text-base md:text-xl leading-none"
-                    >
-                      {PIECE_SYMBOLS[p] || p}
-                    </motion.span>
-                  ))
-                )}
-              </motion.div>
-            </div>
-          </div>
-          {gameState.selectedMove && (
-            <>
-              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-              <motion.div
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-1.5"
-              >
-                <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Move</span>
-                <span className="px-2 py-0.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-xs md:text-sm font-mono font-bold border border-green-500/20">
-                  {gameState.selectedMove}
-                </span>
-              </motion.div>
-            </>
-          )}
-        </div>
-
-        {/* Move Playback */}
-        <div className="max-w-[500px] mx-auto mb-3">
-          <MovePlayback
-            moves={moveHistoryRef.current}
-            currentIndex={playbackIndex}
-            initialFen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-            onSelectMove={(index, fen) => {
-              setPlaybackIndex(index)
-              setPlaybackFen(fen)
-            }}
-            onReset={() => {
-              setPlaybackIndex(null)
-              setPlaybackFen(null)
-            }}
-          />
-        </div>
-
-        {/* Game Over result text */}
-        {gameState.status === GameStatus.GAME_OVER && (
-          <motion.p
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center text-xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent mb-3"
-          >
-            {isOnline && onlineGameRef.current ? onlineGameRef.current.getResult() : game?.getResult()}
-          </motion.p>
         )}
+
+        {/* Confirm Move button (only when setting enabled and game playing) */}
+        {gameState.status === GameStatus.PLAYING && (
+          <div className="pb-2">
+            <ConfirmMoveButton
+              visible={settings.confirmMove}
+              hasPendingMove={!!heldMove}
+              onConfirm={handleConfirmHeldMove}
+              onCancel={handleCancelHeldMove}
+            />
+          </div>
+        )}
+
+        {/* Bottom nav */}
+        <BoardBottomNav
+          activeTab={activeBoardTab}
+          onTabChange={(t) => {
+            setActiveBoardTab(t)
+            if (t === 'moves') setShowRoundHistory(true)
+            if (t === 'insights' || t === 'chat') setActiveBoardTab('game')
+          }}
+          onSurrender={() => gameState.status !== GameStatus.GAME_OVER && setShowResignConfirm(true)}
+        />
       </div>
+
+      <MoveResolvedCard
+        open={!!resolutionData}
+        data={resolutionData}
+        onNext={() => {
+          setAccuracyComparison(null)
+        }}
+      />
+
+      <RoundHistorySidebar
+        open={showRoundHistory}
+        entries={roundHistoryEntries}
+        onClose={() => {
+          setShowRoundHistory(false)
+          setActiveBoardTab('game')
+        }}
+      />
 
       <SlideOver
         open={overlayMode === 'profile'}

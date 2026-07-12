@@ -19,3 +19,6 @@ The main 2v2 team chess game. Supports both online (multiplayer via Supabase) an
 ## Dependencies
 - `@/components/Game` — the main Game component
 - `useNavigationGuard` — prevents back-navigation during play
+
+## Recent Changes
+- **2026-07-12**: Board page revamp — `Game.tsx` now uses the dark glassmorphism theme and the new `BoardTopBar` + `BoardBottomNav` shell. Chess board is sized to ~80% of the viewport. The new `confirmMove` setting (off by default) gates `handleMove` so the move is held until the user taps Confirm.

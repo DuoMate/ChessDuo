@@ -8,11 +8,11 @@ import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { MatchTimer } from './MatchTimer'
 import { GameOverModal } from './GameOverModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { BottomNav } from './BottomNav'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
 import { GameMenu } from './GameMenu'
+import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 
 const duelBoardStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 7rem), 650px)' } as const
 import { SettingsPanel } from './SettingsPanel'
@@ -252,11 +252,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col p-4 ${isMobile ? 'pb-16 pt-14' : ''}`}>
-      <div className="max-w-xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold flex items-center gap-1.5">
-            <Swords size={18} className="text-amber-600 dark:text-amber-400" /> Duel
+    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
+        <div className="flex items-center justify-between py-2">
+          <h1 className="text-lg font-bold flex items-center gap-1.5 text-amber-400">
+            <Swords size={18} /> Duel
           </h1>
           <GameMenu
             onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
@@ -264,26 +264,29 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           />
         </div>
 
-        <div className="flex items-center justify-between mb-2">
-            <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+        <div className="flex items-center justify-between mb-2 px-1">
+            <span className={`text-xs md:text-sm font-semibold ${team === 'WHITE' ? 'text-slate-100' : 'text-slate-400'}`}>
               {team === 'WHITE' ? 'You (White)' : `${opponentUsername} (White)`}
             </span>
             <div className="flex items-center gap-3">
-              <span className={`font-mono font-bold ${currentTurn === 'w' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+              <span className={`font-mono font-bold ${currentTurn === 'w' && timerActive ? 'text-amber-400' : 'text-slate-400'}`}>
                 {Math.floor(whiteTime / 60)}:{(whiteTime % 60).toString().padStart(2, '0')}
               </span>
-              <span className="text-gray-400 dark:text-gray-500">vs</span>
-              <span className={`font-mono font-bold ${currentTurn === 'b' && timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+              <span className="text-slate-500">vs</span>
+              <span className={`font-mono font-bold ${currentTurn === 'b' && timerActive ? 'text-amber-400' : 'text-slate-400'}`}>
                 {Math.floor(blackTime / 60)}:{(blackTime % 60).toString().padStart(2, '0')}
               </span>
             </div>
-            <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+            <span className={`text-xs md:text-sm font-semibold ${team === 'BLACK' ? 'text-slate-100' : 'text-slate-400'}`}>
               {team === 'BLACK' ? 'You (Black)' : `${opponentUsername} (Black)`}
           </span>
         </div>
 
-        <div className="relative w-full mx-auto aspect-square mb-2" style={duelBoardStyle}>
-          <div className="absolute inset-0">
+        <div
+          className="relative w-full mx-auto aspect-square mb-2"
+          style={{ maxWidth: 'min(95vw, 80vh, 600px)' }}
+        >
+          <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
             {isMobile ? (
               <MobileChessBoard
                 fen={fen}
@@ -411,15 +414,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           detail="You will forfeit this duel."
         />
       )}
-      {isMobile && (
-        <BottomNav
-          activeOverlay="none"
-          onProfileClick={() => router.push('/profile')}
-          onHistoryClick={() => router.push('/history')}
-          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
-          soundEnabled={soundEnabled}
-        />
-      )}
+      <BoardBottomNav
+        activeTab={'game'}
+        onTabChange={() => {}}
+        onSurrender={() => setShowResignConfirm(true)}
+      />
     </div>
   )
 }

@@ -9,12 +9,14 @@ export type Theme = 'dark' | 'light'
 interface Settings {
   autoQueen: boolean
   lowTimeWarning: boolean
+  confirmMove: boolean
   theme: Theme
 }
 
 const DEFAULTS: Settings = {
   autoQueen: false,
   lowTimeWarning: true,
+  confirmMove: false,
   theme: 'dark',
 }
 
@@ -26,6 +28,7 @@ function loadSettings(): Settings {
       return {
         autoQueen: parsed.autoQueen ?? DEFAULTS.autoQueen,
         lowTimeWarning: parsed.lowTimeWarning ?? DEFAULTS.lowTimeWarning,
+        confirmMove: parsed.confirmMove ?? DEFAULTS.confirmMove,
         theme: parsed.theme === 'light' ? 'light' : (parsed.theme === 'dark' ? 'dark' : DEFAULTS.theme),
       }
     }
@@ -81,12 +84,22 @@ export function useSettings() {
     })
   }, [])
 
+  const setConfirmMove = useCallback((value: boolean) => {
+    setSettingsState(prev => {
+      const updated = { ...prev, confirmMove: value }
+      saveSettings(updated)
+      return updated
+    })
+  }, [])
+
   return {
     autoQueen: settings.autoQueen,
     lowTimeWarning: settings.lowTimeWarning,
+    confirmMove: settings.confirmMove,
     theme: settings.theme,
     setAutoQueen,
     setLowTimeWarning,
     setTheme,
+    setConfirmMove,
   }
 }

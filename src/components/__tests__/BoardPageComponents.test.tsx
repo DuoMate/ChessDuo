@@ -1,0 +1,172 @@
+import React from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { TeamHexagon } from '../TeamHexagon'
+import { BoardTopBar } from '../BoardTopBar'
+import { PendingMovesRow } from '../PendingMovesRow'
+import { ConfirmMoveButton } from '../ConfirmMoveButton'
+import { MoveResolvedCard, type MoveResolutionData } from '../MoveResolvedCard'
+import { RoundHistorySidebar } from '../RoundHistorySidebar'
+import { BoardBottomNav } from '../BoardBottomNav'
+
+describe('TeamHexagon', () => {
+  it('renders the value', () => {
+    render(<TeamHexagon value={2} team="WHITE" />)
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  it('renders with a different value and team', () => {
+    const { container } = render(<TeamHexagon value={3} team="BLACK" />)
+    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(container.querySelector('svg')).toBeInTheDocument()
+  })
+})
+
+describe('BoardTopBar', () => {
+  it('renders team labels and players', () => {
+    render(
+      <BoardTopBar
+        whitePlayers={[
+          { id: 'p1', label: 'You', type: 'human', isYou: true },
+          { id: 'p2', label: 'Teammate', type: 'human' },
+        ]}
+        blackPlayers={[
+          { id: 'b1', label: 'Bot 1', type: 'bot' },
+        ]}
+        matchTimeRemaining={120}
+        matchTimerActive={true}
+        totalMatchSeconds={600}
+        currentTurn={'WHITE' as any}
+      />
+    )
+    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(screen.getByText('Teammate')).toBeInTheDocument()
+    expect(screen.getByText('Bot 1')).toBeInTheDocument()
+  })
+})
+
+describe('PendingMovesRow', () => {
+  it('shows "Waiting..." when no teammate move', () => {
+    render(
+      <PendingMovesRow
+        yourMove={null}
+        teammateMove={null}
+      />
+    )
+    expect(screen.getByText('Waiting...')).toBeInTheDocument()
+  })
+
+  it('shows submitted when both moves present', () => {
+    render(
+      <PendingMovesRow
+        yourMove={{ san: 'Nf3', piece: 'N', color: 'white' }}
+        teammateMove={{ san: 'e4', piece: 'P', color: 'white' }}
+      />
+    )
+    const submitted = screen.getAllByText(/Submitted/i)
+    expect(submitted.length).toBe(2)
+  })
+})
+
+describe('ConfirmMoveButton', () => {
+  it('returns null when not visible', () => {
+    const { container } = render(
+      <ConfirmMoveButton visible={false} hasPendingMove={true} onConfirm={jest.fn()} />
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('shows the button when visible', () => {
+    render(
+      <ConfirmMoveButton visible={true} hasPendingMove={true} onConfirm={jest.fn()} />
+    )
+    expect(screen.getByRole('button')).toBeInTheDocument()
+  })
+
+  it('calls onConfirm when clicked', () => {
+    const onConfirm = jest.fn()
+    render(
+      <ConfirmMoveButton visible={true} hasPendingMove={true} onConfirm={onConfirm} />
+    )
+    fireEvent.click(screen.getByRole('button'))
+    expect(onConfirm).toHaveBeenCalled()
+  })
+})
+
+describe('MoveResolvedCard', () => {
+  const data: MoveResolutionData = {
+    yourMove: { san: 'Nf3', piece: 'N', color: 'white' },
+    teammateMove: { san: 'e4', piece: 'P', color: 'black' },
+    engineChoseMove: { san: 'e4' },
+    yourAccuracy: 86.2,
+    teammateAccuracy: 94.7,
+    result: 'teammate_won',
+    scoreDelta: 0.38,
+    evaluationAfter: 0.53,
+    evaluationImproved: true,
+  }
+
+  it('renders nothing when closed', () => {
+    const { container } = render(
+      <MoveResolvedCard open={false} data={data} onNext={jest.fn()} />
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('renders the card when open', () => {
+    render(
+      <MoveResolvedCard open={true} data={data} onNext={jest.fn()} />
+    )
+    expect(screen.getByText('Move Resolved')).toBeInTheDocument()
+    expect(screen.getByText('Next Move')).toBeInTheDocument()
+  })
+})
+
+describe('RoundHistorySidebar', () => {
+  it('renders entries when open', () => {
+    render(
+      <RoundHistorySidebar
+        open={true}
+        entries={[
+          { round: 1, playerLabel: 'You', moveSan: 'e4', pieceColor: 'white', pieceChar: 'P', evalDelta: 0.2 },
+          { round: 2, playerLabel: 'Teammate', moveSan: 'Nf3', pieceColor: 'white', pieceChar: 'N', evalDelta: -0.1, isCurrent: true },
+        ]}
+        onClose={jest.fn()}
+      />
+    )
+    expect(screen.getByText('Round History')).toBeInTheDocument()
+    expect(screen.getByText('e4')).toBeInTheDocument()
+    expect(screen.getByText('Nf3')).toBeInTheDocument()
+    expect(screen.getByText('Current')).toBeInTheDocument()
+  })
+})
+
+describe('BoardBottomNav', () => {
+  it('renders all five tabs', () => {
+    render(
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} />
+    )
+    expect(screen.getByText('Moves')).toBeInTheDocument()
+    expect(screen.getByText('Game')).toBeInTheDocument()
+    expect(screen.getByText('Surrender')).toBeInTheDocument()
+    expect(screen.getByText('Insights')).toBeInTheDocument()
+    expect(screen.getByText('Chat')).toBeInTheDocument()
+  })
+
+  it('calls onTabChange when a tab is tapped', () => {
+    const onTabChange = jest.fn()
+    render(
+      <BoardBottomNav activeTab="game" onTabChange={onTabChange} />
+    )
+    fireEvent.click(screen.getByText('Moves'))
+    expect(onTabChange).toHaveBeenCalledWith('moves')
+  })
+
+  it('calls onSurrender when the Surrender tab is tapped', () => {
+    const onSurrender = jest.fn()
+    render(
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onSurrender={onSurrender} />
+    )
+    fireEvent.click(screen.getByText('Surrender'))
+    expect(onSurrender).toHaveBeenCalled()
+  })
+})
