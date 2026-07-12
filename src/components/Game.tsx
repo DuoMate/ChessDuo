@@ -1866,6 +1866,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               teammateMove={teammateMoveForRow}
               yourLabel="Your Move"
               teammateLabel="Teammate"
+              yourName={!isOnline ? (userProfile.username || 'You') : undefined}
+              teammateName={!isOnline ? (whitePlayers.find(p => p.id === 'white-bot')?.label) : undefined}
             />
           </div>
         )}

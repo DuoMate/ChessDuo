@@ -16,6 +16,9 @@ interface PendingMovesRowProps {
   teammateMove: PendingMove | null
   yourLabel?: string
   teammateLabel?: string
+  /** Optional display name (e.g. "Alice", "WhiteBot"). Shown next to the label. */
+  yourName?: string
+  teammateName?: string
 }
 
 const PIECE_CHARS: Record<string, string> = {
@@ -34,6 +37,8 @@ export function PendingMovesRow({
   teammateMove,
   yourLabel = 'Your Move',
   teammateLabel = 'Teammate',
+  yourName,
+  teammateName,
 }: PendingMovesRowProps) {
   const youSubmitted = !!yourMove
   const teammateSubmitted = !!teammateMove
@@ -56,8 +61,8 @@ export function PendingMovesRow({
             <span className="text-2xl leading-none">{pieceChar(yourMove?.piece, yourMove?.color)}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] font-bold uppercase tracking-wider ${youSubmitted ? 'text-green-400' : 'text-slate-400'}`}>
-              {yourLabel}
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${youSubmitted ? 'text-green-400' : 'text-slate-400'} truncate`}>
+              {yourLabel}{yourName ? <> · <span className="text-slate-300 normal-case tracking-normal">{yourName}</span></> : null}
             </p>
             <p className="text-sm font-bold text-slate-100 truncate">
               {yourMove?.san || 'Selecting...'}
@@ -90,8 +95,8 @@ export function PendingMovesRow({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] font-bold uppercase tracking-wider ${teammateSubmitted ? 'text-green-400' : 'text-amber-400'}`}>
-              {teammateLabel}
+            <p className={`text-[10px] font-bold uppercase tracking-wider ${teammateSubmitted ? 'text-green-400' : 'text-amber-400'} truncate`}>
+              {teammateLabel}{teammateName ? <> · <span className="text-slate-300 normal-case tracking-normal">{teammateName}</span></> : null}
             </p>
             <p className="text-sm font-bold text-slate-100 truncate">
               {teammateSubmitted ? teammateMove?.san : 'Waiting...'}
