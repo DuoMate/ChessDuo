@@ -50,7 +50,7 @@ const DIFFICULTY_LEVELS = [
 ]
 
 type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
-type TeamIcon = { type: 'human'; avatar: HumanAvatar } | { type: 'bot' }
+type TeamIcon = { type: 'human'; avatar: HumanAvatar; size?: 'normal' | 'small' } | { type: 'bot'; size?: 'normal' | 'small' }
 
 const HUMAN_AVATARS: Record<HumanAvatar, string> = {
   ace: '/avatars/human-ace.webp',
@@ -769,8 +769,8 @@ if (!gameMode) {
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
                   onClick={() => setSelectedGameMode('quick')}
-                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'bot' as const }]}
-                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'bot' as const, size: 'small' as const }]}
+                  rightIcons={[{ type: 'bot' as const, size: 'small' as const }, { type: 'bot' as const, size: 'small' as const }]}
                   title="Quick Play"
                   subtitle="You + Bot vs Bot + Bot"
                 />
@@ -779,7 +779,7 @@ if (!gameMode) {
                   selected={selectedGameMode === 'duo'}
                   onClick={() => setSelectedGameMode('duo')}
                   leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
-                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  rightIcons={[{ type: 'bot' as const, size: 'small' as const }, { type: 'bot' as const, size: 'small' as const }]}
                   title="Duo"
                   subtitle="You + Friend vs Bot + Bot"
                   showStar
@@ -915,37 +915,43 @@ function GameModeCard({
       style={{ minHeight: '72px' }}
     >
       {/* Team icons */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <div className="flex items-center gap-1">
-          {leftIcons.map((icon, i) => (
-            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden">
-              <img
-                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
-                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
-                width={168}
-                height={168}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5">
+          {leftIcons.map((icon, i) => {
+            const isSmall = icon.size === 'small'
+            return (
+              <div key={i} className={`${isSmall ? 'w-6 h-6' : 'w-12 h-12'} rounded-xl overflow-hidden`}>
+                <img
+                  src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                  alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                  width={168}
+                  height={168}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )
+          })}
         </div>
-        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60 mx-0.5">VS</span>
-        <div className="flex items-center gap-1">
-          {rightIcons.map((icon, i) => (
-            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden">
-              <img
-                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
-                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
-                width={168}
-                height={168}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
+        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60 mx-1">VS</span>
+        <div className="flex items-center gap-1.5">
+          {rightIcons.map((icon, i) => {
+            const isSmall = icon.size === 'small'
+            return (
+              <div key={i} className={`${isSmall ? 'w-6 h-6' : 'w-12 h-12'} rounded-xl overflow-hidden`}>
+                <img
+                  src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                  alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                  width={168}
+                  height={168}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -1125,11 +1131,7 @@ function PlayerIcons({ left, right }: {
         {left.map((type, i) => (
           <div
             key={i}
-            className={`w-9 h-9 rounded-xl overflow-hidden border-2 ${
-              type === 'human'
-                ? 'border-amber-300 dark:border-amber-500/30'
-                : 'border-slate-300 dark:border-slate-600/40'
-            }`}
+            className="w-9 h-9 rounded-xl overflow-hidden"
           >
             <img
               src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
@@ -1151,11 +1153,7 @@ function PlayerIcons({ left, right }: {
         {right.map((type, i) => (
           <div
             key={i}
-            className={`w-9 h-9 rounded-xl overflow-hidden border-2 ${
-              type === 'human'
-                ? 'border-amber-300 dark:border-amber-500/30'
-                : 'border-slate-300 dark:border-slate-600/40'
-            }`}
+            className="w-9 h-9 rounded-xl overflow-hidden"
           >
             <img
               src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
