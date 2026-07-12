@@ -8,7 +8,6 @@ interface TeamIndicatorProps {
   blackLabel: string
   activeTeam: 'WHITE' | 'BLACK'
   isGameOver: boolean
-  isBotThinking: boolean
   whiteIsBot?: boolean
   blackIsBot?: boolean
 }
@@ -18,7 +17,6 @@ export function TeamIndicator({
   blackLabel,
   activeTeam,
   isGameOver,
-  isBotThinking,
   whiteIsBot = false,
   blackIsBot = false,
 }: TeamIndicatorProps) {
@@ -26,7 +24,7 @@ export function TeamIndicator({
   const blackActive = activeTeam === 'BLACK' && !isGameOver
 
   return (
-    <div className="relative flex items-center justify-center gap-2 sm:gap-3 mb-3">
+    <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3">
       <motion.div
         animate={{
           boxShadow: whiteActive
@@ -71,26 +69,6 @@ export function TeamIndicator({
         )}
         <span className="text-gray-700 dark:text-gray-300 font-semibold text-xs sm:text-sm break-words">{blackLabel}</span>
       </motion.div>
-
-      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-        {isGameOver ? (
-          <span className="text-amber-600 dark:text-amber-400 font-semibold text-xs uppercase tracking-wider">
-            Game Over
-          </span>
-        ) : isBotThinking ? (
-          <motion.span
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="text-blue-400 font-medium text-xs"
-          >
-            Your turn to move
-          </motion.span>
-        ) : (
-          <span className="text-gray-500 text-xs">
-            {activeTeam === 'WHITE' ? 'White to move' : 'Black to move'}
-          </span>
-        )}
-      </div>
     </div>
   )
 }

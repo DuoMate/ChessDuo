@@ -29,7 +29,6 @@ import { MovePlayback, MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
-import { BottomNav } from './BottomNav'
 import { TeamIndicator } from './TeamIndicator'
 import { GameMenu } from './GameMenu'
 import { SettingsPanel } from './SettingsPanel'
@@ -268,9 +267,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
-  const playerId = playerIdFromProps || null
+  const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
+  const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
+
+  useEffect(() => {
+    let active = true
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) setSessionPlayerId(session?.user?.id ?? null)
+    }).catch(() => {
+      // session unavailable — fall back to URL-provided playerId
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setSessionPlayerId(session?.user?.id ?? null)
+    })
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [])
   const teamRef = useRef<string | undefined>(team)
   teamRef.current = team
   const [teamLabels, setTeamLabels] = useState<{ white: string; black: string; blackIsBot: boolean }>({ white: 'White Team', black: 'Black Team', blackIsBot: true })
@@ -1550,7 +1566,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               blackLabel={teamLabels.black}
               activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
               isGameOver={gameState.status === GameStatus.GAME_OVER}
-              isBotThinking={gameState.isBotThinking ?? false}
               blackIsBot={teamLabels.blackIsBot}
             />
           </div>
@@ -1771,16 +1786,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
-
-      {isMobile && (
-        <BottomNav
-          activeOverlay={overlayMode}
-          onProfileClick={() => setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')}
-          onHistoryClick={() => setOverlayMode(overlayMode === 'history' ? 'none' : 'history')}
-          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
-          soundEnabled={soundEnabled}
-        />
-      )}
     </div>
   )
 }
