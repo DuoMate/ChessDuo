@@ -769,7 +769,7 @@ if (!gameMode) {
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
                   onClick={() => setSelectedGameMode('quick')}
-                  leftIcons={[{ type: 'human', avatar: 'ace' as const }]}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'bot' as const }]}
                   rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
                   title="Quick Play"
                   subtitle="You + Bot vs Bot + Bot"
@@ -916,9 +916,9 @@ function GameModeCard({
     >
       {/* Team icons */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden border-2 border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/20">
+            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -932,9 +932,9 @@ function GameModeCard({
           ))}
         </div>
         <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60 mx-0.5">VS</span>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/40">
+            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
