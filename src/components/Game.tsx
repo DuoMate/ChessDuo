@@ -32,6 +32,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveButton } from './ConfirmMoveButton'
 import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
@@ -277,6 +278,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showInsights, setShowInsights] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
@@ -296,6 +298,36 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       subscription.unsubscribe()
     }
   }, [])
+
+  // Fetch the current user's profile (username + Google avatar) when playerId is known
+  useEffect(() => {
+    if (!playerId) {
+      setUserProfile({ username: null, avatarUrl: null })
+      return
+    }
+    let active = true
+    supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) {
+          DEBUG && console.warn('[Profile] Failed to fetch user profile:', error.message)
+          return
+        }
+        if (data) {
+          setUserProfile({ username: data.username || null, avatarUrl: data.avatar_url || null })
+        }
+      })
+      .catch(() => {
+        // profile fetch is non-critical — keep nulls
+      })
+    return () => {
+      active = false
+    }
+  }, [playerId])
   const teamRef = useRef<string | undefined>(team)
   teamRef.current = team
   const [teamLabels, setTeamLabels] = useState<{ white: string; black: string; blackIsBot: boolean }>({ white: 'White Team', black: 'Black Team', blackIsBot: true })
@@ -1494,60 +1526,78 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [executeBotMove])
 
   // Board-page derived state (must come before any early returns — Rules of Hooks)
-  const isPlayerHuman = (id: string): boolean => {
+  // A player is a bot if its id starts with 'bot_', looks like 'botN', or is one of
+  // the offline player1/player2/player3/player4 placeholders.
+  const isOfflineBotId = (id: string): boolean => {
     if (!id) return false
-    if (id.startsWith('bot_')) return false
-    if (/^bot\d+$/i.test(id)) return false
-    if (/^player\d+$/.test(id)) return false
-    return true
+    if (id.startsWith('bot_')) return true
+    if (/^bot\d+$/i.test(id)) return true
+    if (/^player\d+$/.test(id)) return true
+    return false
   }
 
   const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.WHITE) || []
     const labels = teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
+    let botIndex = 0
     return ids.slice(0, 2).map((id, idx) => {
-      const isHuman = isPlayerHuman(id)
+      // In offline mode the local game creates 4 player1-4 placeholders.
+      // The first white player (player1) is always the user, regardless of the
+      // session UUID, so we treat that slot as "you" too.
+      const isBot = isOfflineBotId(id)
+      const isYou = id === playerId || (!isOnline && idx === 0)
       let label: string
-      if (id === playerId) {
-        label = 'You'
-      } else if (isHuman) {
-        // Try teammate-splitter labels[1] (the second human's name)
-        const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'White Team' ? labels[1] : ''
-        label = candidate || (idx === 0 ? 'Teammate' : 'Teammate')
+      let profileImageUrl: string | null = null
+      let avatar: HumanAvatar = 'ace'
+      if (isYou) {
+        label = userProfile.username || 'You'
+        profileImageUrl = userProfile.avatarUrl
+      } else if (isBot) {
+        botIndex += 1
+        label = `Bot ${botIndex}`
       } else {
-        label = `Bot ${idx + 1}`
+        // Online teammate — pull from the teamLabels parser.
+        const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'White Team' ? labels[1] : ''
+        label = candidate || 'Teammate'
+        // Use the teammate's profile image if it was fetched elsewhere; for now keep default avatar.
+        avatar = 'ace'
       }
       return {
         id,
         label,
-        type: isHuman ? 'human' : 'bot',
-        avatar: 'ace' as const,
-        isYou: id === playerId,
+        type: isBot ? 'bot' : 'human',
+        avatar,
+        profileImageUrl,
+        isYou,
         online: true,
         submitted: !!gameState.myPendingOverlay,
       }
     })
-  }, [teamLabels.white, playerId, gameState.myPendingOverlay, isOnline])
+  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
-    return ids.slice(0, 2).map((id, idx) => {
-      const isHuman = isPlayerHuman(id)
+    let botIndex = 0
+    return ids.slice(0, 2).map((id) => {
+      const isBot = isOfflineBotId(id)
       let label: string
-      if (isHuman) {
-        const candidate = labels[idx] && labels[idx] !== 'Black Team' ? labels[idx] : ''
-        label = candidate || `Player ${idx + 1}`
+      if (isBot) {
+        botIndex += 1
+        label = `Bot ${botIndex}`
       } else {
-        label = `Bot ${idx + 1}`
+        // Online opponent — pull from the teamLabels parser
+        const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
+        label = candidate || 'Opponent'
       }
       return {
         id,
         label,
-        type: isHuman ? 'human' : 'bot',
+        type: isBot ? 'bot' : 'human',
         avatar: 'ace' as const,
+        profileImageUrl: null,
         isYou: false,
         online: true,
         submitted: !!gameState.pendingOverlay,
@@ -1732,32 +1782,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onOpenSettings={() => setShowSettings(true)}
             />
           </div>
-        </div>
-
-        {/* Turn status pill */}
-        <div className="flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-semibold">
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            gameState.turnStatus === 'your_turn' ? 'bg-emerald-400 animate-pulse'
-              : gameState.turnStatus === 'waiting_for_teammate' ? 'bg-amber-400 animate-pulse'
-              : gameState.turnStatus === 'evaluating' ? 'bg-purple-400 animate-pulse'
-              : 'bg-slate-500'
-          }`} />
-          <span className={
-            gameState.turnStatus === 'your_turn' ? 'text-emerald-300'
-              : gameState.turnStatus === 'waiting_for_teammate' ? 'text-amber-300'
-              : gameState.turnStatus === 'evaluating' ? 'text-purple-300'
-              : 'text-slate-400'
-          }>
-            {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
-             gameState.turnStatus === 'your_turn' ? 'Your turn' :
-             gameState.turnStatus === 'evaluating' ? 'Picking the best move...' :
-             gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
-             gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
-             'Waiting'}
-            {gameState.turnStatus === 'your_turn' && (
-              <span className="text-slate-400"> &middot; Both teams submit moves</span>
-            )}
-          </span>
         </div>
 
         {/* Chess Board — 80% of viewport */}
