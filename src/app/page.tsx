@@ -33,11 +33,11 @@ interface TimeOption {
 }
 
 const TIME_OPTIONS: TimeOption[] = [
-  { seconds: 180, label: '3' },
-  { seconds: 300, label: '5' },
-  { seconds: 600, label: '10' },
-  { seconds: 900, label: '15' },
-  { seconds: 1800, label: '30' },
+  { seconds: 180, label: '3 min' },
+  { seconds: 300, label: '5 min' },
+  { seconds: 600, label: '10 min' },
+  { seconds: 900, label: '15 min' },
+  { seconds: 1800, label: '30 min' },
 ]
 
 const DIFFICULTY_LEVELS = [
@@ -607,14 +607,14 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
               <div className="text-center mb-6">
                 <div className="text-[42px] mb-2">⚔️</div>
-                <h1 className="text-2xl font-black text-amber-500 tracking-wider">1v1 Duel</h1>
-                <p className="text-xs text-slate-400 mt-1 font-medium">Choose a friend to challenge</p>
+                <h1 className="text-2xl font-black text-amber-600 dark:text-amber-500 tracking-wider">1v1 Duel</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Choose a friend to challenge</p>
               </div>
 
               {duelFriendsLoading ? (
@@ -624,8 +624,8 @@ export default function SetupPage() {
               ) : duelFriends.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-[32px] mb-3">👥</div>
-                  <p className="text-slate-400 text-sm mb-2">No friends yet</p>
-                  <p className="text-[11px] text-slate-500">Add friends from the Friends panel to challenge them</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">No friends yet</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Add friends from the Friends panel to challenge them</p>
                 </div>
               ) : (
                 <div className="space-y-2 mb-6">
@@ -633,15 +633,15 @@ export default function SetupPage() {
                     <button
                       key={friend.friend_id}
                       onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
-                      className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-800 bg-slate-900/60 hover:border-amber-500/40 hover:bg-amber-500/5 transition-all text-left group"
+                      className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all text-left group"
                       style={{ minHeight: '60px' }}
                     >
-                      <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-400 flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
                         {friend.friend_username.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-white truncate">{friend.friend_username}</div>
-                        <div className="text-[11px] text-slate-500">Challenge to a 1v1 duel</div>
+                        <div className="font-semibold text-sm text-slate-900 dark:text-white truncate">{friend.friend_username}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-500">Challenge to a 1v1 duel</div>
                       </div>
                       <span className="text-amber-500 text-lg opacity-0 group-hover:opacity-100 transition-opacity">⚔️</span>
                     </button>
@@ -650,7 +650,7 @@ export default function SetupPage() {
               )}
 
               <div className="text-center">
-                <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-slate-400 hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+                <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
                   ← Back to home
                 </button>
               </div>
@@ -669,16 +669,16 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col">
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
               <div className="text-center mb-6">
                 <div className="mb-2 flex items-center justify-center">
-                  <PlayerIcons left={['human', 'bot']} right={['bot', 'bot']} />
+                  <PlayerIcons left={['human','bot']} right={['bot','bot']} />
                 </div>
-                <h1 className="text-2xl font-black tracking-wider text-amber-500">QUICK PLAY</h1>
-                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-slate-400">Select opponent skill level</p>
+                <h1 className="text-2xl font-black tracking-wider text-amber-600 dark:text-amber-500">QUICK PLAY</h1>
+                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Select opponent skill level</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                 {skillLevels.map((level: SkillLevel) => (
@@ -687,17 +687,17 @@ export default function SetupPage() {
                     onClick={() => setSelectedLevel(level.level)}
                     className={`p-5 rounded-2xl border-2 transition-all duration-200 text-center ${
                       selectedLevel === level.level
-                        ? 'border-amber-500 bg-amber-500/10 shadow-md'
-                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-600 hover:bg-slate-800/60'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 shadow-md'
+                        : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                     }`}
                   >
-                    <div className="text-base font-bold mb-1 text-white">{level.label}</div>
-                    <div className="text-[11px] text-slate-400 font-medium">{level.description}</div>
+                    <div className="text-base font-bold mb-1 text-slate-900 dark:text-white">{level.label}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{level.description}</div>
                   </button>
                 ))}
               </div>
               <div className="text-center mb-4">
-                <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-slate-400 hover:text-white transition-colors underline font-medium">
+                <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
                   How to play?
                 </button>
               </div>
@@ -710,7 +710,7 @@ export default function SetupPage() {
                 </button>
               </div>
               <div className="mt-8 text-center">
-                <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
+                <button onClick={() => setGameMode(null)} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
                   ← Back to home
                 </button>
               </div>
@@ -731,25 +731,25 @@ export default function SetupPage() {
     )
   }
 
-  // ============================================
-  // Home screen — New mockup-based layout
-  // ============================================
-  if (!gameMode) {
-    return (
-      <ErrorBoundary>
-        <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#0a0e1a] text-white">
-          <HeaderBar />
+// ============================================
+// Home screen — New mockup-based layout
+// ============================================
+if (!gameMode) {
+  return (
+    <ErrorBoundary>
+      <div className="relative flex min-h-screen flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white">
+        <HeaderBar />
 
-          <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
-            {/* Time Control */}
-            <div className="mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Time Control</p>
-              <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
-            </div>
+        <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
+          {/* Time Control */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Time Control</p>
+            <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
+          </div>
 
-            {/* Game Mode */}
-            <div className="mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Game Mode</p>
+          {/* Game Mode */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Game Mode</p>
               <div className="space-y-2">
                 <GameModeCard
                   mode="quick"
@@ -782,9 +782,9 @@ export default function SetupPage() {
               </div>
             </div>
 
-            {/* Bot Difficulty */}
-            <div className="mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Bot Difficulty</p>
+          {/* Bot Difficulty */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Bot Difficulty</p>
               <BotDifficultySelector
                 selectedLevel={selectedLevel}
                 onSelect={setSelectedLevel}
@@ -830,12 +830,12 @@ export default function SetupPage() {
 // ============================================
 function HeaderBar() {
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-[#0a0e1a]/90 backdrop-blur-xl">
+    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[#0a0e1a]/90 dark:border-0 backdrop-blur-xl">
       <div className="flex items-center gap-2">
-        <Crown size={28} strokeWidth={1.5} className="text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+        <Crown size={28} strokeWidth={1.5} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
         <h1 className="text-2xl font-black tracking-tight">
-          <span className="text-white">Chess</span>
-          <span className="text-blue-500">Duo</span>
+          <span className="text-slate-900 dark:text-white">Chess</span>
+          <span className="text-blue-600 dark:text-blue-500">Duo</span>
         </h1>
       </div>
     </div>
@@ -854,10 +854,10 @@ function TimePills({ selectedTime, onSelect }: {
         <button
           key={opt.seconds}
           onClick={() => onSelect(opt.seconds)}
-          className={`flex-1 flex items-center justify-center rounded-xl text-lg font-bold transition-all duration-200 ${
+          className={`flex-1 flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${
             selectedTime === opt.seconds
               ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]'
-              : 'bg-slate-900/60 text-slate-300 border border-slate-800 hover:border-slate-700'
+              : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
           }`}
           style={{ minHeight: '48px', minWidth: '48px' }}
         >
@@ -893,10 +893,10 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
         selected
-          ? 'border-blue-500/60 bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
-          : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/60'
+          ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
       style={{ minHeight: '60px' }}
     >
@@ -904,7 +904,7 @@ function GameModeCard({
       <div className="flex items-center gap-1 flex-shrink-0">
         <div className="flex items-center gap-0.5">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-600/20">
+            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-600/20">
               {icon.type === 'human' ? (
                 <ColoredPersonIcon />
               ) : (
@@ -913,10 +913,10 @@ function GameModeCard({
             </div>
           ))}
         </div>
-        <span className="text-xs font-bold text-blue-400/60 mx-0.5">VS</span>
+        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60 mx-0.5">VS</span>
         <div className="flex items-center gap-0.5">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-slate-700/40">
+            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-slate-100 dark:bg-slate-700/40">
               {icon.type === 'human' ? (
                 <ColoredPersonIcon />
               ) : (
@@ -930,10 +930,10 @@ function GameModeCard({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-base text-white">{title}</span>
-          {showStar && <span className="text-amber-400 text-sm">★</span>}
+          <span className="font-bold text-base text-slate-900 dark:text-white">{title}</span>
+          {showStar && <span className="text-amber-500 text-sm">★</span>}
         </div>
-        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
       </div>
 
       {/* Chevron */}
@@ -969,25 +969,25 @@ function BotDifficultySelector({
   }
 
   return (
-    <div className="p-3 rounded-2xl border border-slate-800 bg-slate-900/40 space-y-2.5">
+    <div className="p-3 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 space-y-2.5">
       {/* Difficulty picker row */}
       <div className="flex items-center justify-between gap-2">
         <button
           onClick={goPrev}
-          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-white transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
           aria-label="Previous difficulty"
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 4l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
 
-        <div className="flex items-center gap-2 text-white">
+        <div className="flex items-center gap-2 text-slate-900 dark:text-white">
           <span className="text-xl">{currentDifficulty.icon}</span>
           <span className="font-bold text-base">{currentDifficulty.label}</span>
         </div>
 
         <button
           onClick={goNext}
-          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-700 bg-slate-800/60 text-slate-400 hover:border-slate-600 hover:text-white transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
           aria-label="Next difficulty"
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -996,18 +996,18 @@ function BotDifficultySelector({
 
       {/* Dot indicators */}
       <div className="flex items-center justify-center gap-3">
-        <span className="text-xs text-slate-500">Easy</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Easy</span>
         <div className="flex items-center gap-1.5">
           {Array.from({ length: totalDots }).map((_, i) => (
             <div
               key={i}
               className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                i < filledDots ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]' : 'bg-slate-700 border border-slate-600'
+                i < filledDots ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]' : 'bg-slate-200 border border-slate-300 dark:bg-slate-700 dark:border-slate-600'
               }`}
             />
           ))}
         </div>
-        <span className="text-xs text-slate-500">Hard</span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Hard</span>
       </div>
     </div>
   )
@@ -1044,7 +1044,7 @@ function HomeBottomNav({
   unreadMessages: number
 }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800 bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
         <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
         <NavButton label="History" icon={History} onClick={onHistory} />
@@ -1073,8 +1073,8 @@ function NavButton({
       onClick={onClick}
       className={`relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
         active
-          ? 'text-blue-400'
-          : 'text-slate-500 hover:text-slate-300'
+          ? 'text-blue-600 dark:text-blue-400'
+          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
       }`}
     >
       <div className="relative">
@@ -1126,20 +1126,20 @@ function PlayerIcons({ left, right }: {
             key={i}
             className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
               type === 'human'
-                ? 'bg-amber-500/20 border-amber-500/30'
-                : 'bg-slate-700/50 border-slate-600/40'
+                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
+                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
             }`}
           >
             {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-300" />
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
             }
           </div>
         ))}
       </div>
       <div className="flex flex-col items-center gap-0.5">
-        <Swords size={18} strokeWidth={2} className="text-amber-400/50" />
-        <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">VS</span>
+        <Swords size={18} strokeWidth={2} className="text-amber-500/60 dark:text-amber-400/50" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
       </div>
       <div className="flex items-center gap-1.5">
         {right.map((type, i) => (
@@ -1147,13 +1147,13 @@ function PlayerIcons({ left, right }: {
             key={i}
             className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
               type === 'human'
-                ? 'bg-amber-500/20 border-amber-500/30'
-                : 'bg-slate-700/50 border-slate-600/40'
+                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
+                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
             }`}
           >
             {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-300" />
+              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
+              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
             }
           </div>
         ))}
