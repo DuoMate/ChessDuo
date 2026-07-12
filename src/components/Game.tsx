@@ -34,9 +34,11 @@ import { useSettings } from '@/lib/settings'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveButton } from './ConfirmMoveButton'
-import { MoveResolvedCard, type MoveResolutionData } from './MoveResolvedCard'
+import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
+import { ChatPanel } from './ChatPanel'
+import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
@@ -272,6 +274,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
   const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
   const [showRoundHistory, setShowRoundHistory] = useState(false)
+  const [showInsights, setShowInsights] = useState(false)
+  const [showChat, setShowChat] = useState(false)
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
@@ -1490,15 +1494,33 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [executeBotMove])
 
   // Board-page derived state (must come before any early returns — Rules of Hooks)
+  const isPlayerHuman = (id: string): boolean => {
+    if (!id) return false
+    if (id.startsWith('bot_')) return false
+    if (/^bot\d+$/i.test(id)) return false
+    if (/^player\d+$/.test(id)) return false
+    return true
+  }
+
   const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
-    const ids = (isOnline && onlineGameRef.current ? onlineGameRef.current : gameRef.current)?.getPlayers(Team.WHITE) || []
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    const ids = g?.getPlayers(Team.WHITE) || []
+    const labels = teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
     return ids.slice(0, 2).map((id, idx) => {
-      const isHuman = !id.startsWith('bot_') && !/^bot\d+$/i.test(id) && !/^player\d+$/.test(id)
-      const teammates = teamLabels.white.split(',').map(s => s.trim())
-      const teammateName = teammates[1] ? teammates[1].replace(/[(),]/g, '').trim() : 'Teammate'
+      const isHuman = isPlayerHuman(id)
+      let label: string
+      if (id === playerId) {
+        label = 'You'
+      } else if (isHuman) {
+        // Try teammate-splitter labels[1] (the second human's name)
+        const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'White Team' ? labels[1] : ''
+        label = candidate || (idx === 0 ? 'Teammate' : 'Teammate')
+      } else {
+        label = `Bot ${idx + 1}`
+      }
       return {
         id,
-        label: id === playerId ? 'You' : (isHuman && idx === 0 ? teammateName : 'Teammate'),
+        label,
         type: isHuman ? 'human' : 'bot',
         avatar: 'ace' as const,
         isYou: id === playerId,
@@ -1509,21 +1531,66 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [teamLabels.white, playerId, gameState.myPendingOverlay, isOnline])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
-    const ids = (isOnline && onlineGameRef.current ? onlineGameRef.current : gameRef.current)?.getPlayers(Team.BLACK) || []
-    return ids.slice(0, 2).map((id, idx) => ({
-      id,
-      label: `Bot ${idx + 1}`,
-      type: 'bot',
-      online: true,
-      submitted: !!gameState.pendingOverlay,
-    }))
-  }, [gameState.pendingOverlay, isOnline])
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    const ids = g?.getPlayers(Team.BLACK) || []
+    const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
+    return ids.slice(0, 2).map((id, idx) => {
+      const isHuman = isPlayerHuman(id)
+      let label: string
+      if (isHuman) {
+        const candidate = labels[idx] && labels[idx] !== 'Black Team' ? labels[idx] : ''
+        label = candidate || `Player ${idx + 1}`
+      } else {
+        label = `Bot ${idx + 1}`
+      }
+      return {
+        id,
+        label,
+        type: isHuman ? 'human' : 'bot',
+        avatar: 'ace' as const,
+        isYou: false,
+        online: true,
+        submitted: !!gameState.pendingOverlay,
+      }
+    })
+  }, [teamLabels.black, gameState.pendingOverlay, isOnline])
 
-  const yourMoveForRow: PendingMove | null = heldMove
-    ? { san: heldMove.move.split('-').join(' '), piece: 'P', color: 'white' }
-    : gameState.myPendingOverlay
-      ? { san: gameState.myPendingOverlay.from + gameState.myPendingOverlay.to, piece: gameState.myPendingOverlay.piece, color: gameState.myPendingOverlay.color }
-      : null
+  const yourMoveForRow: PendingMove | null = (() => {
+    if (heldMove) {
+      return { san: heldMove.move.split('-').join(' '), piece: 'P', color: 'white' as const }
+    }
+    // First check the engine's pending-moves map (works for locked moves too).
+    if (playerId) {
+      const g = isOnline ? onlineGameRef.current : gameRef.current
+      const allMoves = g?.getAllPendingMoves() as Map<string, any> | undefined
+      const myPending = allMoves?.get(playerId)
+      if (myPending && myPending.from && myPending.to) {
+        return {
+          san: gameState.selectedMove || `${myPending.from}-${myPending.to}`,
+          from: myPending.from,
+          to: myPending.to,
+          piece: myPending.piece && myPending.piece !== 'unknown' ? myPending.piece : 'P',
+          color: 'white' as const,
+        }
+      }
+    }
+    // Fall back to the myPendingOverlay (only set when not locked).
+    if (gameState.myPendingOverlay) {
+      return {
+        san: gameState.selectedMove || (gameState.myPendingOverlay.from + gameState.myPendingOverlay.to),
+        from: gameState.myPendingOverlay.from,
+        to: gameState.myPendingOverlay.to,
+        piece: gameState.myPendingOverlay.piece,
+        color: gameState.myPendingOverlay.color,
+      }
+    }
+    // Last resort: just show the SAN if we have one but no engine data.
+    if (gameState.selectedMove) {
+      return { san: gameState.selectedMove, piece: 'P', color: 'white' as const }
+    }
+    return null
+  })()
+
   const teammateMoveForRow: PendingMove | null = gameState.pendingOverlay
     ? { san: gameState.pendingOverlay.from + gameState.pendingOverlay.to, piece: gameState.pendingOverlay.piece, color: gameState.pendingOverlay.color }
     : null
@@ -1749,6 +1816,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         )}
 
+        {/* Inline Move Resolved (when accuracyComparison is available) */}
+        {gameState.status === GameStatus.PLAYING && resolutionData && (
+          <div className="px-3 pb-2">
+            <MoveResolvedInline
+              data={resolutionData}
+              onNext={() => setAccuracyComparison(null)}
+            />
+          </div>
+        )}
+
         {/* Confirm Move button (only when setting enabled and game playing) */}
         {gameState.status === GameStatus.PLAYING && (
           <div className="pb-2">
@@ -1765,21 +1842,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <BoardBottomNav
           activeTab={activeBoardTab}
           onTabChange={(t) => {
+            if (t === 'moves') {
+              setActiveBoardTab('game')
+              setShowRoundHistory(true)
+              return
+            }
+            if (t === 'insights') {
+              setActiveBoardTab('game')
+              setShowInsights(true)
+              return
+            }
+            if (t === 'chat') {
+              setActiveBoardTab('game')
+              setShowChat(true)
+              return
+            }
             setActiveBoardTab(t)
-            if (t === 'moves') setShowRoundHistory(true)
-            if (t === 'insights' || t === 'chat') setActiveBoardTab('game')
           }}
           onSurrender={() => gameState.status !== GameStatus.GAME_OVER && setShowResignConfirm(true)}
         />
       </div>
-
-      <MoveResolvedCard
-        open={!!resolutionData}
-        data={resolutionData}
-        onNext={() => {
-          setAccuracyComparison(null)
-        }}
-      />
 
       <RoundHistorySidebar
         open={showRoundHistory}
@@ -1789,6 +1871,58 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           setActiveBoardTab('game')
         }}
       />
+
+      <SlideOver
+        open={showInsights}
+        onClose={() => setShowInsights(false)}
+        title="Move Insights"
+      >
+        {accuracyComparison ? (
+          <div className="text-slate-100">
+            <MoveInsights
+              player1Move={accuracyComparison.player1Move || '?'}
+              player2Move={accuracyComparison.player2Move || '?'}
+              player1Accuracy={accuracyComparison.player1Accuracy || 0}
+              player2Accuracy={accuracyComparison.player2Accuracy || 0}
+              player1Loss={accuracyComparison.player1Loss || 0}
+              player2Loss={accuracyComparison.player2Loss || 0}
+              isSync={accuracyComparison.isSync}
+              winnerId={accuracyComparison.winnerId}
+              bestEngineMove={accuracyComparison.bestEngineMove}
+              bestEngineScore={accuracyComparison.bestEngineScore}
+            />
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <p>Waiting for the first move resolution...</p>
+            <p className="mt-2 text-xs text-slate-500">Insights will appear after both teammates submit a move.</p>
+          </div>
+        )}
+      </SlideOver>
+
+      <SlideOver
+        open={showChat}
+        onClose={() => setShowChat(false)}
+        title="Team Chat"
+      >
+        {playerId ? (
+          <div className="text-slate-300 text-sm">
+            <ChatPanel
+              currentUserId={playerId}
+              friendId={null}
+              friendName="Team"
+              onClose={() => setShowChat(false)}
+            />
+            <p className="mt-3 text-[11px] text-slate-500 text-center">
+              Team chat coming soon — for now, use the Friends tab to chat with players you know.
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <p>Sign in to chat with your teammate.</p>
+          </div>
+        )}
+      </SlideOver>
 
       <SlideOver
         open={overlayMode === 'profile'}

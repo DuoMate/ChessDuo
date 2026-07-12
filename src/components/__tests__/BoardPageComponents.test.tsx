@@ -4,7 +4,7 @@ import { TeamHexagon } from '../TeamHexagon'
 import { BoardTopBar } from '../BoardTopBar'
 import { PendingMovesRow } from '../PendingMovesRow'
 import { ConfirmMoveButton } from '../ConfirmMoveButton'
-import { MoveResolvedCard, type MoveResolutionData } from '../MoveResolvedCard'
+import { MoveResolvedInline, type MoveResolutionData } from '../MoveResolvedInline'
 import { RoundHistorySidebar } from '../RoundHistorySidebar'
 import { BoardBottomNav } from '../BoardBottomNav'
 
@@ -92,7 +92,7 @@ describe('ConfirmMoveButton', () => {
   })
 })
 
-describe('MoveResolvedCard', () => {
+describe('MoveResolvedInline', () => {
   const data: MoveResolutionData = {
     yourMove: { san: 'Nf3', piece: 'N', color: 'white' },
     teammateMove: { san: 'e4', piece: 'P', color: 'black' },
@@ -105,19 +105,23 @@ describe('MoveResolvedCard', () => {
     evaluationImproved: true,
   }
 
-  it('renders nothing when closed', () => {
-    const { container } = render(
-      <MoveResolvedCard open={false} data={data} onNext={jest.fn()} />
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('renders the card when open', () => {
+  it('renders the inline card with data', () => {
     render(
-      <MoveResolvedCard open={true} data={data} onNext={jest.fn()} />
+      <MoveResolvedInline data={data} onNext={jest.fn()} />
     )
     expect(screen.getByText('Move Resolved')).toBeInTheDocument()
     expect(screen.getByText('Next Move')).toBeInTheDocument()
+    expect(screen.getByText('Your Move')).toBeInTheDocument()
+    expect(screen.getByText('Teammate')).toBeInTheDocument()
+  })
+
+  it('calls onNext when the Next Move button is clicked', () => {
+    const onNext = jest.fn()
+    render(
+      <MoveResolvedInline data={data} onNext={onNext} />
+    )
+    fireEvent.click(screen.getByText('Next Move'))
+    expect(onNext).toHaveBeenCalled()
   })
 })
 
