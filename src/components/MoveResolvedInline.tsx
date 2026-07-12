@@ -1,7 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Zap, Trophy, X, Check, ChevronRight } from 'lucide-react'
+import { Zap, Trophy, X, Check, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react'
+import { classifyMove } from '@/lib/moveClassifier'
+import { getAccuracyCategory } from '@/features/shared/accuracy'
 
 export interface MoveResolutionData {
   yourMove: { san: string; piece?: string; color?: 'white' | 'black' }
@@ -130,28 +132,49 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-3 text-xs text-slate-300">
-        <span>Better by</span>
-        <span className={`font-extrabold ${data.scoreDelta > 0 ? 'text-emerald-300' : data.scoreDelta < 0 ? 'text-rose-300' : 'text-slate-300'}`}>
-          {data.scoreDelta > 0 ? '+' : ''}{data.scoreDelta.toFixed(2)}
-        </span>
-      </div>
-      <div className="mt-1 flex items-center justify-center gap-2 text-[10px] text-slate-400">
-        <span>Evaluation after move</span>
-        <span className={`font-bold ${data.evaluationImproved ? 'text-emerald-300' : 'text-rose-300'}`}>
-          {data.evaluationAfter > 0 ? '+' : ''}{data.evaluationAfter.toFixed(2)}
-        </span>
-        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${data.evaluationImproved ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-          {data.evaluationImproved ? 'Improved' : 'Declined'}
-        </span>
-      </div>
+      {(() => {
+        const san = data.engineChoseMove.san || ''
+        const moveClass = classifyMove(san)
+        // Reverse-derive centipawn loss from the winner's accuracy (Lichess model).
+        const acc = data.result === 'you_won' ? data.yourAccuracy : data.teammateAccuracy
+        const cpLoss = acc >= 100 ? 0 : acc <= 0 ? 300 : Math.round(10 + (100 - acc) * (290 / 100))
+        const verdict = getAccuracyCategory(cpLoss)
+        const verdictTone = verdict.color
+        const improved = data.evaluationImproved
+        const delta = data.scoreDelta
+        const evalText = `${data.evaluationAfter > 0 ? '+' : ''}${data.evaluationAfter.toFixed(2)}`
+        const deltaText = `${delta > 0 ? '+' : ''}${delta.toFixed(2)}`
+        return (
+          <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50">
+            <div className="flex items-center justify-center gap-1.5 text-[11px]">
+              <span className="text-base leading-none" aria-hidden>{moveClass.icon}</span>
+              <span className="text-slate-200 font-semibold">{moveClass.description}</span>
+            </div>
+            <div className="mt-1.5 flex items-center justify-center gap-2 text-[10px] flex-wrap">
+              <span
+                className="px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
+                style={{ backgroundColor: `${verdictTone}22`, color: verdictTone }}
+              >
+                {verdict.emoji}{verdict.label}
+              </span>
+              <span className="text-slate-500">·</span>
+              <span className="text-slate-400">Evaluation</span>
+              <span className={`font-bold ${improved ? 'text-emerald-300' : 'text-rose-300'}`}>{evalText}</span>
+              <span className={`flex items-center gap-0.5 font-bold ${improved ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {improved ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                {improved ? 'Improved' : 'Declined'} {deltaText}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
 
       <button
         type="button"
         onClick={onNext}
-        className="mt-4 w-full min-h-[48px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_0_24px_rgba(99,102,241,0.35)] hover:from-blue-400 hover:to-purple-400 transition-all"
+        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-all"
       >
-        Next Move
+        Continue
         <ChevronRight size={18} />
       </button>
     </motion.div>

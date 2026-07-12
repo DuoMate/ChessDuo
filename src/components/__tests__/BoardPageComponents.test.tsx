@@ -112,17 +112,17 @@ describe('MoveResolvedInline', () => {
       <MoveResolvedInline data={data} onNext={jest.fn()} />
     )
     expect(screen.getByText('Move Resolved')).toBeInTheDocument()
-    expect(screen.getByText('Next Move')).toBeInTheDocument()
+    expect(screen.getByText('Continue')).toBeInTheDocument()
     expect(screen.getByText('Your Move')).toBeInTheDocument()
     expect(screen.getByText('Teammate')).toBeInTheDocument()
   })
 
-  it('calls onNext when the Next Move button is clicked', () => {
+  it('calls onNext when the Continue button is clicked', () => {
     const onNext = jest.fn()
     render(
       <MoveResolvedInline data={data} onNext={onNext} />
     )
-    fireEvent.click(screen.getByText('Next Move'))
+    fireEvent.click(screen.getByText('Continue'))
     expect(onNext).toHaveBeenCalled()
   })
 })
