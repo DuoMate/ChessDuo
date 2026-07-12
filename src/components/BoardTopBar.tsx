@@ -2,8 +2,6 @@
 
 import { Crown } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { MatchTimer } from './MatchTimer'
-import { TeamHexagon } from './TeamHexagon'
 import { getAvatarUrl, type HumanAvatar } from '@/features/shared/avatars'
 import { Team } from '@/features/game-engine/gameState'
 
@@ -12,6 +10,7 @@ export interface BoardTopBarPlayer {
   label: string
   type: 'human' | 'bot'
   avatar?: HumanAvatar
+  profileImageUrl?: string | null
   isYou?: boolean
   isHost?: boolean
   online?: boolean
@@ -36,22 +35,43 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
   const dotClass = isWhite
     ? 'bg-blue-400'
     : 'bg-purple-400'
+  const checkClass = isWhite
+    ? 'bg-emerald-500 text-white'
+    : 'bg-emerald-500 text-white'
+
+  const useProfileImage = !!player.profileImageUrl
+  const imageSrc = useProfileImage
+    ? player.profileImageUrl!
+    : getAvatarUrl(player.type, player.avatar)
 
   return (
     <div className="flex flex-col items-center gap-1 min-w-0">
-      <div className={`relative w-11 h-11 rounded-xl overflow-hidden ring-2 ${ringClass} bg-slate-800/40`}>
+      <div className={`relative w-14 h-14 rounded-2xl overflow-hidden ring-2 ${ringClass} bg-slate-800/40`}>
         <img
-          src={getAvatarUrl(player.type, player.avatar)}
+          src={imageSrc}
           alt={player.label}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
           loading="lazy"
           decoding="async"
+          onError={(e) => {
+            const target = e.currentTarget
+            if (target.src !== getAvatarUrl(player.type, player.avatar)) {
+              target.src = getAvatarUrl(player.type, player.avatar)
+            }
+          }}
         />
-        {player.online !== false && (
+        {player.submitted && (
+          <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${checkClass} flex items-center justify-center ring-2 ring-slate-900`}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        )}
+        {player.online !== false && !player.submitted && (
           <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${dotClass} ring-2 ring-slate-900`} />
         )}
       </div>
-      <span className="text-[10px] font-semibold text-slate-200 truncate max-w-[60px]">
+      <span className="text-[11px] font-medium text-slate-300 truncate max-w-[68px]">
         {player.label}
       </span>
     </div>
@@ -68,53 +88,50 @@ export function BoardTopBar({
   currentTurn,
 }: BoardTopBarProps) {
   return (
-    <div className="w-full bg-slate-900/70 backdrop-blur-xl border-b border-white/5 px-3 py-2">
-      <div className="flex items-start justify-between gap-2 max-w-3xl mx-auto">
-        {/* White team — avatars on top, label below */}
-        <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+    <div className="w-full bg-[#0a0e1a] border-b border-white/5 px-3 py-3">
+      <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+        {/* White team — label above avatars */}
+        <div className="flex flex-col items-center gap-1.5 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <Crown size={14} className="text-slate-200 shrink-0" />
+            <span className="text-[11px] font-bold tracking-widest text-slate-200 uppercase">
+              White Team
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             {whitePlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="WHITE" />
             ))}
           </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <Crown size={11} className="text-amber-400 shrink-0" />
-            <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">
-              White Team
-            </span>
-          </div>
         </div>
 
-        {/* Center: decorative hexagons + timer */}
-        <div className="flex items-center gap-1.5 shrink-0 pt-1">
-          <TeamHexagon value={1} team="WHITE" size={28} />
-          <div className="flex flex-col items-center px-1">
-            <MatchTimer
-              seconds={matchTimeRemaining}
-              isActive={matchTimerActive}
-              totalSeconds={totalMatchSeconds}
-            />
-            {roundLabel && (
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 mt-0.5">
-                {roundLabel}
+        {/* Center: timer card only */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border border-slate-700/70 bg-slate-900/60 min-w-[88px]">
+            <div className="flex items-center gap-1.5 text-slate-300">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <polyline points="12 7 12 12 15 14" />
+              </svg>
+              <span className="font-mono text-sm font-bold">
+                {Math.floor(matchTimeRemaining / 60)}:{(matchTimeRemaining % 60).toString().padStart(2, '0')}
               </span>
-            )}
+            </div>
           </div>
-          <TeamHexagon value={2} team="BLACK" size={28} />
         </div>
 
-        {/* Black team — avatars on top, label below */}
-        <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+        {/* Black team — label above avatars */}
+        <div className="flex flex-col items-center gap-1.5 min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold tracking-widest text-slate-200 uppercase">
+              Black Team
+            </span>
+            <Crown size={14} className="text-slate-200 shrink-0" />
+          </div>
           <div className="flex items-center gap-2">
             {blackPlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="BLACK" />
             ))}
-          </div>
-          <div className="flex items-center gap-1 mt-0.5">
-            <Crown size={11} className="text-slate-500 shrink-0" />
-            <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">
-              Black Team
-            </span>
           </div>
         </div>
       </div>
@@ -123,7 +140,7 @@ export function BoardTopBar({
           key={currentTurn}
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center text-[10px] mt-1 text-slate-400"
+          className="text-center text-[10px] mt-1.5 text-slate-400"
         >
           <span className={currentTurn === Team.WHITE ? 'text-blue-400' : 'text-purple-400'}>
             {currentTurn === Team.WHITE ? 'White' : 'Black'} team active
