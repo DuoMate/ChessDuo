@@ -1578,13 +1578,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
     const out: BoardTopBarPlayer[] = []
-    let hasBot = false
     ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       if (isBot) {
-        if (hasBot) return
         out.push({
-          id: 'black-bot',
+          id: `black-bot-${id}`,
           label: 'BlackBot',
           type: 'bot',
           avatar: 'ace' as const,
@@ -1593,7 +1591,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           online: true,
           submitted: !!gameState.pendingOverlay,
         })
-        hasBot = true
       } else {
         const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
         out.push({
