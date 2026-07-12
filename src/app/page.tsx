@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useId } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
@@ -17,7 +17,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { UserRound, Bot, Swords, Zap, Timer, Clock, Crown, ChevronRight, MessageCircle, Play, History, Users, User, Home as HomeIcon, MessageSquare, Settings } from 'lucide-react'
+import { Swords, Crown, ChevronRight, Play, History, Users, User, Home as HomeIcon } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -48,6 +48,20 @@ const DIFFICULTY_LEVELS = [
   { level: 5, label: 'Expert', icon: '♛' },
   { level: 6, label: 'Master', icon: '♚' },
 ]
+
+type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
+type TeamIcon = { type: 'human'; avatar: HumanAvatar } | { type: 'bot' }
+
+const HUMAN_AVATARS: Record<HumanAvatar, string> = {
+  ace: '/avatars/human-ace.webp',
+  nova: '/avatars/human-nova.webp',
+  rex: '/avatars/human-rex.webp',
+  zee: '/avatars/human-zee.webp',
+  blaze: '/avatars/human-blaze.webp',
+  pixel: '/avatars/human-pixel.webp',
+  kai: '/avatars/human-kai.webp',
+}
+const BOT_AVATAR = '/avatars/bot.webp'
 
 export default function SetupPage() {
   const router = useRouter()
@@ -755,7 +769,7 @@ if (!gameMode) {
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
                   onClick={() => setSelectedGameMode('quick')}
-                  leftIcons={[{ type: 'human' as const }, { type: 'bot' as const }]}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }]}
                   rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
                   title="Quick Play"
                   subtitle="You + Bot vs Bot + Bot"
@@ -764,7 +778,7 @@ if (!gameMode) {
                   mode="duo"
                   selected={selectedGameMode === 'duo'}
                   onClick={() => setSelectedGameMode('duo')}
-                  leftIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
                   rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
                   title="Duo"
                   subtitle="You + Friend vs Bot + Bot"
@@ -774,8 +788,8 @@ if (!gameMode) {
                   mode="four"
                   selected={selectedGameMode === 'four'}
                   onClick={() => setSelectedGameMode('four')}
-                  leftIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
-                  rightIcons={[{ type: 'human' as const }, { type: 'human' as const }]}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
+                  rightIcons={[{ type: 'human', avatar: 'rex' as const }, { type: 'human', avatar: 'zee' as const }]}
                   title="Four Players"
                   subtitle="Friends vs Friends"
                 />
@@ -884,8 +898,8 @@ function GameModeCard({
   mode: string
   selected: boolean
   onClick: () => void
-  leftIcons: Array<{ type: 'human' | 'bot' }>
-  rightIcons: Array<{ type: 'human' | 'bot' }>
+  leftIcons: TeamIcon[]
+  rightIcons: TeamIcon[]
   title: string
   subtitle: string
   showStar?: boolean
@@ -898,30 +912,38 @@ function GameModeCard({
           ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
-      style={{ minHeight: '60px' }}
+      style={{ minHeight: '72px' }}
     >
       {/* Team icons */}
       <div className="flex items-center gap-1 flex-shrink-0">
         <div className="flex items-center gap-0.5">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-600/20">
-              {icon.type === 'human' ? (
-                <ColoredPersonIcon />
-              ) : (
-                <span className="text-base">🤖</span>
-              )}
+            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden border-2 border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/20">
+              <img
+                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                width={168}
+                height={168}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>
         <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60 mx-0.5">VS</span>
         <div className="flex items-center gap-0.5">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-7 h-7 rounded-md flex items-center justify-center bg-slate-100 dark:bg-slate-700/40">
-              {icon.type === 'human' ? (
-                <ColoredPersonIcon />
-              ) : (
-                <span className="text-base">🤖</span>
-              )}
+            <div key={i} className="w-12 h-12 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/40">
+              <img
+                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                width={168}
+                height={168}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>
@@ -1091,49 +1113,33 @@ function NavButton({
 }
 
 // ============================================
-// Colored Person Icon Component
-// ============================================
-function ColoredPersonIcon() {
-  const gradientId = useId()
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id={gradientId} x1="12" y1="0" x2="12" y2="24" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FBBF24"/>
-          <stop offset="1" stopColor="#F59E0B"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="8" r="5" fill={`url(#${gradientId})`}/>
-      <path d="M20 21a8 8 0 0 0-16 0" fill="#818CF8"/>
-      <circle cx="12" cy="8" r="5" fill="none" stroke="#D97706" strokeWidth="0.75" opacity="0.3"/>
-    </svg>
-  )
-}
-
-// ============================================
-// Player Icons Component
+// Player Icons Component (offline mode)
 // ============================================
 function PlayerIcons({ left, right }: {
   left: ('human' | 'bot')[]
   right: ('human' | 'bot')[]
 }) {
-  const iconSize = 18
   return (
     <div className="flex items-center gap-2.5">
       <div className="flex items-center gap-1.5">
         {left.map((type, i) => (
           <div
             key={i}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+            className={`w-9 h-9 rounded-xl overflow-hidden border-2 ${
               type === 'human'
-                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
-                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+                ? 'border-amber-300 dark:border-amber-500/30'
+                : 'border-slate-300 dark:border-slate-600/40'
             }`}
           >
-            {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
-            }
+            <img
+              src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
+              alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
+              width={168}
+              height={168}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           </div>
         ))}
       </div>
@@ -1145,16 +1151,21 @@ function PlayerIcons({ left, right }: {
         {right.map((type, i) => (
           <div
             key={i}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center border ${
+            className={`w-9 h-9 rounded-xl overflow-hidden border-2 ${
               type === 'human'
-                ? 'bg-amber-100 border-amber-300 dark:bg-amber-500/20 dark:border-amber-500/30'
-                : 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/40'
+                ? 'border-amber-300 dark:border-amber-500/30'
+                : 'border-slate-300 dark:border-slate-600/40'
             }`}
           >
-            {type === 'human'
-              ? <UserRound size={iconSize} strokeWidth={2} className="text-amber-700 dark:text-amber-400" />
-              : <Bot size={iconSize} strokeWidth={2} className="text-slate-600 dark:text-slate-300" />
-            }
+            <img
+              src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
+              alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
+              width={168}
+              height={168}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-cover"
+            />
           </div>
         ))}
       </div>
