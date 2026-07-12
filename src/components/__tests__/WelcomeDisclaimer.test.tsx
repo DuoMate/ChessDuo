@@ -11,6 +11,7 @@ describe('WelcomeDisclaimer', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
     expect(screen.getByText('ChessDuo')).toBeDefined()
     expect(screen.getByText('Got it!')).toBeDefined()
+    expect(screen.getByText('How it works')).toBeDefined()
   })
 
   it('does not render when open is false', () => {
@@ -44,17 +45,21 @@ describe('WelcomeDisclaimer', () => {
     expect(localStorage.getItem('chessduo_welcome_dismissed')).toBeNull()
   })
 
-  it('shows rules about two players and bot', () => {
+  it('shows Pick/Compare/Play micro cards', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
-    expect(screen.getByText(/you & your teammate/i)).toBeDefined()
-    expect(screen.getByText(/pick your move/i)).toBeDefined()
-    expect(screen.getByText(/better move plays/i)).toBeDefined()
+    expect(screen.getByText('Pick')).toBeDefined()
+    expect(screen.getByText('Compare')).toBeDefined()
+    expect(screen.getByText('Play')).toBeDefined()
   })
 
-  it('shows winner/loser indicators', () => {
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
-    expect(screen.getByText('Winner')).toBeDefined()
-    expect(screen.getByText('Loser')).toBeDefined()
+  it('shows online-specific caption text', () => {
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="online" />)
+    expect(screen.getByText(/two players, one board/i)).toBeDefined()
+  })
+
+  it('shows offline-specific caption text', () => {
+    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
+    expect(screen.getByText(/botmate/i)).toBeDefined()
   })
 
   it('uses custom storageKey when provided', () => {
@@ -84,17 +89,5 @@ describe('WelcomeDisclaimer', () => {
     fireEvent.click(screen.getByText('Got it!'))
 
     expect(localStorage.getItem('chessduo_welcome_dismissed')).toBe('true')
-  })
-
-  it('shows offline-specific text when mode is offline', () => {
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
-    expect(screen.getByText(/you & a bot teammate/i)).toBeDefined()
-    expect(screen.getByText(/two bot opponents/i)).toBeDefined()
-    expect(screen.getByText(/elo level/i)).toBeDefined()
-  })
-
-  it('shows online-specific text when mode is online', () => {
-    render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="online" />)
-    expect(screen.getByText(/you & your teammate/i)).toBeDefined()
   })
 })

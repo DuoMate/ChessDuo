@@ -103,7 +103,7 @@ export function ChessBoard({
 
   useEffect(() => {
     if (boardRef.current) {
-      boardRef.current.setPosition(fen, true)
+      boardRef.current.setPosition(fen, false)
     }
   }, [fen])
 

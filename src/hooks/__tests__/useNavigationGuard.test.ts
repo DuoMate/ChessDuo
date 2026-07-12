@@ -30,12 +30,12 @@ describe('useNavigationGuard', () => {
     expect(onLeave).not.toHaveBeenCalled()
   })
 
-  it('fires onAttemptLeave on beforeunload when enabled', () => {
+  it('does not fire onAttemptLeave on beforeunload (uses browser native dialog)', () => {
     const onLeave = jest.fn()
     renderHook(() => useNavigationGuard({ enabled: true, onAttemptLeave: onLeave }))
 
     window.dispatchEvent(new Event('beforeunload'))
-    expect(onLeave).toHaveBeenCalled()
+    expect(onLeave).not.toHaveBeenCalled()
   })
 
   it('confirmLeave navigates to /', () => {
@@ -59,8 +59,8 @@ describe('useNavigationGuard', () => {
     )
 
     unmount()
-    expect(removeSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function))
-    expect(removeSpy).toHaveBeenCalledWith('popstate', expect.any(Function))
+    expect(removeSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function), { capture: true })
+    expect(removeSpy).toHaveBeenCalledWith('popstate', expect.any(Function), { capture: true })
   })
 
   it('pushes a blocker history entry on mount when enabled', () => {

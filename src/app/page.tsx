@@ -16,9 +16,8 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
-import { GameTour } from '@/components/GameTour'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { UserRound } from 'lucide-react'
+import { Swords, Crown, ChevronRight, Play, History, Users, User, Home as HomeIcon } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -26,29 +25,52 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 export const dynamic = 'force-dynamic'
 
 type GameMode = 'offline' | 'online' | 'fourplayer' | 'duel' | null
+type SelectedGameMode = 'quick' | 'duo' | 'four' | null
 
 interface TimeOption {
   seconds: number
   label: string
-  icon: string
-  description: string
 }
 
 const TIME_OPTIONS: TimeOption[] = [
-  { seconds: 300, label: '5 min', icon: '⚡', description: 'Blitz' },
-  { seconds: 600, label: '10 min', icon: '⏱', description: 'Rapid' },
-  { seconds: 900, label: '15 min', icon: '🕐', description: 'Rapid' },
-  { seconds: 1800, label: '30 min', icon: '🕒', description: 'Classical' },
+  { seconds: 180, label: '3 min' },
+  { seconds: 300, label: '5 min' },
+  { seconds: 600, label: '10 min' },
+  { seconds: 900, label: '15 min' },
+  { seconds: 1800, label: '30 min' },
 ]
+
+const DIFFICULTY_LEVELS = [
+  { level: 1, label: 'Beginner', icon: '♟' },
+  { level: 2, label: 'Novice', icon: '♞' },
+  { level: 3, label: 'Intermediate', icon: '♝' },
+  { level: 4, label: 'Advanced', icon: '♜' },
+  { level: 5, label: 'Expert', icon: '♛' },
+  { level: 6, label: 'Master', icon: '♚' },
+]
+
+type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
+type TeamIcon = { type: 'human'; avatar: HumanAvatar } | { type: 'bot' }
+
+const HUMAN_AVATARS: Record<HumanAvatar, string> = {
+  ace: '/avatars/human-ace.webp',
+  nova: '/avatars/human-nova.webp',
+  rex: '/avatars/human-rex.webp',
+  zee: '/avatars/human-zee.webp',
+  blaze: '/avatars/human-blaze.webp',
+  pixel: '/avatars/human-pixel.webp',
+  kai: '/avatars/human-kai.webp',
+}
+const BOT_AVATAR = '/avatars/bot.webp'
 
 export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
-  const [selectedTime, setSelectedTime] = useState<number | null>(null)
+  const [selectedTime, setSelectedTime] = useState<number>(DEFAULT_TEAM_TIMER_SECONDS)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
-  const [selectedLevel, setSelectedLevel] = useState<number>(4)
+  const [selectedLevel, setSelectedLevel] = useState<number>(3)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [creatingTime, setCreatingTime] = useState<number | null>(null)
@@ -69,9 +91,6 @@ export default function SetupPage() {
     }
     return false
   })
-  const tourCompleted = typeof window !== 'undefined'
-    && localStorage.getItem('chessduo_tour_completed') === 'true'
-  const [showGameTour, setShowGameTour] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
   const skillLevels = getAvailableSkillLevels()
@@ -81,7 +100,9 @@ export default function SetupPage() {
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
+  const [selectedGameMode, setSelectedGameMode] = useState<SelectedGameMode>('duo')
 
   useEffect(() => {
     mountedRef.current = true
@@ -143,8 +164,6 @@ export default function SetupPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Push browser history entry when entering game mode selection screen
-  // so mobile browser back button returns to home screen instead of exiting
   useEffect(() => {
     if (gameMode !== null) {
       window.history.pushState({ gameMode }, '', window.location.href)
@@ -152,7 +171,6 @@ export default function SetupPage() {
 
     const handlePopState = () => {
       if (gameMode !== null) {
-        setSelectedTime(null)
         setGameMode(null)
         setJoinCode('')
       }
@@ -165,7 +183,6 @@ export default function SetupPage() {
     () => {
       if (gameMode !== null) {
         setGameMode(null)
-        setSelectedTime(null)
         setJoinCode('')
         return true
       }
@@ -246,7 +263,7 @@ export default function SetupPage() {
           setJoinCode('')
         }
         setJoinLoading(false)
-        
+
         const url = new URL(window.location.href)
         url.searchParams.delete('code')
         window.history.replaceState(null, '', url.toString())
@@ -279,7 +296,6 @@ export default function SetupPage() {
     }
   }, [playerId])
 
-  // Fetch friends list when entering duel mode
   useEffect(() => {
     if (gameMode === 'duel' && playerId && !duelFriend) {
       setDuelFriendsLoading(true)
@@ -352,7 +368,6 @@ export default function SetupPage() {
     await supabase.auth.signOut()
     localStorage.removeItem('chessduo_history')
     localStorage.removeItem('chessduo_settings')
-    localStorage.removeItem('chessduo_tour_completed')
     clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
@@ -476,6 +491,21 @@ export default function SetupPage() {
     router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
 
+  const handleTwoPlayerClick = () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
+    if (showOnlineDisclaimer) {
+      setShowOnboarding(true)
+    } else {
+      handleStartOnline(selectedTime)
+    }
+  }
+
+  const handleOnboardingDismiss = () => {
+    setShowOnlineDisclaimer(false)
+    setShowOnboarding(false)
+    handleStartOnline(selectedTime)
+  }
+
   const handleStartFourPlayer = async (timeSeconds: number) => {
     if (!playerId) { setShowAuthOverlay(true); return }
     setCreatingTime(timeSeconds)
@@ -532,26 +562,32 @@ export default function SetupPage() {
     }
   }
 
+  const handlePlay = () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
+
+    switch (selectedGameMode) {
+      case 'quick':
+        handleStartOffline()
+        break
+      case 'duo':
+        handleTwoPlayerClick()
+        break
+      case 'four':
+        handleStartFourPlayer(selectedTime)
+        break
+    }
+  }
+
   if (!sessionChecked) return <ErrorBoundary>{null}</ErrorBoundary>
 
-  const showTopBar = !gameMode || (gameMode && selectedTime === null)
-
-  const topBar = showTopBar && (
-    <TopBar
-      playerId={playerId}
-      unreadMessages={unreadMessages}
-      onProfile={() => setProfileOpen(true)}
-      onFriends={() => setFriendsOpen(true)}
-      onSignIn={() => setShowAuthOverlay(true)}
-    />
-  )
+  const showTopBar = !gameMode
 
   const slideOvers = playerId && (
     <>
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
         <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} onSignOut={handleSignOut} />
       </SlideOver>
-        <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
         <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
       </SlideOver>
     </>
@@ -585,350 +621,52 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[42px] mb-2">{"\u2694"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">1v1 Duel</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">Choose a friend to challenge</p>
-            </div>
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
+          <HeaderBar />
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="text-[42px] mb-2">⚔️</div>
+                <h1 className="text-2xl font-black text-amber-600 dark:text-amber-500 tracking-wider">1v1 Duel</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Choose a friend to challenge</p>
+              </div>
 
-            {duelFriendsLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : duelFriends.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-[32px] mb-3">👥</div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">No friends yet</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500">Add friends from the Friends panel to challenge them</p>
-              </div>
-            ) : (
-              <div className="space-y-2 mb-6">
-                {duelFriends.map((friend) => (
-                  <button
-                    key={friend.friend_id}
-                    onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
-                    className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-white/8 bg-white dark:bg-white/[0.03] hover:border-amber-400 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/[0.05] transition-all text-left group"
-                    style={{ minHeight: '60px' }}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                      {friend.friend_username.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-gray-900 dark:text-white truncate">{friend.friend_username}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">Challenge to a 1v1 duel</div>
-                    </div>
-                    <span className="text-amber-500 dark:text-amber-400 text-lg opacity-0 group-hover:opacity-100 transition-opacity">{"\u2694"}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="text-center">
-              <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {"\u2190"} Back to home
-              </button>
-            </div>
-          </div>
-        </div>
-          {slideOvers}
-          {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  // ============================================
-  // Time selection screen
-  // ============================================
-  if (gameMode && selectedTime === null) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        
-        {gameMode === 'online' && showOnlineDisclaimer && !showGameTour && (
-          <WelcomeDisclaimer
-            open={showOnlineDisclaimer}
-            onDismiss={() => {
-              setShowOnlineDisclaimer(false)
-              if (!tourCompleted) {
-                setShowGameTour(true)
-              }
-            }}
-            mode="online"
-          />
-        )}
-        {gameMode === 'online' && showGameTour && (
-          <GameTour
-            open={showGameTour}
-            onComplete={() => {
-              setShowGameTour(false)
-              localStorage.setItem('chessduo_tour_completed', 'true')
-            }}
-            onSkip={() => {
-              setShowGameTour(false)
-              localStorage.setItem('chessduo_tour_completed', 'true')
-            }}
-          />
-        )}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-3">
-              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">
-                {gameMode === 'offline' ? '\u265E' : gameMode === 'online' ? '\u265B\u265B' : gameMode === 'fourplayer' ? '\u265B\u265C' : '\u2694'}
-              </div>
-              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">
-                {gameMode === 'offline' ? 'OFFLINE' : gameMode === 'online' ? 'TWO PLAYER' : gameMode === 'fourplayer' ? 'FOUR PLAYER' : '1v1 DUEL'}
-              </h1>
-              {gameMode === 'duel' && duelFriend ? (
-                <p className="text-[12px] text-amber-500 dark:text-amber-400 font-semibold mt-1">vs {duelFriend.name}</p>
+              {duelFriendsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : duelFriends.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-[32px] mb-3">👥</div>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">No friends yet</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500">Add friends from the Friends panel to challenge them</p>
+                </div>
               ) : (
-                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select game duration</p>
-              )}
-            </div>
-
-            {gameMode === 'online' && (
-              <div className="mb-4">
-                <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Have a room code?</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:border-yellow-500 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-yellow-100 dark:bg-yellow-500/15 border-2 border-yellow-400 dark:border-yellow-500/25 text-yellow-800 dark:text-yellow-400 font-semibold text-sm hover:bg-yellow-200 dark:hover:bg-yellow-500/25 active:bg-yellow-300 dark:active:bg-yellow-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
-                </div>
-                {joinError && <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>}
-              </div>
-            )}
-
-            {gameMode === 'fourplayer' && (
-              <div className="mb-4">
-                <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Have a room code?</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    inputMode="text"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    disabled={joinLoading}
-                    className="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.05] text-gray-900 dark:text-white text-base placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:border-blue-500 focus:outline-none focus:bg-white dark:focus:bg-white/[0.08] disabled:opacity-40 transition-all"
-                    style={{ minHeight: '44px' }}
-                  />
-                  <button
-                    onClick={handleJoinFourPlayerByCode}
-                    disabled={joinLoading || !joinCode.trim()}
-                    className="px-5 py-3 rounded-xl bg-blue-100 dark:bg-blue-500/15 border-2 border-blue-400 dark:border-blue-500/25 text-blue-800 dark:text-blue-400 font-semibold text-sm hover:bg-blue-200 dark:hover:bg-blue-500/25 active:bg-blue-300 dark:active:bg-blue-500/35 disabled:opacity-30 disabled:cursor-not-allowed transition-all whitespace-nowrap"
-                    style={{ minHeight: '44px' }}
-                  >
-                    {joinLoading ? 'Joining...' : 'Join'}
-                  </button>
-                </div>
-                {joinError && <p className="text-red-600 dark:text-red-400 text-[11px] mt-1.5 font-medium">{joinError}</p>}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {TIME_OPTIONS.map((option: TimeOption) => (
-                <button
-                  key={option.seconds}
-                  onClick={() => {
-                    if (gameMode === 'online') {
-                      handleStartOnline(option.seconds)
-                    } else if (gameMode === 'fourplayer') {
-                      handleStartFourPlayer(option.seconds)
-                    } else if (gameMode === 'duel') {
-                      handleStartDuel(option.seconds)
-                    } else {
-                      setSelectedTime(option.seconds)
-                    }
-                  }}
-                  disabled={creatingTime !== null}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    selectedTime === option.seconds
-                      ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-gray-400 dark:hover:border-white/15 hover:bg-gray-100 dark:hover:bg-white/[0.05]'
-                  } ${creatingTime !== null ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
-                  {creatingTime === option.seconds ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">Creating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="text-center mb-4">
-              <p className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">Game ends when time runs out. Winner decided by board advantage.</p>
-            </div>
-
-            <div className="text-center mt-4">
-              <button onClick={() => {
-                if (gameMode === 'duel') {
-                  setDuelFriend(null)
-                  setSelectedTime(null)
-                } else {
-                  setGameMode(null)
-                }
-              }} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {gameMode === 'duel' ? '\u2190 Back to friends' : '\u2190 Back to game mode'}
-              </button>
-            </div>
-          </div>
-        </div>
-          {slideOvers}
-          {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  // ============================================
-  // Home screen — Hero + Play Together + More Modes
-  // ============================================
-  if (!gameMode) {
-    return (
-      <ErrorBoundary>
-        <div className="relative flex min-h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
-          {topBar}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.015]"
-            style={{
-              backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px),
-                                repeating-linear-gradient(90deg, transparent, transparent 44px, rgba(0,0,0,0.08) 44px, rgba(0,0,0,0.08) 45px)`,
-            }}
-          />
-          <div
-            className="pointer-events-none absolute left-1/2 top-5 h-80 w-80 -translate-x-1/2 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.08) 0%, transparent 70%)' }}
-          />
-          <div className="flex flex-1 flex-col items-center justify-start pb-8 pt-8">
-            <div className="relative z-10 w-full max-w-md px-4">
-              <div className="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
-                <div className="mb-8 text-center">
-                  <div className="mb-2 flex items-center justify-center gap-3 text-[48px] drop-shadow-[0_0_20px_rgba(250,204,21,0.3)]">
-                    <span className="text-yellow-600 transition-[font-size] duration-300 dark:text-[36px] dark:text-yellow-400">{"♔"}</span>
-                    <span className="text-[36px] text-gray-800 opacity-70 transition-[font-size] duration-300 dark:text-[48px] dark:text-white dark:opacity-60">{"♚"}</span>
-                  </div>
-                  <h1 className="text-[34px] font-black tracking-wider text-yellow-600 dark:text-yellow-400">ChessDuo</h1>
-                  <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.25em] text-gray-700 dark:text-gray-400">Multiplayer Tag Team Chess</p>
-                </div>
-
-                <div className="mb-8">
-                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                    Play Together
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <ModeCard
-                      icon={"♔♚"}
-                      title="Two Player"
-                      desc="(You + Friend) vs Bots"
-                      tag="Online"
-                      tagColor="blue"
-                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('online') }}
-                    />
-                    <ModeCard
-                      icon={"♔♔♚♚"}
-                      title="Four Player"
-                      desc="2 Friends vs 2 Friends"
-                      tag="Online Lobby"
-                      tagColor="blue"
-                      onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('fourplayer') }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                    More Modes
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <ModeButton icon={"♞"} title="Offline Tag Team" desc="You + Bot vs Bots" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('offline') }} />
-                    <ModeButton icon={"⚔"} title="1v1 Duel" desc="Challenge a Friend" onClick={() => { if (!playerId) { setShowAuthOverlay(true); return } setGameMode('duel') }} />
-                  </div>
-                </div>
-
-                {playerId && (
-                  <div className="mb-6">
-                    <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-800 dark:text-gray-400">
-                      Join a Room
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={joinCode}
-                        onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(null) }}
-                        placeholder="Enter room code"
-                        maxLength={8}
-                        inputMode="text"
-                        autoCapitalize="characters"
-                        autoCorrect="off"
-                        disabled={joinLoading}
-                        className="flex-1 min-w-0 rounded-xl border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-500 focus:border-yellow-500 focus:bg-white focus:outline-none disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:placeholder:text-gray-500 dark:focus:border-yellow-500/60 dark:focus:bg-white/[0.08]"
-                        style={{ minHeight: '44px' }}
-                      />
-                      <button
-                        onClick={handleJoinByCode}
-                        disabled={joinLoading || !joinCode.trim()}
-                        className="whitespace-nowrap rounded-xl border-2 border-yellow-400 bg-yellow-100 px-5 py-3 text-sm font-semibold text-yellow-800 transition-all hover:bg-yellow-200 active:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-30 dark:border-yellow-500/25 dark:bg-yellow-500/15 dark:text-yellow-400 dark:hover:bg-yellow-500/25 dark:active:bg-yellow-500/35"
-                        style={{ minHeight: '44px' }}
-                      >
-                        {joinLoading ? 'Joining...' : 'Join'}
-                      </button>
-                    </div>
-                    {joinError && (
-                      <p className="mt-1.5 text-[11px] font-medium text-red-600 dark:text-red-400">{joinError}</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-center gap-6 border-t border-slate-200/80 pt-4 text-[11px] dark:border-slate-700/70">
-                  <button onClick={() => router.push('/history')} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400">
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                    History
-                  </button>
-                  <button onClick={() => router.push('/premium')} className="flex min-h-[44px] items-center gap-1 font-semibold text-yellow-600 transition-all hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300">
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                    Premium
-                  </button>
-                  {!playerId && (
-                    <button onClick={() => setShowAuthOverlay(true)} className="flex min-h-[44px] items-center gap-1 font-medium text-gray-700 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400">
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                      Sign In
+                <div className="space-y-2 mb-6">
+                  {duelFriends.map((friend) => (
+                    <button
+                      key={friend.friend_id}
+                      onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
+                      className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all text-left group"
+                      style={{ minHeight: '60px' }}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
+                        {friend.friend_username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-slate-900 dark:text-white truncate">{friend.friend_username}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-500">Challenge to a 1v1 duel</div>
+                      </div>
+                      <span className="text-amber-500 text-lg opacity-0 group-hover:opacity-100 transition-opacity">⚔️</span>
                     </button>
-                  )}
+                  ))}
                 </div>
+              )}
+
+              <div className="text-center">
+                <button onClick={() => { setGameMode(null); setDuelFriend(null); setDuelFriends([]) }} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
+                  ← Back to home
+                </button>
               </div>
             </div>
           </div>
@@ -945,53 +683,55 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[36px] mb-1 drop-shadow-[0_0_16px_rgba(250,204,21,0.15)]">{"\u265E"}</div>
-              <h1 className="text-2xl font-black tracking-wider text-yellow-600 dark:text-yellow-400">OFFLINE</h1>
-              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">Select opponent skill level</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-              {skillLevels.map((level: SkillLevel) => (
-                <button
-                  key={level.level}
-                  onClick={() => setSelectedLevel(level.level)}
-                  className={`p-5 rounded-xl border-2 transition-all duration-200 text-center ${
-                    selectedLevel === level.level
-                      ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.1)]'
-                      : 'border-gray-300 dark:border-white/8 bg-gray-50 dark:bg-white/[0.03] hover:border-gray-400 dark:hover:border-white/15 hover:bg-gray-100 dark:hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <div className="text-base font-bold mb-1 text-gray-900 dark:text-white">{level.label}</div>
-                  <div className="text-[11px] text-gray-700 dark:text-gray-400 font-medium">{level.description}</div>
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
+          <HeaderBar />
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="mb-2 flex items-center justify-center">
+                  <PlayerIcons left={['human','bot']} right={['bot','bot']} />
+                </div>
+                <h1 className="text-2xl font-black tracking-wider text-amber-600 dark:text-amber-500">QUICK PLAY</h1>
+                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Select opponent skill level</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                {skillLevels.map((level: SkillLevel) => (
+                  <button
+                    key={level.level}
+                    onClick={() => setSelectedLevel(level.level)}
+                    className={`p-5 rounded-2xl border-2 transition-all duration-200 text-center ${
+                      selectedLevel === level.level
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 shadow-md'
+                        : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="text-base font-bold mb-1 text-slate-900 dark:text-white">{level.label}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{level.description}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="text-center mb-4">
+                <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
+                  How to play?
                 </button>
-              ))}
-            </div>
-            <div className="text-center mb-4">
-              <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors underline font-medium">
-                How to play?
-              </button>
-            </div>
-            <div className="text-center">
-              <button
-                onClick={handleStartOffline}
-                className="px-10 py-3 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold rounded-xl text-base transition-colors shadow-md dark:shadow-[0_0_20px_rgba(250,204,21,0.15)]"
-              >
-                Start Game
-              </button>
-            </div>
-            <div className="mt-8 text-center">
-              <button onClick={() => setSelectedTime(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
-                {"\u2190"} Back to time
-              </button>
+              </div>
+              <div className="text-center">
+                <button
+                  onClick={handleStartOffline}
+                  className="px-10 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-2xl text-base transition-colors shadow-md"
+                >
+                  Start Game
+                </button>
+              </div>
+              <div className="mt-8 text-center">
+                <button onClick={() => setGameMode(null)} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-4 py-2">
+                  ← Back to home
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-        {slideOvers}
-        {authOverlay}
+          {slideOvers}
+          {authOverlay}
           {showOfflineDisclaimer && (
             <WelcomeDisclaimer
               open={showOfflineDisclaimer}
@@ -1005,146 +745,92 @@ export default function SetupPage() {
     )
   }
 
-  // ============================================
-  // Online mode — auto-creates room from time selection
-  // This code path is a fallback if selectedTime is somehow set
-  // ============================================
-  if (gameMode === 'online') {
-    if (!playerId) {
-      return (
-        <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white">
-            {topBar}
-            <div className="absolute top-4 left-4 z-10">
-              <button onClick={() => setSelectedTime(null)} className="text-gray-600 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 text-sm transition-colors">
-                {"\u2190"} Back
-              </button>
-            </div>
-            <Auth onAuthComplete={handleAuthComplete} />
-          </div>
-        </ErrorBoundary>
-      )
-    }
+// ============================================
+// Home screen — New mockup-based layout
+// ============================================
+if (!gameMode) {
+  return (
+    <ErrorBoundary>
+      <div className="relative flex min-h-screen flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white">
+        <HeaderBar />
 
-    // Auto-create room and navigate to game
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center">
-          {topBar}
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-amber-600 dark:text-amber-400 text-sm">Creating room...</p>
+        <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
+          {/* Time Control */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Time Control</p>
+            <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
           </div>
+
+          {/* Game Mode */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Game Mode</p>
+              <div className="space-y-2">
+                <GameModeCard
+                  mode="quick"
+                  selected={selectedGameMode === 'quick'}
+                  onClick={() => setSelectedGameMode('quick')}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'bot' as const }]}
+                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  title="Quick Play"
+                  subtitle="You + Bot vs Bot + Bot"
+                />
+                <GameModeCard
+                  mode="duo"
+                  selected={selectedGameMode === 'duo'}
+                  onClick={() => setSelectedGameMode('duo')}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
+                  rightIcons={[{ type: 'bot' as const }, { type: 'bot' as const }]}
+                  title="Duo"
+                  subtitle="You + Friend vs Bot + Bot"
+                  showStar
+                />
+                <GameModeCard
+                  mode="four"
+                  selected={selectedGameMode === 'four'}
+                  onClick={() => setSelectedGameMode('four')}
+                  leftIcons={[{ type: 'human', avatar: 'ace' as const }, { type: 'human', avatar: 'nova' as const }]}
+                  rightIcons={[{ type: 'human', avatar: 'rex' as const }, { type: 'human', avatar: 'zee' as const }]}
+                  title="Four Players"
+                  subtitle="Friends vs Friends"
+                />
+              </div>
+            </div>
+
+          {/* Bot Difficulty */}
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Bot Difficulty</p>
+              <BotDifficultySelector
+                selectedLevel={selectedLevel}
+                onSelect={setSelectedLevel}
+              />
+            </div>
+
+            {/* Play Button */}
+            <PlayButton onClick={handlePlay} />
+
+            {/* Error message */}
+            {joinError && (
+              <p className="mt-3 text-center text-xs font-medium text-red-400">{joinError}</p>
+            )}
+          </div>
+
+          {/* Bottom Navigation */}
+          <HomeBottomNav
+            onProfile={() => setProfileOpen(true)}
+            onHistory={() => router.push('/history')}
+            onFriends={() => setFriendsOpen(true)}
+            unreadMessages={unreadMessages}
+          />
+
           {slideOvers}
           {authOverlay}
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  // ============================================
-  // Four Player mode — create lobby for 2v2 humans
-  // ============================================
-  if (gameMode === 'fourplayer') {
-    if (!playerId) {
-      return (
-        <ErrorBoundary>
-          <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white">
-            {topBar}
-            <div className="absolute top-4 left-4 z-10">
-              <button onClick={() => setGameMode(null)} className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm transition-colors font-medium min-h-[44px] px-3">
-                {"\u2190"} Back
-              </button>
-            </div>
-            <Auth onAuthComplete={handleAuthComplete} />
-          </div>
-        </ErrorBoundary>
-      )
-    }
-
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col">
-          {topBar}
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="text-[42px] mb-2">{"\u265B\u265C"}</div>
-              <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">Four Player</h1>
-              <p className="text-[12px] text-gray-700 dark:text-gray-400 mt-1 font-medium">2 Friends vs 2 Friends</p>
-            </div>
-
-            <div className="bg-blue-50 dark:bg-white/[0.04] border-2 border-blue-200 dark:border-white/10 rounded-2xl p-6 mb-6">
-              <div className="text-center mb-4">
-                <div className="text-[11px] font-bold text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase">How it works</div>
-              </div>
-              <div className="space-y-3 text-sm text-gray-800 dark:text-gray-300 font-medium">
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
-                  <span>Create a room and get a shareable code</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-                  <span>Share the code with 3 friends</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                  <span>All 4 players join and pick teams</span>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
-                  <span>Game starts when all seats are filled</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center mb-4">
-              <p className="text-[11px] text-gray-800 dark:text-gray-400 tracking-[0.15em] uppercase mb-2 font-semibold">Select game duration</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {TIME_OPTIONS.map((option) => (
-                <button
-                  key={option.seconds}
-                  onClick={() => handleStartFourPlayer(option.seconds)}
-                  disabled={creatingTime !== null}
-                   className={`p-5 rounded-2xl border transition-all duration-200 text-center ${
-                      creatingTime === option.seconds
-                        ? 'border-amber-400 bg-amber-500/10 shadow-sm'
-                        : 'border-slate-200/80 bg-white/85 shadow-sm hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
-                    } ${creatingTime !== null && creatingTime !== option.seconds ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  {creatingTime === option.seconds ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">Creating...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-[28px] mb-1.5">{option.icon}</div>
-                      <div className="text-lg font-bold mb-0.5 text-slate-900 dark:text-white">{option.label}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{option.description}</div>
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {joinError && (
-              <div className="mb-4 p-3 rounded-2xl bg-rose-100/80 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-sm text-center font-medium">
-                {joinError}
-              </div>
-            )}
-
-            <div className="text-center">
-              <button onClick={() => setGameMode(null)} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-sm transition-colors min-h-[44px] px-4 py-2 font-medium">
-                {"\u2190"} Back to home
-              </button>
-            </div>
-          </div>
-        </div>
-        {slideOvers}
-          {authOverlay}
+          {showOnboarding && (
+            <WelcomeDisclaimer
+              open={showOnboarding}
+              onDismiss={handleOnboardingDismiss}
+              mode="online"
+            />
+          )}
         </div>
       </ErrorBoundary>
     )
@@ -1154,127 +840,326 @@ export default function SetupPage() {
 }
 
 // ============================================
-// Mode Card Component (for Play Together section)
+// Header Bar Component
 // ============================================
-function ModeCard({ icon, title, desc, tag, tagColor, onClick }: {
-  icon: string; title: string; desc: string; tag: string; tagColor: 'blue' | 'green' | 'pink'; onClick: () => void
+function HeaderBar() {
+  return (
+    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[#0a0e1a]/90 dark:border-0 backdrop-blur-xl">
+      <div className="flex items-center gap-2">
+        <Crown size={28} strokeWidth={1.5} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+        <h1 className="text-2xl font-black tracking-tight">
+          <span className="text-slate-900 dark:text-white">Chess</span>
+          <span className="text-blue-600 dark:text-blue-500">Duo</span>
+        </h1>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Time Pills Component
+// ============================================
+function TimePills({ selectedTime, onSelect }: {
+  selectedTime: number; onSelect: (seconds: number) => void
 }) {
-  const tagStyles = {
-    blue: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
-    green: 'bg-green-100 dark:bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
-    pink: 'bg-pink-100 dark:bg-pink-500/15 text-pink-700 dark:text-pink-400 border-pink-200 dark:border-pink-500/20',
-  }
+  return (
+    <div className="flex gap-2">
+      {TIME_OPTIONS.map((opt) => (
+        <button
+          key={opt.seconds}
+          onClick={() => onSelect(opt.seconds)}
+          className={`flex-1 flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${
+            selectedTime === opt.seconds
+              ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]'
+              : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
+          }`}
+          style={{ minHeight: '48px', minWidth: '48px' }}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ============================================
+// Game Mode Card Component
+// ============================================
+function GameModeCard({
+  mode,
+  selected,
+  onClick,
+  leftIcons,
+  rightIcons,
+  title,
+  subtitle,
+  showStar = false,
+}: {
+  mode: string
+  selected: boolean
+  onClick: () => void
+  leftIcons: TeamIcon[]
+  rightIcons: TeamIcon[]
+  title: string
+  subtitle: string
+  showStar?: boolean
+}) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-[0_16px_40px_rgba(245,158,11,0.12)] dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40"
+      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+        selected
+          ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
+      }`}
+      style={{ minHeight: '72px' }}
     >
-       <div className="text-[28px] mb-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.2)] dark:drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
-        {icon}
+      {/* Team icons — fixed-width column so text always starts at the same x */}
+      <div className="w-[200px] flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5">
+          {leftIcons.map((icon, i) => (
+            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+              <img
+                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                width={160}
+                height={168}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ))}
+        </div>
+        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
+        <div className="flex items-center gap-1.5">
+          {rightIcons.map((icon, i) => (
+            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+              <img
+                src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
+                alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
+                width={160}
+                height={168}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="text-center">
-          <div className="font-bold text-[14px] text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-          {title}
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-base text-slate-900 dark:text-white">{title}</span>
+          {showStar && <span className="text-amber-500 text-sm">★</span>}
         </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
-        </div>
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${tagStyles[tagColor]}`}>
-        {tag}
-      </span>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
+      </div>
+
+      {/* Chevron */}
+      <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
     </button>
   )
 }
 
 // ============================================
-// Mode Button Component
+// Bot Difficulty Selector Component
 // ============================================
-function ModeButton({ icon, title, desc, onClick, highlight }: {
-  icon: string; title: string; desc: string; onClick: () => void; highlight?: boolean
+function BotDifficultySelector({
+  selectedLevel,
+  onSelect,
+}: {
+  selectedLevel: number
+  onSelect: (level: number) => void
+}) {
+  const currentDifficulty = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel) || DIFFICULTY_LEVELS[2]
+  const totalDots = 6
+  const filledDots = selectedLevel
+
+  const goPrev = () => {
+    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
+    const prev = idx > 0 ? DIFFICULTY_LEVELS[idx - 1].level : DIFFICULTY_LEVELS[DIFFICULTY_LEVELS.length - 1].level
+    onSelect(prev)
+  }
+
+  const goNext = () => {
+    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
+    const next = idx < DIFFICULTY_LEVELS.length - 1 ? DIFFICULTY_LEVELS[idx + 1].level : DIFFICULTY_LEVELS[0].level
+    onSelect(next)
+  }
+
+  return (
+    <div className="p-3 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 space-y-2.5">
+      {/* Difficulty picker row */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={goPrev}
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
+          aria-label="Previous difficulty"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 4l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+
+        <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+          <span className="text-xl">{currentDifficulty.icon}</span>
+          <span className="font-bold text-base">{currentDifficulty.label}</span>
+        </div>
+
+        <button
+          onClick={goNext}
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
+          aria-label="Next difficulty"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex items-center justify-center gap-3">
+        <span className="text-xs text-slate-400 dark:text-slate-500">Easy</span>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: totalDots }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                i < filledDots ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]' : 'bg-slate-200 border border-slate-300 dark:bg-slate-700 dark:border-slate-600'
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Hard</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// Play Button Component
+// ============================================
+function PlayButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-black text-xl tracking-wider transition-all duration-200 shadow-[0_0_24px_rgba(16,185,129,0.3)] hover:shadow-[0_0_32px_rgba(16,185,129,0.4)] active:scale-[0.98]"
+      style={{ minHeight: '56px' }}
+    >
+      <Play size={24} fill="currentColor" />
+      PLAY
+    </button>
+  )
+}
+
+// ============================================
+// Home Bottom Navigation Component
+// ============================================
+function HomeBottomNav({
+  onProfile,
+  onHistory,
+  onFriends,
+  unreadMessages,
+}: {
+  onProfile: () => void
+  onHistory: () => void
+  onFriends: () => void
+  unreadMessages: number
+}) {
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+        <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
+        <NavButton label="History" icon={History} onClick={onHistory} />
+        <NavButton label="Friends" icon={Users} onClick={onFriends} badge={unreadMessages} />
+        <NavButton label="Profile" icon={User} onClick={onProfile} />
+      </div>
+    </nav>
+  )
+}
+
+function NavButton({
+  label,
+  icon: Icon,
+  active = false,
+  onClick,
+  badge = 0,
+}: {
+  label: string
+  icon: typeof HomeIcon
+  active?: boolean
+  onClick: () => void
+  badge?: number
 }) {
   return (
     <button
       onClick={onClick}
-      className={`group flex items-center gap-3.5 rounded-[24px] border p-[18px] text-left shadow-sm transition-all duration-200 ${
-        highlight
-          ? 'border-amber-500/20 bg-amber-500/10 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-amber-500/20 dark:bg-amber-500/10 dark:hover:border-amber-400'
-          : 'border-slate-200/80 bg-white/85 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/80 dark:hover:border-amber-500/40'
+      className={`relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
+        active
+          ? 'text-blue-600 dark:text-blue-400'
+          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
       }`}
     >
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-[28px] ${
-        highlight ? 'bg-amber-500/15 border border-amber-500/20 dark:border-amber-500/25 drop-shadow-[0_0_8px_rgba(251,191,36,0.2)]' : 'bg-amber-500/10 border border-amber-500/20 dark:border-amber-500/20 drop-shadow-[0_0_8px_rgba(251,191,36,0.15)]'
-      }`}>
-        {icon}
+      <div className="relative">
+        <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold rounded-full px-1">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </div>
-      <div className="flex-1">
-          <div className={`font-bold text-[15px] ${highlight ? 'text-amber-700 dark:text-amber-400 group-hover:text-amber-800 dark:group-hover:brightness-110' : 'text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400'} transition-all`}>
-          {title}
-        </div>
-        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{desc}</div>
-      </div>
-      <span className="text-base text-amber-600 dark:text-amber-400 opacity-40 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-60 transition-opacity">{"\u25B8"}</span>
+      <span className="text-[11px] leading-none">{label}</span>
     </button>
   )
 }
 
 // ============================================
-// Top Bar Component
+// Player Icons Component (offline mode)
 // ============================================
-function TopBar({
-  playerId, unreadMessages, onProfile, onFriends, onSignIn,
-}: {
-  playerId: string | null
-  unreadMessages: number
-  onProfile: () => void
-  onFriends: () => void
-  onSignIn: () => void
+function PlayerIcons({ left, right }: {
+  left: ('human' | 'bot')[]
+  right: ('human' | 'bot')[]
 }) {
-  const { theme, setTheme } = useSettings()
   return (
-    <div className="sticky top-0 z-30 flex items-center px-4 py-2 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 dark:bg-slate-950/80 dark:border-slate-700/70">
-      <div className="flex-1 flex items-center">
-        <button
-          onClick={() => playerId ? onProfile() : onSignIn()}
-          className="min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-            <polyline points="10 17 15 12 10 7"/>
-            <line x1="15" y1="12" x2="3" y2="12"/>
-          </svg>
-          <span className="text-sm font-medium">{playerId ? 'Profile' : 'Sign In'}</span>
-        </button>
-      </div>
-
-        <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-slate-100 p-1 transition-colors dark:border-slate-700/70 dark:bg-slate-800"
-            aria-label="Toggle theme"
+    <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5">
+        {left.map((type, i) => (
+          <div
+            key={i}
+            className="w-10 h-10 rounded-full overflow-hidden"
           >
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme !== 'dark' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>
-              Light
-            </span>
-            <span className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-all ${theme === 'dark' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400'}`}>
-              Dark
-            </span>
-          </button>
-
-      <div className="flex-1 flex items-center justify-end">
-      {playerId ? (
-        <button
-          onClick={onFriends}
-          className="relative min-h-[44px] min-w-[44px] flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 px-2"
-        >
-          <UserRound size={18} />
-          <span className="text-sm hidden sm:inline font-medium">Friends</span>
-          {unreadMessages > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-rose-500 text-white text-[11px] font-bold rounded-full px-1">
-              {unreadMessages > 99 ? '99+' : unreadMessages}
-            </span>
-          )}
-        </button>
-      ) : (
-        <div className="min-w-[44px]" />
-      )}
+            <img
+              src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
+              alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
+              width={168}
+              height={168}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col items-center gap-0.5">
+        <Swords size={18} strokeWidth={2} className="text-amber-500/60 dark:text-amber-400/50" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        {right.map((type, i) => (
+          <div
+            key={i}
+            className="w-10 h-10 rounded-full overflow-hidden"
+          >
+            <img
+              src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
+              alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
+              width={168}
+              height={168}
+              loading="lazy"
+              decoding="async"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        ))}
       </div>
     </div>
   )

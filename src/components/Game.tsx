@@ -14,10 +14,8 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
-import { MatchTimer } from './MatchTimer'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
-import { AccuracyBottomSheet } from './AccuracyBottomSheet'
 import { AnalyzingIndicator } from './AnalyzingIndicator'
 import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
@@ -25,16 +23,23 @@ import { GameOnOverlay } from './GameOnOverlay'
 import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
-import { MovePlayback, MoveEntry } from './MovePlayback'
+import type { MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
-import { BottomNav } from './BottomNav'
-import { TeamIndicator } from './TeamIndicator'
 import { GameMenu } from './GameMenu'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/lib/settings'
+import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { type HumanAvatar } from '@/features/shared/avatars'
+import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
+import { ConfirmMoveButton } from './ConfirmMoveButton'
+import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
+import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
+import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
+import { ChatPanel } from './ChatPanel'
+import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
@@ -82,7 +87,6 @@ interface GameState {
 
 const DEBUG = process.env.NODE_ENV === 'development'
 
-const boardMaxStyle = { maxWidth: 'min(100vw - 2rem, calc(100vh - 14rem), 600px)' } as const
 const PIECE_SYMBOLS: Record<string, string> = {
   'p': '♟',
   'n': '♞',
@@ -247,7 +251,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const isMobile = useIsMobile()
 
   useNavigationGuard({
-    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY,
+    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING,
     onAttemptLeave: () => setShowLeaveModal(true),
   })
 
@@ -268,9 +272,62 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
-  const playerId = playerIdFromProps || null
+  const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
+  const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
+  const [showRoundHistory, setShowRoundHistory] = useState(false)
+  const [showInsights, setShowInsights] = useState(false)
+  const [showChat, setShowChat] = useState(false)
+  const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
+  const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
+  const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
+
+  useEffect(() => {
+    let active = true
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active) setSessionPlayerId(session?.user?.id ?? null)
+    }).catch(() => {
+      // session unavailable — fall back to URL-provided playerId
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setSessionPlayerId(session?.user?.id ?? null)
+    })
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Fetch the current user's profile (username + Google avatar) when playerId is known
+  useEffect(() => {
+    if (!playerId) {
+      setUserProfile({ username: null, avatarUrl: null })
+      return
+    }
+    let active = true
+    supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) {
+          DEBUG && console.warn('[Profile] Failed to fetch user profile:', error.message)
+          return
+        }
+        if (data) {
+          setUserProfile({ username: data.username || null, avatarUrl: data.avatar_url || null })
+        }
+      })
+      .catch(() => {
+        // profile fetch is non-critical — keep nulls
+      })
+    return () => {
+      active = false
+    }
+  }, [playerId])
   const teamRef = useRef<string | undefined>(team)
   teamRef.current = team
   const [teamLabels, setTeamLabels] = useState<{ white: string; black: string; blackIsBot: boolean }>({ white: 'White Team', black: 'Black Team', blackIsBot: true })
@@ -1314,25 +1371,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           return
         }
 
-        // Track move comparison for offline games (online handled in setOnStateChange callback)
-        const comp = g.lastMoveComparison as MoveComparison | null
-        if (comp && (moveHistoryRef.current.length === 0 ||
-            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
-          const entry: MoveEntry = {
-            turn: moveHistoryRef.current.length + 1,
-            team: currentTurn,
-            winningMove: comp.winningMove,
-            winningMoveUci: comp.winningMove || '',
-            shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
-            shadowMoveUci: '',
-            isSync: comp.isSync,
-            player1Accuracy: comp.player1Accuracy,
-            player2Accuracy: comp.player2Accuracy,
-            fenAfter: g.board.fen(),
-          }
-          moveHistoryRef.current = [...moveHistoryRef.current, entry]
-        }
-
         const newTurn = g.currentTurn
         pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK)
 
@@ -1377,6 +1415,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [gameState.status, tickMatchTimer, matchTimerStarted])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
+    if (settings.confirmMove) {
+      setHeldMove({ move: uciMove, promotion })
+      return
+    }
     if (promotion) {
       if (settings.autoQueen) {
         executeMove(uciMove, 'q')
@@ -1390,7 +1432,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } else {
       executeMove(uciMove)
     }
-  }, [executeMove, settings.autoQueen])
+  }, [executeMove, settings.autoQueen, settings.confirmMove])
+
+  const handleConfirmHeldMove = useCallback(() => {
+    if (!heldMove) return
+    const { move, promotion } = heldMove
+    setHeldMove(null)
+    if (promotion) {
+      if (settings.autoQueen) {
+        executeMove(move, 'q')
+        return
+      }
+      const [from, to] = move.split('-')
+      setGameState(prev => ({ ...prev, pendingPromotion: { from, to } }))
+    } else {
+      executeMove(move)
+    }
+  }, [heldMove, executeMove, settings.autoQueen])
+
+  const handleCancelHeldMove = useCallback(() => {
+    setHeldMove(null)
+  }, [])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
     if (gameState.pendingPromotion) {
@@ -1444,6 +1506,185 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [executeBotMove])
 
+  // Board-page derived state (must come before any early returns — Rules of Hooks)
+  // A player is a bot if its id starts with 'bot_', looks like 'botN', or is one of
+  // the offline player1/player2/player3/player4 placeholders.
+  const isOfflineBotId = (id: string): boolean => {
+    if (!id) return false
+    if (id.startsWith('bot_')) return true
+    if (/^bot\d+$/i.test(id)) return true
+    if (/^player\d+$/.test(id)) return true
+    return false
+  }
+
+  // Board-page derived state (must come before any early returns — Rules of Hooks)
+  // Quick Play layout: one user tile + one bot tile per side, with the
+  // bots labelled WhiteBot / BlackBot. Other bot placeholders are collapsed
+  // (not shown) to keep the top bar uncluttered.
+  const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    const ids = g?.getPlayers(Team.WHITE) || []
+    const labels = teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
+    const out: BoardTopBarPlayer[] = []
+    let hasYou = false
+    let hasBot = false
+    ids.slice(0, 2).forEach((id, idx) => {
+      const isBot = isOfflineBotId(id)
+      const isYou = id === playerId || (!isOnline && idx === 0)
+      if (isYou) {
+        out.push({
+          id,
+          label: userProfile.username || 'You',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: userProfile.avatarUrl,
+          isYou: true,
+          online: true,
+          submitted: !!gameState.myPendingOverlay,
+        })
+        hasYou = true
+      } else if (isBot) {
+        if (hasBot) return
+        out.push({
+          id: 'white-bot',
+          label: 'WhiteBot',
+          type: 'bot',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
+        hasBot = true
+      } else {
+        const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'White Team' ? labels[1] : ''
+        out.push({
+          id,
+          label: candidate || 'Teammate',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.myPendingOverlay,
+        })
+      }
+    })
+    return out
+  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline, gameState.status])
+
+  const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    const ids = g?.getPlayers(Team.BLACK) || []
+    const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
+    const out: BoardTopBarPlayer[] = []
+    ids.slice(0, 2).forEach((id) => {
+      const isBot = isOfflineBotId(id)
+      if (isBot) {
+        out.push({
+          id: `black-bot-${id}`,
+          label: 'BlackBot',
+          type: 'bot',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
+      } else {
+        const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
+        out.push({
+          id,
+          label: candidate || 'Opponent',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
+      }
+    })
+    return out
+  }, [teamLabels.black, gameState.pendingOverlay, isOnline, gameState.status])
+
+  const yourMoveForRow: PendingMove | null = (() => {
+    if (heldMove) {
+      return { san: heldMove.move.split('-').join(' '), piece: 'P', color: 'white' as const }
+    }
+    // First check the engine's pending-moves map (works for locked moves too).
+    if (playerId) {
+      const g = isOnline ? onlineGameRef.current : gameRef.current
+      const allMoves = g?.getAllPendingMoves() as Map<string, any> | undefined
+      const myPending = allMoves?.get(playerId)
+      if (myPending && myPending.from && myPending.to) {
+        return {
+          san: gameState.selectedMove || `${myPending.from}-${myPending.to}`,
+          from: myPending.from,
+          to: myPending.to,
+          piece: myPending.piece && myPending.piece !== 'unknown' ? myPending.piece : 'P',
+          color: 'white' as const,
+        }
+      }
+    }
+    // Fall back to the myPendingOverlay (only set when not locked).
+    if (gameState.myPendingOverlay) {
+      return {
+        san: gameState.selectedMove || (gameState.myPendingOverlay.from + gameState.myPendingOverlay.to),
+        from: gameState.myPendingOverlay.from,
+        to: gameState.myPendingOverlay.to,
+        piece: gameState.myPendingOverlay.piece,
+        color: gameState.myPendingOverlay.color,
+      }
+    }
+    // Last resort: just show the SAN if we have one but no engine data.
+    if (gameState.selectedMove) {
+      return { san: gameState.selectedMove, piece: 'P', color: 'white' as const }
+    }
+    return null
+  })()
+
+  const teammateMoveForRow: PendingMove | null = gameState.pendingOverlay
+    ? { san: gameState.pendingOverlay.from + gameState.pendingOverlay.to, piece: gameState.pendingOverlay.piece, color: gameState.pendingOverlay.color }
+    : null
+
+  const resolutionData: MoveResolutionData | null = accuracyComparison
+    ? {
+        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: 'white' },
+        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: 'black' },
+        engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
+        yourAccuracy: accuracyComparison.player1Accuracy || 0,
+        teammateAccuracy: accuracyComparison.player2Accuracy || 0,
+        yourLoss: accuracyComparison.player1Loss || 0,
+        teammateLoss: accuracyComparison.player2Loss || 0,
+        isSync: !!accuracyComparison.isSync,
+        youMatchedEngine: !!accuracyComparison.youMatchedEngine,
+        teammateMatchedEngine: !!accuracyComparison.teammateMatchedEngine,
+        result: accuracyComparison.winnerId === 'player1' ? 'you_won' : accuracyComparison.winnerId === 'player2' ? 'teammate_won' : 'draw',
+        scoreDelta: (accuracyComparison.winningScore - accuracyComparison.bestEngineScore) || 0,
+        evaluationAfter: accuracyComparison.winningScore || 0,
+        evaluationImproved: (accuracyComparison.winningScore || 0) > (accuracyComparison.bestEngineScore || 0),
+      }
+    : null
+
+  const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
+    const moves = moveHistoryRef.current
+    return moves.slice(-10).map((m, i) => {
+      const isWhite = m.team === 'WHITE'
+      const san = m.winningMoveUci || m.winningMove
+      const pieceChar = san ? san[0] : 'P'
+      return {
+        round: Math.floor(m.turn / 2) + 1,
+        playerLabel: isWhite ? 'You' : 'Teammate',
+        moveSan: m.winningMove,
+        pieceColor: isWhite ? 'white' : 'black',
+        pieceChar: pieceChar,
+        evalDelta: m.player1Accuracy - m.player2Accuracy,
+        isCurrent: i === moves.length - 1,
+      }
+    })
+  }, [moveHistoryRef.current.length])
+
   // Show lobby for online mode while waiting for game to start
   const inviteUrl = roomCode && typeof window !== 'undefined'
     ? `${getAppBaseUrl()}/?code=${roomCode}`
@@ -1465,15 +1706,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   if (gameState.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <GameLoading 
-          message="Initializing game..." 
+        <GameLoading
+          message="Initializing game..."
         />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
@@ -1481,9 +1722,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
-      
+
       {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
-        <GameOverModal 
+        <GameOverModal
           winner={gameState.winner || 'DRAW'}
           onPlayAgain={() => router.push('/')}
           onClose={() => setShowGameOverDismissed(true)}
@@ -1491,8 +1732,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
         />
       )}
-        
-      <div className="max-w-4xl mx-auto">
+
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
         {showSettings && (
           <SettingsPanel onClose={() => setShowSettings(false)} />
         )}
@@ -1515,13 +1756,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
           />
         )}
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2 md:mb-3">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-500 bg-clip-text text-transparent">ChessDuo</h1>
-          <div className="flex items-center gap-2">
+
+        {/* Compact top bar — header + team avatars + timer */}
+        <div className="relative">
+          <BoardTopBar
+            whitePlayers={whitePlayers}
+            blackPlayers={blackPlayers}
+            matchTimeRemaining={gameState.matchTimeRemaining}
+            matchTimerActive={gameState.matchTimerActive}
+            totalMatchSeconds={timeLimitSeconds || 600}
+            roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
+            currentTurn={gameState.currentTurn}
+          />
+          <div className="absolute right-3 top-2 flex items-center gap-2">
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="hidden md:flex min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm items-center justify-center text-sm"
+              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
               title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
               aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
             >
@@ -1529,7 +1779,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             </button>
             <button
               onClick={() => setOverlayMode('profile')}
-              className="min-h-[44px] min-w-[44px] rounded-xl bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 transition-all border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-sm"
+              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
               title="Profile"
               aria-label="Profile"
             >
@@ -1542,58 +1792,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {/* Unified info bar: TeamIndicator centered, turn status + timer below */}
-        <div className="flex flex-col items-center gap-1 mb-3">
-          <div className="w-full flex justify-center">
-            <TeamIndicator
-              whiteLabel={teamLabels.white}
-              blackLabel={teamLabels.black}
-              activeTeam={gameState.currentTurn === Team.WHITE ? 'WHITE' : 'BLACK'}
-              isGameOver={gameState.status === GameStatus.GAME_OVER}
-              isBotThinking={gameState.isBotThinking ?? false}
-              blackIsBot={teamLabels.blackIsBot}
-            />
-          </div>
-          <div className="flex items-center gap-3 mt-1">
-            <motion.div
-              key={gameState.turnStatus}
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
-                gameState.status === GameStatus.GAME_OVER
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-400/30'
-                  : gameState.turnStatus === 'your_turn'
-                  ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-700 dark:text-green-400 border border-green-400/30 animate-pulse'
-                  : gameState.turnStatus === 'evaluating'
-                  ? 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-700 dark:text-purple-300 border border-purple-400/30'
-                  : gameState.turnStatus === 'waiting_for_teammate'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/30'
-                  : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10'
-              }`}
-            >
-              {gameState.status === GameStatus.GAME_OVER ? 'Game Over' :
-               gameState.turnStatus === 'your_turn' ? 'Your turn' :
-               gameState.turnStatus === 'evaluating' ? 'Picking the best move...' :
-               gameState.turnStatus === 'waiting_for_teammate' ? 'Awaiting teammate' :
-               gameState.turnStatus === 'opponent_turn' ? 'Opponent turn' :
-               'Waiting'}
-            </motion.div>
-            <MatchTimer
-              seconds={gameState.matchTimeRemaining}
-              isActive={gameState.matchTimerActive && gameState.status === GameStatus.PLAYING}
-              totalSeconds={timeLimitSeconds || 600}
-            />
-          </div>
-        </div>
-
-        {/* Chess Board — centered */}
-        <div className="flex justify-center mb-3">
+        {/* Chess Board — 80% of viewport */}
+        <div className="flex justify-center px-3">
           <div
             className="w-full aspect-square flex-shrink-0 relative"
-            style={boardMaxStyle}
+            style={{ maxWidth: 'min(95vw, 80vh, 720px)' }}
           >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent dark:from-white/[0.02] ring-1 ring-white/10 dark:ring-white/5 shadow-2xl overflow-hidden">
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
               {(() => {
                 const currentTurn = gameState.currentTurn
                 const myTeamEnabled = isFourPlayer
@@ -1614,7 +1819,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     onAnimationComplete={handleResolutionComplete}
                   />
                 ) : (
-                  <ChessBoard 
+                  <ChessBoard
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
@@ -1631,119 +1836,127 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
         </div>
 
-        {/* Accuracy Panel — below board */}
-        <div className="flex justify-center mb-3">
-          <div
-            className="w-full"
-            style={boardMaxStyle}
-          >
-            {(() => {
-              const g = isOnline ? onlineGameRef.current : gameRef.current
-              return (
-                <>
-                  {!accuracyComparison && gameState.turnStatus === 'evaluating' && (
-                    <EvaluatingLoader />
-                  )}
-                  <AccuracyBottomSheet 
-                    comparison={accuracyComparison}
-                    isVisible={!!accuracyComparison}
-                    playerId={playerId}
-                    player1Id={isOnline ? onlineGameRef.current?.player1Id : null}
-                  />
-                </>
-              )
-            })()}
+        {/* Pending moves row */}
+        {gameState.status === GameStatus.PLAYING && (
+          <div className="py-2">
+            <PendingMovesRow
+              yourMove={yourMoveForRow}
+              teammateMove={teammateMoveForRow}
+              yourLabel="Your Move"
+              teammateLabel="Teammate"
+              yourName={!isOnline ? (userProfile.username || 'You') : undefined}
+              teammateName={!isOnline ? (whitePlayers.find(p => p.id === 'white-bot')?.label) : undefined}
+            />
           </div>
-        </div>
-
-        {/* Bottom bar: captured pieces + selected move */}
-        <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-2 mb-3 px-2 py-2 rounded-xl bg-white/40 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">White</span>
-              <motion.div layout className="flex gap-0.5">
-                {gameState.capturedByWhite.length === 0 ? (
-                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
-                ) : (
-                  [...gameState.capturedByWhite].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
-                    <motion.span
-                      key={`w-${p}-${i}`}
-                      initial={{ scale: 0, rotate: -20 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="text-base md:text-xl leading-none"
-                    >
-                      {PIECE_SYMBOLS[p] || p}
-                    </motion.span>
-                  ))
-                )}
-              </motion.div>
-            </div>
-            <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Black</span>
-              <motion.div layout className="flex gap-0.5">
-                {gameState.capturedByBlack.length === 0 ? (
-                  <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
-                ) : (
-                  [...gameState.capturedByBlack].sort((a, b) => ['q','r','b','n','p'].indexOf(a) - ['q','r','b','n','p'].indexOf(b)).map((p, i) => (
-                    <motion.span
-                      key={`b-${p}-${i}`}
-                      initial={{ scale: 0, rotate: 20 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      className="text-base md:text-xl leading-none"
-                    >
-                      {PIECE_SYMBOLS[p] || p}
-                    </motion.span>
-                  ))
-                )}
-              </motion.div>
-            </div>
-          </div>
-          {gameState.selectedMove && (
-            <>
-              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
-              <motion.div
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-1.5"
-              >
-                <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Move</span>
-                <span className="px-2 py-0.5 rounded-md bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-xs md:text-sm font-mono font-bold border border-green-500/20">
-                  {gameState.selectedMove}
-                </span>
-              </motion.div>
-            </>
-          )}
-        </div>
-
-        {/* Move Playback */}
-        <div className="max-w-[500px] mx-auto mb-3">
-          <MovePlayback
-            moves={moveHistoryRef.current}
-            currentIndex={playbackIndex}
-            initialFen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-            onSelectMove={(index, fen) => {
-              setPlaybackIndex(index)
-              setPlaybackFen(fen)
-            }}
-            onReset={() => {
-              setPlaybackIndex(null)
-              setPlaybackFen(null)
-            }}
-          />
-        </div>
-
-        {/* Game Over result text */}
-        {gameState.status === GameStatus.GAME_OVER && (
-          <motion.p
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center text-xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent mb-3"
-          >
-            {isOnline && onlineGameRef.current ? onlineGameRef.current.getResult() : game?.getResult()}
-          </motion.p>
         )}
+
+        {/* Inline Move Resolved (when accuracyComparison is available) */}
+        {gameState.status === GameStatus.PLAYING && resolutionData && (
+          <div className="px-3 pb-2">
+            <MoveResolvedInline
+              data={resolutionData}
+              onNext={() => setAccuracyComparison(null)}
+            />
+          </div>
+        )}
+
+        {/* Confirm Move button (only when setting enabled and game playing) */}
+        {gameState.status === GameStatus.PLAYING && (
+          <div className="pb-2">
+            <ConfirmMoveButton
+              visible={settings.confirmMove}
+              hasPendingMove={!!heldMove}
+              onConfirm={handleConfirmHeldMove}
+              onCancel={handleCancelHeldMove}
+            />
+          </div>
+        )}
+
+        {/* Bottom nav */}
+        <BoardBottomNav
+          activeTab={activeBoardTab}
+          onTabChange={(t) => {
+            if (t === 'moves') {
+              setActiveBoardTab('game')
+              setShowRoundHistory(true)
+              return
+            }
+            if (t === 'insights') {
+              setActiveBoardTab('game')
+              setShowInsights(true)
+              return
+            }
+            if (t === 'chat') {
+              setActiveBoardTab('game')
+              setShowChat(true)
+              return
+            }
+            setActiveBoardTab(t)
+          }}
+          onSurrender={() => gameState.status !== GameStatus.GAME_OVER && setShowResignConfirm(true)}
+        />
       </div>
+
+      <RoundHistorySidebar
+        open={showRoundHistory}
+        entries={roundHistoryEntries}
+        onClose={() => {
+          setShowRoundHistory(false)
+          setActiveBoardTab('game')
+        }}
+      />
+
+      <SlideOver
+        open={showInsights}
+        onClose={() => setShowInsights(false)}
+        title="Move Insights"
+      >
+        {accuracyComparison ? (
+          <div className="text-slate-100">
+            <MoveInsights
+              player1Move={accuracyComparison.player1Move || '?'}
+              player2Move={accuracyComparison.player2Move || '?'}
+              player1Accuracy={accuracyComparison.player1Accuracy || 0}
+              player2Accuracy={accuracyComparison.player2Accuracy || 0}
+              player1Loss={accuracyComparison.player1Loss || 0}
+              player2Loss={accuracyComparison.player2Loss || 0}
+              isSync={accuracyComparison.isSync}
+              winnerId={accuracyComparison.winnerId}
+              bestEngineMove={accuracyComparison.bestEngineMove}
+              bestEngineScore={accuracyComparison.bestEngineScore}
+            />
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <p>Waiting for the first move resolution...</p>
+            <p className="mt-2 text-xs text-slate-500">Insights will appear after both teammates submit a move.</p>
+          </div>
+        )}
+      </SlideOver>
+
+      <SlideOver
+        open={showChat}
+        onClose={() => setShowChat(false)}
+        title="Team Chat"
+      >
+        {playerId ? (
+          <div className="text-slate-300 text-sm">
+            <ChatPanel
+              currentUserId={playerId}
+              friendId={null}
+              friendName="Team"
+              onClose={() => setShowChat(false)}
+            />
+            <p className="mt-3 text-[11px] text-slate-500 text-center">
+              Team chat coming soon — for now, use the Friends tab to chat with players you know.
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <p>Sign in to chat with your teammate.</p>
+          </div>
+        )}
+      </SlideOver>
 
       <SlideOver
         open={overlayMode === 'profile'}
@@ -1771,16 +1984,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
-
-      {isMobile && (
-        <BottomNav
-          activeOverlay={overlayMode}
-          onProfileClick={() => setOverlayMode(overlayMode === 'profile' ? 'none' : 'profile')}
-          onHistoryClick={() => setOverlayMode(overlayMode === 'history' ? 'none' : 'history')}
-          onSoundToggle={() => setSoundEnabled(!soundEnabled)}
-          soundEnabled={soundEnabled}
-        />
-      )}
     </div>
   )
 }
