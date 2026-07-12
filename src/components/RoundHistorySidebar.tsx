@@ -72,7 +72,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
                 const isWhite = e.pieceColor === 'white'
                 return (
                   <div
-                    key={`${e.round}-${e.moveSan}`}
+                    key={`${e.round}-${e.moveSan}-${e.pieceColor}`} // pieceColor ensures uniqueness when both teams play to the same square
                     className={`flex items-center gap-3 p-2.5 rounded-xl border ${
                       e.isCurrent
                         ? 'border-blue-500/40 bg-blue-500/10'

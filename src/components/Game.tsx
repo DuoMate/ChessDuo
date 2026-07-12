@@ -1371,25 +1371,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           return
         }
 
-        // Track move comparison for offline games (online handled in setOnStateChange callback)
-        const comp = g.lastMoveComparison as MoveComparison | null
-        if (comp && (moveHistoryRef.current.length === 0 ||
-            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
-          const entry: MoveEntry = {
-            turn: moveHistoryRef.current.length + 1,
-            team: currentTurn,
-            winningMove: comp.winningMove,
-            winningMoveUci: comp.winningMove || '',
-            shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
-            shadowMoveUci: '',
-            isSync: comp.isSync,
-            player1Accuracy: comp.player1Accuracy,
-            player2Accuracy: comp.player2Accuracy,
-            fenAfter: g.board.fen(),
-          }
-          moveHistoryRef.current = [...moveHistoryRef.current, entry]
-        }
-
         const newTurn = g.currentTurn
         pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK)
 
@@ -1597,14 +1578,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
     const out: BoardTopBarPlayer[] = []
-    let botCount = 0
-    const maxSlots = isOnline ? 2 : 1
-    for (const id of ids) {
-      if (out.length >= maxSlots) break
+    let hasBot = false
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       if (isBot) {
-        botCount++
-        if (botCount > 1) continue
+        if (hasBot) return
         out.push({
           id: 'black-bot',
           label: 'BlackBot',
@@ -1615,6 +1593,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           online: true,
           submitted: !!gameState.pendingOverlay,
         })
+        hasBot = true
       } else {
         const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
         out.push({
@@ -1628,7 +1607,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           submitted: !!gameState.pendingOverlay,
         })
       }
-    }
+    })
     return out
   }, [teamLabels.black, gameState.pendingOverlay, isOnline, gameState.status])
 
