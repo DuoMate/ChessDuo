@@ -9,6 +9,7 @@ import { MovePlayback, MoveEntry } from './MovePlayback'
 import { ChessBoard } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
 import { BoardBottomNav } from './BoardBottomNav'
+import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -43,24 +44,36 @@ export function ReplayView({ game }: ReplayViewProps) {
 
   const currentFen = playbackFen || (moves.length > 0 ? moves[moves.length - 1].fenAfter : initialFen)
 
+  // Replay uses generic labels — no live profiles. Always 1v1 shell.
+  const whitePlayers: BoardTopBarPlayer[] = [
+    { id: 'p1', label: 'Player 1', type: 'human', isYou: game.winner === 'WHITE', online: true },
+  ]
+  const blackPlayers: BoardTopBarPlayer[] = [
+    { id: 'p2', label: 'Player 2', type: 'human', isYou: game.winner === 'BLACK', online: true },
+  ]
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between py-2"
-        >
-          <button
-            onClick={() => router.push('/history')}
-            className="flex items-center gap-1.5 text-slate-300 hover:text-amber-400 text-sm transition-colors"
-          >
-            <ArrowLeft size={16} /> Back
-          </button>
-          <span className="text-xs text-slate-400">
-            {new Date(game.played_at).toLocaleDateString()}
-          </span>
-        </motion.div>
+        <div className="relative">
+          <BoardTopBar
+            whitePlayers={whitePlayers}
+            blackPlayers={blackPlayers}
+            matchTimeRemaining={0}
+            matchTimerActive={false}
+            totalMatchSeconds={0}
+            currentTurn={'WHITE' as any}
+          />
+          <div className="absolute right-3 top-2 flex items-center gap-2">
+            <button
+              onClick={() => router.push('/history')}
+              className="min-h-[36px] px-3 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center gap-1 text-slate-300 text-xs"
+              aria-label="Back to history"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          </div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -144,12 +157,13 @@ export function ReplayView({ game }: ReplayViewProps) {
             <p className="text-slate-500 text-sm">No move data available for this game.</p>
           </div>
         )}
+
+        <BoardBottomNav
+          activeTab="game"
+          onTabChange={() => {}}
+          onSurrender={() => router.push('/history')}
+        />
       </div>
-      <BoardBottomNav
-        activeTab="game"
-        onTabChange={() => {}}
-        onSurrender={() => router.push('/history')}
-      />
     </div>
   )
 }
