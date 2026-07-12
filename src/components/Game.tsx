@@ -1536,73 +1536,98 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     return false
   }
 
+  // Board-page derived state (must come before any early returns — Rules of Hooks)
+  // Quick Play layout: one user tile + one bot tile per side, with the
+  // bots labelled WhiteBot / BlackBot. Other bot placeholders are collapsed
+  // (not shown) to keep the top bar uncluttered.
   const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.WHITE) || []
     const labels = teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
-    let botIndex = 0
-    return ids.slice(0, 2).map((id, idx) => {
-      // In offline mode the local game creates 4 player1-4 placeholders.
-      // The first white player (player1) is always the user, regardless of the
-      // session UUID, so we treat that slot as "you" too.
+    const out: BoardTopBarPlayer[] = []
+    let hasYou = false
+    let hasBot = false
+    ids.slice(0, 2).forEach((id, idx) => {
       const isBot = isOfflineBotId(id)
       const isYou = id === playerId || (!isOnline && idx === 0)
-      let label: string
-      let profileImageUrl: string | null = null
-      let avatar: HumanAvatar = 'ace'
       if (isYou) {
-        label = userProfile.username || 'You'
-        profileImageUrl = userProfile.avatarUrl
+        out.push({
+          id,
+          label: userProfile.username || 'You',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: userProfile.avatarUrl,
+          isYou: true,
+          online: true,
+          submitted: !!gameState.myPendingOverlay,
+        })
+        hasYou = true
       } else if (isBot) {
-        botIndex += 1
-        label = `Bot ${botIndex}`
+        if (hasBot) return
+        out.push({
+          id: 'white-bot',
+          label: 'WhiteBot',
+          type: 'bot',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
+        hasBot = true
       } else {
-        // Online teammate — pull from the teamLabels parser.
         const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'White Team' ? labels[1] : ''
-        label = candidate || 'Teammate'
-        // Use the teammate's profile image if it was fetched elsewhere; for now keep default avatar.
-        avatar = 'ace'
-      }
-      return {
-        id,
-        label,
-        type: isBot ? 'bot' : 'human',
-        avatar,
-        profileImageUrl,
-        isYou,
-        online: true,
-        submitted: !!gameState.myPendingOverlay,
+        out.push({
+          id,
+          label: candidate || 'Teammate',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.myPendingOverlay,
+        })
       }
     })
+    return out
   }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
-    let botIndex = 0
-    return ids.slice(0, 2).map((id) => {
+    const out: BoardTopBarPlayer[] = []
+    let hasBot = false
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
-      let label: string
       if (isBot) {
-        botIndex += 1
-        label = `Bot ${botIndex}`
+        if (hasBot) return
+        out.push({
+          id: 'black-bot',
+          label: 'BlackBot',
+          type: 'bot',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
+        hasBot = true
       } else {
-        // Online opponent — pull from the teamLabels parser
         const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
-        label = candidate || 'Opponent'
-      }
-      return {
-        id,
-        label,
-        type: isBot ? 'bot' : 'human',
-        avatar: 'ace' as const,
-        profileImageUrl: null,
-        isYou: false,
-        online: true,
-        submitted: !!gameState.pendingOverlay,
+        out.push({
+          id,
+          label: candidate || 'Opponent',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: null,
+          isYou: false,
+          online: true,
+          submitted: !!gameState.pendingOverlay,
+        })
       }
     })
+    return out
   }, [teamLabels.black, gameState.pendingOverlay, isOnline])
 
   const yourMoveForRow: PendingMove | null = (() => {
@@ -1652,6 +1677,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
         yourAccuracy: accuracyComparison.player1Accuracy || 0,
         teammateAccuracy: accuracyComparison.player2Accuracy || 0,
+        yourLoss: accuracyComparison.player1Loss || 0,
+        teammateLoss: accuracyComparison.player2Loss || 0,
+        isSync: !!accuracyComparison.isSync,
+        youMatchedEngine: !!accuracyComparison.youMatchedEngine,
+        teammateMatchedEngine: !!accuracyComparison.teammateMatchedEngine,
         result: accuracyComparison.winnerId === 'player1' ? 'you_won' : accuracyComparison.winnerId === 'player2' ? 'teammate_won' : 'draw',
         scoreDelta: (accuracyComparison.winningScore - accuracyComparison.bestEngineScore) || 0,
         evaluationAfter: accuracyComparison.winningScore || 0,

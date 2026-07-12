@@ -1,9 +1,27 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Zap, Trophy, X, Check, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react'
+import { Zap, Trophy, X, Check, ChevronRight, Sparkles, Target, Lightbulb, AlertTriangle, XCircle } from 'lucide-react'
 import { classifyMove } from '@/lib/moveClassifier'
 import { getAccuracyCategory } from '@/features/shared/accuracy'
+
+function getMoveImpact(san: string): string {
+  if (!san) return ''
+  if (san.includes('#')) return 'Checkmate!'
+  if (san.includes('+')) return 'Puts king in check'
+  if (san.includes('O-O-O')) return 'Queenside castling — king is safer'
+  if (san.includes('O-O')) return 'Kingside castling — king is safer'
+  if (san.includes('x')) return 'Captured a piece'
+  if (san.includes('=')) return 'Promoted a pawn'
+  return ''
+}
+
+function getBlunderWarning(loss: number): { label: string; color: string; Icon: typeof XCircle } | null {
+  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', color: '#ef4444', Icon: XCircle }
+  if (loss >= 200) return { label: 'Blunder — costly mistake', color: '#f59e0b', Icon: AlertTriangle }
+  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', color: '#eab308', Icon: AlertTriangle }
+  return null
+}
 
 export interface MoveResolutionData {
   yourMove: { san: string; piece?: string; color?: 'white' | 'black' }
@@ -11,6 +29,11 @@ export interface MoveResolutionData {
   engineChoseMove: { san: string }
   yourAccuracy: number
   teammateAccuracy: number
+  yourLoss: number
+  teammateLoss: number
+  isSync: boolean
+  youMatchedEngine: boolean
+  teammateMatchedEngine: boolean
   result: 'you_won' | 'teammate_won' | 'draw' | 'pending'
   scoreDelta: number
   evaluationAfter: number
@@ -135,35 +158,73 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
       {(() => {
         const san = data.engineChoseMove.san || ''
         const moveClass = classifyMove(san)
-        // Reverse-derive centipawn loss from the winner's accuracy (Lichess model).
-        const acc = data.result === 'you_won' ? data.yourAccuracy : data.teammateAccuracy
-        const cpLoss = acc >= 100 ? 0 : acc <= 0 ? 300 : Math.round(10 + (100 - acc) * (290 / 100))
-        const verdict = getAccuracyCategory(cpLoss)
-        const verdictTone = verdict.color
-        const improved = data.evaluationImproved
-        const delta = data.scoreDelta
-        const evalText = `${data.evaluationAfter > 0 ? '+' : ''}${data.evaluationAfter.toFixed(2)}`
-        const deltaText = `${delta > 0 ? '+' : ''}${delta.toFixed(2)}`
+        const moveImpact = getMoveImpact(san)
+        // Headline insight line — mirrors the AccuracyBottomSheet phrasing.
+        let headline = ''
+        let HeadlineIcon: typeof Sparkles = Sparkles
+        let headlineColor = 'text-amber-300'
+        if (data.isSync) {
+          headline = 'Both played exactly the same move!'
+          HeadlineIcon = Sparkles
+          headlineColor = 'text-amber-300'
+        } else if (data.youMatchedEngine && data.teammateMatchedEngine) {
+          headline = 'Perfect — both matched the engine\u2019s best move!'
+          HeadlineIcon = Sparkles
+          headlineColor = 'text-amber-300'
+        } else if (data.youMatchedEngine) {
+          headline = 'You found the engine\u2019s top move!'
+          HeadlineIcon = Target
+          headlineColor = 'text-emerald-300'
+        } else if (data.teammateMatchedEngine) {
+          headline = 'Teammate found the engine\u2019s best move'
+          HeadlineIcon = Lightbulb
+          headlineColor = 'text-blue-300'
+        }
+        // The "loser" gets a blunder warning if their loss is large.
+        const isYouWinner = data.result === 'you_won'
+        const loserLoss = isYouWinner ? data.teammateLoss : data.yourLoss
+        const loserName = isYouWinner ? 'Teammate' : 'You'
+        const blunder = !data.isSync ? getBlunderWarning(loserLoss) : null
+        // The winner gets the quality verdict (Perfect / Great / Good / …).
+        const winnerAcc = isYouWinner ? data.yourAccuracy : data.teammateAccuracy
+        const winnerCpLoss = winnerAcc >= 100 ? 0 : winnerAcc <= 0 ? 300 : Math.round(10 + (100 - winnerAcc) * (290 / 100))
+        const verdict = getAccuracyCategory(winnerCpLoss)
         return (
-          <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50">
-            <div className="flex items-center justify-center gap-1.5 text-[11px]">
-              <span className="text-base leading-none" aria-hidden>{moveClass.icon}</span>
-              <span className="text-slate-200 font-semibold">{moveClass.description}</span>
-            </div>
-            <div className="mt-1.5 flex items-center justify-center gap-2 text-[10px] flex-wrap">
-              <span
-                className="px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
-                style={{ backgroundColor: `${verdictTone}22`, color: verdictTone }}
+          <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50 space-y-1.5">
+            {headline && (
+              <div className="flex items-center justify-center gap-1.5 text-[12px] font-medium">
+                <HeadlineIcon size={14} className={headlineColor} />
+                <span className={headlineColor}>{headline}</span>
+              </div>
+            )}
+            {moveImpact && (
+              <p className="text-center text-[11px] text-slate-300">
+                {moveImpact}
+              </p>
+            )}
+            {!data.isSync && blunder && (
+              <p
+                className="text-center text-[11px] font-semibold inline-flex items-center justify-center gap-1 w-full"
+                style={{ color: blunder.color }}
               >
-                {verdict.emoji}{verdict.label}
-              </span>
-              <span className="text-slate-500">·</span>
-              <span className="text-slate-400">Evaluation</span>
-              <span className={`font-bold ${improved ? 'text-emerald-300' : 'text-rose-300'}`}>{evalText}</span>
-              <span className={`flex items-center gap-0.5 font-bold ${improved ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {improved ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                {improved ? 'Improved' : 'Declined'} {deltaText}
-              </span>
+                <blunder.Icon size={12} /> {loserName}: {blunder.label}
+              </p>
+            )}
+            {!data.isSync && (
+              <div className="flex items-center justify-center gap-1.5 text-[10px] flex-wrap">
+                <span
+                  className="px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
+                  style={{ backgroundColor: `${verdict.color}22`, color: verdict.color }}
+                >
+                  {verdict.emoji}{verdict.label} move
+                </span>
+                <span className="text-slate-500">·</span>
+                <span className="text-slate-400">{loserLoss}cp lost</span>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400">
+              <span className="text-base leading-none" aria-hidden>{moveClass.icon}</span>
+              <span>{moveClass.description}</span>
             </div>
           </div>
         )
