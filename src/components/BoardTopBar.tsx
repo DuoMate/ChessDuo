@@ -69,22 +69,24 @@ export function BoardTopBar({
 }: BoardTopBarProps) {
   return (
     <div className="w-full bg-slate-900/70 backdrop-blur-xl border-b border-white/5 px-3 py-2">
-      <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
-        {/* White team */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Crown size={14} className="text-amber-400 shrink-0" />
-          <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase shrink-0">
-            White
-          </span>
-          <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-start justify-between gap-2 max-w-3xl mx-auto">
+        {/* White team — avatars on top, label below */}
+        <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2">
             {whitePlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="WHITE" />
             ))}
           </div>
+          <div className="flex items-center gap-1 mt-0.5">
+            <Crown size={11} className="text-amber-400 shrink-0" />
+            <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">
+              White Team
+            </span>
+          </div>
         </div>
 
         {/* Center: decorative hexagons + timer */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 pt-1">
           <TeamHexagon value={1} team="WHITE" size={28} />
           <div className="flex flex-col items-center px-1">
             <MatchTimer
@@ -101,17 +103,19 @@ export function BoardTopBar({
           <TeamHexagon value={2} team="BLACK" size={28} />
         </div>
 
-        {/* Black team */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
-          <div className="flex items-center gap-2 min-w-0 justify-end">
+        {/* Black team — avatars on top, label below */}
+        <div className="flex flex-col items-center gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2">
             {blackPlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="BLACK" />
             ))}
           </div>
-          <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase shrink-0">
-            Black
-          </span>
-          <Crown size={14} className="text-slate-500 shrink-0" />
+          <div className="flex items-center gap-1 mt-0.5">
+            <Crown size={11} className="text-slate-500 shrink-0" />
+            <span className="text-[10px] font-bold tracking-widest text-slate-300 uppercase">
+              Black Team
+            </span>
+          </div>
         </div>
       </div>
       {currentTurn && (
