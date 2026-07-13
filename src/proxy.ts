@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+export const runtime = 'edge'
+
 export async function proxy(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith('/game') && !request.nextUrl.pathname.startsWith('/duel') && !request.nextUrl.pathname.startsWith('/history')) {
     return NextResponse.next()
