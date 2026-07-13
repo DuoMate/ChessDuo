@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { HomeButton } from '@/components/HomeButton'
+import { BackButton } from '@/components/BackButton'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -52,7 +52,7 @@ export default function HistoryPage() {
   if (loading) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center pb-20">
           <p className="text-gray-400">Loading...</p>
         </div>
       </ErrorBoundary>
@@ -62,10 +62,10 @@ export default function HistoryPage() {
   if (!playerId) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
           <h1 className="text-2xl font-bold mb-4">Match History</h1>
           <p className="text-gray-400 mb-4">Sign in to view your match history</p>
-          <HomeButton label="Go Home" />
+          <BackButton label="Go Home" />
         </div>
       </ErrorBoundary>
     )
@@ -73,11 +73,11 @@ export default function HistoryPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 pb-20">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Match History</h1>
-          <HomeButton />
+          <BackButton />
         </div>
 
         {playerStats && (

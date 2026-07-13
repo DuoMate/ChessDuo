@@ -4,7 +4,6 @@ import { Chakra_Petch } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
-import { SplashHandler } from "@/components/SplashHandler";
 
 export const metadata: Metadata = {
   title: "ChessDuo",
@@ -55,7 +54,6 @@ export default function RootLayout({
         <link rel="stylesheet" href="/cm-chessboard/extensions/promotion-dialog/promotion-dialog.css" />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-transparent transition-colors duration-300">
-        <SplashHandler />
         <Providers>{children}</Providers>
       </body>
     </html>

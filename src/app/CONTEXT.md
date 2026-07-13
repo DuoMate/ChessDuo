@@ -16,17 +16,9 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 ## Sub-modules
 | Module | Context |
 |--------|---------|
-| `game/` | `src/app/game/CONTEXT.md` — Main 2v2 game page |
-| `duel/` | `src/app/duel/CONTEXT.md` — 1v1 duel page |
-| `replay/[gameId]/` | `src/app/replay/CONTEXT.md` — Match replay page |
-| `history/` | `src/app/history/CONTEXT.md` — Match history page |
-| `profile/` | `src/app/profile/CONTEXT.md` — User profile page |
-| `premium/` | `src/app/premium/CONTEXT.md` — Premium pricing page |
-| `privacy/` | `src/app/privacy/CONTEXT.md` — Privacy policy page |
-| `invite/[userId]/` | `src/app/invite/CONTEXT.md` — Friend invite landing |
-| `challenge/[code]/` | `src/app/challenge/CONTEXT.md` — Challenge link landing |
-| `four-player/` | `src/app/four-player/CONTEXT.md` — 4-player lobby |
-| `delete-account/` | `src/app/delete-account/CONTEXT.md` — Account deletion |
+| `(main)/` | `src/app/(main)/CONTEXT.md` — Shared layout (HomeBottomNav + SlideOvers) for non-game pages |
+| `game/` | `src/app/game/CONTEXT.md` — Main 2v2 game page (no bottom nav) |
+| `duel/` | `src/app/duel/CONTEXT.md` — 1v1 duel page (no bottom nav) |
 | `api/` | `src/app/api/CONTEXT.md` — API routes |
 
 ## Logic & Decisions
@@ -34,11 +26,17 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - `providers.tsx` is the single source of truth for client context. No other layout wrappers.
 - `middleware.ts` redirects unauthenticated users away from `/game`.
 - Home page MUST NOT return `null` during session check — always show loading UI.
-- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered, profile/messages icons), TimePills (horizontal time selector), GameModeCard (Quick Play/Duo/Four Players), BotDifficultySelector (global bot difficulty), PlayButton (green gradient CTA), and HomeBottomNav (Home/History/Friends/Profile tabs).
+- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered), TimePills (time selector), GameModeCard (Quick Play/Duo/Four Players), BotDifficultySelector, PlayButton (green gradient CTA), and HomeBottomNav.
+- Non-game-room pages (history, profile, premium, privacy, delete-account, invite, challenge, replay, four-player) are in the `(main)/` route group and share a layout with HomeBottomNav + SlideOver panels for Profile, Friends, and History.
+- Pages in `(main)/` use `BackButton` instead of `HomeButton` for smart back navigation (`router.back()` with fallback to home).
+- All pages in `(main)/` have `pb-20` spacing to prevent overlap with the fixed-position HomeBottomNav.
+- Game rooms (`/game`, `/duel`) do NOT show HomeBottomNav — they have their own `BoardBottomNav`.
 
 ## Recent Changes
+- **2026-07-13**: Created `(main)/` route group for non-game-room pages. Pages moved: history, profile, premium, privacy, delete-account, invite, challenge, replay, four-player. Shared layout provides HomeBottomNav + SlideOvers (Profile/Friends/History). `BackButton` replaces `HomeButton` for smart back. History tab opens SlideOver. Taglines fixed: Duo → "You + Friend vs Bots", Four Players → "Friends Battle".
 - **2026-07-12**: Board page revamp — dark glassmorphism theme, 80% board, new `BoardTopBar` + bottom nav + pending moves row + confirm move button + inline `MoveResolvedInline` + round history sidebar. New `confirmMove` setting (off by default). All three game pages (Game.tsx, DuelGame.tsx, ReplayView.tsx) share the new shell. Quick Play is rendered as `You + WhiteBot vs BlackBot` (one bot per side) — see `src/components/CONTEXT.md` for the visual collapse.
 - **2026-07-11**: Complete home page UI revamp — new mockup-based layout with HeaderBar, TimePills, GameModeCard, BotDifficultySelector, PlayButton, and HomeBottomNav components. Dark theme (#0a0e1a background), blue accent for selected states, green gradient Play button. Added 3-minute time option. Bot difficulty now global on home page. Bottom nav on home page only.
+- **2026-07-13**: Added shadow CSS variables to `globals.css` (`--shadow-glow-blue-strong`, `--shadow-glow-blue-light`, `--shadow-glow-blue-dot`, `--shadow-glow-green`, `--shadow-glow-green-strong`, `--shadow-glow-emerald`, `--shadow-glow-emerald-strong`, `--drop-shadow-glow-blue`). Replaced hardcoded rgba shadows in page.tsx. Converted all static inline `style={{}}` for minHeights to Tailwind classes. Normalized avatar `width`/`height` attributes to 40px. Moved `SplashHandler` into `providers.tsx`. Added `/history` to middleware auth matcher.
 
 ## Dependencies
 - Next.js 16 App Router, Supabase Auth, Razorpay SDK

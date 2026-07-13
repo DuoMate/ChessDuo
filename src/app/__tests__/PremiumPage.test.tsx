@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import PremiumPage from '../../app/premium/page'
+import PremiumPage from '../(main)/premium/page'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),

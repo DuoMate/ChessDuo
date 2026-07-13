@@ -47,7 +47,7 @@ function DuelContent() {
     )
   }
 
-  if (!roomId || !roomCode || !playerId || !team || !isValidSession) {
+  if (!roomId || !roomCode || !playerId || !team) {
     return (
       <ErrorBoundary>
         <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
@@ -55,6 +55,23 @@ function DuelContent() {
             <div className="text-5xl">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
             <p className="text-gray-400">Missing required parameters</p>
+            <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
+              Go Home
+            </button>
+          </div>
+        </div>
+      </ErrorBoundary>
+    )
+  }
+
+  if (!isValidSession) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+          <div className="text-center space-y-4">
+            <div className="text-5xl">🔒</div>
+            <h1 className="text-xl font-bold text-red-400">Session Expired</h1>
+            <p className="text-gray-400">Please sign in again to continue.</p>
             <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
               Go Home
             </button>
@@ -72,7 +89,7 @@ function DuelContent() {
         playerId={playerId}
         team={team}
         timeLimit={time}
-        onLeave={() => { sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true'); window.location.href = '/' }}
+        onLeave={() => { sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true'); router.push('/') }}
       />
     </ErrorBoundary>
   )

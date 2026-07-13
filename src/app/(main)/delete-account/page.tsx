@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { BackButton } from '@/components/BackButton'
 
 export default function DeleteAccountPage() {
   const router = useRouter()
@@ -37,13 +37,10 @@ export default function DeleteAccountPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-      <div className="max-w-lg mx-auto px-4 py-12">
-        <Link
-          href="/"
-          className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-sm mb-6 inline-block"
-        >
-          ← Back to ChessDuo
-        </Link>
+      <div className="max-w-lg mx-auto px-4 py-12 pb-20">
+        <div className="mb-6">
+          <BackButton label="Back to ChessDuo" />
+        </div>
 
         {step === 'info' && (
           <>
@@ -129,12 +126,12 @@ export default function DeleteAccountPage() {
             <p className="text-gray-500 dark:text-gray-400 mb-8">
               Your account and all associated data have been permanently removed.
             </p>
-            <Link
-              href="/"
+            <button
+              onClick={() => router.push('/')}
               className="inline-block py-3 px-6 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors"
             >
               Return Home
-            </Link>
+            </button>
           </div>
         )}
 
