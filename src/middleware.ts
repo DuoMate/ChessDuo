@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 
 export const runtime = 'edge'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith('/game') && !request.nextUrl.pathname.startsWith('/duel') && !request.nextUrl.pathname.startsWith('/history')) {
     return NextResponse.next()
   }
