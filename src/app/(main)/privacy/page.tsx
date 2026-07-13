@@ -1,19 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { BackButton } from '@/components/BackButton'
 
 export default function PrivacyPage() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        <Link
-          href="/"
-          className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-sm mb-6 inline-block"
-        >
-          ← Back to ChessDuo
-        </Link>
+      <div className="max-w-2xl mx-auto px-4 py-12 pb-20">
+        <div className="mb-6">
+          <BackButton label="Back to ChessDuo" />
+        </div>
 
         <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
         <p className="text-yellow-600/60 dark:text-yellow-400/60 text-sm mb-8">ChessDuo is a product of Navron</p>

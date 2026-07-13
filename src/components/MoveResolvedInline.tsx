@@ -233,7 +233,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
       <button
         type="button"
         onClick={onNext}
-        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-all"
+        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[var(--shadow-glow-emerald-strong)] transition-all"
       >
         Continue
         <ChevronRight size={18} />

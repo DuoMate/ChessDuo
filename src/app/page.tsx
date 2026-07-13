@@ -9,7 +9,9 @@ import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { SlideOver } from '@/components/SlideOver'
 import { ProfilePanel } from '@/components/ProfilePanel'
+import { HistoryPanel } from '@/components/HistoryPanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
+import { HomeBottomNav } from '@/components/HomeBottomNav'
 import { Room } from '@/lib/supabase'
 import { getUnreadCounts, subscribeToMessages, sendMessage } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
@@ -17,7 +19,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, Crown, ChevronRight, Play, History, Users, User, Home as HomeIcon } from 'lucide-react'
+import { Swords, Crown, ChevronRight, Play } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -77,6 +79,7 @@ export default function SetupPage() {
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(() => {
@@ -578,14 +581,26 @@ export default function SetupPage() {
     }
   }
 
-  if (!sessionChecked) return <ErrorBoundary>{null}</ErrorBoundary>
+  if (!sessionChecked) return (
+    <ErrorBoundary>
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-400 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400">Loading...</p>
+        </div>
+      </div>
+    </ErrorBoundary>
+  )
 
   const showTopBar = !gameMode
 
   const slideOvers = playerId && (
     <>
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); router.push('/history') }} onSignOut={handleSignOut} />
+        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} />
+      </SlideOver>
+      <SlideOver open={historyOpen} onClose={() => setHistoryOpen(false)} title="Match History">
+        <HistoryPanel playerId={playerId} />
       </SlideOver>
       <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
         <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
@@ -647,8 +662,7 @@ export default function SetupPage() {
                     <button
                       key={friend.friend_id}
                       onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
-                      className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all text-left group"
-                      style={{ minHeight: '60px' }}
+                      className="w-full min-h-[60px] flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all text-left group"
                     >
                       <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
                         {friend.friend_username.charAt(0).toUpperCase()}
@@ -751,7 +765,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex min-h-screen flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white">
+      <div className="relative flex min-h-screen flex-col overflow-y-auto bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white">
         <HeaderBar />
 
         <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
@@ -784,7 +798,7 @@ if (!gameMode) {
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
-                  subtitle="Human teammate vs 1 human opponent"
+                  subtitle="You + Friend vs Bots"
                 />
                 <GameModeCard
                   mode="four"
@@ -794,7 +808,7 @@ if (!gameMode) {
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                   title="Four Players"
-                  subtitle="2 human teammates vs 2 human opponents"
+                  subtitle="Friends Battle"
                 />
               </div>
             </div>
@@ -820,7 +834,7 @@ if (!gameMode) {
           {/* Bottom Navigation */}
           <HomeBottomNav
             onProfile={() => setProfileOpen(true)}
-            onHistory={() => router.push('/history')}
+            onHistory={() => setHistoryOpen(true)}
             onFriends={() => setFriendsOpen(true)}
             unreadMessages={unreadMessages}
           />
@@ -849,7 +863,7 @@ function HeaderBar() {
   return (
     <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[#0a0e1a]/90 dark:border-0 backdrop-blur-xl">
       <div className="flex items-center gap-2">
-        <Crown size={28} strokeWidth={1.5} className="text-blue-500 dark:text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.3)]" />
+        <Crown size={28} strokeWidth={1.5} className="text-blue-500 dark:text-blue-400 drop-shadow-[var(--drop-shadow-glow-blue)]" />
         <h1 className="text-2xl font-black tracking-tight">
           <span className="text-slate-900 dark:text-white">Chess</span>
           <span className="text-blue-600 dark:text-blue-500">Duo</span>
@@ -871,12 +885,11 @@ function TimePills({ selectedTime, onSelect }: {
         <button
           key={opt.seconds}
           onClick={() => onSelect(opt.seconds)}
-          className={`flex-1 flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${
+          className={`flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${
             selectedTime === opt.seconds
-              ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]'
+              ? 'bg-blue-600 text-white shadow-[var(--shadow-glow-blue-strong)]'
               : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
           }`}
-          style={{ minHeight: '48px', minWidth: '48px' }}
         >
           {opt.label}
         </button>
@@ -913,23 +926,22 @@ function GameModeCard({
     <button
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full min-h-[72px] flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
         selected
-          ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
+          ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[var(--shadow-glow-blue-light)]'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
-      style={{ minHeight: '72px' }}
     >
       {/* Team icons — fixed-width column so text always starts at the same x */}
-      <div className="w-[200px] flex items-center gap-1.5 shrink-0">
+      <div className="w-auto min-w-[100px] max-w-[200px] flex items-center gap-1.5 shrink-0">
         <div className="flex items-center gap-1.5">
           {leftIcons.map((icon, i) => (
             <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
-                width={160}
-                height={168}
+                width={40}
+                height={40}
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-contain"
@@ -944,8 +956,8 @@ function GameModeCard({
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
-                width={160}
-                height={168}
+                width={40}
+                height={40}
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-contain"
@@ -958,10 +970,10 @@ function GameModeCard({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-base text-slate-900 dark:text-white">{title}</span>
-          {showStar && <span className="text-amber-500 text-sm">★</span>}
+          <span className="font-bold text-base text-slate-900 dark:text-white truncate">{title}</span>
+          {showStar && <span className="text-amber-500 text-sm shrink-0">★</span>}
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{subtitle}</p>
       </div>
 
       {/* Chevron */}
@@ -1030,7 +1042,7 @@ function BotDifficultySelector({
             <div
               key={i}
               className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                i < filledDots ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.5)]' : 'bg-slate-200 border border-slate-300 dark:bg-slate-700 dark:border-slate-600'
+                i < filledDots ? 'bg-blue-500 shadow-[var(--shadow-glow-blue-dot)]' : 'bg-slate-200 border border-slate-300 dark:bg-slate-700 dark:border-slate-600'
               }`}
             />
           ))}
@@ -1048,8 +1060,7 @@ function PlayButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-black text-xl tracking-wider transition-all duration-200 shadow-[0_0_24px_rgba(16,185,129,0.3)] hover:shadow-[0_0_32px_rgba(16,185,129,0.4)] active:scale-[0.98]"
-      style={{ minHeight: '56px' }}
+      className="w-full min-h-[56px] flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-black text-xl tracking-wider transition-all duration-200 shadow-[var(--shadow-glow-green)] hover:shadow-[var(--shadow-glow-green-strong)] active:scale-[0.98]"
     >
       <Play size={24} fill="currentColor" />
       PLAY
@@ -1057,66 +1068,7 @@ function PlayButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-// ============================================
-// Home Bottom Navigation Component
-// ============================================
-function HomeBottomNav({
-  onProfile,
-  onHistory,
-  onFriends,
-  unreadMessages,
-}: {
-  onProfile: () => void
-  onHistory: () => void
-  onFriends: () => void
-  unreadMessages: number
-}) {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-      <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
-        <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
-        <NavButton label="History" icon={History} onClick={onHistory} />
-        <NavButton label="Friends" icon={Users} onClick={onFriends} badge={unreadMessages} />
-        <NavButton label="Profile" icon={User} onClick={onProfile} />
-      </div>
-    </nav>
-  )
-}
 
-function NavButton({
-  label,
-  icon: Icon,
-  active = false,
-  onClick,
-  badge = 0,
-}: {
-  label: string
-  icon: typeof HomeIcon
-  active?: boolean
-  onClick: () => void
-  badge?: number
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
-        active
-          ? 'text-blue-600 dark:text-blue-400'
-          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-      }`}
-    >
-      <div className="relative">
-        <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-        {badge > 0 && (
-          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold rounded-full px-1">
-            {badge > 99 ? '99+' : badge}
-          </span>
-        )}
-      </div>
-      <span className="text-[11px] leading-none">{label}</span>
-    </button>
-  )
-}
 
 // ============================================
 // Player Icons Component (offline mode)
@@ -1136,8 +1088,8 @@ function PlayerIcons({ left, right }: {
             <img
               src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
               alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
-              width={168}
-              height={168}
+              width={40}
+              height={40}
               loading="lazy"
               decoding="async"
               className="w-full h-full object-contain"
@@ -1158,8 +1110,8 @@ function PlayerIcons({ left, right }: {
             <img
               src={type === 'human' ? HUMAN_AVATARS.ace : BOT_AVATAR}
               alt={type === 'human' ? 'Player avatar' : 'Bot avatar'}
-              width={168}
-              height={168}
+              width={40}
+              height={40}
               loading="lazy"
               decoding="async"
               className="w-full h-full object-contain"

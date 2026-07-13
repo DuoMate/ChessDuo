@@ -79,6 +79,9 @@ All React components — co-located by feature, not by type. Components handle r
 - Duo / Four-Player: real online teammates or online opponent — labels are pulled from `teamLabels` parser (e.g. "Alice" / "Bob"). Multiple human tiles are kept.
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
+## Recent Changes
+- **2026-07-13**: Fixed RoundHistorySidebar close button to 44×44px touch target. Replaced hardcoded rgba shadows in `ConfirmMoveButton` and `MoveResolvedInline` with CSS variable references (`--shadow-glow-emerald`, `--shadow-glow-emerald-strong`).
+
 ## Dependencies
 - `features/` for game logic, `hooks/` for React hooks, `lib/` for utilities
 - `cm-chessboard` for board rendering, `chess.js` for move validation

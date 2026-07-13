@@ -41,7 +41,7 @@ export function ConfirmMoveButton({
           disabled={disabled || !hasPendingMove}
           className={`flex-1 min-h-[48px] rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
             hasPendingMove && !disabled
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-slate-900 shadow-[0_0_20px_rgba(34,197,94,0.35)] hover:from-green-400 hover:to-emerald-400'
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-slate-900 shadow-[var(--shadow-glow-emerald)] hover:from-green-400 hover:to-emerald-400'
               : 'bg-slate-700/40 text-slate-500 border border-slate-700/60 cursor-not-allowed'
           }`}
         >

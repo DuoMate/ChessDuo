@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
-import { HomeButton } from '@/components/HomeButton'
+import { BackButton } from '@/components/BackButton'
 import { motion } from 'framer-motion'
 
 export default function ProfilePage() {
@@ -35,7 +35,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center pb-20">
         <p className="text-gray-400">Loading...</p>
       </div>
     )
@@ -43,21 +43,21 @@ export default function ProfilePage() {
 
   if (!playerId) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <p className="text-gray-400 mb-4">Sign in to view your profile</p>
-        <HomeButton label="Go Home" />
+        <BackButton label="Go Home" />
       </div>
     )
   }
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 pb-20">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Profile</h1>
-          <HomeButton />
+          <BackButton />
         </div>
 
         <motion.div

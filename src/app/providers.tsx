@@ -7,6 +7,7 @@ import Loading from '@/app/loading'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { registerCapacitorAuthListener } from '@/lib/capacitorAuth'
 import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
+import { SplashHandler } from '@/components/SplashHandler'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -25,5 +26,5 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerBackButtonListener()
   }, [])
 
-  return <NetworkAwareToastProvider>{children}</NetworkAwareToastProvider>
+  return <NetworkAwareToastProvider><SplashHandler />{children}</NetworkAwareToastProvider>
 }
