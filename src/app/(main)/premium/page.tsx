@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
-import { HomeButton } from '@/components/HomeButton'
+import { BackButton } from '@/components/BackButton'
 
 interface ErrorDetail {
   title: string
@@ -212,7 +212,7 @@ export default function PremiumPage() {
 
   if (loading || checkingPremium) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] px-4 py-6 dark:bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.16),_transparent_28%)]">
+      <div className="flex min-h-screen items-center justify-center pb-20 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] px-4 py-6 dark:bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.16),_transparent_28%)]">
         <ChessLoader />
       </div>
     )
@@ -220,12 +220,12 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
+      <div className="flex min-h-screen flex-col pb-20 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.14),_transparent_28%)] text-gray-900 dark:text-white">
         <div className="flex flex-1 flex-col items-center justify-center p-4">
           <div className="w-full max-w-md rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_24px_90px_rgba(2,6,23,0.16)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/85 sm:p-6">
             <div className="mb-6 flex items-center justify-between rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
               <h1 className="text-2xl font-black text-yellow-600 dark:text-yellow-400 tracking-wider">ChessDuo Premium</h1>
-              <HomeButton />
+              <BackButton />
             </div>
 
             {isPremium ? (

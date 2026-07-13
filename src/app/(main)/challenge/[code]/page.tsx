@@ -7,6 +7,7 @@ import { getChallengeByCode, deactivateChallenge } from '@/lib/challenges'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { BackButton } from '@/components/BackButton'
 
 export default function ChallengePage() {
   const params = useParams()
@@ -147,7 +148,7 @@ export default function ChallengePage() {
   if (loading) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
           <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
         </div>
       </ErrorBoundary>
@@ -157,7 +158,7 @@ export default function ChallengePage() {
   if (status === 'need_auth' || (!playerId && !loading && status === 'loading')) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
           <div className="max-w-sm w-full text-center space-y-6">
             <div className="text-5xl mb-2">⚡</div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
@@ -172,16 +173,14 @@ export default function ChallengePage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
       <div className="max-w-sm w-full text-center space-y-4">
         {status === 'invalid' && (
           <>
             <div className="text-5xl mb-2">🔗</div>
             <h1 className="text-xl font-bold text-red-400">Invalid Challenge</h1>
             <p className="text-gray-500 dark:text-gray-400">This challenge link is invalid or has already been used</p>
-            <button onClick={() => router.push('/')} className="mt-4 px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
-              Go Home
-            </button>
+            <BackButton label="Go Home" />
           </>
         )}
 
@@ -190,9 +189,7 @@ export default function ChallengePage() {
             <div className="text-5xl mb-2">⏰</div>
             <h1 className="text-xl font-bold text-red-400">Challenge Expired</h1>
             <p className="text-gray-500 dark:text-gray-400">This challenge link has expired (24h limit)</p>
-            <button onClick={() => router.push('/')} className="mt-4 px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
-              Go Home
-            </button>
+            <BackButton label="Go Home" />
           </>
         )}
 
@@ -209,9 +206,7 @@ export default function ChallengePage() {
             <div className="text-5xl mb-2">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Error</h1>
             <p className="text-gray-500 dark:text-gray-400">{errorMsg}</p>
-            <button onClick={() => router.push('/')} className="mt-4 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600">
-              Go Home
-            </button>
+            <BackButton label="Go Home" />
           </>
         )}
       </div>

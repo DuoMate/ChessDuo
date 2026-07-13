@@ -57,7 +57,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
               <button
                 type="button"
                 onClick={onClose}
-                className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400"
                 aria-label="Close"
               >
                 <X size={18} />
