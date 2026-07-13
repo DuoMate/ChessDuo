@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export const runtime = 'edge'
+export const runtime = 'experimental-edge'
 
 export async function middleware(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith('/game') && !request.nextUrl.pathname.startsWith('/duel') && !request.nextUrl.pathname.startsWith('/history')) {
