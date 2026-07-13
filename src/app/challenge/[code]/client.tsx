@@ -9,7 +9,7 @@ import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 
-export default function ChallengePage() {
+export default function ChallengePageClient() {
   const params = useParams()
   const router = useRouter()
   const challengeCode = params.code as string
