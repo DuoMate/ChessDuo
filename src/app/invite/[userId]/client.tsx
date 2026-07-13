@@ -9,7 +9,7 @@ import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 
-export default function InvitePage() {
+export default function InvitePageClient() {
   const params = useParams()
   const router = useRouter()
   const targetUserId = params.userId as string
@@ -48,9 +48,7 @@ export default function InvitePage() {
         if (!mountedRef.current) return
         const data = result.data
         if (data) setTargetUsername(data.username)
-      }).catch((err: unknown) => {
-        // Target username not found
-      })
+      }).catch(() => {})
   }, [targetUserId])
 
   useEffect(() => {
@@ -74,9 +72,7 @@ export default function InvitePage() {
         setStatus('error')
         setErrorMsg('Could not send friend request')
       })
-    }).catch(() => {
-      // Could not check friend status
-    })
+    }).catch(() => {})
   }, [playerId, targetUserId])
 
   const isSelf = playerId && targetUserId && playerId === targetUserId
