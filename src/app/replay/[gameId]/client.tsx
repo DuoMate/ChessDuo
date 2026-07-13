@@ -15,7 +15,7 @@ const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then
   ssr: false,
 })
 
-export default function ReplayPage() {
+export default function ReplayPageClient() {
   const params = useParams()
   const gameId = params.gameId as string
   const [game, setGame] = useState<CompletedGame | null | undefined>(undefined)

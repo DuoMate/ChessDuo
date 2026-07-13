@@ -19,9 +19,6 @@ Route group for non-game pages that share a common layout with `HomeBottomNav` (
 | `/premium` | Premium subscription pricing |
 | `/privacy` | Privacy policy |
 | `/delete-account` | Account deletion flow |
-| `/invite/[userId]` | Friend invite landing |
-| `/challenge/[code]` | Challenge link landing |
-| `/replay/[gameId]` | Match replay viewer |
 | `/four-player` | 4-player lobby |
 
 ## Pages NOT in This Group
@@ -30,6 +27,9 @@ Route group for non-game pages that share a common layout with `HomeBottomNav` (
 | `/` (home) | Has its own HomeBottomNav and sub-screen management |
 | `/game` | Game room — no bottom nav |
 | `/duel` | Duel room — no bottom nav |
+| `/challenge/[code]` | Challenge link landing (root level — needs server component for `generateStaticParams`) |
+| `/invite/[userId]` | Friend invite landing (root level — needs server component for `generateStaticParams`) |
+| `/replay/[gameId]` | Match replay viewer (root level — needs server component for `generateStaticParams`) |
 
 ## Logic & Decisions
 - Smart back: all pages in this group use `BackButton` which calls `router.back()` (falls back to home or appropriate parent).
@@ -45,4 +45,5 @@ Route group for non-game pages that share a common layout with `HomeBottomNav` (
 - `@/lib/messages` — unread message counts
 
 ## Recent Changes
-- **2026-07-13**: Created `(main)/` route group. Pages moved here: history, profile, premium, privacy, delete-account, invite, challenge, replay, four-player. Each page now uses `BackButton` instead of `HomeButton`. HomeBottomNav added to layout (visible on all non-game-room pages). History tab opens SlideOver instead of navigating to `/history`. Taglines fixed: Duo → "You + Friend vs Bots", Four Players → "Friends Battle".
+- **2026-07-13**: Created `(main)/` route group. Pages moved here: history, profile, premium, privacy, delete-account, four-player. Each page now uses `BackButton` instead of `HomeButton`. HomeBottomNav added to layout (visible on all non-game-room pages). History tab opens SlideOver instead of navigating to `/history`. Taglines fixed: Duo → "You + Friend vs Bots", Four Players → "Friends Battle".
+- **2026-07-13**: Moved `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` OUT of `(main)/` route group to root level. Reason: `(main)/layout.tsx` is `'use client'`, which prevents child pages from using server-only `generateStaticParams()`. Root-level pages use server component `page.tsx` importing client component. `generateStaticParams()` returns placeholder params `[{param: 'placeholder'}]` for static export compatibility.
