@@ -47,7 +47,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
             <h2 className="text-lg font-bold text-white">Match History</h2>
           </div>
           {onClose && (
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
               <span className="text-slate-400 text-lg">&times;</span>
             </button>
           )}
@@ -70,7 +70,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
           <h2 className="text-lg font-bold text-white">Match History</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
             <span className="text-slate-400 text-lg">&times;</span>
           </button>
         )}
@@ -90,7 +90,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 <Target size={14} className="text-blue-400" />
               </div>
               <p className="text-lg font-bold text-white">{playerStats.totalGames}</p>
-              <p className="text-[10px] text-slate-400">Games</p>
+              <p className="text-xs text-slate-400">Games</p>
             </div>
             <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -103,14 +103,14 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 <span className="text-slate-500">/</span>
                 <span className="text-amber-400">{playerStats.draws}</span>
               </p>
-              <p className="text-[10px] text-slate-400">W/L/D</p>
+              <p className="text-xs text-slate-400">W/L/D</p>
             </div>
             <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <Clock size={14} className="text-purple-400" />
               </div>
               <p className="text-lg font-bold text-white">{Math.round(playerStats.avgSyncRate * 100)}%</p>
-              <p className="text-[10px] text-slate-400">Avg Sync</p>
+              <p className="text-xs text-slate-400">Avg Sync</p>
             </div>
           </motion.div>
         )}
@@ -126,7 +126,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
+            <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
             {games.map((game, i) => (
               <motion.div
                 key={game.id}
@@ -162,7 +162,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                       }`}>
                         {game.winner === 'WHITE' ? 'White Wins' : game.winner === 'DRAW' ? 'Draw' : 'Black Wins'}
                       </span>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
                         <span>{game.is_online ? '🌐 Online' : '🤖 Offline'}</span>
                         <span>·</span>
                         <span>{new Date(game.played_at).toLocaleDateString()}</span>
@@ -181,7 +181,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                <div className="flex items-center gap-3 text-xs text-slate-400">
                   <span>{game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over'}</span>
                   <span>·</span>
                   <span>{game.white_moves} moves</span>

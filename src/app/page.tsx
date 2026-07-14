@@ -1015,7 +1015,7 @@ function GameModeCard({
             </div>
           ))}
         </div>
-        <span className="text-[10px] font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
+        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
         <div className="flex items-center gap-1">
           {rightIcons.map((icon, i) => (
             <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden">
@@ -1169,7 +1169,7 @@ function PlayerIcons({ left, right }: {
       </div>
       <div className="flex flex-col items-center gap-0.5">
         <Swords size={18} strokeWidth={2} className="text-amber-500/60 dark:text-amber-400/50" />
-        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
+        <span className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">VS</span>
       </div>
       <div className="flex items-center gap-1.5">
         {right.map((type, i) => (

@@ -1989,7 +1989,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           <button
             onClick={() => setShowInsights(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
             aria-label="Close"
           >
             ✕
@@ -2035,7 +2035,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           </div>
           <button
             onClick={() => setShowChat(false)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
             aria-label="Close"
           >
             ✕

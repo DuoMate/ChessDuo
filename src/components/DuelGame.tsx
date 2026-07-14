@@ -302,13 +302,13 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </div>
           <h1 className="text-2xl font-bold text-amber-600 dark:text-amber-400">Waiting for opponent...</h1>
           <p className="text-gray-500 dark:text-gray-400">Share this room code with your friend:</p>
-          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
+          <div className="bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-white/10 rounded-xl p-4">
             <p className="text-3xl font-bold tracking-widest font-mono text-amber-500 dark:text-amber-400">{roomCode}</p>
           </div>
           <p className="text-gray-500 text-sm">The game starts when your opponent joins</p>
           <button
             onClick={onLeave}
-            className="mt-4 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors min-h-[44px]"
+            className="mt-4 px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors min-h-[44px]"
           >
             Cancel
           </button>

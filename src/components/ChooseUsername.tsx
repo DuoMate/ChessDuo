@@ -122,12 +122,12 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 text-yellow-600 dark:text-yellow-400">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[#0a0e1a] p-4">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/70 dark:border-slate-700/70 p-6 sm:p-8 rounded-[30px] shadow-[0_24px_90px_rgba(2,6,23,0.25)] w-full max-w-md">
+        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
           ChessDuo
         </h1>
-        <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-6">
+        <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">
           Choose your unique display name
         </p>
 
@@ -143,12 +143,14 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
                 maxLength={30}
                 autoFocus
                 autoComplete="username"
-                className={`w-full p-3 pr-10 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border focus:outline-none transition-colors ${
+                autoCapitalize="none"
+                enterKeyHint="done"
+                className={`w-full p-3 pr-10 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border focus:outline-none focus:ring-2 transition-all ${
                   usernameStatus === 'available'
-                    ? 'border-green-500 focus:border-green-400'
+                    ? 'border-green-500 focus:border-green-400 focus:ring-green-500/20'
                     : usernameStatus === 'taken' || usernameStatus === 'invalid'
-                    ? 'border-red-500 focus:border-red-400'
-                    : 'border-gray-300 dark:border-gray-600 focus:border-yellow-400'
+                    ? 'border-red-500 focus:border-red-400 focus:ring-red-500/20'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-amber-400 focus:ring-amber-500/20'
                 }`}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -175,7 +177,7 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
               </p>
             )}
             {!usernameMessage && !username.trim() && (
-              <p className="text-gray-500 text-xs mt-1">
+              <p className="text-slate-500 text-xs mt-1">
                 3-30 characters, letters, numbers, and underscores only
               </p>
             )}
@@ -188,13 +190,13 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
           <button
             type="submit"
             disabled={loading || usernameStatus !== 'available'}
-            className="w-full p-3 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50 transition-colors"
+            className="w-full min-h-[44px] p-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold rounded-2xl hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-amber-500/20 hover:-translate-y-0.5"
           >
             {loading ? 'Creating profile...' : 'Continue'}
           </button>
         </form>
 
-        <p className="text-gray-500 dark:text-gray-400 text-xs text-center mt-4">
+        <p className="text-slate-500 dark:text-slate-400 text-xs text-center mt-4">
           You can change your username anytime in your profile settings.
         </p>
       </div>

@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { getCompletedGame, type CompletedGame } from '@/lib/matchHistory'
 import dynamic from 'next/dynamic'
+import { Spinner } from '@/components/Spinner'
 import { BackButton } from '@/components/BackButton'
 
 const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center pb-20">
-      <p className="text-gray-500 dark:text-gray-400">Loading replay...</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+      <Spinner size="md" label="Loading replay..." />
     </div>
   ),
   ssr: false,
@@ -40,17 +41,17 @@ export default function ReplayPageClient() {
 
   if (game === undefined) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <p className="text-gray-500 dark:text-gray-400">Loading replay...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+        <Spinner size="md" label="Loading replay..." />
       </div>
     )
   }
 
   if (!game || error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-xl font-bold mb-2">Game Not Found</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">This replay is no longer available.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">This replay is no longer available.</p>
         <BackButton label="Back to History" fallbackHref="/history" />
       </div>
     )

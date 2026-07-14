@@ -32,12 +32,12 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-xs w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-2xl"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-xs w-full mx-4 border border-gray-200 dark:border-slate-700 shadow-2xl"
           >
             <div className="text-center mb-5">
               <div className="text-3xl mb-3">⚠</div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{title || 'Abort Match'}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{message || 'Are you sure?'}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{message || 'Are you sure?'}</p>
               {detail && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{detail}</p>
               )}
@@ -46,7 +46,7 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
             <div className="flex gap-3">
               <button
                 onClick={onCancel}
-                className="flex-1 min-h-[44px] rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 min-h-[44px] rounded-xl border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>

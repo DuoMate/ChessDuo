@@ -29,7 +29,7 @@ export function ResignConfirmModal({ onConfirm, onCancel }: ResignConfirmModalPr
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={MODAL_SPRING}
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-sm p-6 text-center shadow-xl"
+          className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-center mb-3">
@@ -38,11 +38,11 @@ export function ResignConfirmModal({ onConfirm, onCancel }: ResignConfirmModalPr
             </div>
           </div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Resign Game</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Are you sure you want to resign? This cannot be undone.</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">Are you sure you want to resign? This cannot be undone.</p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white font-medium text-sm transition-colors min-h-[44px]"
+              className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-white font-medium text-sm transition-colors min-h-[44px]"
             >
               Cancel
             </button>

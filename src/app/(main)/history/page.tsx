@@ -135,7 +135,7 @@ export default function HistoryPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
+              <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
               {games.map((game, i) => (
                 <motion.div
                   key={game.id}

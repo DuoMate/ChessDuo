@@ -205,8 +205,8 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a0e1a]">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-yellow-400">
           ♟️ ChessDuo
         </h1>
@@ -224,9 +224,9 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
             <span className="text-gray-500 text-sm">OR</span>
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+            <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
           </div>
 
           <div className="flex gap-2">
@@ -236,7 +236,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
                value={joinCode}
                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                maxLength={36}
-               className="flex-1 p-2 md:p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 focus:border-yellow-400 focus:outline-none text-center text-base md:text-lg tracking-wide md:tracking-widest font-mono"
+               className="flex-1 p-2 md:p-3 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-slate-600 focus:border-yellow-400 focus:outline-none text-center text-base md:text-lg tracking-wide md:tracking-widest font-mono"
              />
             <button
               onClick={joinRoom}
@@ -252,8 +252,8 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           )}
 
           {myRoomCode && (
-            <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-              <p className="text-gray-500 dark:text-gray-400 text-center mb-2">Share this code with your teammate:</p>
+            <div className="mt-6 p-4 bg-gray-100 dark:bg-slate-700 rounded">
+              <p className="text-gray-500 dark:text-slate-400 text-center mb-2">Share this code with your teammate:</p>
               <p className="text-3xl font-bold text-center text-yellow-400 tracking-widest font-mono">
                 {myRoomCode}
               </p>

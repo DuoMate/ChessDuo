@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 dark:bg-gray-900 rounded-xl">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 dark:bg-[#0a0e1a] rounded-xl">
           <div className="text-red-400 text-4xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 text-center max-w-md">
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
           >
             Reload Page
           </button>
