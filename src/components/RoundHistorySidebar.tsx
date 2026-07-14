@@ -50,14 +50,19 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
             className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-slate-900/95 border-l border-slate-700/70 backdrop-blur-xl flex flex-col"
           >
             <header className="flex items-center justify-between p-4 border-b border-slate-700/60">
-              <div className="flex items-center gap-2">
-                <History size={16} className="text-amber-400" />
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-100">Round History</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  <History size={18} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white">Round History</h3>
+                  <p className="text-xs text-slate-400">View past rounds</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
                 aria-label="Close"
               >
                 <X size={18} />
