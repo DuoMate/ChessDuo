@@ -617,4 +617,26 @@ CREATE POLICY "Users can manage their own tokens"
   ON push_tokens
   FOR ALL
   USING (user_id = auth.uid()::text);
+
+-- Index for faster message queries
+CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver
+  ON messages(sender_id, receiver_id, created_at DESC);
+
+-- TTL cleanup: remove stale game data older than 24 hours
+-- Run manually or via Supabase cron when needed:
+--   SELECT cleanup_stale_game_data();
+CREATE OR REPLACE FUNCTION cleanup_stale_game_data()
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  deleted_count int;
+BEGIN
+  DELETE FROM games WHERE updated_at < NOW() - INTERVAL '24 hours';
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  DELETE FROM rooms WHERE created_at < NOW() - INTERVAL '24 hours' AND status != 'playing';
+  RETURN deleted_count;
+END;
+$$;
                                                                                                                                                                                     

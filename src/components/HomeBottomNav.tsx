@@ -12,8 +12,8 @@ interface HomeBottomNavProps {
 
 export function HomeBottomNav({ onProfile, onHistory, onFriends, unreadMessages }: HomeBottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-[#0a0e1a]/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-      <div className="flex items-center justify-around h-16 px-2 max-w-lg mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-end justify-center pointer-events-none" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}>
+      <div className="flex items-center justify-around h-14 px-3 w-[90%] max-w-xs rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
         <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
         <NavButton label="History" icon={History} onClick={onHistory} />
         <NavButton label="Friends" icon={Users} onClick={onFriends} badge={unreadMessages} />

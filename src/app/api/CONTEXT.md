@@ -21,6 +21,10 @@ Next.js API route handlers for server-side operations (health checks, payments, 
 - Push routes use `createServerClient` from `@supabase/ssr` for auth (same pattern as delete-account).
 - `/api/push/send` uses FCM HTTP v1 API with JWT assertion via `jose` library (no Firebase Admin SDK needed).
 - OAuth2 token is cached in memory to avoid repeated JWT exchanges per request.
+- Push routes are rate-limited: register 30/min, send 60/min (via `applyRateLimit()`).
 
 ## Dependencies
 - Supabase Admin client, Razorpay SDK, `jose` (JWT signing for FCM)
+
+## Recent Changes
+- **2026-07-14**: Added rate limiting to push routes (`/api/push/register` 30/min, `/api/push/send` 60/min).

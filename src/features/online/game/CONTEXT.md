@@ -21,3 +21,6 @@ Real-time multiplayer 2v2 game implementation using Supabase Broadcast + Presenc
 - `GameState` from `game-engine/`, `GameInterface` from `shared/`
 - `@supabase/supabase-js` for real-time channels
 - `lib/gamePersistence` for save/load, `lib/subscriptionManager` for channel tracking
+
+## Recent Changes
+- **2026-07-14**: Timer sync interval reduced 5s→15s to cut Realtime messages by 66%. Added local countdown on all clients (`startMatchTimer()` now runs on all players, timeout detection remains coordinator-only). Timer_sync interval also restored on game reconnect.

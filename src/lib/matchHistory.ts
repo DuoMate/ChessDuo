@@ -1,3 +1,5 @@
+import { supabase } from './supabase'
+
 export interface CompletedGame {
   id: string
   room_id: string | null
@@ -92,6 +94,28 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
   const existing = getLocalHistory(userId)
   existing.unshift(localEntry)
   saveLocalHistory(existing, userId)
+
+  if (userId) {
+    try {
+      await supabase.from('completed_games').insert({
+        winner: data.winner,
+        game_result: data.gameResult,
+        game_over_reason: data.gameOverReason,
+        white_moves: data.stats.whiteMovesPlayed,
+        white_sync_rate: data.stats.whiteSyncRate,
+        white_conflicts: data.stats.whiteConflicts,
+        player1_accuracy: Math.round(data.stats.player1Accuracy),
+        player2_accuracy: Math.round(data.stats.player2Accuracy),
+        total_moves: data.stats.totalMoves,
+        is_online: data.isOnline,
+        move_comparisons: data.moveComparisons || [],
+        challenge_id: data.challengeId || null,
+        played_at: new Date().toISOString(),
+      })
+    } catch {
+      // Supabase insert is best-effort — history still saved locally
+    }
+  }
 }
 
 export async function getMatchHistory(limit = 20, userId?: string): Promise<CompletedGame[]> {

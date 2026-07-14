@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Crown, Copy, Share2, CheckCircle2, User, Loader2, Sparkles } from 'lucide-react'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { supabase } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import {
@@ -43,6 +44,14 @@ export function FourPlayerLobby({
   const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+
+  useCapacitorBackButton(
+    () => {
+      handleLeave()
+      return true
+    },
+    view === 'lobby' || view === 'loading' || view === 'starting'
+  )
 
   const inviteUrl = typeof window !== 'undefined'
     ? `${getAppBaseUrl()}/?code=${roomCode}`

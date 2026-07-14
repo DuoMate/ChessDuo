@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
+import { applyRateLimit } from '@/lib/rateLimit'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
+  const rateLimitResponse = applyRateLimit(request)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(

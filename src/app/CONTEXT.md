@@ -26,7 +26,7 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - `providers.tsx` is the single source of truth for client context. No other layout wrappers.
 - `middleware.ts` redirects unauthenticated users away from `/game`.
 - Home page MUST NOT return `null` during session check — always show loading UI.
-- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered), TimePills (time selector), GameModeCard (Quick Play/Duo/Four Players), BotDifficultySelector, PlayButton (green gradient CTA), and HomeBottomNav.
+- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered), TimePills (time selector), GameModeCard (Quick Play/Duo/Four Players — single click selects, double-click starts), PlayButton (green gradient, enabled when mode selected), BotDifficultySelector (visible for Quick Play and Duo only), and HomeBottomNav (floating pill style).
 - Non-game-room pages (history, profile, premium, privacy, delete-account, four-player) are in the `(main)/` route group and share a layout with HomeBottomNav + SlideOver panels for Profile, Friends, and History.
 - Dynamic routes `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` are at root level (not in `(main)/`) because they need server component `page.tsx` with `generateStaticParams()` for static export.
 - Pages in `(main)/` use `BackButton` instead of `HomeButton` for smart back navigation (`router.back()` with fallback to home).
@@ -34,8 +34,12 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - Game rooms (`/game`, `/duel`) do NOT show HomeBottomNav — they have their own `BoardBottomNav`.
 
 ## Recent Changes
+- **2026-07-14**: Restored PlayButton above BotDifficulty — single click selects a mode (blue highlight), double-click or Play starts the game. No-scroll layout (`h-screen overflow-hidden`, compact spacing). PlayButton + BotDifficulty visible for Quick Play/Duo; 4 Player shows PlayButton only. BotDifficulty hidden for 4 Player.
+- **2026-07-14**: HomeBottomNav changed to floating pill style (rounded-2xl, centered, 12px from bottom, glassmorphism shadow).
+- **2026-07-14**: WelcomeDisclaimer instruction screen now shows "Your Move" (green) + "Teammate"/"Bot" (blue) legend below the chess board.
+- **2026-07-14**: WelcomeDisclaimer back button fixed — hardware back dismisses modal instead of exiting app. Same fix applied to FourPlayerLobby.
+- **2026-07-14**: Unread message polling reduced from 10s to 30s (`page.tsx`). Saves 66% idle DB queries per user.
 - **2026-07-14**: Added push notification module — `NotificationHandler` and `initPushNotifications()` wired into `providers.tsx`. New API routes at `/api/push/register` and `/api/push/send`.
-- **2026-07-14**: Game mode cards now start game on single click — removed `selectedGameMode` state, `handlePlay`/`handleGameModeDoubleClick`, and `PlayButton`. Each card's `onClick` directly triggers the appropriate handler (Quick Play → offline, Duo → online/onboarding, 4 Player → four-player room). Sound/Profile buttons moved into `GameMenu` hamburger on game pages.
 - **2026-07-13**: Moved `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` OUT of `(main)/` route group to root level. Reason: `(main)/layout.tsx` is `'use client'` which prevents `generateStaticParams()`. Fixed static export build by using placeholder params `[{param: 'placeholder'}]` instead of `[]` (Next.js 16 Turbopack does not properly detect empty `generateStaticParams()`). Renamed `middleware.ts` to `proxy.ts` (Next.js 16 deprecation).
 - **2026-07-13**: Created `(main)/` route group for non-game-room pages. Pages moved: history, profile, premium, privacy, delete-account, four-player. Shared layout provides HomeBottomNav + SlideOvers (Profile/Friends/History). `BackButton` replaces `HomeButton` for smart back. History tab opens SlideOver. Taglines fixed: Duo → "You + Friend vs Bots", Four Players → "Friends Battle".
 - **2026-07-12**: Board page revamp — dark glassmorphism theme, 80% board, new `BoardTopBar` + bottom nav + pending moves row + confirm move button + inline `MoveResolvedInline` + round history sidebar. New `confirmMove` setting (off by default). All three game pages (Game.tsx, DuelGame.tsx, ReplayView.tsx) share the new shell. Quick Play is rendered as `You + WhiteBot vs BlackBot` (one bot per side) — see `src/components/CONTEXT.md` for the visual collapse.
