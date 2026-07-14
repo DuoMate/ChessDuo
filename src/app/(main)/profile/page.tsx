@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { BackButton } from '@/components/BackButton'
 import { motion } from 'framer-motion'
+import { InitialsAvatar } from '@/components/InitialsAvatar'
 
 export default function ProfilePage() {
-  const router = useRouter()
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [username, setUsername] = useState('')
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -33,19 +33,32 @@ export default function ProfilePage() {
     })
   }, [])
 
+  useEffect(() => {
+    if (!playerId) return
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', playerId)
+      .maybeSingle()
+      .then((result) => {
+        if (!mountedRef.current) return
+        if (result.data?.username) setUsername(result.data.username)
+      }).catch(() => {})
+  }, [playerId])
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <p className="text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
+        <p className="text-slate-400">Loading...</p>
       </div>
     )
   }
 
   if (!playerId) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
-        <p className="text-gray-400 mb-4">Sign in to view your profile</p>
+        <p className="text-slate-400 mb-4">Sign in to view your profile</p>
         <BackButton label="Go Home" />
       </div>
     )
@@ -53,30 +66,36 @@ export default function ProfilePage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-4 pb-20">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <BackButton />
-        </div>
+      <div className="min-h-screen bg-[#0a0e1a] text-white p-4 pb-20">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">Profile</h1>
+            <BackButton />
+          </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700"
-        >
-          <ProfileEditor playerId={playerId} />
-        </motion.div>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => router.push('/history')}
-            className="text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 text-sm"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
           >
-            View Match History →
-          </button>
+            {/* Profile Card */}
+            <div className="p-6 bg-slate-800/50 border border-white/5 rounded-2xl flex flex-col items-center">
+              <InitialsAvatar username={username || 'U'} size="lg" />
+              <div className="mt-4 w-full">
+                <ProfileEditor playerId={playerId} />
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={() => window.history.back()}
+                className="text-slate-400 hover:text-amber-400 text-sm transition-colors"
+              >
+                &larr; Back
+              </button>
+            </div>
+          </motion.div>
         </div>
-      </div>
       </div>
     </ErrorBoundary>
   )

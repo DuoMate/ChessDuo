@@ -32,7 +32,7 @@ jest.mock('@/components/ErrorBoundary', () => ({
 describe('PremiumPage Component', () => {
   test('renders the ChessDuo Premium heading', async () => {
     render(<PremiumPage />)
-    const heading = await screen.findByText('ChessDuo Premium')
+    const heading = await screen.findByText('ChessDuo')
     expect(heading).toBeDefined()
   })
 

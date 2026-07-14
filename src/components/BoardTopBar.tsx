@@ -4,6 +4,7 @@ import { Crown, Activity } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getAvatarUrl, type HumanAvatar } from '@/features/shared/avatars'
 import { Team } from '@/features/game-engine/gameState'
+import { InitialsAvatar } from './InitialsAvatar'
 
 export interface BoardTopBarPlayer {
   id: string
@@ -39,26 +40,44 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
     ? 'bg-emerald-500 text-white'
     : 'bg-emerald-500 text-white'
 
-  const useProfileImage = !!player.profileImageUrl
-  const imageSrc = useProfileImage
-    ? player.profileImageUrl!
-    : getAvatarUrl(player.type, player.avatar)
+  if (player.type === 'bot') {
+    const imageSrc = getAvatarUrl(player.type, player.avatar)
+    return (
+      <div className="flex flex-col items-center gap-0.5 min-w-0">
+        <div className={`relative w-10 h-10 rounded-xl overflow-hidden ring-2 ${ringClass} bg-slate-800/40`}>
+          <img
+            src={imageSrc}
+            alt={player.label}
+            className="w-full h-full object-contain p-0.5"
+            loading="lazy"
+            decoding="async"
+          />
+          {player.submitted && (
+            <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${checkClass} flex items-center justify-center ring-2 ring-slate-900`}>
+              <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          )}
+          {player.online !== false && !player.submitted && (
+            <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${dotClass} ring-2 ring-slate-900`} />
+          )}
+        </div>
+        <span className="text-[10px] font-medium text-slate-300 truncate max-w-[60px]">
+          {player.label}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center gap-0.5 min-w-0">
-      <div className={`relative w-10 h-10 rounded-xl overflow-hidden ring-2 ${ringClass} bg-slate-800/40`}>
-        <img
-          src={imageSrc}
-          alt={player.label}
-          className={`w-full h-full ${player.type === 'bot' ? 'object-contain p-0.5' : 'object-cover'}`}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            const target = e.currentTarget
-            if (target.src !== getAvatarUrl(player.type, player.avatar)) {
-              target.src = getAvatarUrl(player.type, player.avatar)
-            }
-          }}
+      <div className="relative">
+        <InitialsAvatar
+          username={player.label}
+          size="md"
+          online={player.online}
+          ringClass={ringClass}
         />
         {player.submitted && (
           <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${checkClass} flex items-center justify-center ring-2 ring-slate-900`}>
@@ -66,9 +85,6 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
               <path d="M2.5 6.5L5 9L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-        )}
-        {player.online !== false && !player.submitted && (
-          <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${dotClass} ring-2 ring-slate-900`} />
         )}
       </div>
       <span className="text-[10px] font-medium text-slate-300 truncate max-w-[60px]">

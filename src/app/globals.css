@@ -23,12 +23,12 @@
 }
 
 .dark {
-  --color-page-bg: #060816;
+  --color-page-bg: #0a0e1a;
   --color-page-fg: #f8fafc;
-  --color-surface: rgba(18, 23, 42, 0.9);
-  --color-surface-strong: #111827;
-  --color-surface-hover: #1f2937;
-  --color-border: rgba(148, 163, 184, 0.22);
+  --color-surface: rgba(15, 23, 42, 0.8);
+  --color-surface-strong: #0f172a;
+  --color-surface-hover: #1e293b;
+  --color-border: rgba(255, 255, 255, 0.06);
   --color-muted: #94a3b8;
   --color-muted-bg: rgba(15, 23, 42, 0.9);
   --color-accent-bg: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(129, 140, 248, 0.18));
@@ -37,8 +37,8 @@
   --color-danger-hover: #f43f5e;
   --color-primary: #fbbf24;
   --color-primary-strong: #f59e0b;
-  --color-secondary: #818cf8;
-  --color-success: #34d399;
+  --color-secondary: #3b82f6;
+  --color-success: #22c55e;
   --color-shadow: rgba(2, 6, 23, 0.45);
 }
 
