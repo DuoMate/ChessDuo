@@ -939,17 +939,17 @@ function GameModeCard({
     <button
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`w-full min-h-[72px] flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full min-h-[72px] flex items-center gap-3 p-2 sm:p-3 rounded-xl border-2 transition-all duration-200 text-left ${
         selected
           ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[var(--shadow-glow-blue-light)]'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
     >
       {/* Team icons — fixed-width column so text always starts at the same x */}
-      <div className="w-auto min-w-[100px] max-w-[200px] flex items-center gap-1.5 shrink-0">
+      <div className="w-auto min-w-0 max-w-[200px] flex items-center gap-1.5 shrink-0">
         <div className="flex items-center gap-1.5">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -965,7 +965,7 @@ function GameModeCard({
         <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
         <div className="flex items-center gap-1.5">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -983,10 +983,10 @@ function GameModeCard({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-base text-slate-900 dark:text-white truncate">{title}</span>
+          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{title}</span>
           {showStar && <span className="text-amber-500 text-sm shrink-0">★</span>}
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{subtitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
       </div>
 
       {/* Chevron */}
