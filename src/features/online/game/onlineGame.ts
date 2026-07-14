@@ -758,8 +758,9 @@ export class OnlineGame {
             this.gameState.setMatchTimeRemaining(Math.floor(remaining))
             this.gameState.setMatchTimerActive(true)
             if (this.isCoordinator()) {
-              this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+              this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 15000)
             }
+            this.startMatchTimer()
             DEBUG && console.log('[ONLINE] Restored match timer:', { 
               elapsed: Math.floor(elapsed), 
               remaining: Math.floor(remaining), 
@@ -832,14 +833,13 @@ export class OnlineGame {
   }
 
   private startMatchTimer(): void {
-    if (!this.isCoordinator()) return
     this.gameState.setMatchTimerActive(true)
     if (this._timerCountdownInterval) {
       clearInterval(this._timerCountdownInterval)
     }
     this._timerCountdownInterval = setInterval(() => {
       const remaining = this.gameState.getMatchTimeRemaining()
-      if (remaining <= 0) {
+      if (this.isCoordinator() && remaining <= 0) {
         const captured = this.gameState.capturedPieces
         const whiteCaptured = captured.white.length
         const blackCaptured = captured.black.length
@@ -853,7 +853,8 @@ export class OnlineGame {
         this.notifyStateChange()
         return
       }
-      this.gameState.setMatchTimeRemaining(remaining - 1)
+      this.gameState.setMatchTimeRemaining(Math.max(0, remaining - 1))
+      this.notifyStateChange()
     }, 1000)
   }
 

@@ -73,6 +73,17 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
               </div>
             </div>
 
+            <div className="flex items-center justify-center gap-4 mb-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" />
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Your Move</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-blue-400 bg-blue-400/20" />
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">{isOffline ? 'Bot' : 'Teammate'}</span>
+              </div>
+            </div>
+
             <p className="text-center text-[12px] leading-relaxed font-medium text-slate-600 dark:text-slate-300 mb-4">
               {isOffline
                 ? 'You and your botmate each pick a move.\nThe best one plays on the board.'

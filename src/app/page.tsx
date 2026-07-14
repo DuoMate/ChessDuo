@@ -68,6 +68,7 @@ export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
+  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'duo' | 'four' | null>(null)
   const [selectedTime, setSelectedTime] = useState<number>(DEFAULT_TEAM_TIMER_SECONDS)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
@@ -104,7 +105,6 @@ export default function SetupPage() {
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
-  // Game mode click directly starts the game — no selection state needed
 
   useEffect(() => {
     mountedRef.current = true
@@ -183,6 +183,14 @@ export default function SetupPage() {
 
   useCapacitorBackButton(
     () => {
+      if (showOnboarding) {
+        setShowOnboarding(false)
+        return true
+      }
+      if (showOfflineDisclaimer) {
+        setShowOfflineDisclaimer(false)
+        return true
+      }
       if (gameMode !== null) {
         setGameMode(null)
         setJoinCode('')
@@ -194,7 +202,7 @@ export default function SetupPage() {
       }
       return false
     },
-    gameMode !== null || !!duelFriend
+    gameMode !== null || !!duelFriend || showOnboarding || showOfflineDisclaimer
   )
 
   useEffect(() => {
@@ -284,7 +292,7 @@ export default function SetupPage() {
         // Message counts unavailable
       })
       update()
-      const interval = setInterval(update, 10000)
+      const interval = setInterval(update, 30000)
       const unsub = subscribeToMessages(playerId, () => {
         getUnreadCounts(playerId).then(({ total, bySender }) => {
           if (!mountedRef.current) return
@@ -568,8 +576,26 @@ export default function SetupPage() {
   }
 
   const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
-    if (!playerId && mode !== 'quick') { setShowAuthOverlay(true); return }
-    switch (mode) {
+    if (selectedGameMode === mode) {
+      switch (mode) {
+        case 'quick':
+          handleStartOffline()
+          break
+        case 'duo':
+          handleTwoPlayerClick()
+          break
+        case 'four':
+          handleStartFourPlayer(selectedTime)
+          break
+      }
+    } else {
+      setSelectedGameMode(mode)
+    }
+  }
+
+  const handlePlay = () => {
+    if (!selectedGameMode) return
+    switch (selectedGameMode) {
       case 'quick':
         handleStartOffline()
         break
@@ -766,30 +792,32 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex min-h-screen flex-col overflow-y-auto bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white">
+      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden">
         <HeaderBar />
 
-        <div className="flex flex-1 flex-col px-4 pb-20 pt-6 max-w-lg mx-auto w-full">
+        <div className="flex flex-1 flex-col px-4 pb-20 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
           {/* Time Control */}
-          <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Time Control</p>
+          <div className="mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
             <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
           </div>
 
           {/* Game Mode */}
-          <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Game Mode</p>
-              <div className="space-y-2">
+          <div className="mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+              <div className="space-y-1.5">
                 <GameModeCard
                   onClick={() => handleGameModeClick('quick')}
+                  selected={selectedGameMode === 'quick'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
-                  subtitle="You + WhiteBot vs BlackBot"
+                  subtitle="You + WhiteBot vs BlackBots"
                   showStar
                 />
                 <GameModeCard
                   onClick={() => handleGameModeClick('duo')}
+                  selected={selectedGameMode === 'duo'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
@@ -797,6 +825,7 @@ if (!gameMode) {
                 />
                 <GameModeCard
                   onClick={() => handleGameModeClick('four')}
+                  selected={selectedGameMode === 'four'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                   title="4 Player"
@@ -805,14 +834,28 @@ if (!gameMode) {
               </div>
             </div>
 
-          {/* Bot Difficulty */}
-          <div className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Bot Difficulty</p>
+          {/* Play Button — visible when any mode is selected */}
+          {selectedGameMode && (
+            <div className="mb-2">
+              <button
+                onClick={handlePlay}
+                className="w-full min-h-[44px] rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-md hover:from-emerald-400 hover:to-green-400 active:scale-[0.98] transition-all duration-200"
+              >
+                Play
+              </button>
+            </div>
+          )}
+
+          {/* Bot Difficulty — visible only for Quick Play and Duo */}
+          {selectedGameMode && selectedGameMode !== 'four' && (
+            <div className="mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Bot Difficulty</p>
               <BotDifficultySelector
                 selectedLevel={selectedLevel}
                 onSelect={setSelectedLevel}
               />
             </div>
+          )}
 
             {/* Error message */}
             {joinError && (
@@ -897,6 +940,7 @@ function GameModeCard({
   title,
   subtitle,
   showStar = false,
+  selected = false,
 }: {
   onClick: () => void
   leftIcons: TeamIcon[]
@@ -904,17 +948,22 @@ function GameModeCard({
   title: string
   subtitle: string
   showStar?: boolean
+  selected?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full min-h-[72px] flex items-center gap-3 p-2 sm:p-3 rounded-xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-all duration-200 text-left"
+      className={`w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left ${
+        selected
+          ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10'
+          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
+      }`}
     >
-      {/* Team icons — fixed-width column so text always starts at the same x */}
-      <div className="w-auto min-w-0 max-w-[200px] flex items-center gap-1.5 shrink-0">
-        <div className="flex items-center gap-1.5">
+      {/* Team icons */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -927,10 +976,10 @@ function GameModeCard({
             </div>
           ))}
         </div>
-        <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
-        <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
+        <div className="flex items-center gap-1">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -947,15 +996,15 @@ function GameModeCard({
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{title}</span>
-          {showStar && <span className="text-amber-500 text-sm shrink-0">★</span>}
+        <div className="flex items-center gap-1">
+          <span className="font-bold text-sm text-slate-900 dark:text-white">{title}</span>
+          {showStar && <span className="text-amber-500 text-xs shrink-0">★</span>}
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
 
       {/* Chevron */}
-      <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
+      <ChevronRight size={16} className="text-slate-500 flex-shrink-0" />
     </button>
   )
 }

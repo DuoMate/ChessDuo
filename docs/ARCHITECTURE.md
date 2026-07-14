@@ -76,10 +76,16 @@ src/
 │   │   └── localGame.ts          # LocalGame class
 │   ├── online/game/              # Real-time multiplayer game
 │   │   └── onlineGame.ts         # OnlineGame class
-│   └── bots/                     # Bot players
-│       ├── chessBot.ts           # Bot move generation
-│       ├── botConfig.ts          # ELO-based difficulty config
-│       └── serverMoveEvaluator.ts# Stockfish HTTP client
+│   ├── bots/                     # Bot players
+│   │   ├── chessBot.ts           # Bot move generation
+│   │   ├── botConfig.ts          # ELO-based difficulty config
+│   │   └── serverMoveEvaluator.ts# Stockfish HTTP client
+│   └── push-notifications/       # Push notification module
+│       ├── types.ts              # NotificationType, PushPayload types
+│       ├── PushNotificationService.ts  # FCM token registration + sending
+│       ├── NotificationHandler.tsx      # Deep-link on notification tap
+│       ├── index.ts              # Public API (initPushNotifications, notify*)
+│       └── CONTEXT.md            # Module documentation
 │
 ├── hooks/                        # React hooks
 │   ├── useIsMobile.ts            # Viewport breakpoint hook

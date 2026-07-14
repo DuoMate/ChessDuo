@@ -42,4 +42,5 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - Razorpay SDK, Stockfish WASM
 
 ## Recent Changes
+- **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games (previously localStorage only). `rateLimit.ts` added push route limits (register: 30/min, send: 60/min).
 - **2026-07-12**: `settings.ts` now exposes `confirmMove: boolean` (default `false`) and a `setConfirmMove` setter. Used by `Game.tsx` to gate the move-commit flow behind a "Confirm Move" button.
