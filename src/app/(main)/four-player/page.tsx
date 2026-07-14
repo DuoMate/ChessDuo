@@ -9,12 +9,13 @@ import { joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
+import { Spinner } from '@/components/Spinner'
 
 const FourPlayerLobbyComponent = dynamic(() => import('@/components/FourPlayerLobby').then(mod => ({ default: mod.FourPlayerLobby })), {
   loading: () => (
     <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Spinner size="md" />
         <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading lobby...</p>
       </div>
     </div>
@@ -84,7 +85,7 @@ function FourPlayerContent() {
   if (!roomId || !roomCode || !urlPlayerId) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Spinner size="md" />
       </div>
     )
   }
@@ -106,7 +107,7 @@ export default function FourPlayerPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <Spinner size="md" />
           <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading...</p>
         </div>
       </div>

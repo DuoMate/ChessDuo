@@ -2,6 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, History, Crown } from 'lucide-react'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 export interface RoundHistoryEntry {
   round: number
@@ -31,6 +33,8 @@ function pieceFor(san: string, color: 'white' | 'black'): string {
 }
 
 export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory }: RoundHistorySidebarProps) {
+  useEscapeKey(onClose, open)
+  useScrollLock(open)
   return (
     <AnimatePresence>
       {open && (
@@ -46,7 +50,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
             className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-slate-900/95 border-l border-slate-700/70 backdrop-blur-xl flex flex-col"
           >
             <header className="flex items-center justify-between p-4 border-b border-slate-700/60">
@@ -62,7 +66,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
                 aria-label="Close"
               >
                 <X size={18} />

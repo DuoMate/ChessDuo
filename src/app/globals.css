@@ -103,13 +103,3 @@ body {
     @apply ring-1 ring-slate-200/70 dark:ring-slate-700/70;
   }
 }
-
-@keyframes gentleFloat {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}

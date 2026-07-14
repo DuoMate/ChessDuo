@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Timeline } from 'animejs'
 import { Crown, Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { Spinner } from '@/components/Spinner'
 
 interface GameLobbyProps {
   roomCode?: string
@@ -143,7 +144,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
                 <span className="text-sm text-slate-500">{'\u2192'}</span>
                 <div className="flex items-center gap-1.5">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-600/40 bg-slate-700/30">
-                    <Loader2 size={12} className="text-slate-500 animate-spin" />
+                    <Spinner size="sm" />
                   </div>
                   <span className="text-sm text-slate-500">Waiting for your teammate</span>
                 </div>

@@ -5,6 +5,9 @@ import type { ReactNode } from 'react'
 import { useCallback } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { useScrollLock } from '@/hooks/useScrollLock'
+import { PANEL_SPRING, PANEL_BACKDROP } from './modalConstants'
 
 interface SlideOverProps {
   open: boolean
@@ -21,6 +24,8 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
     return true
   }, [onClose])
   useCapacitorBackButton(backHandler, open)
+  useEscapeKey(onClose, open)
+  useScrollLock(open)
 
   if (isMobile) {
     return (
@@ -31,14 +36,14 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-slate-950/65 backdrop-blur-sm"
+              className={`fixed inset-0 z-40 ${PANEL_BACKDROP}`}
               onClick={onClose}
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              transition={PANEL_SPRING}
               className="fixed inset-x-0 top-0 bottom-0 z-50 overflow-y-auto bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl dark:bg-slate-950/90"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
@@ -72,14 +77,14 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-40"
+            className={`fixed inset-0 z-40 ${PANEL_BACKDROP}`}
             onClick={onClose}
           />
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={PANEL_SPRING}
             className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-sm overflow-y-auto border-l border-slate-200/80 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl dark:border-slate-700/80 dark:bg-slate-950/90"
           >
             <div className="p-4">

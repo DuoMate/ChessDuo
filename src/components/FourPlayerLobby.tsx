@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Crown, Copy, Share2, CheckCircle2, User, Loader2, Sparkles } from 'lucide-react'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import {
@@ -329,7 +330,7 @@ export function FourPlayerLobby({
       >
         {view === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <Spinner size="md" />
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading lobby...</p>
           </div>
         )}
@@ -348,7 +349,7 @@ export function FourPlayerLobby({
 
         {view === 'starting' && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+            <Spinner size="md" />
             <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Starting game...</p>
           </div>
         )}

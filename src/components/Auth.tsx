@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
+import { Spinner } from '@/components/Spinner'
 
 const RESERVED_USERNAMES = new Set([
   'admin', 'moderator', 'system', 'chessduo', 'support', 'official',
@@ -322,7 +323,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {usernameStatus === 'checking' && (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                      <Spinner size="sm" />
                     )}
                     {usernameStatus === 'available' && (
                       <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

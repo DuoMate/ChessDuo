@@ -23,6 +23,7 @@ import { Swords, Crown, ChevronRight } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { Spinner } from '@/components/Spinner'
 
 export const dynamic = 'force-dynamic'
 
@@ -612,7 +613,7 @@ export default function SetupPage() {
     <ErrorBoundary>
       <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-400 rounded-full animate-spin" />
+          <Spinner size="md" />
           <p className="text-sm text-slate-400">Loading...</p>
         </div>
       </div>
@@ -687,7 +688,7 @@ export default function SetupPage() {
 
               {duelFriendsLoading ? (
                 <div className="flex justify-center py-12">
-                  <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                  <Spinner size="sm" />
                 </div>
               ) : duelFriends.length === 0 ? (
                 <div className="text-center py-12">
@@ -887,7 +888,7 @@ if (!gameMode) {
                 className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
               >
                 {joinLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                  <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
                 ) : (
                   'Join'
                 )}
