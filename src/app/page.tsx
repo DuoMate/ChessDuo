@@ -863,14 +863,6 @@ if (!gameMode) {
             )}
           </div>
 
-          {/* Bottom Navigation */}
-          <HomeBottomNav
-            onProfile={() => setProfileOpen(true)}
-            onHistory={() => setHistoryOpen(true)}
-            onFriends={() => setFriendsOpen(true)}
-            unreadMessages={unreadMessages}
-          />
-
           {slideOvers}
           {authOverlay}
           {showOnboarding && (
@@ -881,6 +873,14 @@ if (!gameMode) {
             />
           )}
         </div>
+
+        {/* Bottom Navigation — outside overflow-hidden container */}
+        <HomeBottomNav
+          onProfile={() => setProfileOpen(true)}
+          onHistory={() => setHistoryOpen(true)}
+          onFriends={() => setFriendsOpen(true)}
+          unreadMessages={unreadMessages}
+        />
       </ErrorBoundary>
     )
   }
