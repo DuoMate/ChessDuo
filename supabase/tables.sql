@@ -598,4 +598,23 @@ CREATE POLICY "Allow all" ON public.games FOR ALL USING (true) WITH CHECK (true)
 DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
 CREATE POLICY "Authenticated users can join rooms" ON public.room_players
   FOR INSERT WITH CHECK (auth.uid()::text = player_id);
+
+-- Push notification device tokens
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('android', 'ios')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (user_id, token)
+);
+
+ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own tokens" ON public.push_tokens;
+CREATE POLICY "Users can manage their own tokens"
+  ON push_tokens
+  FOR ALL
+  USING (user_id = auth.uid()::text);
                                                                                                                                                                                     
