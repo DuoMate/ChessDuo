@@ -1,6 +1,8 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 interface LeaveConfirmModalProps {
   open: boolean
@@ -12,6 +14,8 @@ interface LeaveConfirmModalProps {
 }
 
 export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, detail }: LeaveConfirmModalProps) {
+  useEscapeKey(onCancel, open)
+  useScrollLock(open)
   return (
     <AnimatePresence>
       {open && (

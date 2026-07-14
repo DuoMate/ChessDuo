@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 interface ErrorDetailModalProps {
   open: boolean
@@ -13,6 +15,9 @@ interface ErrorDetailModalProps {
 
 export function ErrorDetailModal({ open, onClose, title, message, details }: ErrorDetailModalProps) {
   const [showDetails, setShowDetails] = useState(false)
+
+  useEscapeKey(onClose, open)
+  useScrollLock(open)
 
   return (
     <AnimatePresence>

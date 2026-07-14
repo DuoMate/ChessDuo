@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { findAvailableRoom, createQuickMatchRoom, joinQuickMatchRoom, checkMyRoomJoined, deleteRoom } from '@/lib/matchmaking'
 import { supabase } from '@/lib/supabase'
 import { Room } from '@/lib/supabase'
+import { Spinner } from '@/components/Spinner'
 
 type Status = 'searching' | 'creating' | 'waiting' | 'joining' | 'error'
 
@@ -127,11 +128,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
 
         {status === 'searching' && (
           <div className="mt-6 space-y-3">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-              className="w-10 h-10 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full mx-auto"
-            />
+            <Spinner size="md" />
             <p className="text-gray-500 dark:text-gray-400 text-sm">Searching for opponent...</p>
           </div>
         )}

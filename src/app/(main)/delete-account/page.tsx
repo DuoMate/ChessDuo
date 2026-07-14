@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
+import { Spinner } from '@/components/Spinner'
 
 export default function DeleteAccountPage() {
   const router = useRouter()
@@ -112,7 +113,7 @@ export default function DeleteAccountPage() {
 
         {step === 'loading' && (
           <div className="text-center py-20">
-            <div className="animate-spin w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4" />
+            <Spinner size="lg" />
             <p className="text-gray-500 dark:text-gray-400">Deleting your account...</p>
           </div>
         )}

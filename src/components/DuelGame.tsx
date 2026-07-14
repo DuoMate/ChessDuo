@@ -404,8 +404,19 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         </AnimatePresence>
 
         {pendingPromotion && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-slate-900 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-slate-900 p-6 rounded-lg border border-slate-700"
+            >
               <h3 className="text-xl font-bold text-slate-100 mb-4 text-center">Promote Pawn</h3>
               <div className="flex gap-3 md:gap-4">
                 {(['q', 'r', 'b', 'n'] as PromotionPiece[]).map((piece) => (
@@ -423,8 +434,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Bottom nav */}
@@ -458,20 +469,18 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onCancel={() => setShowResignConfirm(false)}
         />
       )}
-      {showLeaveModal && (
-        <LeaveConfirmModal
-          open={showLeaveModal}
-          onConfirm={() => {
-            setShowLeaveModal(false)
-            confirmNavLeave()
-            onLeave()
-          }}
-          onCancel={() => setShowLeaveModal(false)}
-          title="Abort Match"
-          message="Are you sure you want to leave?"
-          detail="You will forfeit this duel."
-        />
-      )}
+      <LeaveConfirmModal
+        open={showLeaveModal}
+        onConfirm={() => {
+          setShowLeaveModal(false)
+          confirmNavLeave()
+          onLeave()
+        }}
+        onCancel={() => setShowLeaveModal(false)}
+        title="Abort Match"
+        message="Are you sure you want to leave?"
+        detail="You will forfeit this duel."
+      />
     </div>
   )
 }

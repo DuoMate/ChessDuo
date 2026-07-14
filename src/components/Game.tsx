@@ -132,23 +132,34 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
 
 function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => void }) {
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-xl">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-xl"
+      >
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
         <div className="flex gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
               key={piece}
               onClick={() => onSelect(piece)}
-              className="flex flex-col items-center p-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors"
+              className="flex flex-col items-center p-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
             >
               <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-500 dark:text-gray-300">{label}</span>
             </button>
           ))}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -277,6 +288,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showRoundHistory, setShowRoundHistory] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
   const [showChat, setShowChat] = useState(false)
+
+  const closeAllPanels = useCallback(() => {
+    setShowRoundHistory(false)
+    setShowInsights(false)
+    setShowChat(false)
+    setOverlayMode('none')
+  }, [])
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
   const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
   const playerId = playerIdFromProps || sessionPlayerId
@@ -1762,16 +1780,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onCancel={() => setShowResignConfirm(false)}
         />
       )}
-      {showLeaveModal && (
-        <LeaveConfirmModal
-          open={showLeaveModal}
-          onConfirm={() => handleLeaveConfirm()}
-          onCancel={() => setShowLeaveModal(false)}
-          title={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Leave Room' : 'Abort Match'}
-          message={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
-          detail={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
-        />
-      )}
+      <LeaveConfirmModal
+        open={showLeaveModal}
+        onConfirm={() => handleLeaveConfirm()}
+        onCancel={() => setShowLeaveModal(false)}
+        title={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Leave Room' : 'Abort Match'}
+        message={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+        detail={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
+      />
     </>
   )
 
@@ -1925,16 +1941,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onTabChange={(t) => {
             if (t === 'moves') {
               setActiveBoardTab('game')
+              closeAllPanels()
               setShowRoundHistory(true)
               return
             }
             if (t === 'insights') {
               setActiveBoardTab('game')
+              closeAllPanels()
               setShowInsights(true)
               return
             }
             if (t === 'chat') {
               setActiveBoardTab('game')
+              closeAllPanels()
               setShowChat(true)
               return
             }

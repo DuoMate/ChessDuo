@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Crown } from 'lucide-react'
 import { ChessBoard } from './ChessBoard'
+import { useEscapeKey } from '@/hooks/useEscapeKey'
+import { useScrollLock } from '@/hooks/useScrollLock'
 
 interface OnboardingOverlayProps {
   open: boolean
@@ -19,6 +21,9 @@ const TOUR_LAST_MOVE = { from: 'e2', to: 'e4' }
 export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welcome_dismissed', mode = 'online' }: OnboardingOverlayProps) {
   const [dontShow, setDontShow] = useState(false)
   const isOffline = mode === 'offline'
+
+  useEscapeKey(onDismiss, open)
+  useScrollLock(open)
 
   const handleDismiss = () => {
     if (dontShow) {
