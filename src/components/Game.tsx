@@ -1767,9 +1767,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           open={showLeaveModal}
           onConfirm={() => handleLeaveConfirm()}
           onCancel={() => setShowLeaveModal(false)}
-          title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
-          message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
-          detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
+          title={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Leave Room' : 'Abort Match'}
+          message={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+          detail={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
         />
       )}
     </>
@@ -1814,7 +1814,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
         {/* Compact top bar — header + team avatars + timer + controls */}
-        <div className="w-full border-b border-white/5 px-3 py-3 bg-[#0a0e1a]">
+        <div className="w-full bg-[#0a0e1a] border-b border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
@@ -1827,10 +1827,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 currentTurn={gameState.currentTurn}
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setSoundEnabled(!soundEnabled)}
-                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                className="min-h-[44px] min-w-[44px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
                 title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
                 aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
               >
@@ -1838,7 +1838,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               </button>
               <button
                 onClick={() => setOverlayMode('profile')}
-                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                className="min-h-[44px] min-w-[44px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
                 title="Profile"
                 aria-label="Profile"
               >

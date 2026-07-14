@@ -504,9 +504,10 @@ export default function SetupPage() {
   }
 
   const handleOnboardingDismiss = () => {
-    setShowOnlineDisclaimer(false)
-    setShowOnboarding(false)
-    setGameMode(null)
+    // DON'T dismiss the overlay here — it stays visible during room creation
+    // to prevent flashing the home page. Navigation happens after the room
+    // is created (see handleStartOnline). On error, the overlay is dismissed
+    // in the catch block.
     handleStartOnline(selectedTime)
   }
 
@@ -562,7 +563,8 @@ export default function SetupPage() {
       }
     } catch (err) {
       setCreatingTime(null)
-      setJoinError(err instanceof Error ? err.message : 'Failed to create challenge')
+      setShowOnboarding(false)
+      setJoinError(err instanceof Error ? err.message : 'Failed to create room')
     }
   }
 
