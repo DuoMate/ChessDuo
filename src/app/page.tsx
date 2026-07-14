@@ -506,6 +506,7 @@ export default function SetupPage() {
   const handleOnboardingDismiss = () => {
     setShowOnlineDisclaimer(false)
     setShowOnboarding(false)
+    setGameMode(null)
     handleStartOnline(selectedTime)
   }
 
@@ -578,6 +579,18 @@ export default function SetupPage() {
       case 'four':
         handleStartFourPlayer(selectedTime)
         break
+    }
+  }
+
+  const handleGameModeClick = (mode: SelectedGameMode) => {
+    setSelectedGameMode(mode)
+  }
+
+  const handleGameModeDoubleClick = (mode: SelectedGameMode) => {
+    if (selectedGameMode === mode) {
+      handlePlay()
+    } else {
+      setSelectedGameMode(mode)
     }
   }
 
@@ -782,8 +795,8 @@ if (!gameMode) {
                 <GameModeCard
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
-                  onClick={() => setSelectedGameMode('quick')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('quick')}
+                  onDoubleClick={() => handleGameModeDoubleClick('quick')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
@@ -793,8 +806,8 @@ if (!gameMode) {
                 <GameModeCard
                   mode="duo"
                   selected={selectedGameMode === 'duo'}
-                  onClick={() => setSelectedGameMode('duo')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('duo')}
+                  onDoubleClick={() => handleGameModeDoubleClick('duo')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
@@ -803,11 +816,11 @@ if (!gameMode) {
                 <GameModeCard
                   mode="four"
                   selected={selectedGameMode === 'four'}
-                  onClick={() => setSelectedGameMode('four')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('four')}
+                  onDoubleClick={() => handleGameModeDoubleClick('four')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
-                  title="Four Players"
+                  title="4 Player"
                   subtitle="Friends Battle"
                 />
               </div>
@@ -926,17 +939,17 @@ function GameModeCard({
     <button
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`w-full min-h-[72px] flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full min-h-[72px] flex items-center gap-3 p-2 sm:p-3 rounded-xl border-2 transition-all duration-200 text-left ${
         selected
           ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[var(--shadow-glow-blue-light)]'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
     >
       {/* Team icons — fixed-width column so text always starts at the same x */}
-      <div className="w-auto min-w-[100px] max-w-[200px] flex items-center gap-1.5 shrink-0">
+      <div className="w-auto min-w-0 max-w-[200px] flex items-center gap-1.5 shrink-0">
         <div className="flex items-center gap-1.5">
           {leftIcons.map((icon, i) => (
-            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -952,7 +965,7 @@ function GameModeCard({
         <span className="text-xs font-bold text-blue-500/60 dark:text-blue-400/60">VS</span>
         <div className="flex items-center gap-1.5">
           {rightIcons.map((icon, i) => (
-            <div key={i} className="w-10 h-10 rounded-full overflow-hidden">
+            <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden">
               <img
                 src={icon.type === 'human' ? HUMAN_AVATARS[icon.avatar] : BOT_AVATAR}
                 alt={icon.type === 'human' ? `Player avatar (${icon.avatar})` : 'Bot avatar'}
@@ -970,10 +983,10 @@ function GameModeCard({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-base text-slate-900 dark:text-white truncate">{title}</span>
+          <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{title}</span>
           {showStar && <span className="text-amber-500 text-sm shrink-0">★</span>}
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">{subtitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>
       </div>
 
       {/* Chevron */}
