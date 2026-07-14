@@ -19,7 +19,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, Crown, ChevronRight, Play } from 'lucide-react'
+import { Swords, Crown, ChevronRight } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -27,7 +27,6 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 export const dynamic = 'force-dynamic'
 
 type GameMode = 'offline' | 'online' | 'fourplayer' | 'duel' | null
-type SelectedGameMode = 'quick' | 'duo' | 'four' | null
 
 interface TimeOption {
   seconds: number
@@ -105,7 +104,7 @@ export default function SetupPage() {
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
-  const [selectedGameMode, setSelectedGameMode] = useState<SelectedGameMode>('duo')
+  // Game mode click directly starts the game — no selection state needed
 
   useEffect(() => {
     mountedRef.current = true
@@ -568,10 +567,9 @@ export default function SetupPage() {
     }
   }
 
-  const handlePlay = () => {
-    if (!playerId) { setShowAuthOverlay(true); return }
-
-    switch (selectedGameMode) {
+  const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
+    if (!playerId && mode !== 'quick') { setShowAuthOverlay(true); return }
+    switch (mode) {
       case 'quick':
         handleStartOffline()
         break
@@ -581,18 +579,6 @@ export default function SetupPage() {
       case 'four':
         handleStartFourPlayer(selectedTime)
         break
-    }
-  }
-
-  const handleGameModeClick = (mode: SelectedGameMode) => {
-    setSelectedGameMode(mode)
-  }
-
-  const handleGameModeDoubleClick = (mode: SelectedGameMode) => {
-    if (selectedGameMode === mode) {
-      handlePlay()
-    } else {
-      setSelectedGameMode(mode)
     }
   }
 
@@ -795,10 +781,7 @@ if (!gameMode) {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Game Mode</p>
               <div className="space-y-2">
                 <GameModeCard
-                  mode="quick"
-                  selected={selectedGameMode === 'quick'}
                   onClick={() => handleGameModeClick('quick')}
-                  onDoubleClick={() => handleGameModeDoubleClick('quick')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
@@ -806,20 +789,14 @@ if (!gameMode) {
                   showStar
                 />
                 <GameModeCard
-                  mode="duo"
-                  selected={selectedGameMode === 'duo'}
                   onClick={() => handleGameModeClick('duo')}
-                  onDoubleClick={() => handleGameModeDoubleClick('duo')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
                   subtitle="You + Friend vs Bots"
                 />
                 <GameModeCard
-                  mode="four"
-                  selected={selectedGameMode === 'four'}
                   onClick={() => handleGameModeClick('four')}
-                  onDoubleClick={() => handleGameModeDoubleClick('four')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                   title="4 Player"
@@ -837,12 +814,9 @@ if (!gameMode) {
               />
             </div>
 
-            {/* Play Button */}
-            <PlayButton onClick={handlePlay} />
-
             {/* Error message */}
             {joinError && (
-              <p className="mt-3 text-center text-xs font-medium text-red-400">{joinError}</p>
+              <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
             )}
           </div>
 
@@ -917,20 +891,14 @@ function TimePills({ selectedTime, onSelect }: {
 // Game Mode Card Component
 // ============================================
 function GameModeCard({
-  mode,
-  selected,
   onClick,
-  onDoubleClick,
   leftIcons,
   rightIcons,
   title,
   subtitle,
   showStar = false,
 }: {
-  mode: string
-  selected: boolean
   onClick: () => void
-  onDoubleClick?: () => void
   leftIcons: TeamIcon[]
   rightIcons: TeamIcon[]
   title: string
@@ -940,12 +908,7 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      className={`w-full min-h-[72px] flex items-center gap-3 p-2 sm:p-3 rounded-xl border-2 transition-all duration-200 text-left ${
-        selected
-          ? 'border-blue-500/60 bg-blue-50 dark:bg-blue-500/5 shadow-[var(--shadow-glow-blue-light)]'
-          : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
-      }`}
+      className="w-full min-h-[72px] flex items-center gap-3 p-2 sm:p-3 rounded-xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-all duration-200 text-left"
     >
       {/* Team icons — fixed-width column so text always starts at the same x */}
       <div className="w-auto min-w-0 max-w-[200px] flex items-center gap-1.5 shrink-0">
@@ -1067,23 +1030,6 @@ function BotDifficultySelector({
     </div>
   )
 }
-
-// ============================================
-// Play Button Component
-// ============================================
-function PlayButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full min-h-[56px] flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-white font-black text-xl tracking-wider transition-all duration-200 shadow-[var(--shadow-glow-green)] hover:shadow-[var(--shadow-glow-green-strong)] active:scale-[0.98]"
-    >
-      <Play size={24} fill="currentColor" />
-      PLAY
-    </button>
-  )
-}
-
-
 
 // ============================================
 // Player Icons Component (offline mode)
