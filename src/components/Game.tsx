@@ -1956,8 +1956,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       <SlideOver
         open={showInsights}
         onClose={() => setShowInsights(false)}
-        title="Move Insights"
       >
+        {/* Move Insights Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <span className="text-white text-lg">♟</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Move Insights</h2>
+            <p className="text-xs text-slate-400">Analyze your moves</p>
+          </div>
+        </div>
         {accuracyComparison ? (
           <div className="text-slate-100">
             <MoveInsights
@@ -1984,8 +1993,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       <SlideOver
         open={showChat}
         onClose={() => setShowChat(false)}
-        title="Team Chat"
       >
+        {/* Team Chat Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <span className="text-white text-lg">💬</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Team Chat</h2>
+            <p className="text-xs text-slate-400">Communicate with teammate</p>
+          </div>
+        </div>
         {playerId ? (
           <div className="text-slate-300 text-sm">
             <ChatPanel
