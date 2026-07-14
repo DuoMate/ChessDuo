@@ -34,6 +34,7 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - Game rooms (`/game`, `/duel`) do NOT show HomeBottomNav — they have their own `BoardBottomNav`.
 
 ## Recent Changes
+- **2026-07-14**: Dark mode CSS variables updated in `globals.css` — page background changed from `#060816` to `#0a0e1a`, surface from `rgba(18,23,42,0.9)` to `rgba(15,23,42,0.8)`, border from `rgba(148,163,184,0.22)` to `rgba(255,255,255,0.06)`, secondary from `#818cf8` to `#3b82f6`, success from `#34d399` to `#22c55e`. All redesigned pages (Friends, Profile, Premium, History) use the new palette.
 - **2026-07-14**: Restored PlayButton above BotDifficulty — single click selects a mode (blue highlight), double-click or Play starts the game. No-scroll layout (`h-screen overflow-hidden`, compact spacing). PlayButton + BotDifficulty visible for Quick Play/Duo; 4 Player shows PlayButton only. BotDifficulty hidden for 4 Player.
 - **2026-07-14**: HomeBottomNav changed to floating pill style (rounded-2xl, centered, 12px from bottom, glassmorphism shadow).
 - **2026-07-14**: WelcomeDisclaimer instruction screen now shows "Your Move" (green) + "Teammate"/"Bot" (blue) legend below the chess board.

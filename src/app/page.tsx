@@ -621,16 +621,28 @@ export default function SetupPage() {
 
   const showTopBar = !gameMode
 
-  const slideOvers = playerId && (
+  const slideOvers = (
     <>
       <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-        <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} />
+        {playerId ? (
+          <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setProfileOpen(false); setShowAuthOverlay(true) }} />
+        )}
       </SlideOver>
       <SlideOver open={historyOpen} onClose={() => setHistoryOpen(false)} title="Match History">
-        <HistoryPanel playerId={playerId} />
+        {playerId ? (
+          <HistoryPanel playerId={playerId} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setHistoryOpen(false); setShowAuthOverlay(true) }} />
+        )}
       </SlideOver>
-      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); getUnreadCounts(playerId!).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) }} title="Friends">
-        <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); if (playerId) { getUnreadCounts(playerId).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) } }} title="Friends">
+        {playerId ? (
+          <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setFriendsOpen(false); setShowAuthOverlay(true) }} />
+        )}
       </SlideOver>
     </>
   )
@@ -857,6 +869,32 @@ if (!gameMode) {
             </div>
           )}
 
+          {/* Join by Code */}
+          <div className="mt-1 mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="Enter room code"
+                maxLength={36}
+                className="flex-1 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              />
+              <button
+                onClick={handleJoinByCode}
+                disabled={joinLoading || !joinCode.trim()}
+                className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
+              >
+                {joinLoading ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                ) : (
+                  'Join'
+                )}
+              </button>
+            </div>
+          </div>
+
             {/* Error message */}
             {joinError && (
               <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
@@ -876,9 +914,9 @@ if (!gameMode) {
 
         {/* Bottom Navigation — outside overflow-hidden container */}
         <HomeBottomNav
-          onProfile={() => setProfileOpen(true)}
-          onHistory={() => setHistoryOpen(true)}
-          onFriends={() => setFriendsOpen(true)}
+          onProfile={() => { if (!playerId) { setShowAuthOverlay(true); return }; setProfileOpen(true) }}
+          onHistory={() => { if (!playerId) { setShowAuthOverlay(true); return }; setHistoryOpen(true) }}
+          onFriends={() => { if (!playerId) { setShowAuthOverlay(true); return }; setFriendsOpen(true) }}
           unreadMessages={unreadMessages}
         />
       </ErrorBoundary>
@@ -1076,6 +1114,27 @@ function BotDifficultySelector({
         </div>
         <span className="text-xs text-slate-400 dark:text-slate-500">Hard</span>
       </div>
+    </div>
+  )
+}
+
+// ============================================
+// Sign In Prompt Component
+// ============================================
+function SignInPrompt({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="text-4xl mb-4">🔒</div>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Sign in required</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
+        Sign in to access your profile, match history, and friends.
+      </p>
+      <button
+        onClick={onSignIn}
+        className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+      >
+        Sign In
+      </button>
     </div>
   )
 }

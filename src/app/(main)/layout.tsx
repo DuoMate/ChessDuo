@@ -65,24 +65,50 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {children}
       </div>
       <HomeBottomNav
-        onProfile={() => setProfileOpen(true)}
-        onHistory={() => setHistoryOpen(true)}
-        onFriends={() => setFriendsOpen(true)}
+        onProfile={() => { if (!playerId) { router.push('/'); return }; setProfileOpen(true) }}
+        onHistory={() => { if (!playerId) { router.push('/'); return }; setHistoryOpen(true) }}
+        onFriends={() => { if (!playerId) { router.push('/'); return }; setFriendsOpen(true) }}
         unreadMessages={unreadMessages}
       />
-      {playerId && (
-        <>
-          <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)} title="Profile">
-            <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} />
-          </SlideOver>
-          <SlideOver open={historyOpen} onClose={() => setHistoryOpen(false)} title="Match History">
-            <HistoryPanel playerId={playerId} />
-          </SlideOver>
-          <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); refreshUnread() }} title="Friends">
-            <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} />
-          </SlideOver>
-        </>
-      )}
+      <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)}>
+        {playerId ? (
+          <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} onClose={() => setProfileOpen(false)} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setProfileOpen(false); router.push('/?signup=1') }} />
+        )}
+      </SlideOver>
+      <SlideOver open={historyOpen} onClose={() => setHistoryOpen(false)}>
+        {playerId ? (
+          <HistoryPanel playerId={playerId} onClose={() => setHistoryOpen(false)} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setHistoryOpen(false); router.push('/?signup=1') }} />
+        )}
+      </SlideOver>
+      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); if (playerId) refreshUnread() }}>
+        {playerId ? (
+          <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} onClose={() => setFriendsOpen(false)} />
+        ) : (
+          <SignInPrompt onSignIn={() => { setFriendsOpen(false); router.push('/?signup=1') }} />
+        )}
+      </SlideOver>
     </ErrorBoundary>
+  )
+}
+
+function SignInPrompt({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="text-4xl mb-4">🔒</div>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Sign in required</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
+        Sign in to access your profile, match history, and friends.
+      </p>
+      <button
+        onClick={onSignIn}
+        className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+      >
+        Sign In
+      </button>
+    </div>
   )
 }
