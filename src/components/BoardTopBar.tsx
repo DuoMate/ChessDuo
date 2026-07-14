@@ -158,16 +158,12 @@ export function BoardTopBar({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: -6 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="flex items-center justify-center gap-1.5 mt-1"
+          className="flex items-center justify-center mt-1"
         >
-          <motion.div
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]' : 'text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.4)] [text-shadow:0_0_3px_rgba(255,255,255,0.4),0_1px_2px_rgba(0,0,0,0.8)]'}`}
-          >
-            {currentTurn === Team.WHITE ? '♔' : '♚'}
-          </motion.div>
-          <div className={`px-2.5 py-0.5 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/25 bg-blue-500/10' : 'border-purple-500/25 bg-purple-500/10'}`}>
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/30 bg-blue-500/15' : 'border-purple-500/30 bg-purple-500/15'}`}>
+            <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
+              {currentTurn === Team.WHITE ? '♔' : '♚'}
+            </span>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
               {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
             </span>
