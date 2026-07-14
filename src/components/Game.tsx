@@ -1767,9 +1767,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           open={showLeaveModal}
           onConfirm={() => handleLeaveConfirm()}
           onCancel={() => setShowLeaveModal(false)}
-          title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
-          message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
-          detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
+          title={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Leave Room' : 'Abort Match'}
+          message={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+          detail={gameState.status === GameStatus.WAITING || gameState.status === GameStatus.READY ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
         />
       )}
     </>
