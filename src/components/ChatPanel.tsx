@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { sendMessage, getConversation, markMessagesAsRead, subscribeToMessages } from '@/lib/messages'
 import { Message } from '@/lib/supabase'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { notifyChatMessage } from '@/features/push-notifications'
 
 interface ChatPanelProps {
   currentUserId: string
@@ -63,6 +64,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
       setInput('')
       clearTimeout(scrollTimerRef.current)
       scrollTimerRef.current = setTimeout(scrollToBottom, 100)
+      notifyChatMessage(friendId, currentUserId, 'You', input.trim().slice(0, 100))
     }
     setSending(false)
   }

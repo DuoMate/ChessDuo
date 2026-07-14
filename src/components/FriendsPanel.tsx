@@ -17,6 +17,7 @@ import {
 } from '@/lib/friends'
 import { FriendWithProfile } from '@/lib/friends'
 import { FriendActionsMenu } from './FriendActionsMenu'
+import { notifyFriendRequest } from '@/features/push-notifications'
 import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
@@ -135,6 +136,8 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
       setSearchQuery('')
       setSearchResults([])
       loadData()
+      const username = searchResults.find((u) => u.id === receiverId)?.username || 'Someone'
+      notifyFriendRequest(playerId, receiverId, username)
     }
   }
 
@@ -208,7 +211,7 @@ export function FriendsPanel({ playerId, unreadBySender = {} }: FriendsPanelProp
                   className="w-full text-left px-4 py-3 text-sm text-gray-200 hover:bg-white/[0.05] transition-colors flex items-center justify-between min-h-[44px]"
                 >
                   <span>{user.username}</span>
-                  <span className="text-yellow-600 dark:text-yellow-400 text-xs">+ Add</span>
+                  <span className="text-yellow-600 dark:text-yellow-400 text-xs">+ Invite</span>
                 </button>
               ))}
             </div>

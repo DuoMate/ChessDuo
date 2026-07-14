@@ -8,6 +8,8 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { registerCapacitorAuthListener } from '@/lib/capacitorAuth'
 import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
+import { NotificationHandler } from '@/features/push-notifications'
+import { initPushNotifications } from '@/features/push-notifications'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -24,7 +26,14 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerCapacitorAuthListener()
     registerBackButtonListener()
+    initPushNotifications()
   }, [])
 
-  return <NetworkAwareToastProvider><SplashHandler />{children}</NetworkAwareToastProvider>
+  return (
+    <NetworkAwareToastProvider>
+      <SplashHandler />
+      <NotificationHandler />
+      {children}
+    </NetworkAwareToastProvider>
+  )
 }
