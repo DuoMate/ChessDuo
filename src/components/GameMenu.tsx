@@ -2,14 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Flag, Settings } from 'lucide-react'
+import { Menu, X, Flag, Settings, Volume2, VolumeX, User } from 'lucide-react'
 
 interface GameMenuProps {
   onResign?: () => void
   onOpenSettings: () => void
+  soundEnabled?: boolean
+  onToggleSound?: () => void
+  onOpenProfile?: () => void
 }
 
-export function GameMenu({ onResign, onOpenSettings }: GameMenuProps) {
+export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound, onOpenProfile }: GameMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -52,6 +55,32 @@ export function GameMenu({ onResign, onOpenSettings }: GameMenuProps) {
             transition={{ duration: 0.15 }}
             className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/95 shadow-[0_16px_60px_rgba(2,6,23,0.2)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90"
           >
+            {onToggleSound && (
+              <>
+                <button
+                  onClick={() => { onToggleSound(); setOpen(false) }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  style={{ minHeight: '44px' }}
+                >
+                  {soundEnabled ? <Volume2 size={16} className="text-slate-500 dark:text-slate-400" /> : <VolumeX size={16} className="text-slate-500 dark:text-slate-400" />}
+                  {soundEnabled ? 'Sound On' : 'Sound Off'}
+                </button>
+                <div className="h-px bg-slate-200 dark:bg-slate-700" />
+              </>
+            )}
+            {onOpenProfile && (
+              <>
+                <button
+                  onClick={() => { onOpenProfile(); setOpen(false) }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  style={{ minHeight: '44px' }}
+                >
+                  <User size={16} className="text-slate-500 dark:text-slate-400" />
+                  Profile
+                </button>
+                <div className="h-px bg-slate-200 dark:bg-slate-700" />
+              </>
+            )}
             <button
               onClick={() => { onOpenSettings(); setOpen(false) }}
               className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
