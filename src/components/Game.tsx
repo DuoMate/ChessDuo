@@ -712,6 +712,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     DEBUG && console.log('[Game] setOnStateChange callback set up complete')
+
+    // Set onAbandonCallback so resigning triggers state update and save
+    onlineGame.setOnAbandonCallback(() => {
+      DEBUG && console.log('[Game] 🔥 Abandon callback triggered!')
+      if (onlineGameRef.current) {
+        const g = onlineGameRef.current
+        const captured = g.getCapturedPieces()
+        const currentPlayerId = playerIdRef.current
+        const currentTeam = teamRef.current
+        const myTeam = currentTeam || (g as GameInterface).getTeam()
+        if (myTeam) myTeamRef.current = myTeam as 'WHITE' | 'BLACK'
+
+        setGameState(prev => ({
+          ...prev,
+          status: GameStatus.GAME_OVER,
+          fen: g.fen,
+          currentTurn: g.currentTurn,
+          capturedByWhite: captured.white,
+          capturedByBlack: captured.black,
+          lastMove: g.lastMove,
+          matchTimeRemaining: g.getMatchTimeRemaining(),
+          matchTimerActive: false,
+          winner: prev.winner
+        }))
+      }
+    })
   }, [onlineGame, playerId])
 
   // Initialize online game - runs AFTER setOnStateChange is set up
@@ -1467,12 +1493,34 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     try {
       if (isOnline && onlineGameRef.current) {
         await onlineGameRef.current.abandonMatch()
+      } else if (!isOnline && gameRef.current) {
+        // Save offline game before navigating away
+        const g = gameRef.current as LocalGame
+        const result = g.getResult() || 'Resigned'
+        saveCompletedGame({
+          winner: 'DRAW',
+          gameResult: result,
+          gameOverReason: 'resignation',
+          stats: {
+            whiteMovesPlayed: g.getStats().whiteMovesPlayed || 0,
+            whiteSyncRate: g.getStats().whiteSyncRate || 0,
+            whiteConflicts: g.getStats().whiteConflicts || 0,
+            player1Accuracy: g.getStats().player1Accuracy || 0,
+            player2Accuracy: g.getStats().player2Accuracy || 0,
+            totalMoves: moveHistoryRef.current.length,
+          },
+          isOnline: false,
+          moveComparisons: moveHistoryRef.current,
+        }, playerId || undefined)
       }
     } catch {
       // Channel may be dead during refresh; navigation still proceeds
     }
+    // Let the state update process before navigating so the save effect fires
+    await new Promise(r => setTimeout(r, 100))
+    setShowGameOverDismissed(false)
     router.push('/')
-  }, [isOnline])
+  }, [isOnline, playerId])
 
   const handleLeaveConfirm = useCallback(async () => {
     if (roomCode) {
@@ -1482,8 +1530,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       onlineGameRef.current.abandonMatch().catch(() => {})
     }
     setShowLeaveModal(false)
-    window.location.href = '/'
-  }, [isOnline, roomCode])
+    router.push('/')
+  }, [isOnline, roomCode, router])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {
@@ -1685,6 +1733,48 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     })
   }, [moveHistoryRef.current.length])
 
+  // Common modals rendered at the top level so they're available even
+  // during early returns (e.g. lobby, loading). These are fixed-position
+  // overlays that render by conditional state, not by layout position.
+  const commonModals = (
+    <>
+      {gameState.pendingPromotion && (
+        <PromotionModal onSelect={handlePromotionSelect} />
+      )}
+      {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
+        <GameOverModal
+          winner={gameState.winner || 'DRAW'}
+          onPlayAgain={() => router.push('/')}
+          onClose={() => setShowGameOverDismissed(true)}
+          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
+          gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
+        />
+      )}
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
+      )}
+      {showResignConfirm && (
+        <ResignConfirmModal
+          onConfirm={() => {
+            setShowResignConfirm(false)
+            handleResign()
+          }}
+          onCancel={() => setShowResignConfirm(false)}
+        />
+      )}
+      {showLeaveModal && (
+        <LeaveConfirmModal
+          open={showLeaveModal}
+          onConfirm={() => handleLeaveConfirm()}
+          onCancel={() => setShowLeaveModal(false)}
+          title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
+          message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
+          detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
+        />
+      )}
+    </>
+  )
+
   // Show lobby for online mode while waiting for game to start
   const inviteUrl = roomCode && typeof window !== 'undefined'
     ? `${getAppBaseUrl()}/?code=${roomCode}`
@@ -1692,13 +1782,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   if (isOnline && gameState.status !== GameStatus.PLAYING && gameState.status !== GameStatus.GAME_OVER) {
     return (
-      <GameLobby
-        roomCode={roomCode}
-        inviteUrl={inviteUrl}
-        isLoading={gameState.isLoading}
-        botEloLevel={isFourPlayer ? undefined : botEloLevel}
-        onBotEloSelect={isFourPlayer ? undefined : setBotEloLevel}
-      />
+      <>
+        {commonModals}
+        <GameLobby
+          roomCode={roomCode}
+          inviteUrl={inviteUrl}
+          isLoading={gameState.isLoading}
+        />
+      </>
     )
   }
 
@@ -1715,80 +1806,49 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+      {commonModals}
+
       {showGameOn && (
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      {gameState.pendingPromotion && (
-        <PromotionModal onSelect={handlePromotionSelect} />
-      )}
-
-      {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
-        <GameOverModal
-          winner={gameState.winner || 'DRAW'}
-          onPlayAgain={() => router.push('/')}
-          onClose={() => setShowGameOverDismissed(true)}
-          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
-          gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
-        />
-      )}
-
       <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
-        {showSettings && (
-          <SettingsPanel onClose={() => setShowSettings(false)} />
-        )}
-        {showResignConfirm && (
-          <ResignConfirmModal
-            onConfirm={() => {
-              setShowResignConfirm(false)
-              handleResign()
-            }}
-            onCancel={() => setShowResignConfirm(false)}
-          />
-        )}
-        {showLeaveModal && (
-          <LeaveConfirmModal
-            open={showLeaveModal}
-            onConfirm={() => handleLeaveConfirm()}
-            onCancel={() => setShowLeaveModal(false)}
-            title={gameState.status === GameStatus.WAITING ? 'Leave Room' : 'Abort Match'}
-            message={gameState.status === GameStatus.WAITING ? 'Are you sure you want to leave this room?' : 'Are you sure?'}
-            detail={gameState.status === GameStatus.WAITING ? 'The room will be disbanded if you are the creator.' : 'Your teammate will be notified and the match will end for both players.'}
-          />
-        )}
-
-        {/* Compact top bar — header + team avatars + timer */}
-        <div className="relative">
-          <BoardTopBar
-            whitePlayers={whitePlayers}
-            blackPlayers={blackPlayers}
-            matchTimeRemaining={gameState.matchTimeRemaining}
-            matchTimerActive={gameState.matchTimerActive}
-            totalMatchSeconds={timeLimitSeconds || 600}
-            roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
-            currentTurn={gameState.currentTurn}
-          />
-          <div className="absolute right-3 top-2 flex items-center gap-2">
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
-              title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-              aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-            >
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-            <button
-              onClick={() => setOverlayMode('profile')}
-              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
-              title="Profile"
-              aria-label="Profile"
-            >
-              👤
-            </button>
-            <GameMenu
-              onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
-              onOpenSettings={() => setShowSettings(true)}
-            />
+        {/* Compact top bar — header + team avatars + timer + controls */}
+        <div className="w-full border-b border-white/5 px-3 py-3 bg-[#0a0e1a]">
+          <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+            <div className="min-w-0 flex-1">
+              <BoardTopBar
+                whitePlayers={whitePlayers}
+                blackPlayers={blackPlayers}
+                matchTimeRemaining={gameState.matchTimeRemaining}
+                matchTimerActive={gameState.matchTimerActive}
+                totalMatchSeconds={timeLimitSeconds || 600}
+                roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
+                currentTurn={gameState.currentTurn}
+              />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+                aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+              >
+                {soundEnabled ? '🔊' : '🔇'}
+              </button>
+              <button
+                onClick={() => setOverlayMode('profile')}
+                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                title="Profile"
+                aria-label="Profile"
+              >
+                👤
+              </button>
+              <GameMenu
+                onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
+                onOpenSettings={() => setShowSettings(true)}
+              />
+            </div>
           </div>
         </div>
 
