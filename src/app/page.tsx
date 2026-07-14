@@ -19,7 +19,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, Crown, ChevronRight } from 'lucide-react'
+import { Swords, Crown, ChevronRight, Play } from 'lucide-react'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -847,18 +847,6 @@ if (!gameMode) {
               </div>
             </div>
 
-          {/* Play Button — visible when any mode is selected */}
-          {selectedGameMode && (
-            <div className="mb-2">
-              <button
-                onClick={handlePlay}
-                className="w-full min-h-[44px] rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-md hover:from-emerald-400 hover:to-green-400 active:scale-[0.98] transition-all duration-200"
-              >
-                Play
-              </button>
-            </div>
-          )}
-
           {/* Bot Difficulty — visible only for Quick Play and Duo */}
           {selectedGameMode && selectedGameMode !== 'four' && (
             <div className="mb-2">
@@ -912,6 +900,19 @@ if (!gameMode) {
             />
           )}
         </div>
+
+        {/* Play Button Row — above the bottom nav */}
+        {selectedGameMode && (
+          <div className="fixed bottom-[72px] left-0 right-0 z-30 flex justify-center px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <button
+              onClick={handlePlay}
+              className="w-full max-w-xs min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-sm shadow-[0_4px_24px_rgba(16,185,129,0.35)] transition-all duration-200 hover:from-emerald-400 hover:to-green-400 active:scale-[0.97]"
+            >
+              <Play size={20} strokeWidth={2.5} fill="currentColor" />
+              Play
+            </button>
+          </div>
+        )}
 
         {/* Bottom Navigation — outside overflow-hidden container */}
         <HomeBottomNav
