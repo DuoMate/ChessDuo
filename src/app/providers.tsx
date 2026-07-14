@@ -27,7 +27,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerCapacitorAuthListener()
     registerBackButtonListener()
-    initPushNotifications()
+    initPushNotifications().catch(() => {})
   }, [])
 
   useScrollToTop()

@@ -15,25 +15,29 @@ async function isCapacitorAvailable(): Promise<boolean> {
 }
 
 export async function registerDeviceToken(): Promise<void> {
-  const native = await isCapacitorAvailable()
-  if (!native) return
+  try {
+    const native = await isCapacitorAvailable()
+    if (!native) return
 
-  const { PushNotifications } = await import('@capacitor/push-notifications')
+    const { PushNotifications } = await import('@capacitor/push-notifications')
 
-  const permResult = await PushNotifications.requestPermissions()
-  if (permResult.receive !== 'granted') return
+    const permResult = await PushNotifications.requestPermissions()
+    if (permResult.receive !== 'granted') return
 
-  await PushNotifications.register()
+    await PushNotifications.register()
 
-  PushNotifications.addListener('registration', (token) => {
-    fetch(`${getApiBase()}/api/push/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token.value, platform: 'android' }),
+    PushNotifications.addListener('registration', (token) => {
+      fetch(`${getApiBase()}/api/push/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token.value, platform: 'android' }),
+      }).catch(() => {})
     })
-  })
 
-  PushNotifications.addListener('registrationError', () => {})
+    PushNotifications.addListener('registrationError', () => {})
+  } catch {
+    // Push notifications are best-effort — silently fail if native plugin is unavailable
+  }
 }
 
 export async function sendPushNotification(

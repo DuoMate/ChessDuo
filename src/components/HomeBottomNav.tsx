@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { History, Users, User, Home as HomeIcon } from 'lucide-react'
 
 interface HomeBottomNavProps {
@@ -13,7 +12,7 @@ interface HomeBottomNavProps {
 export function HomeBottomNav({ onProfile, onHistory, onFriends, unreadMessages }: HomeBottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 flex justify-center" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}>
-      <div className="flex items-center justify-around h-14 px-3 w-[90%] max-w-xs rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      <div className="flex items-center h-14 w-[90%] max-w-xs px-2 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <NavButton label="Home" icon={HomeIcon} active onClick={() => {}} />
         <NavButton label="History" icon={History} onClick={onHistory} />
         <NavButton label="Friends" icon={Users} onClick={onFriends} badge={unreadMessages} />
@@ -39,7 +38,7 @@ function NavButton({
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
+      className={`relative flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
         active
           ? 'text-blue-600 dark:text-blue-400'
           : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
