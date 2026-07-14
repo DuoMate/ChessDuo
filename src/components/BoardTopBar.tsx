@@ -163,7 +163,7 @@ export function BoardTopBar({
           <motion.div
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            className={`text-sm ${currentTurn === Team.WHITE ? 'text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]' : 'text-slate-800 drop-shadow-[0_0_4px_rgba(0,0,0,0.5)]'}`}
+            className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]' : 'text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.4)] [text-shadow:0_0_3px_rgba(255,255,255,0.4),0_1px_2px_rgba(0,0,0,0.8)]'}`}
           >
             {currentTurn === Team.WHITE ? '♔' : '♚'}
           </motion.div>
