@@ -1088,6 +1088,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         g.lockMove('player4')
         await g.resolveLegacy(true)
         updateStateRef.current()
+
+        const fbComp = g.lastMoveComparison as MoveComparison | null
+        if (fbComp && (moveHistoryRef.current.length === 0 ||
+            fbComp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+          const entry: MoveEntry = {
+            turn: moveHistoryRef.current.length + 1,
+            team: Team.BLACK,
+            winningMove: fbComp.winningMove,
+            winningMoveUci: fbComp.winningMove || '',
+            shadowMove: fbComp.isSync ? null : (fbComp.winningMove === fbComp.player1Move ? fbComp.player2Move : fbComp.player1Move),
+            shadowMoveUci: '',
+            isSync: fbComp.isSync,
+            player1Accuracy: fbComp.player1Accuracy,
+            player2Accuracy: fbComp.player2Accuracy,
+            fenAfter: g.board.fen(),
+          }
+          moveHistoryRef.current = [...moveHistoryRef.current, entry]
+        }
       }
       opponentInProgressRef.current = false
       return
@@ -1103,7 +1121,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     await g.resolveLegacy(true)
     updateStateRef.current()
-    
+
+    const comp = g.lastMoveComparison as MoveComparison | null
+    if (comp && (moveHistoryRef.current.length === 0 ||
+        comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+      const entry: MoveEntry = {
+        turn: moveHistoryRef.current.length + 1,
+        team: Team.BLACK,
+        winningMove: comp.winningMove,
+        winningMoveUci: comp.winningMove || '',
+        shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+        shadowMoveUci: '',
+        isSync: comp.isSync,
+        player1Accuracy: comp.player1Accuracy,
+        player2Accuracy: comp.player2Accuracy,
+        fenAfter: g.board.fen(),
+      }
+      moveHistoryRef.current = [...moveHistoryRef.current, entry]
+    }
+
     DEBUG && console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
     opponentInProgressRef.current = false
   }, [isOnline, bot])
@@ -1413,6 +1449,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (!resolved) {
           setGameState(prev => ({ ...prev, pendingOverlay: null, myPendingOverlay: null }))
           return
+        }
+
+        const comp = g.lastMoveComparison as MoveComparison | null
+        if (comp && moveHistoryRef.current.length === 0 ||
+            (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+          const entry: MoveEntry = {
+            turn: moveHistoryRef.current.length + 1,
+            team: Team.WHITE,
+            winningMove: comp.winningMove,
+            winningMoveUci: comp.winningMove || '',
+            shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+            shadowMoveUci: '',
+            isSync: comp.isSync,
+            player1Accuracy: comp.player1Accuracy,
+            player2Accuracy: comp.player2Accuracy,
+            fenAfter: g.board.fen(),
+          }
+          moveHistoryRef.current = [...moveHistoryRef.current, entry]
         }
 
         const newTurn = g.currentTurn
