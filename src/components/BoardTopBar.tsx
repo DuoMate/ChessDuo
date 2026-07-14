@@ -1,6 +1,6 @@
 'use client'
 
-import { Crown } from 'lucide-react'
+import { Crown, Activity } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getAvatarUrl, type HumanAvatar } from '@/features/shared/avatars'
 import { Team } from '@/features/game-engine/gameState'
@@ -138,13 +138,22 @@ export function BoardTopBar({
       {currentTurn && (
         <motion.div
           key={currentTurn}
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center text-[9px] mt-1 text-slate-400"
+          initial={{ opacity: 0, scale: 0.9, y: -6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: -6 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          className="flex items-center justify-center gap-1.5 mt-1"
         >
-          <span className={currentTurn === Team.WHITE ? 'text-blue-400' : 'text-purple-400'}>
-            {currentTurn === Team.WHITE ? 'White' : 'Black'} team active
-          </span>
+          <motion.div
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            className={`w-1.5 h-1.5 rounded-full ${currentTurn === Team.WHITE ? 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.6)]' : 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.6)]'}`}
+          />
+          <div className={`px-2.5 py-0.5 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/25 bg-blue-500/10' : 'border-purple-500/25 bg-purple-500/10'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
+              {currentTurn === Team.WHITE ? 'White' : 'Black'} Active
+            </span>
+          </div>
         </motion.div>
       )}
     </>
