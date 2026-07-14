@@ -77,8 +77,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
               <button
                 onClick={() => setAutoQueen(!autoQueen)}
-                className={`relative h-7 w-12 rounded-full transition-colors ${autoQueen ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                style={{ minHeight: '44px', minWidth: '44px' }}
+                className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${autoQueen ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 aria-label="Toggle auto-queen"
               >
                 <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -94,8 +93,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
               <button
                 onClick={() => setLowTimeWarning(!lowTimeWarning)}
-                className={`relative h-7 w-12 rounded-full transition-colors ${lowTimeWarning ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                style={{ minHeight: '44px', minWidth: '44px' }}
+                className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${lowTimeWarning ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 aria-label="Toggle low time warning"
               >
                 <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />

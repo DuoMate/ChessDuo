@@ -8,6 +8,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { registerCapacitorAuthListener } from '@/lib/capacitorAuth'
 import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
+import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { NotificationHandler } from '@/features/push-notifications'
 import { initPushNotifications } from '@/features/push-notifications'
 
@@ -28,6 +29,8 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerBackButtonListener()
     initPushNotifications()
   }, [])
+
+  useScrollToTop()
 
   return (
     <NetworkAwareToastProvider>

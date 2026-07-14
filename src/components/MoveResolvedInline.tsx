@@ -92,14 +92,14 @@ function MoveColumn({
 
   return (
     <div className={`flex-1 rounded-xl border ${borderClass} ${bgClass} px-3 py-3 flex flex-col items-center gap-1 min-w-0`}>
-      <span className={`text-[10px] font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
+      <span className={`text-xs font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
       <div className="flex items-center gap-1.5">
         <span className="text-2xl leading-none">{pieceChar(move.piece, move.color)}</span>
         <span className="text-lg font-extrabold text-slate-100">{move.san}</span>
       </div>
-      <span className={`text-[10px] font-semibold uppercase tracking-wider text-slate-400`}>Accuracy</span>
+      <span className={`text-xs font-semibold uppercase tracking-wider text-slate-400`}>Accuracy</span>
       <span className={`text-2xl font-extrabold ${accClass}`}>{accuracy.toFixed(1)}</span>
-      <div className={`mt-1 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+      <div className={`mt-1 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
         outcome === 'won' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
           : outcome === 'lost' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
           : 'bg-slate-700/40 text-slate-300 border border-slate-600/30'
@@ -137,12 +137,12 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
           tone="blue"
         />
         <div className="flex flex-col items-center justify-center gap-2 px-1 min-w-[100px]">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Engine Chose</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">Engine Chose</span>
           <Trophy size={22} className="text-amber-300" />
           <span className="text-2xl font-extrabold text-emerald-300">
             {data.engineChoseMove.san}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
             Played
           </span>
         </div>
@@ -211,7 +211,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
               </p>
             )}
             {!data.isSync && (
-              <div className="flex items-center justify-center gap-1.5 text-[10px] flex-wrap">
+              <div className="flex items-center justify-center gap-1.5 text-xs flex-wrap">
                 <span
                   className="px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
                   style={{ backgroundColor: `${verdict.color}22`, color: verdict.color }}
@@ -222,7 +222,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
                 <span className="text-slate-400">{loserLoss}cp lost</span>
               </div>
             )}
-            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400">
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
               <span className="text-base leading-none" aria-hidden>{moveClass.icon}</span>
               <span>{moveClass.description}</span>
             </div>

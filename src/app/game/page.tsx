@@ -4,12 +4,13 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
+import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
 
 const GameComponent = dynamic(() => import('@/components/Game').then(mod => ({ default: mod.Game })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-      <p className="text-gray-500 dark:text-gray-400">Loading game...</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+      <Spinner size="md" label="Loading game..." />
     </div>
   ),
   ssr: false,
@@ -78,8 +79,8 @@ function GameContent() {
 
   if (!validated) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Verifying session...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+        <Spinner size="md" label="Verifying session..." />
       </div>
     )
   }
@@ -104,8 +105,8 @@ function GameContent() {
 export default function GamePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+        <Spinner size="md" label="Loading..." />
       </div>
     }>
       <GameContent />

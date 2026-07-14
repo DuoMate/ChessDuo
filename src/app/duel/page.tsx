@@ -5,12 +5,13 @@ import { Suspense, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
 
 const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
-      <p className="text-gray-400">Loading duel...</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+      <Spinner size="md" label="Loading duel..." />
     </div>
   ),
   ssr: false,
@@ -41,8 +42,8 @@ function DuelContent() {
 
   if (!sessionChecked) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
-        <p className="text-gray-400">Verifying session...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+        <Spinner size="md" label="Verifying session..." />
       </div>
     )
   }
@@ -50,12 +51,12 @@ function DuelContent() {
   if (!roomId || !roomCode || !playerId || !team) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
-            <p className="text-gray-400">Missing required parameters</p>
-            <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
+            <p className="text-slate-400">Missing required parameters</p>
+            <button onClick={() => router.push('/')} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
               Go Home
             </button>
           </div>
@@ -67,12 +68,12 @@ function DuelContent() {
   if (!isValidSession) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">🔒</div>
             <h1 className="text-xl font-bold text-red-400">Session Expired</h1>
-            <p className="text-gray-400">Please sign in again to continue.</p>
-            <button onClick={() => router.push('/')} className="px-6 py-3 bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400">
+            <p className="text-slate-400">Please sign in again to continue.</p>
+            <button onClick={() => router.push('/')} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
               Go Home
             </button>
           </div>
@@ -99,8 +100,8 @@ export default function DuelPage() {
   return (
     <ErrorBoundary>
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center">
-          <p className="text-gray-400">Loading...</p>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+          <Spinner size="md" label="Loading..." />
         </div>
       }>
         <DuelContent />

@@ -204,7 +204,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
           </div>
         </div>
         {onClose && (
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
             <span className="text-slate-400 text-lg">&times;</span>
           </button>
         )}
@@ -283,7 +283,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
             <Send size={14} />
             Requests
             {totalRequests > 0 && (
-              <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{totalRequests}</span>
+              <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalRequests}</span>
             )}
           </button>
           <button
@@ -401,7 +401,7 @@ function FriendList({
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Your Friends</p>
+      <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Your Friends</p>
       {friends.map((friend) => (
         <div
           key={friend.friend_id}
@@ -417,7 +417,7 @@ function FriendList({
               <div className="flex items-center gap-2">
                 <span className="text-white text-sm font-medium truncate">{friend.friend_username}</span>
                 {unreadBySender[friend.friend_id] && (
-                  <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
+                  <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
                     {unreadBySender[friend.friend_id]}
                   </span>
                 )}
@@ -481,7 +481,7 @@ function RequestsTab({
     <div className="space-y-4">
       {pending.incoming.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-2">Incoming</p>
+          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Incoming</p>
           {pending.incoming.map((req) => (
             <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">
@@ -502,7 +502,7 @@ function RequestsTab({
 
       {pending.outgoing.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-2">Outgoing Requests</p>
+          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Outgoing Requests</p>
           {pending.outgoing.map((req) => (
             <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">

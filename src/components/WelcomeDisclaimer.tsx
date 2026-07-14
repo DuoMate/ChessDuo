@@ -103,7 +103,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                 >
                   <span className="text-lg mb-0.5">{step.emoji}</span>
                   <span className="text-[11px] font-bold text-slate-900 dark:text-white">{step.word}</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight text-center">{step.desc}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 leading-tight text-center">{step.desc}</span>
                 </div>
               ))}
             </div>

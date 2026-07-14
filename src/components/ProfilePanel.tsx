@@ -67,7 +67,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           <h2 className="text-lg font-bold text-white">Profile</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
             <span className="text-slate-400 text-lg">&times;</span>
           </button>
         )}

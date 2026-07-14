@@ -63,7 +63,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
             <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${dotClass} ring-2 ring-slate-900`} />
           )}
         </div>
-        <span className="text-[10px] font-medium text-slate-300 truncate max-w-[60px]">
+        <span className="text-xs font-medium text-slate-300 truncate max-w-[60px]">
           {player.label}
         </span>
       </div>
@@ -87,7 +87,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
           </span>
         )}
       </div>
-      <span className="text-[10px] font-medium text-slate-300 truncate max-w-[60px]">
+      <span className="text-xs font-medium text-slate-300 truncate max-w-[60px]">
         {player.label}
       </span>
     </div>
@@ -110,7 +110,7 @@ export function BoardTopBar({
         <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
           <div className="flex items-center gap-1">
             <Crown size={11} className="text-slate-200 shrink-0" />
-            <span className="text-[10px] font-bold tracking-widest text-slate-200 uppercase">
+            <span className="text-xs font-bold tracking-widest text-slate-200 uppercase">
               White
             </span>
           </div>
@@ -139,7 +139,7 @@ export function BoardTopBar({
         {/* Black team */}
         <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] font-bold tracking-widest text-slate-200 uppercase">
+            <span className="text-xs font-bold tracking-widest text-slate-200 uppercase">
               Black
             </span>
             <Crown size={11} className="text-slate-200 shrink-0" />
@@ -164,7 +164,7 @@ export function BoardTopBar({
             <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
               {currentTurn === Team.WHITE ? '♔' : '♚'}
             </span>
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
+            <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
               {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
             </span>
           </div>

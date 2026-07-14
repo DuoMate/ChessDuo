@@ -92,7 +92,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           <p className="text-xs text-slate-400 mb-2">
             {game.game_result || (game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over')}
           </p>
-          <div className="flex items-center gap-3 text-[10px] text-slate-500 flex-wrap">
+          <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
             <span>{game.is_online ? 'Online' : 'Offline'}</span>
             <span>·</span>
             <span>{game.white_moves} moves</span>

@@ -114,7 +114,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
   }, [status, playerId, onRoomJoined])
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex flex-col items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -129,7 +129,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
         {status === 'searching' && (
           <div className="mt-6 space-y-3">
             <Spinner size="md" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Searching for opponent...</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm">Searching for opponent...</p>
           </div>
         )}
 
@@ -142,7 +142,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             >
               {"\u265E"}
             </motion.div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Creating room...</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm">Creating room...</p>
           </div>
         )}
 
@@ -164,7 +164,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             <motion.div
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 2 }}
-              className="text-gray-500 dark:text-gray-400 text-sm"
+              className="text-gray-500 dark:text-slate-400 text-sm"
             >
               Waiting for opponent to join...
             </motion.div>
@@ -194,7 +194,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
 
         <button
           onClick={onCancel}
-          className="mt-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm transition-colors"
+          className="mt-8 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 text-sm transition-colors"
         >
           {"\u2190"} Cancel
         </button>

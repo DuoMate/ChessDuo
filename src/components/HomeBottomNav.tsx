@@ -48,7 +48,7 @@ function NavButton({
       <div className="relative">
         <Icon size={22} strokeWidth={active ? 2.5 : 2} />
         {badge > 0 && (
-          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[9px] font-bold rounded-full px-1">
+          <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full px-1">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
