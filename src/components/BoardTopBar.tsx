@@ -161,13 +161,15 @@ export function BoardTopBar({
           className="flex items-center justify-center gap-1.5 mt-1"
         >
           <motion.div
-            animate={{ opacity: [0.6, 1, 0.6] }}
+            animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            className={`w-1.5 h-1.5 rounded-full ${currentTurn === Team.WHITE ? 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.6)]' : 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.6)]'}`}
-          />
+            className={`text-sm ${currentTurn === Team.WHITE ? 'text-white drop-shadow-[0_0_4px_rgba(255,255,255,0.5)]' : 'text-slate-800 drop-shadow-[0_0_4px_rgba(0,0,0,0.5)]'}`}
+          >
+            {currentTurn === Team.WHITE ? '♔' : '♚'}
+          </motion.div>
           <div className={`px-2.5 py-0.5 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/25 bg-blue-500/10' : 'border-purple-500/25 bg-purple-500/10'}`}>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
-              {currentTurn === Team.WHITE ? 'White' : 'Black'} Active
+              {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
             </span>
           </div>
         </motion.div>
