@@ -506,6 +506,7 @@ export default function SetupPage() {
   const handleOnboardingDismiss = () => {
     setShowOnlineDisclaimer(false)
     setShowOnboarding(false)
+    setGameMode(null)
     handleStartOnline(selectedTime)
   }
 
@@ -578,6 +579,18 @@ export default function SetupPage() {
       case 'four':
         handleStartFourPlayer(selectedTime)
         break
+    }
+  }
+
+  const handleGameModeClick = (mode: SelectedGameMode) => {
+    setSelectedGameMode(mode)
+  }
+
+  const handleGameModeDoubleClick = (mode: SelectedGameMode) => {
+    if (selectedGameMode === mode) {
+      handlePlay()
+    } else {
+      setSelectedGameMode(mode)
     }
   }
 
@@ -782,8 +795,8 @@ if (!gameMode) {
                 <GameModeCard
                   mode="quick"
                   selected={selectedGameMode === 'quick'}
-                  onClick={() => setSelectedGameMode('quick')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('quick')}
+                  onDoubleClick={() => handleGameModeDoubleClick('quick')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
@@ -793,8 +806,8 @@ if (!gameMode) {
                 <GameModeCard
                   mode="duo"
                   selected={selectedGameMode === 'duo'}
-                  onClick={() => setSelectedGameMode('duo')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('duo')}
+                  onDoubleClick={() => handleGameModeDoubleClick('duo')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Duo"
@@ -803,11 +816,11 @@ if (!gameMode) {
                 <GameModeCard
                   mode="four"
                   selected={selectedGameMode === 'four'}
-                  onClick={() => setSelectedGameMode('four')}
-                  onDoubleClick={handlePlay}
+                  onClick={() => handleGameModeClick('four')}
+                  onDoubleClick={() => handleGameModeDoubleClick('four')}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
-                  title="Four Players"
+                  title="4 Player"
                   subtitle="Friends Battle"
                 />
               </div>

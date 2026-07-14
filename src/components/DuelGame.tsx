@@ -325,29 +325,33 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
-        <div className="relative">
-          <BoardTopBar
-            whitePlayers={whitePlayers}
-            blackPlayers={blackPlayers}
-            matchTimeRemaining={remainingSeconds}
-            matchTimerActive={timerActive}
-            totalMatchSeconds={totalSeconds}
-            roundLabel={undefined}
-            currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
-          />
-          <div className="absolute right-3 top-2 flex items-center gap-2">
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
-              title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-              aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-            >
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-            <GameMenu
-              onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
-              onOpenSettings={() => setShowSettings(true)}
-            />
+        <div className="w-full border-b border-white/5 px-3 py-3 bg-[#0a0e1a]">
+          <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+            <div className="min-w-0 flex-1">
+              <BoardTopBar
+                whitePlayers={whitePlayers}
+                blackPlayers={blackPlayers}
+                matchTimeRemaining={remainingSeconds}
+                matchTimerActive={timerActive}
+                totalMatchSeconds={totalSeconds}
+                roundLabel={undefined}
+                currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
+              />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+                aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+              >
+                {soundEnabled ? '🔊' : '🔇'}
+              </button>
+              <GameMenu
+                onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
+                onOpenSettings={() => setShowSettings(true)}
+              />
+            </div>
           </div>
         </div>
 
@@ -455,7 +459,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onConfirm={() => {
             setShowResignConfirm(false)
             gameRef.current?.resign()
-            onLeave()
+            setTimeout(() => onLeave(), 150)
           }}
           onCancel={() => setShowResignConfirm(false)}
         />
