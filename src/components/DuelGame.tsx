@@ -325,7 +325,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
-        <div className="w-full border-b border-white/5 px-3 py-3 bg-[#0a0e1a]">
+        <div className="w-full bg-[#0a0e1a] border-b border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
@@ -338,10 +338,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
                 currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setSoundEnabled(!soundEnabled)}
-                className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
+                className="min-h-[44px] min-w-[44px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
                 title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
                 aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
               >
