@@ -1828,25 +1828,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className="min-h-[44px] min-w-[44px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
-                title={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-                aria-label={soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
-              >
-                {soundEnabled ? '🔊' : '🔇'}
-              </button>
-              <button
-                onClick={() => setOverlayMode('profile')}
-                className="min-h-[44px] min-w-[44px] rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center justify-center text-sm"
-                title="Profile"
-                aria-label="Profile"
-              >
-                👤
-              </button>
               <GameMenu
                 onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
                 onOpenSettings={() => setShowSettings(true)}
+                soundEnabled={soundEnabled}
+                onToggleSound={() => setSoundEnabled(!soundEnabled)}
+                onOpenProfile={() => setOverlayMode('profile')}
               />
             </div>
           </div>
