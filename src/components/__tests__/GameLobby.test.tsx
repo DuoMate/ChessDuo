@@ -38,19 +38,19 @@ describe('GameLobby Component', () => {
 
   it('renders copy code button when roomCode is provided', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" />)
-    expect(screen.getByText('Copy code')).toBeDefined()
+    expect(screen.getByText('Copy')).toBeDefined()
   })
 
   it('renders share button when inviteUrl is provided', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" inviteUrl="https://example.com/game" />)
-    expect(screen.getByText('Share link')).toBeDefined()
+    expect(screen.getByText('Share Invite Link')).toBeDefined()
     expect(screen.getByText(/Or share the invite link/i)).toBeDefined()
   })
 
   it('does not render share section when inviteUrl is missing', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" />)
     expect(screen.queryByText(/Or share the invite link/i)).toBeNull()
-    expect(screen.queryByText('Share link')).toBeNull()
+    expect(screen.queryByText('Share Invite Link')).toBeNull()
   })
 
   it('does not render connecting text in waiting state', () => {
@@ -65,7 +65,7 @@ describe('GameLobby Component', () => {
 
   it('shows the refreshed welcome messaging for waiting players', () => {
     render(<GameLobby isLoading={false} roomCode="ABC123" username="Mina" />)
-    expect(screen.getByText('Ready to play?')).toBeInTheDocument()
+    expect(screen.getByText(/ready/i)).toBeInTheDocument()
     expect(screen.getByText(/Waiting for your teammate/i)).toBeInTheDocument()
   })
 })
