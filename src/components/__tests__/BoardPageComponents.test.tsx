@@ -41,8 +41,8 @@ describe('BoardTopBar', () => {
     expect(screen.getByText('You')).toBeInTheDocument()
     expect(screen.getByText('Teammate')).toBeInTheDocument()
     expect(screen.getByText('Bot 1')).toBeInTheDocument()
-    expect(screen.getByText('White Team')).toBeInTheDocument()
-    expect(screen.getByText('Black Team')).toBeInTheDocument()
+    expect(screen.getByText('White')).toBeInTheDocument()
+    expect(screen.getByText('Black')).toBeInTheDocument()
   })
 })
 
