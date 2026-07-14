@@ -17,6 +17,7 @@ Framework-free domain logic — zero React/Next.js imports. Organized by bounded
 | `online/game/` | `src/features/online/game/CONTEXT.md` — OnlineGame class |
 | `bots/` | `src/features/bots/CONTEXT.md` — Bot AI, difficulty, openings |
 | `mobile-engine/` | `src/features/mobile-engine/CONTEXT.md` — Browser/capacitor evaluator factory |
+| `push-notifications/` | `src/features/push-notifications/CONTEXT.md` — FCM token registration, push sending, deep-link handler |
 
 ## Logic & Decisions
 - `GameInterface.ts` in `shared/` is the contract — both `OnlineGame` and `LocalGame` implement it.
