@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Timeline } from 'animejs'
-import { Crown, Copy, Share2, CheckCircle2, User, Loader2, Sparkles } from 'lucide-react'
+import { Crown, Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface GameLobbyProps {
@@ -26,10 +26,6 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
   const isMobile = useIsMobile()
 
   const crownSize = isMobile ? 64 : 80
-  const crownMb = isMobile ? 'mb-4' : 'mb-6'
-  const glowWidth = isMobile ? 'w-12' : 'w-16'
-  const statusTextSize = isMobile ? 'text-base' : 'text-lg'
-  const codeTextSize = isMobile ? 'text-xl' : 'text-2xl'
 
   useEffect(() => {
     const tl = new Timeline({ loop: true, autoplay: true })
@@ -85,31 +81,35 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
   const phase = isLoading ? 'joining' : 'waiting'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4 dark:bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.18),_transparent_24%)]">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0e1a] p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+        className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/[0.06] bg-[#0f1525] p-6 shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
       >
         <div className="flex flex-col items-center">
 
-          <div className={`relative ${crownMb}`}>
+          {/* Crown with glow */}
+          <div className="mb-5">
             <motion.div
               ref={iconRef}
-              className="inline-block"
+              className="relative inline-block"
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Crown size={crownSize} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
+              <Crown size={crownSize} className="text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" strokeWidth={1.5} />
             </motion.div>
-            <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 ${glowWidth} h-1 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(251,191,36,0.4)]`} />
+            <div className="mx-auto mt-1 w-16 h-[3px] rounded-full bg-amber-500/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" />
           </div>
 
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 shadow-sm dark:text-amber-300">
-            <Sparkles size={12} />
-            Ready to play?
-          </div>
+          {/* Title */}
+          <h1 className="mb-2 text-center text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+            READY <span className="text-amber-400">TO PLAY?</span>
+          </h1>
+          <p className="mb-5 text-center text-sm text-slate-400">
+            Invite your teammate and start your match
+          </p>
 
           {/* Joining phase */}
           {phase === 'joining' && (
@@ -119,85 +119,103 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
                 <motion.div ref={dot2Ref} className="h-3 w-3 rounded-full bg-amber-500" />
                 <motion.div ref={dot3Ref} className="h-3 w-3 rounded-full bg-amber-500" />
               </div>
-              <p className={`mb-4 text-slate-500 dark:text-slate-400 ${statusTextSize}`}>Connecting to room...</p>
+              <p className="mb-4 text-base text-slate-400">Connecting to room...</p>
             </>
           )}
 
           {/* Waiting phase */}
           {phase === 'waiting' && (
             <>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_6px_rgba(52,211,153,0.5)]" />
-                <span className="text-emerald-400 text-sm font-medium">Connected</span>
+              {/* Connected badge */}
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+                <span className="text-sm font-medium text-emerald-400">Connected</span>
               </div>
 
-              <div className="flex items-center gap-3 mb-4">
+              {/* Player status row */}
+              <div className="mb-5 flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                    <User size={10} className="text-amber-600 dark:text-amber-400" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
+                    <User size={12} className="text-amber-400" />
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">{username || 'You'}</span>
+                  <span className="text-sm font-medium text-white">{username || 'You'}</span>
                 </div>
-                <div className="text-gray-600 text-xs font-mono">{'\u2192'}</div>
+                <span className="text-sm text-slate-500">{'\u2192'}</span>
                 <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center">
-                    <Loader2 size={10} className="text-gray-500 animate-spin" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-600/40 bg-slate-700/30">
+                    <Loader2 size={12} className="text-slate-500 animate-spin" />
                   </div>
-                  <span className="text-sm text-gray-500">Waiting for your teammate</span>
+                  <span className="text-sm text-slate-500">Waiting for your teammate</span>
                 </div>
               </div>
             </>
           )}
 
-          {/* Room code — always visible */}
+          {/* Dotted separator */}
+          {roomCode && (
+            <div className="mb-5 w-full border-t border-dashed border-slate-700/60" />
+          )}
+
+          {/* Room code */}
           {roomCode && (
             <>
-              <p className="text-xs text-gray-500 tracking-[0.15em] uppercase mb-2">
+              <p className="mb-3 w-full text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                 Send this code to your friend to join
               </p>
 
-              <div className="mb-3 w-full rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-4 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
-                <p className={`mb-3 select-all font-mono font-bold tracking-[0.2em] text-amber-500 ${codeTextSize}`}>
-                  {roomCode}
-                </p>
-                <button
-                  onClick={handleCopyCode}
-                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl px-4 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-amber-400"
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle2 size={13} className="text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={13} />
-                      <span>Copy code</span>
-                    </>
-                  )}
-                </button>
+              <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-[#151c2e] p-4">
+                <div className="flex items-center justify-between">
+                  <p className="select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
+                    {roomCode}
+                  </p>
+                  <button
+                    onClick={handleCopyCode}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-xl border border-slate-700/60 bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-amber-500/30 hover:bg-slate-700/60 hover:text-amber-400"
+                  >
+                    {copied ? (
+                      <>
+                        <CheckCircle2 size={14} className="text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </>
           )}
 
-          {/* Share link — always visible */}
+          {/* OR divider */}
+          {inviteUrl && roomCode && (
+            <div className="mb-4 flex w-full items-center gap-3">
+              <div className="h-px flex-1 bg-slate-700/50" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Or</span>
+              <div className="h-px flex-1 bg-slate-700/50" />
+            </div>
+          )}
+
+          {/* Share link */}
           {inviteUrl && (
             <>
-              <p className="text-xs text-gray-500 tracking-[0.15em] uppercase mb-2">
+              <p className="mb-3 w-full text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
                 Or share the invite link
               </p>
 
-              <div className="w-full rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-4 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
-                <div className="flex gap-2">
+              <div className="w-full overflow-hidden rounded-2xl border border-slate-700/40 bg-[#151c2e] p-4">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleShare}
-                    className="flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+                    className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/15"
                   >
-                    <Share2 size={15} /> Share link
+                    <Share2 size={15} /> Share Invite Link
                   </button>
                   <button
                     onClick={handleCopyLink}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/60 text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-700/60 hover:text-white"
                     title={linkCopied ? 'Copied' : 'Copy link'}
                   >
                     {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}
@@ -206,6 +224,24 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
               </div>
             </>
           )}
+
+          {/* Info card */}
+          <div className="mt-5 w-full rounded-2xl border border-purple-500/15 bg-purple-500/[0.06] px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/15">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-200">Your friend can join using</p>
+                <p className="text-xs text-slate-400">the code or the invite link</p>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -50,7 +50,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
         <img
           src={imageSrc}
           alt={player.label}
-          className="w-full h-full object-cover"
+          className={`w-full h-full ${player.type === 'bot' ? 'object-contain p-0.5' : 'object-cover'}`}
           loading="lazy"
           decoding="async"
           onError={(e) => {
