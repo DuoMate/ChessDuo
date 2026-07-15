@@ -45,6 +45,17 @@ export async function rejectFriendRequest(senderId: string, receiverId: string):
   return { error: error?.message || null }
 }
 
+export async function cancelFriendRequest(senderId: string, receiverId: string): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from('friendships')
+    .delete()
+    .eq('sender_id', senderId)
+    .eq('receiver_id', receiverId)
+    .eq('status', 'pending')
+
+  return { error: error?.message || null }
+}
+
 export async function deleteFriendship(userId: string, friendId: string): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('friendships')

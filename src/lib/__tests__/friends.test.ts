@@ -2,6 +2,7 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  cancelFriendRequest,
   deleteFriendship,
   blockUser,
   unblockUser,
@@ -95,6 +96,14 @@ describe('rejectFriendRequest', () => {
   it('deletes a pending request', async () => {
     const chain = mockFromChain()
     await rejectFriendRequest('sender', 'receiver')
+    expect(chain.delete).toHaveBeenCalled()
+  })
+})
+
+describe('cancelFriendRequest', () => {
+  it('deletes a pending request initiated by sender', async () => {
+    const chain = mockFromChain()
+    await cancelFriendRequest('sender', 'receiver')
     expect(chain.delete).toHaveBeenCalled()
   })
 })
