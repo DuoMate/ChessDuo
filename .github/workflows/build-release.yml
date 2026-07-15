@@ -73,6 +73,11 @@ jobs:
           echo "[DEBUG] NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-unset}"
           npx cap add android
 
+      - name: Write google-services.json from secret
+        run: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
       - name: Add OAuth deep link intent filter
         run: bash scripts/add-deep-link.sh
 
