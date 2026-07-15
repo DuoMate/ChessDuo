@@ -253,17 +253,17 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             <X size={16} className="text-slate-400 dark:text-slate-500" />
           </button>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-400/15 via-transparent to-indigo-500/15" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-400/15 via-transparent to-indigo-500/15" />
         <div className="relative">
           <div className="mb-6 flex items-center justify-between">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 dark:text-amber-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-blue-700 dark:text-blue-300">
               <Sparkles size={12} />
               Multiplayer Tag Team Chess
             </div>
           </div>
 
           <div className="text-center">
-            <h1 className="bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-500 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
+            <h1 className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-500 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
               ChessDuo
             </h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">

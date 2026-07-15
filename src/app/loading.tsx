@@ -62,7 +62,7 @@ export default function Loading() {
           fontFamily: 'inherit',
           fontSize: 'clamp(18px, 5vw, 26px)',
           fontWeight: 800,
-          color: '#facc15',
+          color: '#3b82f6',
           letterSpacing: '0.1em',
           marginTop: '20px',
           marginBottom: '4px',
@@ -101,7 +101,7 @@ export default function Loading() {
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(90deg, transparent 0%, #facc15 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, #3b82f6 50%, transparent 100%)',
               animation: 'shimmer 1.8s linear infinite',
               backgroundSize: '200% 100%',
             }}

@@ -128,20 +128,20 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             <div className="mb-5 text-center">
               <div className="flex items-center justify-center gap-0 text-3xl font-black tracking-tight">
                 <span className="text-white">Chess</span>
-                <span className="relative text-amber-500">
+                <span className="relative text-blue-500">
                   Duo
                   <Crown
                     size={18}
-                    className="absolute -left-0.5 -top-3.5 text-amber-400"
+                    className="absolute -left-0.5 -top-3.5 text-blue-400"
                     fill="currentColor"
                     strokeWidth={0}
                   />
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-400">
-                <span className="text-amber-500/80">&#9670;</span>
+                <span className="text-blue-400/70">&#9670;</span>
                 <span>How it works</span>
-                <span className="text-amber-500/80">&#9670;</span>
+                <span className="text-blue-400/70">&#9670;</span>
               </div>
             </div>
 
