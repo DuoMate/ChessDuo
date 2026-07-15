@@ -103,3 +103,14 @@ body {
     @apply ring-1 ring-slate-200/70 dark:ring-slate-700/70;
   }
 }
+
+/* Instruction screen board — Your Move = green frame, Teammate/Botmate = violet square */
+.onboarding-board .cm-chessboard .markers .marker.marker-frame {
+  stroke: #22c55e;
+  stroke-width: 2px;
+  opacity: 0.7;
+}
+.onboarding-board .cm-chessboard .markers .marker.marker-square {
+  fill: #8b5cf6;
+  opacity: 0.25;
+}

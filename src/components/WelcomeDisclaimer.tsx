@@ -146,7 +146,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             </div>
 
             <div className="mb-5 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-              <div className="mx-auto aspect-square w-full max-w-[260px]">
+              <div className="mx-auto aspect-square w-full max-w-[260px] onboarding-board">
                 <ChessBoard
                   fen={TOUR_FEN}
                   onMove={() => {}}
