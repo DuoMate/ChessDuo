@@ -126,6 +126,8 @@ export function ChessBoard({
       if (highlightSquares.loserFrom && highlightSquares.loserTo) {
         boardRef.current.addMarker(MARKER_TYPE.square, highlightSquares.loserFrom)
         boardRef.current.addMarker(MARKER_TYPE.square, highlightSquares.loserTo)
+        boardRef.current.addMarker(MARKER_TYPE.framePrimary, highlightSquares.loserFrom)
+        boardRef.current.addMarker(MARKER_TYPE.framePrimary, highlightSquares.loserTo)
       }
     } else if (lastMove) {
       boardRef.current.addMarker(MARKER_TYPE.dot, lastMove.from)
