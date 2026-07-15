@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Share2, ShieldCheck, User } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
 import { supabase } from '@/lib/supabase'
 import { InitialsAvatar } from './InitialsAvatar'
 import { SubscriptionService } from '@/features/billing'
+import { useSettings } from '@/lib/settings'
 
 interface ProfilePanelProps {
   playerId: string
@@ -26,6 +27,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [username, setUsername] = useState('')
+  const { theme, setTheme } = useSettings()
 
   useEffect(() => {
     getMatchHistory(5, playerId).then(setRecentGames).catch(() => setRecentGames([]))
@@ -69,11 +71,24 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           </div>
           <h2 className="text-lg font-bold text-white">Profile</h2>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span className="text-slate-400 text-lg">&times;</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun size={20} className="text-amber-400" />
+            ) : (
+              <Moon size={20} className="text-sky-400" />
+            )}
           </button>
-        )}
+          {onClose && (
+            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <span className="text-slate-400 text-lg">&times;</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
