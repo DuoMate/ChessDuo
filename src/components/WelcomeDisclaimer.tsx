@@ -157,7 +157,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                 />
                 <div
                   className="pointer-events-none absolute z-10"
-                  style={{ left: '56.25%', top: '52%', transform: 'translate(-50%, -50%)' }}
+                  style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
                   <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">
                     You
@@ -165,7 +165,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                 </div>
                 <div
                   className="pointer-events-none absolute z-10"
-                  style={{ left: '31.25%', top: '52%', transform: 'translate(-50%, -50%)' }}
+                  style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
                   <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">
                     {partnerLabel}
