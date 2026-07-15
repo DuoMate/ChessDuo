@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { getCompletedGame, type CompletedGame } from '@/lib/matchHistory'
 import dynamic from 'next/dynamic'
 import { Spinner } from '@/components/Spinner'
 import { BackButton } from '@/components/BackButton'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
   loading: () => (
@@ -18,9 +19,12 @@ const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then
 
 export default function ReplayPageClient() {
   const params = useParams()
+  const router = useRouter()
   const gameId = params.gameId as string
   const [game, setGame] = useState<CompletedGame | null | undefined>(undefined)
   const [error, setError] = useState(false)
+
+  useCapacitorBackButton(() => { router.push('/history'); return true }, true)
 
   useEffect(() => {
     async function load() {
