@@ -35,39 +35,66 @@ class SoundEngine {
     return this.getContext().resume()
   }
 
+  getState(): AudioContextState | 'uninitialized' {
+    return this.audioContext?.state ?? 'uninitialized'
+  }
+
   play(sound: SoundType) {
-    if (!this.enabled) return
+    if (!this.enabled) {
+      DEBUG && console.log('[Sound] Skipped (disabled):', sound)
+      return
+    }
 
     this.ensureInitialized()
 
     try {
       const ctx = this.getContext()
-      
-      switch (sound) {
-        case 'move':
-          this.playMoveSound(ctx)
-          break
-        case 'capture':
-          this.playCaptureSound(ctx)
-          break
-        case 'check':
-          this.playCheckSound(ctx)
-          break
-        case 'checkmate':
-          this.playCheckmateSound(ctx)
-          break
-        case 'illegal':
-          this.playIllegalSound(ctx)
-          break
-        case 'lock':
-          this.playLockSound(ctx)
-          break
-        case 'resolution':
-          this.playResolutionSound(ctx)
-          break
+
+      const trigger = () => {
+        try {
+          switch (sound) {
+            case 'move':
+              this.playMoveSound(ctx)
+              break
+            case 'capture':
+              this.playCaptureSound(ctx)
+              break
+            case 'check':
+              this.playCheckSound(ctx)
+              break
+            case 'checkmate':
+              this.playCheckmateSound(ctx)
+              break
+            case 'illegal':
+              this.playIllegalSound(ctx)
+              break
+            case 'lock':
+              this.playLockSound(ctx)
+              break
+            case 'resolution':
+              this.playResolutionSound(ctx)
+              break
+          }
+          DEBUG && console.log('[Sound] Played:', sound, 'state:', ctx.state)
+        } catch (e) {
+          DEBUG && console.log('[Sound] Play error:', sound, e)
+        }
+      }
+
+      if (ctx.state === 'suspended') {
+        ctx.resume()
+          .then(() => {
+            DEBUG && console.log('[Sound] Context resumed, playing:', sound)
+            trigger()
+          })
+          .catch((err) => {
+            DEBUG && console.log('[Sound] Resume failed:', err)
+            trigger()
+          })
+      } else {
+        trigger()
       }
     } catch (e) {
-      // Silently fail if audio not available
       DEBUG && console.log('[Sound] Not available:', e)
     }
   }
