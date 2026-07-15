@@ -31,6 +31,10 @@ class SoundEngine {
     this.enabled = enabled
   }
 
+  resumeContext(): Promise<void> {
+    return this.getContext().resume()
+  }
+
   play(sound: SoundType) {
     if (!this.enabled) return
 

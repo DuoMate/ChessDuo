@@ -21,6 +21,8 @@ import { saveCompletedGame } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playIllegalSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
+import { Chess } from 'chess.js'
 
 interface DuelGameProps {
   roomId: string
@@ -67,6 +69,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const moveEntriesRef = useRef<Array<{ accuracy: number; fenAfter: string }>>([])
   const moveAccuracyRef = useRef<number | null>(null)
   const opponentAccuracyRef = useRef<number | null>(null)
+  const prevFenRef = useRef('')
+  const prevStatusRef = useRef<'waiting' | 'playing' | 'game_over'>('waiting')
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
 
@@ -99,12 +103,61 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         opponentAccuracyRef.current = state.opponentAccuracy
       }
       if (state.status === 'playing') setWaiting(false)
+
+      if (prevFenRef.current && state.fen !== prevFenRef.current && state.status === 'playing') {
+        playMoveSound()
+
+        try {
+          const prevChess = new Chess(prevFenRef.current)
+          const currChess = new Chess(state.fen)
+          const prevPieces = Array.from(prevChess.board().flat()).filter(Boolean).length
+          const currPieces = Array.from(currChess.board().flat()).filter(Boolean).length
+          if (currPieces < prevPieces) {
+            playCaptureSound()
+          }
+        } catch { /* fen parse error — skip capture sound */ }
+
+        try {
+          const currChess = new Chess(state.fen)
+          if (currChess.isCheck()) {
+            playCheckSound()
+          }
+        } catch { /* skip check sound */ }
+      }
+
+      if (state.status === 'game_over' && prevStatusRef.current !== 'game_over') {
+        try {
+          const currChess = new Chess(state.fen)
+          if (currChess.isCheckmate()) {
+            playCheckmateSound()
+          }
+        } catch { /* skip checkmate sound */ }
+      }
+
+      prevFenRef.current = state.fen
+      prevStatusRef.current = state.status
     })
 
     game.join()
 
     return () => { game.destroy() }
   }, [roomId, playerId, team, timeLimit])
+
+  useEffect(() => {
+    setEngineSoundEnabled(soundEnabled)
+  }, [soundEnabled])
+
+  useEffect(() => {
+    const resumeAudio = () => {
+      soundEngine.resumeContext().catch(() => {})
+    }
+    document.addEventListener('click', resumeAudio, { once: true })
+    document.addEventListener('touchstart', resumeAudio, { once: true })
+    return () => {
+      document.removeEventListener('click', resumeAudio)
+      document.removeEventListener('touchstart', resumeAudio)
+    }
+  }, [])
 
   const clearAccuracyTimer = useCallback(() => {
     if (accuracyTimeoutRef.current) {
