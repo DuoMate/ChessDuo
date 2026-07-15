@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, X } from 'lucide-react'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 import { Spinner } from '@/components/Spinner'
@@ -262,10 +263,8 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             </div>
           </div>
 
-          <div className="text-center">
-            <h1 className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-500 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
-              ChessDuo
-            </h1>
+          <div className="flex flex-col items-center text-center">
+            <ChessDuoLogo size="lg" />
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {isLogin ? 'Sign in to continue your match.' : 'Create your account and invite a teammate.'}
             </p>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { validateUsernameFormat } from '@/components/Auth'
 import { Spinner } from '@/components/Spinner'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 
 interface ChooseUsernameProps {
   userId: string
@@ -124,9 +125,9 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
   return (
     <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[#0a0e1a] p-4">
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/70 dark:border-slate-700/70 p-6 sm:p-8 rounded-[30px] shadow-[0_24px_90px_rgba(2,6,23,0.25)] w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
-          ChessDuo
-        </h1>
+        <div className="flex flex-col items-center mb-2">
+          <ChessDuoLogo size="lg" />
+        </div>
         <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">
           Choose your unique display name
         </p>

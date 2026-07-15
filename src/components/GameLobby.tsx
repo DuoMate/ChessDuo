@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Timeline } from 'animejs'
-import { Crown, Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
+import { Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Spinner } from '@/components/Spinner'
 
@@ -99,9 +100,9 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <Crown size={crownSize} className="text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]" strokeWidth={1.5} />
+              <ChessDuoLogo showText={false} size={crownSize >= 80 ? 'xl' : 'lg'} />
             </motion.div>
-            <div className="mx-auto mt-1 w-16 h-[3px] rounded-full bg-amber-500/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" />
+            <div className="mx-auto mt-1 w-16 h-[3px] rounded-full bg-blue-500/80 shadow-[0_0_14px_rgba(59,130,246,0.5)]" />
           </div>
 
           {/* Title */}

@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
 import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRight, RefreshCw } from 'lucide-react'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
 
@@ -139,40 +140,10 @@ export default function PremiumPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <BackButton />
-                <div>
-                  <h1 className="text-2xl font-black">
-                    <span className="text-white">ChessDuo </span>
-                    <span className="text-amber-400">Premium</span>
-                  </h1>
+                <div className="flex items-center gap-2">
+                  <ChessDuoLogo size="md" />
+                  <span className="text-2xl font-black text-amber-400">Premium</span>
                 </div>
-              </div>
-              <div className="relative">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 44L12 20L22 32L32 16L42 32L52 20L56 44H8Z" fill="url(#crownGradient)" stroke="url(#crownStroke)" strokeWidth="2"/>
-                  <rect x="8" y="44" width="48" height="8" rx="2" fill="url(#baseGradient)"/>
-                  <circle cx="20" cy="48" r="2" fill="#ef4444"/>
-                  <circle cx="32" cy="48" r="2" fill="#3b82f6"/>
-                  <circle cx="44" cy="48" r="2" fill="#22c55e"/>
-                  <circle cx="16" cy="14" r="1.5" fill="#fbbf24" className="animate-pulse"/>
-                  <circle cx="48" cy="12" r="1" fill="#fbbf24" className="animate-pulse" style={{animationDelay: '0.3s'}}/>
-                  <circle cx="52" cy="22" r="1.5" fill="#fbbf24" className="animate-pulse" style={{animationDelay: '0.6s'}}/>
-                  <circle cx="12" cy="24" r="1" fill="#fbbf24" className="animate-pulse" style={{animationDelay: '0.9s'}}/>
-                  <defs>
-                    <linearGradient id="crownGradient" x1="8" y1="16" x2="56" y2="44" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#fbbf24"/>
-                      <stop offset="0.5" stopColor="#f59e0b"/>
-                      <stop offset="1" stopColor="#d97706"/>
-                    </linearGradient>
-                    <linearGradient id="crownStroke" x1="8" y1="16" x2="56" y2="44" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#fde68a"/>
-                      <stop offset="1" stopColor="#b45309"/>
-                    </linearGradient>
-                    <linearGradient id="baseGradient" x1="8" y1="44" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#d97706"/>
-                      <stop offset="1" stopColor="#92400e"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
               </div>
             </div>
 

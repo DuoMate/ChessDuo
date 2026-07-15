@@ -19,7 +19,8 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, Crown, ChevronRight, Play } from 'lucide-react'
+import { Swords, ChevronRight, Play } from 'lucide-react'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -965,13 +966,7 @@ if (!gameMode) {
 function HeaderBar() {
   return (
     <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[#0a0e1a]/90 dark:border-0 backdrop-blur-xl">
-      <div className="flex items-center gap-2">
-        <Crown size={28} strokeWidth={1.5} className="text-blue-500 dark:text-blue-400 drop-shadow-[var(--drop-shadow-glow-blue)]" />
-        <h1 className="text-2xl font-black tracking-tight">
-          <span className="text-slate-900 dark:text-white">Chess</span>
-          <span className="text-blue-600 dark:text-blue-500">Duo</span>
-        </h1>
-      </div>
+      <ChessDuoLogo size="md" />
     </div>
   )
 }
