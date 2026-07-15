@@ -61,7 +61,6 @@ __pycache__/
 
 # Capacitor / Android
 /android
-!/android/app/google-services.json
 chessduo.keystore
 *.jks
 *.p12
