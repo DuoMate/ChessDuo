@@ -55,7 +55,13 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
 
   return (
     <AnimatePresence>
-      <div className={`fixed inset-0 z-[60] flex bg-slate-950/70 ${isMobile ? 'items-end' : 'items-center justify-center'} p-4 backdrop-blur-sm`} onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className={`fixed inset-0 z-[60] flex bg-slate-950/70 ${isMobile ? 'items-end' : 'items-center justify-center'} p-4 backdrop-blur-sm`}
+        onClick={onClose}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -115,7 +121,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
             </button>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </AnimatePresence>
   )
 }

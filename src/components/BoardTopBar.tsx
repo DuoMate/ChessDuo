@@ -1,7 +1,7 @@
 'use client'
 
 import { Crown, Activity } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { getAvatarUrl, type HumanAvatar } from '@/features/shared/avatars'
 import { Team } from '@/features/game-engine/gameState'
 import { InitialsAvatar } from './InitialsAvatar'
@@ -151,25 +151,27 @@ export function BoardTopBar({
           </div>
         </div>
       </div>
-      {currentTurn && (
-        <motion.div
-          key={currentTurn}
-          initial={{ opacity: 0, scale: 0.9, y: -6 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: -6 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="flex items-center justify-center mt-1"
-        >
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/30 bg-blue-500/15' : 'border-purple-500/30 bg-purple-500/15'}`}>
-            <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
-              {currentTurn === Team.WHITE ? '♔' : '♚'}
-            </span>
-            <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
-              {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
-            </span>
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence mode="wait">
+        {currentTurn && (
+          <motion.div
+            key={currentTurn}
+            initial={{ opacity: 0, scale: 0.9, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -6 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="flex items-center justify-center mt-1"
+          >
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-500/30 bg-blue-500/15' : 'border-purple-500/30 bg-purple-500/15'}`}>
+              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
+                {currentTurn === Team.WHITE ? '♔' : '♚'}
+              </span>
+              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-300' : 'text-purple-300'}`}>
+                {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

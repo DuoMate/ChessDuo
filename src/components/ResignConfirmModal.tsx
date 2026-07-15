@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flag } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
-import { MODAL_SPRING } from './modalConstants'
+import { MODAL_SPRING, MODAL_BACKDROP } from './modalConstants'
 
 interface ResignConfirmModalProps {
   onConfirm: () => void
@@ -21,7 +21,7 @@ export function ResignConfirmModal({ onConfirm, onCancel }: ResignConfirmModalPr
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4"
+        className={`fixed inset-0 ${MODAL_BACKDROP} flex items-center justify-center z-[80] p-4`}
         onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}
       >
         <motion.div

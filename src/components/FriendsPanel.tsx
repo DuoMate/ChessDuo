@@ -22,6 +22,7 @@ import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
 import { supabase } from '@/lib/supabase'
+import { motion, AnimatePresence } from 'framer-motion'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip } from 'lucide-react'
 
@@ -340,18 +341,26 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
       </div>
 
       {/* Chat Panel Overlay */}
-      {chatFriend && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4" onClick={() => setChatFriend(null)}>
-          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <ChatPanel
-              currentUserId={playerId}
-              friendId={chatFriend.id}
-              friendName={chatFriend.name}
-              onClose={() => setChatFriend(null)}
-            />
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {chatFriend && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4"
+            onClick={() => setChatFriend(null)}
+          >
+            <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+              <ChatPanel
+                currentUserId={playerId}
+                friendId={chatFriend.id}
+                friendName={chatFriend.name}
+                onClose={() => setChatFriend(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Challenge Picker Overlay */}
       {challengeFriend && (
