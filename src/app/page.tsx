@@ -83,12 +83,8 @@ export default function SetupPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
-  const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('chessduo_offline_disclaimer_dismissed') !== 'true'
-    }
-    return false
-  })
+  const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(false)
+  const hasSeenOfflineDisclaimer = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
   const offlineDisclaimerShouldStartRef = useRef(false)
   const [showOnlineDisclaimer, setShowOnlineDisclaimer] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -500,7 +496,7 @@ export default function SetupPage() {
   }
 
   const handleStartOffline = () => {
-    if (showOfflineDisclaimer) {
+    if (!hasSeenOfflineDisclaimer) {
       offlineDisclaimerShouldStartRef.current = true
       setShowOfflineDisclaimer(true)
       return
