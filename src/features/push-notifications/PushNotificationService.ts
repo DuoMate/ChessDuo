@@ -57,6 +57,21 @@ export async function registerDeviceToken(): Promise<void> {
         return
       }
 
+      PushNotifications.addListener('registration', (token) => {
+        fetch(`${getApiBase()}/api/push/register`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token.value, platform: 'android' }),
+        }).catch((err) => {
+          console.warn('[Push] Failed to register token with backend:', err)
+        })
+      })
+
+      PushNotifications.addListener('registrationError', (err) => {
+        console.warn('[Push] Registration error:', err)
+      })
+
       await PushNotifications.register()
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
@@ -89,16 +104,6 @@ export async function registerDeviceToken(): Promise<void> {
           try { alert(msg) } catch { /* alert may be unavailable */ }
         }
       })
-
-      PushNotifications.addListener('registration', (token) => {
-        fetch(`${getApiBase()}/api/push/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token.value, platform: 'android' }),
-        }).catch(() => {})
-      })
-
-      PushNotifications.addListener('registrationError', () => {})
     } finally {
       localStorage.removeItem('chessduo_push_in_progress')
     }
