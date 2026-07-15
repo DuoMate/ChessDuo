@@ -81,6 +81,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-15**: Animation fixes — `useScrollLock` uses ref-counted lock to prevent nested overlay conflicts. `BoardTopBar` turn indicator wrapped in `AnimatePresence` so exit animation plays on turn change. `ChallengePicker` backdrop gets `motion.div` exit animation. `FriendsPanel` chat overlay gets `AnimatePresence` fade transition. `ResignConfirmModal` imports shared `MODAL_BACKDROP` constant. `GameOverModal` removes unused `isOnline`/`roomId` props.
 - **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to FriendsPanel, ProfilePanel, HistoryPanel, and Premium page. New `InitialsAvatar` component for user initials (replaces emoji placeholders and image avatars in non-home contexts). BoardTopBar now uses `InitialsAvatar` for human players, retains bot images. All panels use consistent dark slate backgrounds, white/5 borders, and gradient accents.
 - **2026-07-14**: `HomeBottomNav` redesigned as floating pill (rounded-2xl, centered w-[90%] max-w-xs, 12px bottom spacing, glassmorphism shadow). Samsung UI style.
 - **2026-07-14**: `WelcomeDisclaimer` — added "Your Move" (green dot) + "Teammate"/"Bot" (blue dot) legend below the chess board in the instruction screen. `useCapacitorBackButton` not needed here (handled at page level).

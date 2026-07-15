@@ -12,8 +12,6 @@ interface GameOverModalProps {
   onClose?: () => void
   gameResult?: string
   gameOverReason?: string | null
-  isOnline?: boolean
-  roomId?: string
 }
 
 function Particles() {
@@ -52,8 +50,6 @@ export function GameOverModal({
   onClose,
   gameResult,
   gameOverReason,
-  isOnline: _isOnline,
-  roomId: _roomId,
 }: GameOverModalProps) {
   const isAbandoned = gameOverReason === 'abandoned'
 
