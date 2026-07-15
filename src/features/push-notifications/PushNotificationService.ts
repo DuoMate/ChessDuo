@@ -18,6 +18,15 @@ export async function registerDeviceToken(): Promise<void> {
   try {
     if (typeof window !== 'undefined' && localStorage.getItem('chessduo_push_disabled') === 'true') return
 
+    const pushInProgress = typeof window !== 'undefined' ? localStorage.getItem('chessduo_push_in_progress') : null
+    if (pushInProgress === 'true') {
+      console.warn('[Push] Detected crash during previous registration attempt — disabling push')
+      localStorage.setItem('chessduo_push_disabled', 'true')
+      localStorage.removeItem('chessduo_push_in_progress')
+      try { alert('Push notifications caused a crash and have been disabled. You can re-enable them in Settings.') } catch { /* alert may be unavailable */ }
+      return
+    }
+
     const lastError = typeof window !== 'undefined' ? localStorage.getItem('chessduo_push_last_error') : null
     if (lastError) {
       console.warn('[Push] Previous crash detected:', lastError)
@@ -32,8 +41,13 @@ export async function registerDeviceToken(): Promise<void> {
 
     const { PushNotifications } = await import('@capacitor/push-notifications')
 
+    localStorage.setItem('chessduo_push_in_progress', 'true')
+
     const permResult = await PushNotifications.requestPermissions()
-    if (permResult.receive !== 'granted') return
+    if (permResult.receive !== 'granted') {
+      localStorage.removeItem('chessduo_push_in_progress')
+      return
+    }
 
     await PushNotifications.register()
 
@@ -77,6 +91,8 @@ export async function registerDeviceToken(): Promise<void> {
     })
 
     PushNotifications.addListener('registrationError', () => {})
+
+    localStorage.removeItem('chessduo_push_in_progress')
   } catch (err) {
     const msg = `[Push Setup] ${err instanceof Error ? err.message : String(err)}`
     console.warn(msg)
