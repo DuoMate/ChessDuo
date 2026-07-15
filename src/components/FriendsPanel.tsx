@@ -10,6 +10,7 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  cancelFriendRequest,
   deleteFriendship,
   blockUser,
   unblockUser,
@@ -152,6 +153,11 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
 
   const handleReject = async (senderId: string) => {
     await rejectFriendRequest(senderId, playerId)
+    loadData()
+  }
+
+  const handleCancel = async (receiverId: string) => {
+    await cancelFriendRequest(playerId, receiverId)
     loadData()
   }
 
@@ -327,6 +333,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
                 pending={pending}
                 onAccept={handleAccept}
                 onReject={handleReject}
+                onCancel={handleCancel}
               />
             )}
 
@@ -481,10 +488,12 @@ function RequestsTab({
   pending,
   onAccept,
   onReject,
+  onCancel,
 }: {
   pending: { incoming: FriendWithProfile[]; outgoing: FriendWithProfile[] }
   onAccept: (senderId: string) => void
   onReject: (senderId: string) => void
+  onCancel: (receiverId: string) => void
 }) {
   return (
     <div className="space-y-4">
@@ -521,7 +530,12 @@ function RequestsTab({
                   <p className="text-slate-400 text-xs">Request sent</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-medium rounded-full">Pending</span>
+              <button
+                onClick={() => onCancel(req.receiver_id || req.sender_id)}
+                className="px-3 py-1 min-h-[44px] min-w-[44px] bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs font-medium rounded-full transition-colors border border-slate-600/50 hover:border-red-500/30"
+              >
+                Cancel
+              </button>
             </div>
           ))}
         </div>
