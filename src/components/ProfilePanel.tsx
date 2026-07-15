@@ -71,11 +71,24 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           </div>
           <h2 className="text-lg font-bold text-white">Profile</h2>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span className="text-slate-400 text-lg">&times;</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun size={20} className="text-amber-400" />
+            ) : (
+              <Moon size={20} className="text-sky-400" />
+            )}
           </button>
-        )}
+          {onClose && (
+            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <span className="text-slate-400 text-lg">&times;</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -132,28 +145,6 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           </div>
           <span className="text-slate-500">&rsaquo;</span>
         </button>
-
-        {/* Theme Toggle */}
-        <div className="w-full p-4 bg-sky-500/5 border border-sky-500/20 rounded-2xl flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-sky-500/20 flex items-center justify-center flex-shrink-0">
-            {theme === 'dark' ? (
-              <Moon size={20} className="text-sky-400" />
-            ) : (
-              <Sun size={20} className="text-sky-400" />
-            )}
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-sm font-semibold text-sky-400">Dark Mode</p>
-            <p className="text-xs text-slate-400">{theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}</p>
-          </div>
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${theme === 'dark' ? 'bg-sky-500' : 'bg-slate-600 dark:bg-slate-600'}`}
-            aria-label="Toggle theme"
-          >
-            <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
 
         <Link
           href="/delete-account"
