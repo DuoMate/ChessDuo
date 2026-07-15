@@ -925,7 +925,11 @@ if (!gameMode) {
     )
   }
 
-  return <ErrorBoundary>{null}</ErrorBoundary>
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
+      <Spinner size="lg" />
+    </div>
+  )
 }
 
 // ============================================
