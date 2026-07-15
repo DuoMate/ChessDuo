@@ -146,7 +146,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             </div>
 
             <div className="mb-5 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-              <div className="mx-auto aspect-square w-full max-w-[260px] onboarding-board">
+              <div className="relative mx-auto aspect-square w-full max-w-[260px] onboarding-board">
                 <ChessBoard
                   fen={TOUR_FEN}
                   onMove={() => {}}
@@ -155,6 +155,22 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   highlightSquares={TOUR_HIGHLIGHT}
                   lastMove={TOUR_LAST_MOVE}
                 />
+                <div
+                  className="pointer-events-none absolute z-10"
+                  style={{ left: '56.25%', top: '52%', transform: 'translate(-50%, -50%)' }}
+                >
+                  <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">
+                    You
+                  </span>
+                </div>
+                <div
+                  className="pointer-events-none absolute z-10"
+                  style={{ left: '31.25%', top: '52%', transform: 'translate(-50%, -50%)' }}
+                >
+                  <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">
+                    {partnerLabel}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-4 flex items-center justify-center gap-6">
@@ -163,7 +179,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   <span className="text-xs font-semibold text-slate-200">Your Move</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full border-2 border-blue-400 bg-blue-500 shadow-[0_0_8px_rgba(96,165,250,0.6)]" />
+                  <div className="h-3 w-3 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
                   <span className="text-xs font-semibold text-slate-200">{partnerLabel}</span>
                 </div>
               </div>
