@@ -39,60 +39,69 @@ export async function registerDeviceToken(): Promise<void> {
 
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    const { PushNotifications } = await import('@capacitor/push-notifications')
-
-    localStorage.setItem('chessduo_push_in_progress', 'true')
-
-    const permResult = await PushNotifications.requestPermissions()
-    if (permResult.receive !== 'granted') {
-      localStorage.removeItem('chessduo_push_in_progress')
+    let PushNotifications
+    try {
+      ;({ PushNotifications } = await import('@capacitor/push-notifications'))
+    } catch (err) {
+      const msg = `[Push Setup] Capacitor Push plugin unavailable: ${err instanceof Error ? err.message : String(err)}`
+      console.warn(msg)
+      try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
       return
     }
 
-    await PushNotifications.register()
+    localStorage.setItem('chessduo_push_in_progress', 'true')
 
-    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      try {
-        const data = notification?.notification?.data as Record<string, string> | undefined
-        if (!data) return
-        const type = data.type as NotificationType | undefined
-        if (!type) return
-        switch (type) {
-          case 'friend_request':
-            if (data.senderId) window.location.href = `/invite/${data.senderId}`
-            break
-          case 'invite_accepted':
-          case 'chat_message':
-            window.location.href = '/'
-            break
-          case 'game_invite':
-            if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
-            break
-          default: {
-            const msg = `[Push Debug] Unknown type: ${JSON.stringify(data)}`
-            console.warn(msg)
-            try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-          }
-        }
-      } catch (err) {
-        const msg = `[Push Crash] ${err instanceof Error ? err.message : String(err)} | data: ${JSON.stringify(notification)}`
-        console.error(msg)
-        try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-        try { alert(msg) } catch { /* alert may be unavailable */ }
+    try {
+      const permResult = await PushNotifications.requestPermissions()
+      if (permResult?.receive !== 'granted') {
+        return
       }
-    })
 
-    PushNotifications.addListener('registration', (token) => {
-      fetch(`${getApiBase()}/api/push/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.value, platform: 'android' }),
-      }).catch(() => {})
-    })
+      await PushNotifications.register()
 
-    PushNotifications.addListener('registrationError', () => {})
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        try {
+          const data = notification?.notification?.data as Record<string, string> | undefined
+          if (!data) return
+          const type = data.type as NotificationType | undefined
+          if (!type) return
+          switch (type) {
+            case 'friend_request':
+              if (data.senderId) window.location.href = `/invite/${data.senderId}`
+              break
+            case 'invite_accepted':
+            case 'chat_message':
+              window.location.href = '/'
+              break
+            case 'game_invite':
+              if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
+              break
+            default: {
+              const msg = `[Push Debug] Unknown type: ${JSON.stringify(data)}`
+              console.warn(msg)
+              try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+            }
+          }
+        } catch (err) {
+          const msg = `[Push Crash] ${err instanceof Error ? err.message : String(err)} | data: ${JSON.stringify(notification)}`
+          console.error(msg)
+          try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+          try { alert(msg) } catch { /* alert may be unavailable */ }
+        }
+      })
 
-    localStorage.removeItem('chessduo_push_in_progress')
+      PushNotifications.addListener('registration', (token) => {
+        fetch(`${getApiBase()}/api/push/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token.value, platform: 'android' }),
+        }).catch(() => {})
+      })
+
+      PushNotifications.addListener('registrationError', () => {})
+    } finally {
+      localStorage.removeItem('chessduo_push_in_progress')
+    }
   } catch (err) {
     const msg = `[Push Setup] ${err instanceof Error ? err.message : String(err)}`
     console.warn(msg)
