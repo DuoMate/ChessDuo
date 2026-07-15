@@ -9,7 +9,8 @@ describe('WelcomeDisclaimer', () => {
 
   it('renders when open is true', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} />)
-    expect(screen.getByText('ChessDuo')).toBeDefined()
+    expect(screen.getByText('Chess')).toBeDefined()
+    expect(screen.getByText('Duo')).toBeDefined()
     expect(screen.getByText('Got it!')).toBeDefined()
   })
 
