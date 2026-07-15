@@ -188,6 +188,24 @@ if [ -f "scripts/generate-icons.sh" ]; then
     bash scripts/generate-icons.sh
 fi
 
+# ─── Configure Google Services for Firebase/FCM ──
+GOOGLE_SERVICES_JSON="android/app/google-services.json"
+PROJECT_BUILD_GRADLE="android/build.gradle"
+APP_BUILD_GRADLE="android/app/build.gradle"
+if [ -f "$GOOGLE_SERVICES_JSON" ]; then
+  if ! grep -q "google-services" "$PROJECT_BUILD_GRADLE" 2>/dev/null; then
+    sed -i "/classpath 'com.android.tools.build:gradle:/a \        classpath 'com.google.gms:google-services:4.4.2'" "$PROJECT_BUILD_GRADLE"
+    ok "Google Services classpath added to project build.gradle"
+  fi
+  if ! grep -q "google-services" "$APP_BUILD_GRADLE" 2>/dev/null; then
+    echo '' >> "$APP_BUILD_GRADLE"
+    echo 'apply plugin: "com.google.gms.google-services"' >> "$APP_BUILD_GRADLE"
+    ok "Google Services plugin applied to app build.gradle"
+  fi
+else
+  log "Skipping Google Services config (google-services.json not found — push notifications won't work)"
+fi
+
 # ─── Inject Android release config ──────────────
 # Build types tag
 BUILD_GRADLE="android/app/build.gradle"
