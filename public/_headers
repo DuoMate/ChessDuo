@@ -1,6 +1,15 @@
+# ── Static assets: immutable cache ──
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
 
 /avatars/*
   Cache-Control: public,max-age=31536000,immutable
   Content-Type: image/webp
+
+# ── Security headers (all routes) ──
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-XSS-Protection: 1; mode=block

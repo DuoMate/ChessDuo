@@ -545,6 +545,7 @@ BEGIN
   DELETE FROM friendships WHERE sender_id = my_id OR receiver_id = my_id;
   DELETE FROM challenge_links WHERE creator_id = my_id;
   DELETE FROM duel_games WHERE player_white = my_id OR player_black = my_id;
+  DELETE FROM push_tokens WHERE user_id = my_id;
   DELETE FROM profiles WHERE id = my_id;
 
   DELETE FROM room_players WHERE player_id = my_id;
@@ -584,6 +585,16 @@ DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_ga
 -- The security fix dropped dashboard-added "Allow all" policies.
 -- PostgreSQL OR's permissive policies together, so "Allow all"
 -- coexists safely with the specific policies below.
+--
+-- WARNING (2026-07-15): These "Allow all" policies make room_players and
+-- games tables fully WORLD-READABLE AND WORLD-WRITABLE. Any client can
+-- read/modify any game's FEN state, moves, and player rosters without
+-- authentication. This exists because anonymous Quick Play users need
+-- row access without a permanent auth session. The long-term fix is to
+-- create anonymous users via signInAnonymously() and use is_room_member()
+-- checks (which already pass for anon users since they have auth.uid()).
+-- Remove these policies ONLY after verifying that anonymous room joins
+-- work correctly in a staging environment with the tighter RLS in place.
 -- ============================================================
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.room_players TO anon, authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.games TO anon, authenticated;

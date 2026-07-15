@@ -16,6 +16,8 @@ async function isCapacitorAvailable(): Promise<boolean> {
 
 export async function registerDeviceToken(): Promise<void> {
   try {
+    if (typeof window !== 'undefined' && localStorage.getItem('chessduo_push_disabled') === 'true') return
+
     const native = await isCapacitorAvailable()
     if (!native) return
 

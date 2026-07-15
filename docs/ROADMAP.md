@@ -160,12 +160,12 @@ Uses Docker to build Stockfish from `/server` directory via Render Blueprint.
 - [x] 6.1 Setup Capacitor project (config, scripts, runbook)
 - [x] 6.2 Create mobile-compatible chess board component — MobileChessBoard integrated in Game.tsx + DuelGame.tsx with touch-manipulation
 - [x] 6.3 Build mobile UI (responsive design) — DuelGame mobile pass, MobileStatusBar safe-area, viewport meta, MobileChessBoard integration
+- [x] 6.7 App store submission prep — Google Play Console ready, store descriptions + screenshots guide + content rating complete
 - [ ] 6.4 Server-side Stockfish API hardening (mobile performance) — not yet started
 - [ ] 6.5 Compile Android APK (sideload + Play Store) — build scripts exist, pending compilation
 - [ ] 6.6 Compile iOS IPA (TestFlight + App Store) — not yet started
-- [ ] 6.7 App store submission prep — not yet started
 
-**Deliverable**: Web MVP complete; native iOS and Android apps pending (6.4-6.7)
+**Deliverable**: Web MVP complete; iOS pending; Android APK build scripts ready, Play Store submission pending.
 
 **Capacitor Setup (6.1 — Complete):**
 - `capacitor.config.ts` — WebView wrapper loading from the live Cloudflare Workers URL
@@ -618,6 +618,32 @@ Add `console.error` to critical empty catch blocks in:
 ---
 
 *Last Updated: 2026-06-10 — Bug bounty Batch 1 complete (9 critical/high fixes)*
+
+---
+
+## Pre-Launch Security Hardening (July 2026)
+
+Completed as part of go-live preparation:
+
+### P0 — Payment Security
+- **Razorpay client-side trust fix** — Removed `is_premium: true` and `subscription_status: 'active'` from client-side DB write in checkout handler. Webhook is now sole authority for subscription activation. Client keeps optimistic UI state update only (no DB write). Prevents payment bypass via browser DevTools.
+- **RLS policy documented** — `Allow all` policies on `games` and `room_players` flagged with detailed comment explaining the security gap and staging test requirements before removal.
+
+### P1 — Infrastructure Hardening
+- **Security headers** — Added `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `X-XSS-Protection` to `public/_headers`.
+- **PWA manifest** — Added `public/manifest.json` with 512px icon, standalone display, theme-color. Linked in `layout.tsx`.
+- **Open Graph metadata** — Added `openGraph`, `twitter:card`, `icons`, `appleWebApp` to layout metadata for social sharing previews.
+- **Favicon / Apple touch icon** — `loading/icon-512.webp` referenced as both favicon and apple-touch-icon.
+
+### P1 — Crash Reporting
+- **`SplashHandler` wired to `/api/log-crash`** — Global `window.onerror` and `unhandledrejection` handlers now POST error data to the existing crash endpoint. Best-effort delivery with network failure suppression.
+
+### P1 — Push Notification Opt-Out
+- **SettingsPanel toggle** — Added "Push Notifications" toggle (on by default). On disable, sets `chessduo_push_disabled` in localStorage. `registerDeviceToken()` checks this flag and skips FCM registration if disabled.
+- **Account deletion cleanup** — `delete_my_account()` RPC now deletes `push_tokens` rows for the deleted user.
+
+### RLS Caveat (Known Issue)
+- `games` and `room_players` tables have permissive `FOR ALL USING (true) WITH CHECK (true)` policies that override stricter per-policy RLS. These exist because anonymous Quick Play users need row access. The `is_room_member()` function already supports anonymous auth UIDs — the fix is to remove the "Allow all" policies and test anonymous room join end-to-end in staging. Flagged in `supabase/tables.sql` with full context.
 
 ---
 

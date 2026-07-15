@@ -150,13 +150,16 @@ export default function PremiumPage() {
         handler: async function (response: { razorpay_payment_id: string; razorpay_subscription_id: string }) {
           setIsPremium(true)
           setSubscriptionStatus('active')
+          // The webhook at /api/razorpay/webhook is the authoritative source for
+          // subscription status. We update the DB only when the webhook confirms.
+          // The client-side write below is intentionally removed — it was a payment
+          // bypass vector. UI state (setIsPremium) is optimistic; the webhook will
+          // set is_premium=true server-side within seconds of a successful payment.
           await supabase
             .from('profiles')
             .update({
-              is_premium: true,
               rzp_subscription_id: response.razorpay_subscription_id,
               rzp_payment_id: response.razorpay_payment_id,
-              subscription_status: 'active',
             })
             .eq('id', playerId)
         },
