@@ -1,6 +1,8 @@
 import type { BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
 import type { NativePurchasesPlugin, PURCHASE_TYPE, Product, Transaction } from '@capgo/native-purchases'
 
+const BILLING_TIMEOUT_MS = 5000
+
 let plugin: NativePurchasesPlugin | null = null
 
 async function getPlugin(): Promise<NativePurchasesPlugin | null> {
@@ -14,6 +16,13 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
   } catch {
     return null
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>(resolve => setTimeout(() => resolve(fallback), timeoutMs)),
+  ])
 }
 
 function isYearly(productId: string, prod: Product): boolean {
@@ -44,10 +53,14 @@ export const GooglePlayBillingProvider: BillingProvider = {
     if (!p) return []
 
     try {
-      const result = await p.getProducts({
-        productIdentifiers: productIds,
-        productType: 'subs' as PURCHASE_TYPE,
-      })
+      const result = await withTimeout(
+        p.getProducts({
+          productIdentifiers: productIds,
+          productType: 'subs' as PURCHASE_TYPE,
+        }),
+        BILLING_TIMEOUT_MS,
+        { products: [] },
+      )
 
       return result.products.map((prod) => {
         const isYr = isYearly(prod.identifier, prod)
@@ -72,10 +85,18 @@ export const GooglePlayBillingProvider: BillingProvider = {
     }
 
     try {
-      const result = await p.purchaseProduct({
-        productIdentifier: productId,
-        productType: 'subs' as PURCHASE_TYPE,
-      })
+      const result = await withTimeout(
+        p.purchaseProduct({
+          productIdentifier: productId,
+          productType: 'subs' as PURCHASE_TYPE,
+        }),
+        BILLING_TIMEOUT_MS,
+        null,
+      )
+
+      if (!result) {
+        return { success: false, error: 'Billing timed out. Please try again.', errorDetail: 'network' }
+      }
 
       const purchaseToken = (result as unknown as Transaction).purchaseToken
         || (result as unknown as Transaction & { jwsRepresentation?: string }).jwsRepresentation
