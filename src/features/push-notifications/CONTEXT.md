@@ -25,11 +25,16 @@ Isolated push notification module for the ChessDuo Capacitor app. Handles FCM to
 - `src/app/api/push/register/route.ts`
 - `src/app/api/push/send/route.ts`
 
-## Integration Points (minimal — only 1-line calls)
+## Integration Points
 - `src/app/providers.tsx` — `initPushNotifications()` after auth
 - `src/components/FriendsPanel.tsx` — `notifyFriendRequest()` after `sendFriendRequest()`
 - `src/components/ChatPanel.tsx` — `notifyChatMessage()` after `sendMessage()`
+- `src/components/SettingsPanel.tsx` — Push notification opt-out toggle (sets `chessduo_push_disabled` in localStorage)
+
+## Opt-Out Mechanism
+- User toggles "Push Notifications" off in SettingsPanel → `localStorage.setItem('chessduo_push_disabled', 'true')`
+- `registerDeviceToken()` checks this flag before FCM registration; if disabled, returns immediately
+- `delete_my_account()` RPC cleans up `push_tokens` rows on account deletion
 
 ## Recent Changes
-- **2026-07-15**: Added 500ms startup delay before `PushNotifications.requestPermissions()` to prevent race condition with `SplashScreen.hide()`. Added `POST_NOTIFICATIONS` permission to AndroidManifest.xml for Android 13+. Synced native plugins via `npx cap sync` (was missing `capacitor-push-notifications` and `capacitor-browser` in Gradle).
-- **2026-07-14**: Module created.
+- **2026-07-15**: Added opt-out toggle in SettingsPanel → `registerDeviceToken()` skips FCM registration when disabled. `delete_my_account()` now cleans push_tokens.

@@ -1,0 +1,17 @@
+{
+  "name": "ChessDuo — 2v2 Chess",
+  "short_name": "ChessDuo",
+  "description": "Play smarter, together. 2v2 chess with your teammate and AI.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0f1119",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/loading/icon-512.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    }
+  ]
+}

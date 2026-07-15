@@ -19,15 +19,21 @@ export function SplashHandler() {
       console.error('[Global]', msg, source, line, col, err)
       try {
         const errorData = {
-          message: msg,
-          source,
-          line,
-          col,
-          stack: err?.stack,
+          message: String(msg),
+          source: String(source || ''),
+          line: line || 0,
+          col: col || 0,
+          stack: err?.stack || '',
           url: window.location.href,
           time: new Date().toISOString(),
         }
-        // Crash endpoint not available on current infra; logged client-side only
+        fetch('/api/log-crash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(errorData),
+        }).catch(() => {
+          // crash-report delivery is best-effort; suppress network failures
+        })
       } catch {
         // Ignore crash-report fetch failures
       }
@@ -37,6 +43,17 @@ export function SplashHandler() {
 
     window.addEventListener('unhandledrejection', (e) => {
       console.error('[Global Unhandled]', e.reason)
+      try {
+        fetch('/api/log-crash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: String(e.reason || 'Unhandled rejection'),
+            url: window.location.href,
+            time: new Date().toISOString(),
+          }),
+        }).catch(() => {})
+      } catch { /* suppress */ }
     })
   }, [])
 

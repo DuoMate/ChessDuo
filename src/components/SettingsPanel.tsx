@@ -1,9 +1,9 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCallback } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useSettings } from '@/lib/settings'
-import { ArrowLeft, Sun, Moon } from 'lucide-react'
+import { ArrowLeft, Sun, Moon, BellOff } from 'lucide-react'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
@@ -15,6 +15,11 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { autoQueen, lowTimeWarning, theme, setAutoQueen, setLowTimeWarning, setTheme } = useSettings()
+  const [notifsEnabled, setNotifsEnabled] = useState(true)
+
+  useEffect(() => {
+    setNotifsEnabled(localStorage.getItem('chessduo_push_disabled') !== 'true')
+  }, [])
 
   const backHandler = useCallback(() => {
     onClose()
@@ -97,6 +102,26 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 aria-label="Toggle low time warning"
               >
                 <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            <div className="h-px bg-gray-200 dark:bg-gray-700" />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">Push Notifications</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Receive game invites and chat alerts</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !notifsEnabled
+                  setNotifsEnabled(next)
+                  localStorage.setItem('chessduo_push_disabled', next ? 'false' : 'true')
+                }}
+                className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${notifsEnabled ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                aria-label="Toggle push notifications"
+              >
+                <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notifsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </div>
