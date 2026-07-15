@@ -21,7 +21,7 @@ import { GameLoading } from './GameLoading'
 import { GameLobby } from './GameLobby'
 import { GameOnOverlay } from './GameOnOverlay'
 import { EvaluatingLoader } from './EvaluatingLoader'
-import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled } from '@/lib/sounds'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
 import { saveCompletedGame } from '@/lib/matchHistory'
 import type { MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
@@ -279,6 +279,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const moveHistoryRef = useRef<MoveEntry[]>([])
   const teammateLabelShownRef = useRef(0)
   const lastTeammateLabelMoveKeyRef = useRef<string | null>(null)
+  // Sound tracking refs — compare prev/current state to trigger sounds
+  const prevFenRef = useRef('')
+  const prevCapturedWhiteRef = useRef(0)
+  const prevCapturedBlackRef = useRef(0)
+  const prevStatusRef = useRef<GameStatus | null>(null)
   const [matchTimerStarted, setMatchTimerStarted] = useState(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
@@ -434,10 +439,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Initialize AudioContext on first user gesture for browsers
   useEffect(() => {
     const resumeAudio = () => {
-      const engine = (window as { __soundEngineInstance?: { getContext: () => { resume: () => Promise<void> } } }).__soundEngineInstance
-      if (engine?.getContext) {
-        engine.getContext().resume().catch(() => {})
-      }
+      soundEngine.resumeContext().catch(() => {})
     }
     document.addEventListener('click', resumeAudio, { once: true })
     document.addEventListener('touchstart', resumeAudio, { once: true })
@@ -954,6 +956,37 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
       return newState
     })
+    
+    const newFen = g.board.fen()
+    const newWhiteCaptured = captured.white.length
+    const newBlackCaptured = captured.black.length
+
+    if (prevFenRef.current && newFen !== prevFenRef.current && g.status === GameStatus.PLAYING) {
+      playMoveSound()
+    }
+
+    const prevTotalCaptured = prevCapturedWhiteRef.current + prevCapturedBlackRef.current
+    const newTotalCaptured = newWhiteCaptured + newBlackCaptured
+    if (prevFenRef.current && newTotalCaptured > prevTotalCaptured) {
+      playCaptureSound()
+    }
+
+    if (g.board.isCheck() && g.status === GameStatus.PLAYING) {
+      playCheckSound()
+    }
+
+    if (g.status === GameStatus.GAME_OVER && prevStatusRef.current !== GameStatus.GAME_OVER) {
+      const result = g.getResult()
+      const isCheckmate = result.toLowerCase().includes('checkmate') || g.getGameOverReason()?.toLowerCase().includes('checkmate')
+      if (isCheckmate) {
+        playCheckmateSound()
+      }
+    }
+
+    prevFenRef.current = newFen
+    prevCapturedWhiteRef.current = newWhiteCaptured
+    prevCapturedBlackRef.current = newBlackCaptured
+    prevStatusRef.current = g.status
     
     if (pendingOverlay?.showTeammateLabel) {
       const labelKey = `${pendingOverlay.from}-${pendingOverlay.to}`
