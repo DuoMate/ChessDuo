@@ -438,6 +438,7 @@ export class OnlineGame {
               clearInterval(this._timerSyncInterval)
               this._timerSyncInterval = null
             }
+            this.resolvePendingWaiter()
           }
         })
         .on('broadcast', { event: 'player_move' }, ({ payload }) => {
@@ -1126,6 +1127,7 @@ export class OnlineGame {
         payload: { result, reason }
       })
     }
+    this.resolvePendingWaiter()
   }
 
   setGameOverResult(result: string): void {
@@ -1496,6 +1498,17 @@ export class OnlineGame {
     this.onAbandonCallback?.()
   }
 
+  private resolvePendingWaiter(): void {
+    if (this.resolveTeammateLocked) {
+      this.resolveTeammateLocked()
+      this.resolveTeammateLocked = null
+    }
+    if (this.resolveTurnChange) {
+      this.resolveTurnChange()
+      this.resolveTurnChange = null
+    }
+  }
+
   setOnAbandonCallback(callback: () => void): void {
     this.onAbandonCallback = callback
   }
@@ -1514,10 +1527,7 @@ export class OnlineGame {
       this._pollingInterval = null
     }
     this.stopMatchTimer()
-    if (this.resolveTeammateLocked) {
-      this.resolveTeammateLocked()
-      this.resolveTeammateLocked = null
-    }
+    this.resolvePendingWaiter()
     this.notifyStateChange()
   }
 
@@ -1531,6 +1541,7 @@ export class OnlineGame {
       this._timerSyncInterval = null
     }
     this.stopMatchTimer()
+    this.resolvePendingWaiter()
     this.notifyStateChange()
   }
 
