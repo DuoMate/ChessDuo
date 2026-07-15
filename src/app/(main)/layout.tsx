@@ -10,6 +10,7 @@ import { ProfilePanel } from '@/components/ProfilePanel'
 import { HistoryPanel } from '@/components/HistoryPanel'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { getUnreadCounts } from '@/lib/messages'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -58,6 +59,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
     }).catch(() => {})
   }, [playerId])
+
+  useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
     <ErrorBoundary>

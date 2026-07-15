@@ -21,6 +21,7 @@ import { saveCompletedGame } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playIllegalSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
 import { Chess } from 'chess.js'
 
@@ -78,6 +79,18 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeaveModal(true),
   })
+
+  useCapacitorBackButton(
+    () => {
+      if (status === 'playing') {
+        setShowLeaveModal(true)
+      } else {
+        onLeave()
+      }
+      return true
+    },
+    true,
+  )
 
   useEffect(() => {
     const game = new DuelGameEngine(roomId, playerId, team, timeLimit)
