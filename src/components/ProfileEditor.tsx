@@ -128,7 +128,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
     setUsernameMessage(null)
   }
 
-  if (loading) return <p className="text-gray-400 text-center text-sm">Loading profile...</p>
+  if (loading) return <div className="flex justify-center py-8"><Spinner size="md" /></div>
 
   return (
     <div className="space-y-3">

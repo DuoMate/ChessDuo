@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoveInsights } from './MoveInsights'
+import { Spinner } from './Spinner'
 import { getUserInsightsState, incrementInsightsReveals, isUserPremium } from '@/lib/insights'
 
 interface InsightsGateProps {
@@ -49,7 +50,7 @@ export function InsightsGate({ playerId, ...comparison }: InsightsGateProps) {
   }
 
   if (loading) {
-    return <div className="mt-3 pt-3 border-t border-gray-600 text-center text-gray-500 text-xs">Loading...</div>
+    return <div className="mt-3 pt-3 border-t border-gray-600 flex justify-center"><Spinner size="sm" /></div>
   }
 
   if (isPremium || showInsights) {
