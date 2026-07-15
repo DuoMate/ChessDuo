@@ -797,11 +797,12 @@ export default function SetupPage() {
             <WelcomeDisclaimer
               open={showOfflineDisclaimer}
               onDismiss={() => {
-                setShowOfflineDisclaimer(false)
                 if (offlineDisclaimerShouldStartRef.current) {
                   offlineDisclaimerShouldStartRef.current = false
                   const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
                   router.push(`/game?level=${selectedLevel}&time=${time}`)
+                } else {
+                  setShowOfflineDisclaimer(false)
                 }
               }}
               storageKey="chessduo_offline_disclaimer_dismissed"
