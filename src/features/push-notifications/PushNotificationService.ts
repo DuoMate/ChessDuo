@@ -18,6 +18,13 @@ export async function registerDeviceToken(): Promise<void> {
   try {
     if (typeof window !== 'undefined' && localStorage.getItem('chessduo_push_disabled') === 'true') return
 
+    const lastError = typeof window !== 'undefined' ? localStorage.getItem('chessduo_push_last_error') : null
+    if (lastError) {
+      console.warn('[Push] Previous crash detected:', lastError)
+      try { alert(`[Push Prev Crash]\n${lastError}`) } catch { /* alert may be unavailable */ }
+      try { localStorage.removeItem('chessduo_push_last_error') } catch { /* quota exceeded */ }
+    }
+
     const native = await isCapacitorAvailable()
     if (!native) return
 
@@ -31,21 +38,33 @@ export async function registerDeviceToken(): Promise<void> {
     await PushNotifications.register()
 
     PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      const data = notification?.notification?.data as Record<string, string> | undefined
-      if (!data) return
-      const type = data.type as NotificationType | undefined
-      if (!type) return
-      switch (type) {
-        case 'friend_request':
-          window.location.href = `/invite/${data.senderId}`
-          break
-        case 'invite_accepted':
-        case 'chat_message':
-          window.location.href = '/'
-          break
-        case 'game_invite':
-          if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
-          break
+      try {
+        const data = notification?.notification?.data as Record<string, string> | undefined
+        if (!data) return
+        const type = data.type as NotificationType | undefined
+        if (!type) return
+        switch (type) {
+          case 'friend_request':
+            if (data.senderId) window.location.href = `/invite/${data.senderId}`
+            break
+          case 'invite_accepted':
+          case 'chat_message':
+            window.location.href = '/'
+            break
+          case 'game_invite':
+            if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
+            break
+          default: {
+            const msg = `[Push Debug] Unknown type: ${JSON.stringify(data)}`
+            console.warn(msg)
+            try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+          }
+        }
+      } catch (err) {
+        const msg = `[Push Crash] ${err instanceof Error ? err.message : String(err)} | data: ${JSON.stringify(notification)}`
+        console.error(msg)
+        try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+        try { alert(msg) } catch { /* alert may be unavailable */ }
       }
     })
 
@@ -58,8 +77,10 @@ export async function registerDeviceToken(): Promise<void> {
     })
 
     PushNotifications.addListener('registrationError', () => {})
-  } catch {
-    // Push notifications are best-effort — silently fail if native plugin is unavailable
+  } catch (err) {
+    const msg = `[Push Setup] ${err instanceof Error ? err.message : String(err)}`
+    console.warn(msg)
+    try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
   }
 }
 

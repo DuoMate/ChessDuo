@@ -1,7 +1,7 @@
 import { evaluationCache } from '../shared/evaluationCache'
 import { DEBUG } from '../../lib/debug'
 
-const WORKER_PATH = '/stockfish/stockfish-18-lite-single.js'
+const WORKER_PATH = '/stockfish/stockfish.js'
 const EVAL_TIMEOUT_MS = 30000
 
 function workerReady(worker: Worker): Promise<void> {
