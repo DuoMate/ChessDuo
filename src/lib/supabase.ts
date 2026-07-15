@@ -30,9 +30,13 @@ export type Database = {
           avatar_url: string | null
           insights_reveals_used: number
           is_premium: boolean
-          rzp_customer_id: string | null
-          rzp_subscription_id: string | null
-          rzp_payment_id: string | null
+          subscription_provider: string | null
+          subscription_plan: string | null
+          purchase_token: string | null
+          subscription_expiry_date: string | null
+          auto_renew_status: boolean
+          purchase_state: string | null
+          last_verified_date: string | null
           subscription_status: string
           created_at: string
         }
@@ -42,9 +46,13 @@ export type Database = {
           avatar_url?: string | null
           insights_reveals_used?: number
           is_premium?: boolean
-          rzp_customer_id?: string | null
-          rzp_subscription_id?: string | null
-          rzp_payment_id?: string | null
+          subscription_provider?: string | null
+          subscription_plan?: string | null
+          purchase_token?: string | null
+          subscription_expiry_date?: string | null
+          auto_renew_status?: boolean
+          purchase_state?: string | null
+          last_verified_date?: string | null
           subscription_status?: string
         }
         Update: {
@@ -53,9 +61,13 @@ export type Database = {
           avatar_url?: string | null
           insights_reveals_used?: number
           is_premium?: boolean
-          rzp_customer_id?: string | null
-          rzp_subscription_id?: string | null
-          rzp_payment_id?: string | null
+          subscription_provider?: string | null
+          subscription_plan?: string | null
+          purchase_token?: string | null
+          subscription_expiry_date?: string | null
+          auto_renew_status?: boolean
+          purchase_state?: string | null
+          last_verified_date?: string | null
           subscription_status?: string
         }
       }

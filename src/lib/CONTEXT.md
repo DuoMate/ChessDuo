@@ -23,7 +23,6 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `challenges.ts` | Challenge link generation/validation |
 | `insights.ts` | Premium insights logic |
 | `moveClassifier.ts` | Heuristic SAN-based move analysis |
-| `razorpay.ts` | Razorpay payment client |
 | `rateLimit.ts` | API rate limiting |
 | `debug.ts` | Debug utilities (conditional logging) |
 | `appUrl.ts` | App URL helpers (deep links) |

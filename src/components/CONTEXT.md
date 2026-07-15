@@ -27,9 +27,9 @@ All React components — co-located by feature, not by type. Components handle r
 | `WelcomeDisclaimer.tsx` | First-time welcome modal |
 | `GameTour.tsx` | Onboarding tutorial |
 | `ChallengePicker.tsx` | Challenge mode/time picker |
-| `InsightsGate.tsx` | Premium insight gate |
+| `InsightsGate.tsx` | Premium insight gate — uses `SubscriptionService.isPremium()` |
 | `SettingsPanel.tsx` | Settings slide-over |
-| `ProfilePanel.tsx` | Profile + stats view — dark theme redesign |
+| `ProfilePanel.tsx` | Profile + stats view — uses `SubscriptionService.isPremium()` for premium status |
 | `HistoryPanel.tsx` | Match history list — dark theme redesign |
 | `FriendsPanel.tsx` | Friends list + requests + chat — dark theme redesign |
 | `ChatPanel.tsx` | In-app messenger |
@@ -56,6 +56,7 @@ All React components — co-located by feature, not by type. Components handle r
 ## Logic & Decisions
 - Components access game logic through `GameInterface` — never use `as any`.
 - All game events displayed via `useGameToast()` — no `alert()` or `console.log` for user messages.
+- Premium checks delegated to `SubscriptionService.isPremium()` — never query `profiles.is_premium` directly.
 - Every component has `dark:` variants for background, text, and borders.
 - Interactive elements: `min-h-[44px] min-w-[44px]`.
 - No hardcoded hex colors — Tailwind classes only.
@@ -81,6 +82,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-15**: Google Play Billing migration — `InsightsGate` and `ProfilePanel` now use `SubscriptionService.isPremium()` instead of direct `profiles.is_premium` queries. Premium checks are delegated to the provider-agnostic billing module.
 - **2026-07-15**: Animation fixes — `useScrollLock` uses ref-counted lock to prevent nested overlay conflicts. `BoardTopBar` turn indicator wrapped in `AnimatePresence` so exit animation plays on turn change. `ChallengePicker` backdrop gets `motion.div` exit animation. `FriendsPanel` chat overlay gets `AnimatePresence` fade transition. `ResignConfirmModal` imports shared `MODAL_BACKDROP` constant. `GameOverModal` removes unused `isOnline`/`roomId` props.
 - **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to FriendsPanel, ProfilePanel, HistoryPanel, and Premium page. New `InitialsAvatar` component for user initials (replaces emoji placeholders and image avatars in non-home contexts). BoardTopBar now uses `InitialsAvatar` for human players, retains bot images. All panels use consistent dark slate backgrounds, white/5 borders, and gradient accents.
 - **2026-07-14**: `HomeBottomNav` redesigned as floating pill (rounded-2xl, centered w-[90%] max-w-xs, 12px bottom spacing, glassmorphism shadow). Samsung UI style.

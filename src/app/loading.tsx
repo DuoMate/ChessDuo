@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 import { Timeline } from 'animejs'
+import ChessDuoLogo from '@/components/ChessDuoLogo'
 
 export default function Loading() {
   const logoRef = useRef<HTMLDivElement>(null)
-  const titleRef = useRef<HTMLParagraphElement>(null)
   const taglineRef = useRef<HTMLParagraphElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
   const statusRef = useRef<HTMLParagraphElement>(null)
@@ -16,7 +16,6 @@ export default function Loading() {
     timelineRef.current = tl
 
     tl.add(logoRef.current!, { scale: [1, 1.06, 1], duration: 2400, easing: 'spring(1, 80, 10, 0)' }, 0)
-    tl.add(titleRef.current!, { opacity: [0, 1], translateY: [8, 0], duration: 600, easing: 'outExpo' }, 100)
     tl.add(taglineRef.current!, { opacity: [0, 1], translateY: [6, 0], duration: 500, easing: 'outExpo' }, 300)
     tl.add(barRef.current!, { opacity: [0, 1], duration: 400, easing: 'outExpo' }, 600)
     tl.add(statusRef.current!, { opacity: [0.3, 1, 0.3], duration: 2500, easing: 'easeInOutSine' }, 0)
@@ -43,34 +42,10 @@ export default function Loading() {
         overflow: 'hidden',
       }}
     >
-      <div
-        ref={logoRef}
-        style={{
-          width: 'min(280px, 60vw)',
-          height: 'auto',
-          aspectRatio: '1/1',
-          backgroundImage: 'url(/loading/logo.webp)',
-          backgroundSize: 'contain',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'center',
-        }}
-      />
+      <div ref={logoRef}>
+        <ChessDuoLogo size="xl" animate />
+      </div>
 
-      <p
-        ref={titleRef}
-        style={{
-          fontFamily: 'inherit',
-          fontSize: 'clamp(18px, 5vw, 26px)',
-          fontWeight: 800,
-          color: '#3b82f6',
-          letterSpacing: '0.1em',
-          marginTop: '20px',
-          marginBottom: '4px',
-          opacity: 0,
-        }}
-      >
-        ChessDuo
-      </p>
       <p
         ref={taglineRef}
         style={{

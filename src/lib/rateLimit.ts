@@ -9,6 +9,8 @@ const ENDPOINT_LIMITS: Record<string, number> = {
   '/api/log-crash': 30,
   '/api/push/register': 30,
   '/api/push/send': 60,
+  '/api/subscription/verify': 30,
+  '/api/subscription/status': 60,
 }
 
 export function checkRateLimit(identifier: string, maxRequests: number = DEFAULT_MAX): { allowed: boolean; remaining: number; resetIn: number } {

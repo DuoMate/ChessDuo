@@ -10,6 +10,7 @@ import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { initPushNotifications } from '@/features/push-notifications'
+import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -27,6 +28,8 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
     initPushNotifications().catch(() => {})
+    SubscriptionService.setProvider(GooglePlayBillingProvider)
+    SubscriptionService.initialize().catch(() => {})
   }, [])
 
   useScrollToTop()

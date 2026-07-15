@@ -52,11 +52,11 @@
 
 ## Premium (Freemium)
 - 3 free insights (`INSIGHTS_FREE_LIMIT`)
-- Razorpay subscriptions for unlimited insights
-- Subscription status tracked on `profiles` table (`rzp_subscription_id`, `subscription_status`)
+- Google Play Billing subscriptions for unlimited insights
+- Subscription status tracked on `profiles` table (`subscription_provider`, `subscription_plan`, `purchase_state`, `subscription_expiry_date`) via `SubscriptionService`
 
 ## Database Entities
-- **profiles**: id, username, avatar_url, is_premium, insights count, razorpay fields
+- **profiles**: id, username, avatar_url, is_premium, insights count, subscription fields
 - **rooms**: id, code, status, mode, created_by, created_at
 - **room_players**: room_id, player_id, team, slot, status, joined_at
 - **games**: id, room_id, fen, current_turn, move_history, status, timers

@@ -452,41 +452,48 @@ Key files:
 
 ## Premium Features
 
-### Razorpay Payment Integration (June 2026)
+### Google Play Billing (July 2026)
 
-**Payment processor**: Razorpay (India-friendly — no invite required)
+**Payment processor**: Google Play Billing via `@capgo/native-purchases` (Capacitor plugin)
 
 **Architecture**:
-- `src/lib/razorpay.ts` — Server-side Razorpay client
-- `POST /api/razorpay/create-subscription` — Creates a Razorpay subscription for the authenticated user
-- `POST /api/razorpay/webhook` — Verifies HMAC-SHA256 signature, handles subscription events
-- `POST /api/razorpay/cancel-subscription` — Cancels subscription at period end (in-app)
+- `src/features/billing/BillingProvider.ts` — Abstract interface for all billing providers
+- `src/features/billing/GooglePlayBillingProvider.ts` — Capacitor wrapper for Google Play Billing
+- `src/features/billing/SubscriptionService.ts` — High-level API: purchase, restore, isPremium, getPlans
+- `src/features/billing/SubscriptionStateMachine.ts` — Pure function for subscription lifecycle transitions
+- `POST /api/subscription/verify` — Verifies purchase token with Google Play Developer API → updates Supabase
+- `GET /api/subscription/status` — Fetches subscription status, re-verifies when needed
+- `POST /api/subscription/rtdn` — RTDN webhook endpoint (placeholder for future push-based updates)
 
-**Pricing plans** (configured via Razorpay Dashboard):
-- Monthly — ₹99/mo (`plan_T0QT9vboakOs4G`)
-- Annual — ₹999/yr (`plan_T0QTzoKMUnsuug`)
+**Pricing plans** (configured in Google Play Console):
+- Monthly — ₹99/mo (`premium_monthly`)
+- Annual — ₹999/yr (`premium_yearly`)
+- Prices fetched dynamically from Google Play — never hardcoded
 
 **Database columns** (on `profiles`):
-- `rzp_customer_id` — Razorpay customer ID
-- `rzp_subscription_id` — Active subscription ID
-- `subscription_status` — `active`, `canceling`, or `inactive`
+- `subscription_provider` — `GOOGLE_PLAY`, `APPLE`, or `WEB`
+- `subscription_plan` — `monthly` or `yearly`
+- `purchase_token` — Google Play purchase token
+- `subscription_expiry_date` — When the subscription expires
+- `auto_renew_status` — Whether auto-renew is enabled
+- `purchase_state` — `purchased`, `pending`, `cancelled`, or `expired`
+- `last_verified_date` — Last time the server verified with Google Play
 
 **Security**:
-- Webhook signature verification via HMAC-SHA256
-- Auth check before creating subscription (validates Supabase session)
-- User ID passed as subscription notes for webhook matching
-- `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` never exposed to client
+- Purchase verification via Google Play Developer API (OAuth2 JWT via `jose`, same pattern as FCM)
+- Auth check before verifying (validates Supabase session)
+- Purchase acknowledged server-side within 3-day window
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` never exposed to client
 
 **Flow**:
-1. User clicks "Subscribe Monthly" or "Subscribe Annual" on `/premium`
-2. Server creates a Razorpay Subscription via API → returns subscription ID
-3. Client opens Razorpay Checkout modal (uses `window.Razorpay`)
-4. Razorpay calls webhook → webhook verifies signature → sets `is_premium = true`
-5. In-app "Cancel Subscription" calls `/api/razorpay/cancel-subscription` → cancels at period end
+1. User taps "Upgrade to Premium" on `/premium`
+2. `SubscriptionService.purchaseMonthly()` → launches native Google Play dialog
+3. Google Play returns purchase token → sent to `/api/subscription/verify`
+4. Server verifies with Google Play Developer API → acknowledges → sets `is_premium = true`
+5. Premium unlocked immediately, no app restart required
 
-**GitHub Secrets required** (6):
-`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`,
-`NEXT_PUBLIC_RAZORPAY_KEY_ID`, `NEXT_PUBLIC_RAZORPAY_PLAN_MONTHLY`, `NEXT_PUBLIC_RAZORPAY_PLAN_ANNUAL`
+**GitHub Secrets required**:
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `GOOGLE_PLAY_PACKAGE_NAME`
 
 ### Move Insights (Freemium)
 
@@ -523,7 +530,7 @@ Key files:
 
 ---
 
-*Last Updated: 2026-06-11 — Razorpay payment integration implemented; premium page with pricing + in-app cancel*
+*Last Updated: 2026-07-15 — Migrated from Razorpay to Google Play Billing subscriptions*
 
 ---
 
@@ -626,7 +633,7 @@ Add `console.error` to critical empty catch blocks in:
 Completed as part of go-live preparation:
 
 ### P0 — Payment Security
-- **Razorpay client-side trust fix** — Removed `is_premium: true` and `subscription_status: 'active'` from client-side DB write in checkout handler. Webhook is now sole authority for subscription activation. Client keeps optimistic UI state update only (no DB write). Prevents payment bypass via browser DevTools.
+- **Google Play Billing verification** — All purchases verified server-side via Google Play Developer API before granting premium. Client can never directly set `is_premium`. 
 - **RLS policy documented** — `Allow all` policies on `games` and `room_players` flagged with detailed comment explaining the security gap and staging test requirements before removal.
 
 ### P1 — Infrastructure Hardening

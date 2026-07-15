@@ -17,10 +17,19 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Idempotent: add columns that may be missing on existing tables
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS insights_reveals_used INTEGER DEFAULT 0;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_customer_id TEXT;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_subscription_id TEXT;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rzp_payment_id TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_provider TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_plan TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS purchase_token TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_expiry_date TIMESTAMPTZ;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS auto_renew_status BOOLEAN DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS purchase_state TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_verified_date TIMESTAMPTZ;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';
+
+-- Drop old Razorpay columns (idempotent, safe to re-run)
+ALTER TABLE profiles DROP COLUMN IF EXISTS rzp_customer_id;
+ALTER TABLE profiles DROP COLUMN IF EXISTS rzp_subscription_id;
+ALTER TABLE profiles DROP COLUMN IF EXISTS rzp_payment_id;
 
         -- Create rooms table
         CREATE TABLE IF NOT EXISTS rooms (
