@@ -1,4 +1,3 @@
-export { NotificationHandler } from './NotificationHandler'
 export { registerDeviceToken, sendPushNotification } from './PushNotificationService'
 export type { NotificationPayload, NotificationType, PushTokenRow } from './types'
 

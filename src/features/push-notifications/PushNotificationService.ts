@@ -30,6 +30,25 @@ export async function registerDeviceToken(): Promise<void> {
 
     await PushNotifications.register()
 
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      const data = notification?.notification?.data as Record<string, string> | undefined
+      if (!data) return
+      const type = data.type as NotificationType | undefined
+      if (!type) return
+      switch (type) {
+        case 'friend_request':
+          window.location.href = `/invite/${data.senderId}`
+          break
+        case 'invite_accepted':
+        case 'chat_message':
+          window.location.href = '/'
+          break
+        case 'game_invite':
+          if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
+          break
+      }
+    })
+
     PushNotifications.addListener('registration', (token) => {
       fetch(`${getApiBase()}/api/push/register`, {
         method: 'POST',
