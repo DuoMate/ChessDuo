@@ -49,7 +49,7 @@ describe('BrowserMoveEvaluator', () => {
   describe('constructor and initialization', () => {
     test('creates a Worker with the correct path', () => {
       new BrowserMoveEvaluator()
-      expect(globalThis.Worker).toHaveBeenCalledWith('/stockfish/stockfish-18-lite-single.js')
+      expect(globalThis.Worker).toHaveBeenCalledWith('/stockfish/stockfish.js')
     })
 
     test('sends UCI init commands to worker', () => {
