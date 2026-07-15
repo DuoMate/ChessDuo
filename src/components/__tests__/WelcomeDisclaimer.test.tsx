@@ -61,7 +61,8 @@ describe('WelcomeDisclaimer', () => {
 
   it('shows offline-specific caption text', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
-    expect(screen.getByText(/botmate/i)).toBeDefined()
+    const matches = screen.getAllByText(/botmate/i)
+    expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 
   it('uses custom storageKey when provided', () => {

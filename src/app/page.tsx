@@ -89,6 +89,7 @@ export default function SetupPage() {
     }
     return false
   })
+  const offlineDisclaimerShouldStartRef = useRef(false)
   const [showOnlineDisclaimer, setShowOnlineDisclaimer] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
@@ -190,6 +191,7 @@ export default function SetupPage() {
       }
       if (showOfflineDisclaimer) {
         setShowOfflineDisclaimer(false)
+        offlineDisclaimerShouldStartRef.current = false
         return true
       }
       if (gameMode !== null) {
@@ -498,6 +500,11 @@ export default function SetupPage() {
   }
 
   const handleStartOffline = () => {
+    if (showOfflineDisclaimer) {
+      offlineDisclaimerShouldStartRef.current = true
+      setGameMode('offline')
+      return
+    }
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
     router.push(`/game?level=${selectedLevel}&time=${time}`)
   }
@@ -789,7 +796,14 @@ export default function SetupPage() {
           {showOfflineDisclaimer && (
             <WelcomeDisclaimer
               open={showOfflineDisclaimer}
-              onDismiss={() => setShowOfflineDisclaimer(false)}
+              onDismiss={() => {
+                setShowOfflineDisclaimer(false)
+                if (offlineDisclaimerShouldStartRef.current) {
+                  offlineDisclaimerShouldStartRef.current = false
+                  const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+                  router.push(`/game?level=${selectedLevel}&time=${time}`)
+                }
+              }}
               storageKey="chessduo_offline_disclaimer_dismissed"
               mode="offline"
             />

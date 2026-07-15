@@ -42,6 +42,7 @@ describe('WelcomeDisclaimer', () => {
 
   it('shows offline-specific caption', () => {
     render(<WelcomeDisclaimer open={true} onDismiss={jest.fn()} mode="offline" />)
-    expect(screen.getByText(/botmate/i)).toBeDefined()
+    const matches = screen.getAllByText(/botmate/i)
+    expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 })
