@@ -148,14 +148,21 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   }, [soundEnabled])
 
   useEffect(() => {
-    const resumeAudio = () => {
+    const tryResumeAudio = () => {
       soundEngine.resumeContext().catch(() => {})
+      if (soundEngine.getState() === 'running') {
+        document.removeEventListener('click', tryResumeAudio)
+        document.removeEventListener('touchstart', tryResumeAudio)
+        document.removeEventListener('pointerdown', tryResumeAudio)
+      }
     }
-    document.addEventListener('click', resumeAudio, { once: true })
-    document.addEventListener('touchstart', resumeAudio, { once: true })
+    document.addEventListener('click', tryResumeAudio)
+    document.addEventListener('touchstart', tryResumeAudio)
+    document.addEventListener('pointerdown', tryResumeAudio)
     return () => {
-      document.removeEventListener('click', resumeAudio)
-      document.removeEventListener('touchstart', resumeAudio)
+      document.removeEventListener('click', tryResumeAudio)
+      document.removeEventListener('touchstart', tryResumeAudio)
+      document.removeEventListener('pointerdown', tryResumeAudio)
     }
   }, [])
 
