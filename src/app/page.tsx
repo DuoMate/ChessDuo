@@ -502,7 +502,7 @@ export default function SetupPage() {
   const handleStartOffline = () => {
     if (showOfflineDisclaimer) {
       offlineDisclaimerShouldStartRef.current = true
-      setGameMode('offline')
+      setShowOfflineDisclaimer(true)
       return
     }
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
@@ -912,6 +912,22 @@ if (!gameMode) {
               open={showOnboarding}
               onDismiss={handleOnboardingDismiss}
               mode="online"
+            />
+          )}
+          {showOfflineDisclaimer && (
+            <WelcomeDisclaimer
+              open={showOfflineDisclaimer}
+              onDismiss={() => {
+                if (offlineDisclaimerShouldStartRef.current) {
+                  offlineDisclaimerShouldStartRef.current = false
+                  const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+                  router.push(`/game?level=${selectedLevel}&time=${time}`)
+                } else {
+                  setShowOfflineDisclaimer(false)
+                }
+              }}
+              storageKey="chessduo_offline_disclaimer_dismissed"
+              mode="offline"
             />
           )}
         </div>
