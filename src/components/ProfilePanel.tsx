@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Share2, Sparkles, ShieldCheck, User } from 'lucide-react'
+import { Crown, History, LogOut, Share2, ShieldCheck, User } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
 import { supabase } from '@/lib/supabase'
 import { InitialsAvatar } from './InitialsAvatar'
+import { SubscriptionService } from '@/features/billing'
 
 interface ProfilePanelProps {
   playerId: string
@@ -31,18 +32,20 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   }, [playerId])
 
   useEffect(() => {
-    supabase
-      .from('profiles')
-      .select('is_premium, username')
-      .eq('id', playerId)
-      .maybeSingle()
-      .then((result) => {
-        if (result.data?.is_premium) setIsPremium(true)
-        if (result.data?.username) setUsername(result.data.username)
-        setCheckingPremium(false)
-      }).catch(() => {
-        setCheckingPremium(false)
-      })
+    Promise.all([
+      SubscriptionService.isPremium(),
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', playerId)
+        .maybeSingle(),
+    ]).then(([premium, profileResult]) => {
+      setIsPremium(premium)
+      if (profileResult.data?.username) setUsername(profileResult.data.username)
+      setCheckingPremium(false)
+    }).catch(() => {
+      setCheckingPremium(false)
+    })
   }, [playerId])
 
   useEffect(() => {

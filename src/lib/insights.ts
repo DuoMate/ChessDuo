@@ -7,14 +7,14 @@ function getLocalState(userId: string): { revealsUsed: number } {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
     if (raw) return JSON.parse(raw)
-  } catch (e) { console.error('[Insights] Failed to read from localStorage:', e) }
+  } catch { /* localStorage unavailable */ }
   return { revealsUsed: 0 }
 }
 
 function setLocalState(userId: string, state: { revealsUsed: number }) {
   try {
     localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(state))
-  } catch (e) { console.error('[Insights] Failed to write to localStorage:', e) }
+  } catch { /* localStorage unavailable */ }
 }
 
 export async function getUserInsightsState(userId: string): Promise<{
@@ -26,14 +26,17 @@ export async function getUserInsightsState(userId: string): Promise<{
 
   let isPremium = false
   try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', userId)
-      .maybeSingle()
-    isPremium = data?.is_premium === true
-  } catch (e) {
-    console.error('[Insights] Failed to fetch premium status:', e)
+    const { SubscriptionService } = await import('@/features/billing')
+    isPremium = await SubscriptionService.isPremium()
+  } catch {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', userId)
+        .maybeSingle()
+      isPremium = data?.is_premium === true
+    } catch { /* db unavailable — default to false */ }
   }
 
   return {
@@ -51,6 +54,11 @@ export async function incrementInsightsReveals(userId: string): Promise<number> 
   return Math.max(0, INSIGHTS_FREE_LIMIT - nextLocal)
 }
 
-export function isUserPremium(_userId: string): boolean {
-  return false
+export async function isUserPremium(): Promise<boolean> {
+  try {
+    const { SubscriptionService } = await import('@/features/billing')
+    return await SubscriptionService.isPremium()
+  } catch {
+    return false
+  }
 }

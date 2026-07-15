@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MoveInsights } from './MoveInsights'
 import { Spinner } from './Spinner'
-import { getUserInsightsState, incrementInsightsReveals, isUserPremium } from '@/lib/insights'
+import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
+import { SubscriptionService } from '@/features/billing'
 
 interface InsightsGateProps {
   playerId: string
@@ -21,21 +22,20 @@ interface InsightsGateProps {
 }
 
 export function InsightsGate({ playerId, ...comparison }: InsightsGateProps) {
-  const [isPremium, setIsPremium] = useState(() => isUserPremium(playerId))
+  const [isPremium, setIsPremium] = useState(false)
   const [revealsRemaining, setRevealsRemaining] = useState<number | null>(null)
-  const [showInsights, setShowInsights] = useState(() => isUserPremium(playerId))
+  const [showInsights, setShowInsights] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!playerId) return
-    const premium = isUserPremium(playerId)
-    setIsPremium(premium)
-    if (premium) setShowInsights(true)
-
-    getUserInsightsState(playerId).then(state => {
-      setIsPremium(state.isPremium)
+    Promise.all([
+      SubscriptionService.isPremium(),
+      getUserInsightsState(playerId),
+    ]).then(([premium, state]) => {
+      setIsPremium(premium)
       setRevealsRemaining(state.revealsRemaining)
-      if (state.isPremium) setShowInsights(true)
+      if (premium) setShowInsights(true)
       setLoading(false)
     }).catch(() => {
       setLoading(false)

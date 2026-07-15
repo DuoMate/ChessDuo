@@ -9,7 +9,20 @@ jest.mock('@/lib/insights', () => ({
     revealsRemaining: 3,
   }),
   incrementInsightsReveals: jest.fn().mockResolvedValue(2),
-  isUserPremium: jest.fn().mockReturnValue(false),
+}))
+
+jest.mock('@/features/billing', () => ({
+  SubscriptionService: {
+    isPremium: jest.fn().mockResolvedValue(false),
+    setProvider: jest.fn(),
+    initialize: jest.fn().mockResolvedValue(undefined),
+    getStatus: jest.fn().mockResolvedValue({ isPremium: false }),
+    getPlans: jest.fn().mockResolvedValue([]),
+    purchaseMonthly: jest.fn(),
+    purchaseYearly: jest.fn(),
+    restore: jest.fn(),
+  },
+  GooglePlayBillingProvider: {},
 }))
 
 jest.mock('../MoveInsights', () => ({
@@ -55,8 +68,8 @@ describe('InsightsGate Component', () => {
   })
 
   test('shows MoveInsights immediately when user is premium', async () => {
-    const insights = require('@/lib/insights')
-    insights.isUserPremium.mockReturnValue(true)
+    const billing = require('@/features/billing')
+    billing.SubscriptionService.isPremium.mockResolvedValue(true)
     render(<InsightsGate {...baseProps} />)
     await waitFor(() => {
       expect(screen.getByTestId('move-insights')).toBeDefined()
