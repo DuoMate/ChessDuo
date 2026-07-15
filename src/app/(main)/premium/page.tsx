@@ -232,7 +232,7 @@ export default function PremiumPage() {
                     </div>
 
                     {/* Annual Card */}
-                    <div className="relative rounded-[24px] border border-emerald-500/30 bg-slate-800/50 p-5 mb-6 overflow-hidden">
+                    <div className="relative rounded-[24px] border border-emerald-500/30 bg-slate-800/50 p-5 mb-6">
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold">
                         Best Value
                       </div>
