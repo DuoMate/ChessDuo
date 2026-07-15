@@ -124,7 +124,7 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
   return (
     <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[#0a0e1a] p-4">
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/70 dark:border-slate-700/70 p-6 sm:p-8 rounded-[30px] shadow-[0_24px_90px_rgba(2,6,23,0.25)] w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
           ChessDuo
         </h1>
         <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">
@@ -150,7 +150,7 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
                     ? 'border-green-500 focus:border-green-400 focus:ring-green-500/20'
                     : usernameStatus === 'taken' || usernameStatus === 'invalid'
                     ? 'border-red-500 focus:border-red-400 focus:ring-red-500/20'
-                    : 'border-slate-200 dark:border-slate-700 focus:border-amber-400 focus:ring-amber-500/20'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-blue-400 focus:ring-blue-500/20'
                 }`}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -190,7 +190,7 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
           <button
             type="submit"
             disabled={loading || usernameStatus !== 'available'}
-            className="w-full min-h-[44px] p-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold rounded-2xl hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-amber-500/20 hover:-translate-y-0.5"
+            className="w-full min-h-[44px] p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 hover:-translate-y-0.5"
           >
             {loading ? 'Creating profile...' : 'Continue'}
           </button>
