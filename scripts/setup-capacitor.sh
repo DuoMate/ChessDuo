@@ -161,6 +161,11 @@ if [ -f "$MANIFEST" ]; then
   else
     ok "AD_ID already removed from manifest"
   fi
+
+  if ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null; then
+    sed -i '/<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"
+    ok "POST_NOTIFICATIONS permission added (required for Android 13+)"
+  fi
 fi
 
 # ─── 6. Generate keystore ───────────────────────

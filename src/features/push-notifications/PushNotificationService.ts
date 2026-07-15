@@ -19,6 +19,8 @@ export async function registerDeviceToken(): Promise<void> {
     const native = await isCapacitorAvailable()
     if (!native) return
 
+    await new Promise(resolve => setTimeout(resolve, 500))
+
     const { PushNotifications } = await import('@capacitor/push-notifications')
 
     const permResult = await PushNotifications.requestPermissions()

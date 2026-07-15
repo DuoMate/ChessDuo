@@ -162,6 +162,13 @@ bash "$PROJECT_ROOT/scripts/copy-app-icons.sh"
 # No additional patching needed — the source manifest is already correct.
 ok "Ads permissions handled via tools:node=remove in source manifest"
 
+# ─── Ensure POST_NOTIFICATIONS permission for push (Android 13+) ──
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [ -f "$MANIFEST" ] && ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null; then
+  sed -i '/<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"
+  ok "POST_NOTIFICATIONS permission added (required for Android 13+)"
+fi
+
 # ─── Apply version from android-version.properties ──
 VERSION_FILE="android-version.properties"
 if [ -f "$VERSION_FILE" ]; then

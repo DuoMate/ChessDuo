@@ -31,4 +31,5 @@ Isolated push notification module for the ChessDuo Capacitor app. Handles FCM to
 - `src/components/ChatPanel.tsx` — `notifyChatMessage()` after `sendMessage()`
 
 ## Recent Changes
+- **2026-07-15**: Added 500ms startup delay before `PushNotifications.requestPermissions()` to prevent race condition with `SplashScreen.hide()`. Added `POST_NOTIFICATIONS` permission to AndroidManifest.xml for Android 13+. Synced native plugins via `npx cap sync` (was missing `capacitor-push-notifications` and `capacitor-browser` in Gradle).
 - **2026-07-14**: Module created.

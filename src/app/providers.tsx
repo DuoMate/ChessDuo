@@ -25,7 +25,7 @@ function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
 
 export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
-    registerCapacitorAuthListener()
+    registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
     initPushNotifications().catch(() => {})
   }, [])
