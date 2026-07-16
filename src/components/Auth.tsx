@@ -47,6 +47,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const authCompletedRef = useRef<string | null>(null)
+  const googleAuthInProgressRef = useRef(false)
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
@@ -67,20 +68,36 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       .maybeSingle()
     if (data?.username) {
       onAuthComplete(userId, data.username)
+      if (googleAuthInProgressRef.current) {
+        setGoogleLoading(false)
+        googleAuthInProgressRef.current = false
+      }
     } else if (onNeedUsername) {
       const suggested = googleDisplayName || email.split('@')[0]
       onNeedUsername(userId, suggested)
+      if (googleAuthInProgressRef.current) {
+        setGoogleLoading(false)
+        googleAuthInProgressRef.current = false
+      }
     } else {
       const displayName = email.split('@')[0]
       const formatError = validateUsernameFormat(displayName)
       if (formatError) {
         onAuthComplete(userId, displayName)
+        if (googleAuthInProgressRef.current) {
+          setGoogleLoading(false)
+          googleAuthInProgressRef.current = false
+        }
         return
       }
       try {
         await supabase.from('profiles').upsert({ id: userId, username: displayName }, { onConflict: 'id' })
       } catch { console.error('[Auth] Failed to upsert profile') }
       onAuthComplete(userId, displayName)
+      if (googleAuthInProgressRef.current) {
+        setGoogleLoading(false)
+        googleAuthInProgressRef.current = false
+      }
     }
   }
 
@@ -219,17 +236,20 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
     setError(null)
+    googleAuthInProgressRef.current = true
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
         await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName)
       } else if (result.error) {
         setError(result.error)
+        setGoogleLoading(false)
+        googleAuthInProgressRef.current = false
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Google sign-in failed')
-    } finally {
       setGoogleLoading(false)
+      googleAuthInProgressRef.current = false
     }
   }
 

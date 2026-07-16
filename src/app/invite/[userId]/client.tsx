@@ -7,7 +7,20 @@ import { sendFriendRequest, isFriend } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { BackButton } from '@/components/BackButton'
+import { ArrowLeft } from 'lucide-react'
+
+function GoHomeButton() {
+  const router = useRouter()
+  return (
+    <button
+      onClick={() => router.push('/')}
+      className="flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+    >
+      <ArrowLeft size={18} strokeWidth={2} />
+      <span className="text-[11px] font-medium leading-none">Go Home</span>
+    </button>
+  )
+}
 
 export default function InvitePageClient() {
   const params = useParams()
@@ -112,7 +125,7 @@ export default function InvitePageClient() {
             <div className="text-5xl mb-2">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
             <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
-            <BackButton label="Go Home" />
+            <GoHomeButton />
           </div>
         </div>
       </ErrorBoundary>
@@ -163,7 +176,7 @@ export default function InvitePageClient() {
             <p className="text-gray-500 dark:text-gray-400">
               {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
             </p>
-            <BackButton label="Go Home" />
+            <GoHomeButton />
           </>
         )}
 
@@ -175,7 +188,7 @@ export default function InvitePageClient() {
               {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
             </p>
             <p className="text-gray-500 text-sm">They will see your request in their friends panel</p>
-            <BackButton label="Go Home" />
+            <GoHomeButton />
           </>
         )}
 
@@ -184,7 +197,7 @@ export default function InvitePageClient() {
             <div className="text-5xl mb-2">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Something went wrong</h1>
             <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
-            <BackButton label="Go Home" />
+            <GoHomeButton />
           </>
         )}
       </div>

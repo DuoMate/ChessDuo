@@ -38,7 +38,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -60,7 +60,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { applyRateLimit } from '@/lib/rateLimit'
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { SignJWT, importPKCS8 } from 'jose'
 
@@ -125,45 +124,70 @@ function mapPurchaseState(purchaseStateNum: number | undefined): string {
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID()
+  const route = 'subscription/verify'
+
   const rateLimitResponse = applyRateLimit(request)
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll() {},
-        },
-      },
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const authHeader = request.headers.get('authorization')
 
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
+
+    let user = null
+    let supabase: any
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const token = authHeader.split(' ')[1]
+      const { data } = await supabase.auth.getUser(token)
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
+    } else {
+      const cookieStore = await cookies()
+      const { createServerClient } = await import('@supabase/ssr')
+      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
+      })
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via cookies`)
+    }
+
     if (!user) {
+      console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
+
+    console.log(`[${route}] ${requestId} - User: ${user.id}`)
 
     const body = await request.json() as { purchaseToken?: string; productId?: string; orderId?: string }
     const { purchaseToken, productId, orderId } = body
     if (!purchaseToken || !productId) {
+      console.warn(`[${route}] ${requestId} - Missing purchaseToken or productId`)
       return NextResponse.json({ error: 'Missing purchaseToken or productId' }, { status: 400 })
     }
 
     const sa = getServiceAccount()
     if (!sa) {
+      console.error(`[${route}] ${requestId} - Google Play Billing not configured`)
       return NextResponse.json({ error: 'Google Play Billing not configured' }, { status: 503 })
     }
 
     const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.navron.chessduo'
     const accessToken = await getOAuth2Token(sa)
 
+    console.log(`[${route}] ${requestId} - Fetching subscription from Google`)
     const sub = await getSubscriptionFromGoogle(accessToken, packageName, productId, purchaseToken)
 
     const purchaseState = mapPurchaseState(sub.purchaseState)
     const isActive = purchaseState === 'purchased'
+
+    console.log(`[${route}] ${requestId} - Purchase state: ${purchaseState}, active: ${isActive}`)
 
     if (!isActive) {
       return NextResponse.json({
@@ -174,6 +198,7 @@ export async function POST(request: Request) {
     }
 
     if (sub.acknowledgementState === 0) {
+      console.log(`[${route}] ${requestId} - Acknowledging subscription`)
       await acknowledgeSubscription(accessToken, packageName, productId, purchaseToken)
     }
 
@@ -200,9 +225,11 @@ export async function POST(request: Request) {
       )
 
     if (upsertError) {
+      console.error(`[${route}] ${requestId} - DB upsert error: ${upsertError.message}`)
       return NextResponse.json({ error: upsertError.message }, { status: 500 })
     }
 
+    console.log(`[${route}] ${requestId} - Subscription verified successfully, plan: ${plan}`)
     return NextResponse.json({
       success: true,
       state: purchaseState,
@@ -210,6 +237,7 @@ export async function POST(request: Request) {
       expiryDate,
     })
   } catch (err) {
+    console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 },

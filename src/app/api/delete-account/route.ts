@@ -1,44 +1,65 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function POST() {
-  try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {},
-        },
-      }
-    )
+export async function POST(request: Request) {
+  const requestId = crypto.randomUUID()
+  const route = 'delete-account'
 
-    const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const authHeader = request.headers.get('authorization')
+
+    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
+
+    let user = null
+    let supabase: any
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const token = authHeader.split(' ')[1]
+      const { data } = await supabase.auth.getUser(token)
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
+    } else {
+      const cookieStore = await cookies()
+      const { createServerClient } = await import('@supabase/ssr')
+      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
+      })
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via cookies`)
+    }
+
     if (!user) {
+      console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    console.log(`[${route}] ${requestId} - User: ${user.id}`)
+
     const { error: rpcError } = await supabase.rpc('delete_my_account')
     if (rpcError) {
+      console.error(`[${route}] ${requestId} - RPC error: ${rpcError.message}`)
       return NextResponse.json({ error: 'Failed to delete: ' + rpcError.message }, { status: 500 })
     }
 
+    console.log(`[${route}] ${requestId} - Account deleted via RPC`)
+
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) {
-      console.warn('[delete-account] signOut warning:', signOutError.message)
+      console.warn(`[${route}] ${requestId} - SignOut warning: ${signOutError.message}`)
     }
 
+    console.log(`[${route}] ${requestId} - Success`)
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[delete-account] Error:', err)
+    console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
