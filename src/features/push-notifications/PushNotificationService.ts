@@ -1,8 +1,13 @@
 import type { NotificationPayload, NotificationType } from './types'
 
 function getApiBase(): string {
-  if (typeof window === 'undefined') return ''
-  return window.location.origin
+  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL
+  }
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  return ''
 }
 
 async function isCapacitorAvailable(): Promise<boolean> {
