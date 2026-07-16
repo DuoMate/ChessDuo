@@ -21,6 +21,17 @@ async function sha256Hash(message: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
+export function isCancellationError(err: { code?: string | number; message?: string }): boolean {
+  const code = err.code || ''
+  const msg = err.message || err.toString() || ''
+  return (
+    code === 'USER_CANCELLED' ||
+    code === 16 ||
+    msg.includes('Cancelled by user') ||
+    msg.includes('GetCredentialCancellationException')
+  )
+}
+
 async function authenticateWithGoogleNative(): Promise<{
   success: boolean
   cancelled?: boolean
@@ -119,9 +130,12 @@ async function authenticateWithGoogleNative(): Promise<{
     }
   } catch (err: any) {
     console.error('[NativeAuth] Exception:', err)
-    const code = err.code ? ` (${err.code})` : ''
-    const msg = err.message || err.toString() || 'Unknown error'
-    return { success: false, error: `Native SDK error: ${msg}${code}` }
+    if (isCancellationError(err)) {
+      return { success: false, cancelled: true }
+    }
+    const code = err.code || ''
+    const msg = err.message || err.toString() || ''
+    return { success: false, error: `Native SDK error: ${msg}${code ? ` (${code})` : ''}` }
   }
 }
 

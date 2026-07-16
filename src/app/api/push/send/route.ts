@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { applyRateLimit } from '@/lib/rateLimit'
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { SignJWT, importPKCS8 } from 'jose'
 import type { PushTokenRow } from '@/features/push-notifications/types'
@@ -100,36 +99,60 @@ async function sendFcmMessage(
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID()
+  const route = 'push/send'
+
   const rateLimitResponse = applyRateLimit(request)
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll() {},
-        },
-      },
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const authHeader = request.headers.get('authorization')
 
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
+
+    let user = null
+    let supabase: any
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const token = authHeader.split(' ')[1]
+      const { data } = await supabase.auth.getUser(token)
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
+    } else {
+      const cookieStore = await cookies()
+      const { createServerClient } = await import('@supabase/ssr')
+      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
+      })
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via cookies`)
+    }
+
     if (!user) {
+      console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    console.log(`[${route}] ${requestId} - User: ${user.id}`)
+
     const { userId, title, body, data } = await request.json()
     if (!userId || !title || !body) {
+      console.warn(`[${route}] ${requestId} - Missing required fields`)
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     const sa = getServiceAccount()
     if (!sa) {
+      console.error(`[${route}] ${requestId} - FCM not configured`)
       return NextResponse.json({ error: 'FCM not configured' }, { status: 503 })
     }
+
+    console.log(`[${route}] ${requestId} - Fetching tokens for user: ${userId}`)
 
     const projectId = process.env.FCM_PROJECT_ID || sa.project_id
 
@@ -139,12 +162,16 @@ export async function POST(request: Request) {
       .eq('user_id', userId)
 
     if (error) {
+      console.error(`[${route}] ${requestId} - DB error: ${error.message}`)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     if (!tokens || tokens.length === 0) {
+      console.warn(`[${route}] ${requestId} - No tokens found for user`)
       return NextResponse.json({ success: true, sent: 0 })
     }
+
+    console.log(`[${route}] ${requestId} - Found ${tokens.length} token(s), sending FCM`)
 
     const accessToken = await getOAuth2Token(sa)
 
@@ -157,8 +184,10 @@ export async function POST(request: Request) {
     const sent = results.filter((r) => r.status === 'fulfilled').length
     const failed = results.filter((r) => r.status === 'rejected').length
 
+    console.log(`[${route}] ${requestId} - Sent: ${sent}, Failed: ${failed}`)
     return NextResponse.json({ success: true, sent, failed })
   } catch (err) {
+    console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 },

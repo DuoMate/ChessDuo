@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { SignJWT, importPKCS8 } from 'jose'
 
@@ -115,23 +114,43 @@ function needsReverification(
 }
 
 export async function GET(request: Request) {
-  try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll() {},
-        },
-      },
-    )
+  const requestId = crypto.randomUUID()
+  const route = 'subscription/status'
 
-    const { data: { user } } = await supabase.auth.getUser()
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const authHeader = request.headers.get('authorization')
+
+    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
+
+    let user = null
+    let supabase: any
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(supabaseUrl, supabaseAnonKey)
+      const token = authHeader.split(' ')[1]
+      const { data } = await supabase.auth.getUser(token)
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
+    } else {
+      const cookieStore = await cookies()
+      const { createServerClient } = await import('@supabase/ssr')
+      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
+      })
+      const { data } = await supabase.auth.getUser()
+      user = data.user
+      console.log(`[${route}] ${requestId} - Auth via cookies`)
+    }
+
     if (!user) {
+      console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
+
+    console.log(`[${route}] ${requestId} - User: ${user.id}`)
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -161,11 +180,17 @@ export async function GET(request: Request) {
       )
 
     if (!needsCheck) {
+      console.log(`[${route}] ${requestId} - No reverification needed, returning cached status`)
       return NextResponse.json(baseResponse)
     }
 
+    console.log(`[${route}] ${requestId} - Reverification needed, checking with Google`)
+
     const sa = getServiceAccount()
-    if (!sa) return NextResponse.json(baseResponse)
+    if (!sa) {
+      console.warn(`[${route}] ${requestId} - Google Play not configured, returning cached`)
+      return NextResponse.json(baseResponse)
+    }
 
     const packageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.navron.chessduo'
     const accessToken = await getOAuth2Token(sa)
@@ -177,12 +202,17 @@ export async function GET(request: Request) {
       profile!.purchase_token as string,
     )
 
-    if (!sub) return NextResponse.json(baseResponse)
+    if (!sub) {
+      console.warn(`[${route}] ${requestId} - No subscription data from Google`)
+      return NextResponse.json(baseResponse)
+    }
 
     const purchaseState = mapPurchaseState(sub.purchaseState)
     const isActive = purchaseState === 'purchased'
     const expiryDate = sub.expiryTimeMillis ? new Date(Number(sub.expiryTimeMillis)).toISOString() : null
     const now = new Date().toISOString()
+
+    console.log(`[${route}] ${requestId} - Google response: active=${isActive}, state=${purchaseState}`)
 
     if (isActive && !baseResponse.isPremium) {
       await supabase
@@ -220,6 +250,7 @@ export async function GET(request: Request) {
         .eq('id', user.id)
     }
 
+    console.log(`[${route}] ${requestId} - Profile updated`)
     return NextResponse.json({
       ...baseResponse,
       isPremium: isActive,
@@ -229,6 +260,7 @@ export async function GET(request: Request) {
       lastVerifiedDate: now,
     })
   } catch (err) {
+    console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Internal server error' },
       { status: 500 },

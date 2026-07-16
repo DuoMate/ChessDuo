@@ -40,7 +40,10 @@ export async function registerDeviceToken(): Promise<void> {
     }
 
     const native = await isCapacitorAvailable()
-    if (!native) return
+    if (!native) {
+      console.log('[Push] Not on native platform, skipping')
+      return
+    }
 
     await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -59,22 +62,65 @@ export async function registerDeviceToken(): Promise<void> {
     try {
       const permResult = await PushNotifications.requestPermissions()
       if (permResult?.receive !== 'granted') {
+        console.log('[Push] Permission not granted')
         return
       }
 
-      PushNotifications.addListener('registration', (token) => {
-        fetch(`${getApiBase()}/api/push/register`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token.value, platform: 'android' }),
-        }).catch((err) => {
-          console.warn('[Push] Failed to register token with backend:', err)
-        })
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('[Push] Registration fired, token:', token.value.substring(0, 20) + '...')
+
+        try {
+          const { supabase } = await import('@/lib/supabase')
+          const { data: { session } } = await supabase.auth.getSession()
+
+          if (!session?.access_token) {
+            console.warn('[Push] No session found, cannot register token')
+            return
+          }
+
+          console.log('[Push] Session found, sending token to API')
+
+          const res = await fetch(`${getApiBase()}/api/push/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ token: token.value, platform: 'android' }),
+          })
+
+          const resText = await res.text()
+          console.log('[Push] Registration response:', res.status, resText)
+
+          if (res.ok) {
+            const parsed = JSON.parse(resText)
+            console.log('[Push] Token registered successfully')
+
+            // Send welcome notification after short delay
+            if (session?.user) {
+              setTimeout(async () => {
+                try {
+                  await sendPushNotification(session.user.id, 'friend_request', {
+                    senderId: 'system',
+                    senderName: 'ChessDuo',
+                    snippet: 'Welcome! Push notifications are now enabled.',
+                  })
+                  console.log('[Push] Welcome notification sent')
+                } catch (err) {
+                  console.warn('[Push] Failed to send welcome notification:', err)
+                }
+              }, 1000)
+            }
+          } else {
+            console.error('[Push] Registration failed:', res.status, resText)
+          }
+        } catch (err) {
+          console.error('[Push] Registration error:', err instanceof Error ? err.message : String(err))
+        }
       })
 
       PushNotifications.addListener('registrationError', (err) => {
-        console.warn('[Push] Registration error:', err)
+        console.error('[Push] Registration error:', err)
       })
 
       await PushNotifications.register()
@@ -139,9 +185,18 @@ export async function sendPushNotification(
   }
 
   try {
-    await fetch(`${getApiBase()}/api/push/send`, {
+    const { supabase } = await import('@/lib/supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+
+    const authHeader = session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {}
+
+    console.log('[Push] Sending notification to:', receiverId, 'type:', type)
+
+    const res = await fetch(`${getApiBase()}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({
         userId: receiverId,
         title: titles[type],
@@ -149,7 +204,14 @@ export async function sendPushNotification(
         data: { type, senderId: data.senderId, roomId: data.roomId || '' },
       }),
     })
-  } catch {
-    // silently fail — push is best-effort
+
+    const resText = await res.text()
+    console.log('[Push] Send response:', res.status, resText)
+
+    if (!res.ok) {
+      console.error('[Push] Send failed:', res.status, resText)
+    }
+  } catch (err) {
+    console.error('[Push] Send error:', err instanceof Error ? err.message : String(err))
   }
 }

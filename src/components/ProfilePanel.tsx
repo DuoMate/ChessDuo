@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
@@ -27,6 +27,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [username, setUsername] = useState('')
+  const [editingProfile, setEditingProfile] = useState(false)
   const { theme, setTheme } = useSettings()
 
   useEffect(() => {
@@ -93,13 +94,30 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {/* Profile Card */}
-        <div className="p-6 bg-slate-800/50 border border-white/5 rounded-2xl flex flex-col items-center">
-          <InitialsAvatar username={username || 'U'} size="lg" premium={isPremium} />
-          <div className="mt-4 w-full">
+        {/* Profile Card — compact row matching menu items */}
+        {editingProfile ? (
+          <div className="p-4 bg-slate-800/50 border border-white/5 rounded-2xl">
             <ProfileEditor playerId={playerId} />
+            <button
+              onClick={() => setEditingProfile(false)}
+              className="mt-3 w-full min-h-[44px] text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              Done
+            </button>
           </div>
-        </div>
+        ) : (
+          <button
+            onClick={() => setEditingProfile(true)}
+            className="w-full p-4 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
+          >
+            <InitialsAvatar username={username || 'U'} size="sm" premium={isPremium} />
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{username || 'Player'}</p>
+              <p className="text-xs text-slate-400">Tap to edit profile</p>
+            </div>
+            <Pencil size={16} className="text-slate-500 flex-shrink-0" />
+          </button>
+        )}
 
         {/* Menu Items */}
         <button

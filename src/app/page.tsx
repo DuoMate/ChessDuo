@@ -66,15 +66,40 @@ const HUMAN_AVATARS: Record<HumanAvatar, string> = {
 }
 const BOT_AVATAR = '/avatars/bot.webp'
 
+const SELECTED_TIME_KEY = 'chessduo_selected_time'
+const SELECTED_LEVEL_KEY = 'chessduo_selected_level'
+
+function getInitialTime(): number {
+  try {
+    const saved = localStorage.getItem(SELECTED_TIME_KEY)
+    if (saved) {
+      const val = parseInt(saved, 10)
+      if (TIME_OPTIONS.some(o => o.seconds === val)) return val
+    }
+  } catch {}
+  return DEFAULT_TEAM_TIMER_SECONDS
+}
+
+function getInitialLevel(): number {
+  try {
+    const saved = localStorage.getItem(SELECTED_LEVEL_KEY)
+    if (saved) {
+      const val = parseInt(saved, 10)
+      if (DIFFICULTY_LEVELS.some(d => d.level === val)) return val
+    }
+  } catch {}
+  return 3
+}
+
 export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
   const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'duo' | 'four' | null>(null)
-  const [selectedTime, setSelectedTime] = useState<number>(DEFAULT_TEAM_TIMER_SECONDS)
+  const [selectedTime, setSelectedTime] = useState<number>(getInitialTime)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
-  const [selectedLevel, setSelectedLevel] = useState<number>(3)
+  const [selectedLevel, setSelectedLevel] = useState<number>(getInitialLevel)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [creatingTime, setCreatingTime] = useState<number | null>(null)
@@ -164,6 +189,14 @@ export default function SetupPage() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    try { localStorage.setItem(SELECTED_TIME_KEY, String(selectedTime)) } catch {}
+  }, [selectedTime])
+
+  useEffect(() => {
+    try { localStorage.setItem(SELECTED_LEVEL_KEY, String(selectedLevel)) } catch {}
+  }, [selectedLevel])
 
   useEffect(() => {
     if (gameMode !== null) {
