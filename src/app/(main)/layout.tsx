@@ -35,12 +35,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!playerId) return
-    getUnreadCounts(playerId).then(({ total, bySender }) => {
+    const update = () => getUnreadCounts(playerId).then(({ total, bySender }) => {
       if (mountedRef.current) {
         setUnreadMessages(total)
         setUnreadBySender(bySender)
       }
     }).catch(() => {})
+    update()
+
+    const channel = supabase
+      .channel('unread-messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${playerId}`,
+        },
+        () => { if (mountedRef.current) update() }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [playerId])
 
   const handleSignOut = async () => {

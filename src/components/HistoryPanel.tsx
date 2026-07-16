@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface HistoryPanelProps {
   playerId: string
@@ -34,6 +35,26 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
       setPlayerStats(s)
       setLoading(false)
     }).catch(() => setLoading(false))
+
+    const channel = supabase
+      .channel('completed-games-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'completed_games',
+        },
+        () => {
+          getMatchHistory(50, playerId).then(setGames).catch(() => {})
+          getPlayerStats(playerId).then(setPlayerStats).catch(() => {})
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [playerId])
 
   if (loading) {

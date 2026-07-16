@@ -49,6 +49,35 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
     }).catch(() => {
       setCheckingPremium(false)
     })
+
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${playerId}`,
+        },
+        async () => {
+          const [premium, profileResult] = await Promise.all([
+            SubscriptionService.isPremium(),
+            supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', playerId)
+              .maybeSingle(),
+          ])
+          setIsPremium(premium)
+          if (profileResult.data?.username) setUsername(profileResult.data.username)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [playerId])
 
   useEffect(() => {
