@@ -89,6 +89,36 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   }, [loadData])
 
   useEffect(() => {
+    const channel = supabase
+      .channel('friendship-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships',
+          filter: `sender_id=eq.${playerId}`,
+        },
+        () => { if (mountedRef.current) loadData() }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships',
+          filter: `receiver_id=eq.${playerId}`,
+        },
+        () => { if (mountedRef.current) loadData() }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [playerId, loadData])
+
+  useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
