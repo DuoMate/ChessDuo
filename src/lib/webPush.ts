@@ -182,8 +182,12 @@ async function importVapidPrivateKey(
   vapidPublicKey: string,
   vapidPrivateKey: string,
 ): Promise<CryptoKey> {
-  // Try JWK format first (JSON string)
+  const pubLen = vapidPublicKey.length
+  const privLen = vapidPrivateKey.length
+  const privStart = vapidPrivateKey.length <= 10 ? vapidPrivateKey : vapidPrivateKey.substring(0, 10)
+
   if (vapidPrivateKey.startsWith('{')) {
+    console.log(`[VAPID] Parsing private key as JWK (len=${privLen})`)
     return crypto.subtle.importKey(
       'jwk',
       JSON.parse(vapidPrivateKey),
@@ -193,10 +197,10 @@ async function importVapidPrivateKey(
     )
   }
 
-  // Try base64url-encoded raw private key (32 bytes)
-  // We need the public key too to construct the JWK
   try {
+    console.log(`[VAPID] Parsing as raw base64url keys (pub=${pubLen} priv=${privLen} starts=${privStart}...)`)
     const jwk = rawKeysToJwk(vapidPublicKey, vapidPrivateKey)
+    console.log(`[VAPID] JWK built — x=${jwk.x?.length}ch y=${jwk.y?.length}ch d=${jwk.d?.length}ch`)
     return crypto.subtle.importKey(
       'jwk',
       jwk,
@@ -204,20 +208,17 @@ async function importVapidPrivateKey(
       false,
       ['sign'],
     )
-  } catch {
-    // Try PEM format - extract raw key from PEM
+  } catch (e) {
+    console.warn(`[VAPID] Raw key parse failed: ${e instanceof Error ? e.message : e}, trying PEM...`)
     if (vapidPrivateKey.includes('-----')) {
-      // Strip PEM headers/footers and base64 decode
       const pemBody = vapidPrivateKey
         .replace(/-----[^-]+-----/g, '')
         .replace(/\s+/g, '')
       const pemBytes = base64UrlDecode(pemBody)
 
-      // For EC private keys in PKCS#8 format, extract the raw private key
-      // PKCS#8 EC private key: 0x30 0x... 0x04 0x20 <32 bytes private key>
-      // Find the last 32 bytes which is the private key
       if (pemBytes.length >= 32) {
         const rawPriv = pemBytes.slice(-32)
+        console.log(`[VAPID] PEM parsed — priv raw ${rawPriv.length} bytes`)
         const jwk = rawKeysToJwk(vapidPublicKey, base64UrlEncode(rawPriv))
         return crypto.subtle.importKey(
           'jwk',
@@ -228,9 +229,8 @@ async function importVapidPrivateKey(
         )
       }
     }
+    throw e
   }
-
-  throw new Error('Unable to parse VAPID private key. Expected base64url raw key, JWK, or PEM.')
 }
 
 // Sign VAPID JWT
