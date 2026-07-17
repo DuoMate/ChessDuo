@@ -161,6 +161,17 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
 
 export function clearCachedAccessToken(): void { cachedAccessToken = '' }
 
+export function setCachedAccessToken(token: string): void { cachedAccessToken = token }
+
+export async function resetPushState(): Promise<void> {
+  fcmRegistered = false
+  pushInitInProgress = false
+  if (typeof window !== 'undefined') {
+    try { localStorage.removeItem(PUSH_FCM_TOKEN_KEY) } catch { /* quota exceeded */ }
+    try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
+  }
+}
+
 export async function registerDeviceToken(accessToken?: string): Promise<void> {
   if (!accessToken) {
     console.warn('[Push] No access token — skipping registration (not yet signed in)')
