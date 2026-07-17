@@ -240,6 +240,22 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
         return
       }
 
+      try {
+        await PushNotifications.createChannel({
+          id: 'chessduo_default',
+          name: 'ChessDuo Notifications',
+          description: 'Game invites, friend requests, and chat messages',
+          importance: 4, // IMPORTANCE_HIGH
+          visibility: 1, // VISIBILITY_PUBLIC
+          sound: 'default',
+          vibration: true,
+          lights: true,
+        })
+        console.log('[Push] Notification channel created')
+      } catch (err) {
+        console.warn('[Push] createChannel failed (may already exist):', err)
+      }
+
       PushNotifications.addListener('registration', async (token) => {
         console.log('[Push] Registration fired, token:', token.value.substring(0, 20) + '...')
         if (typeof window !== 'undefined') {
@@ -257,6 +273,26 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
 
       await PushNotifications.register()
       fcmRegistered = true
+
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        try {
+          const data = notification?.data as Record<string, string> | undefined
+          if (!data) return
+          const type = data.type as NotificationType | undefined
+          const title = notification?.title || 'ChessDuo'
+          const body = notification?.body || ''
+
+          if (type === 'chat_message') {
+            try { window.dispatchEvent(new CustomEvent('chessduo:new-message', { detail: { senderId: data.senderId, senderName: data.senderName || '', snippet: data.snippet || '' } })) } catch { /* custom event unavailable */ }
+          } else if (type === 'friend_request') {
+            try { window.dispatchEvent(new CustomEvent('chessduo:friend-request', { detail: { senderId: data.senderId } })) } catch { /* custom event unavailable */ }
+          }
+
+          console.log('[Push] Foreground notification received:', type, title)
+        } catch (err) {
+          console.warn('[Push] Foreground notification handler error:', err)
+        }
+      })
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         try {

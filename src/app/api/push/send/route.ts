@@ -72,7 +72,10 @@ async function sendFcmMessage(
     message: {
       token: deviceToken,
       notification: { title, body },
-      android: { priority: 'HIGH' as const },
+      android: {
+        priority: 'HIGH' as const,
+        notification: { channel_id: 'chessduo_default', default_sound: true },
+      },
     },
   }
 
