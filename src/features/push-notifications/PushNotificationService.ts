@@ -149,7 +149,12 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
 export function clearCachedAccessToken(): void { cachedAccessToken = '' }
 
 export async function registerDeviceToken(accessToken?: string): Promise<void> {
-  if (accessToken) cachedAccessToken = accessToken
+  if (!accessToken) {
+    console.warn('[Push] No access token — skipping registration (not yet signed in)')
+    return
+  }
+
+  cachedAccessToken = accessToken
 
   if (pushInitInProgress) {
     console.log('[Push] Init already in progress, skipping')

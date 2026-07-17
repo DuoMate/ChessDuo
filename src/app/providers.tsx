@@ -29,7 +29,6 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
     SubscriptionService.setProvider(GooglePlayBillingProvider)
-    SubscriptionService.initialize().catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -44,7 +43,10 @@ export default function Providers({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         const token = session?.access_token || ''
-        initPushNotifications(token).catch(() => {})
+        if (token) {
+          initPushNotifications(token).catch(() => {})
+          SubscriptionService.initialize().catch(() => {})
+        }
       }
       if (event === 'SIGNED_OUT') {
         clearCachedAccessToken()

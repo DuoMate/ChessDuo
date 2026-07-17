@@ -58,7 +58,7 @@ CANCELLED → ACTIVE (via purchase/restore)
 ```
 
 ## Integration Points
-- `src/app/providers.tsx` — `SubscriptionService.initialize()` on app startup
+- `src/app/providers.tsx` — `SubscriptionService.initialize()` triggered on `onAuthStateChange` after session confirmed
 - `src/app/(main)/premium/page.tsx` — `getPlans()`, `purchaseMonthly()`, `purchaseYearly()`
 - `src/components/InsightsGate.tsx` — `isPremium()`
 - `src/components/ProfilePanel.tsx` — `isPremium()`
@@ -69,4 +69,5 @@ CANCELLED → ACTIVE (via purchase/restore)
 - `@supabase/ssr` (server-side auth)
 
 ## Recent Changes
+- **2026-07-17**: Fixed subscription 401 on startup — `initialize()` now runs inside `onAuthStateChange` after session is confirmed. `fetchServerStatus()` retries once on 401 to handle transient auth gaps.
 - **2026-07-15**: Initial implementation — migrated from Razorpay to Google Play Billing. Complete removal of Razorpay SDK, API routes, and DB columns. Added `BillingProvider` abstraction, `SubscriptionStateMachine`, `GooglePlayBillingProvider`, and `SubscriptionService`.
