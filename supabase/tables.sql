@@ -630,6 +630,11 @@ CREATE TABLE IF NOT EXISTS push_tokens (
   UNIQUE (user_id, token)
 );
 
+-- Ensure 'web' platform is allowed (for existing databases created before web support)
+ALTER TABLE push_tokens
+  DROP CONSTRAINT IF EXISTS push_tokens_platform_check,
+  ADD CONSTRAINT push_tokens_platform_check CHECK (platform IN ('android', 'ios', 'web'));
+
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage their own tokens" ON public.push_tokens;
