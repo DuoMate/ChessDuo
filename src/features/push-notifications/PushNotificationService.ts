@@ -96,6 +96,8 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
   }
 }
 
+const PUSH_VAPID_KEY = 'chessduo_vapid_public_key'
+
 async function registerBrowserPush(accessToken?: string): Promise<boolean> {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -109,13 +111,23 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
     return false
   }
 
+  const storedVapidKey = typeof window !== 'undefined' ? localStorage.getItem(PUSH_VAPID_KEY) : null
+  const vapidKeyChanged = storedVapidKey !== null && storedVapidKey !== vapidPublicKey
+
   try {
     const registration = await navigator.serviceWorker.ready
     const existingSubscription = await registration.pushManager.getSubscription()
+
     if (existingSubscription) {
-      console.log('[Push] Existing browser subscription found, reusing')
-      await saveTokenToServer(JSON.stringify(existingSubscription), 'web', accessToken)
-      return true
+      if (vapidKeyChanged) {
+        console.log('[Push] VAPID key changed — unsubscribing old subscription and creating new one')
+        await existingSubscription.unsubscribe()
+      } else {
+        console.log('[Push] Existing browser subscription found, reusing')
+        await saveTokenToServer(JSON.stringify(existingSubscription), 'web', accessToken)
+        try { localStorage.setItem(PUSH_VAPID_KEY, vapidPublicKey) } catch { /* quota exceeded */ }
+        return true
+      }
     }
   } catch (err) {
     console.warn('[Push] Failed to check existing browser subscription:', err)
@@ -135,6 +147,7 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
       applicationServerKey,
     })
 
+    try { localStorage.setItem(PUSH_VAPID_KEY, vapidPublicKey) } catch { /* quota exceeded */ }
     await saveTokenToServer(JSON.stringify(subscription), 'web', accessToken)
     return true
   } catch (err) {
