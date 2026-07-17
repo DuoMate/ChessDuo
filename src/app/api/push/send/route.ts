@@ -256,7 +256,7 @@ export async function POST(request: Request) {
     const failures = tokenResults.filter((r) => r.error).map((r) => ({ platform: r.platform, tokenPreview: r.tokenPreview, error: r.error }))
 
     console.log(`[${route}] ${requestId} - Sent: ${sent}, Failed: ${failed}`)
-    return NextResponse.json({ success: true, sent, failed, failures })
+    return NextResponse.json({ success: true, sent, failed, failures, tokenCount: webTokens.length + nativeTokens.length })
   } catch (err) {
     console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(
