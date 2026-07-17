@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Platform must be android, ios, or web' }, { status: 400 })
     }
 
+    console.log(`[${route}] ${requestId} - Clearing old ${platform} tokens for user ${user.id}`)
+    await supabase.from('push_tokens').delete().eq('user_id', user.id).eq('platform', platform)
+
     const { error } = await supabase.from('push_tokens').upsert(
       { user_id: user.id, token, platform },
       { onConflict: 'user_id,token' },
