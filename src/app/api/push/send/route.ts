@@ -98,6 +98,34 @@ async function sendFcmMessage(
   }
 }
 
+async function sendWebPushMessage(
+  subscription: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+): Promise<void> {
+  const webpush = await import('web-push')
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || ''
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@chessduo.app'
+
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    throw new Error('VAPID keys not configured')
+  }
+
+  webpush.setVapidDetails(subject, vapidPublicKey, vapidPrivateKey)
+
+  let pushSubscription: { endpoint: string; keys: { p256dh: string; auth: string } }
+  try {
+    pushSubscription = JSON.parse(subscription)
+  } catch {
+    throw new Error('Invalid web push subscription JSON')
+  }
+
+  const payload = JSON.stringify({ title, body, data, tag: `chessduo-${data?.type || 'default'}` })
+  await webpush.sendNotification(pushSubscription as Parameters<typeof webpush.sendNotification>[0], payload)
+}
+
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID()
   const route = 'push/send'
@@ -146,19 +174,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const sa = getServiceAccount()
-    if (!sa) {
-      console.error(`[${route}] ${requestId} - FCM not configured`)
-      return NextResponse.json({ error: 'FCM not configured' }, { status: 503 })
-    }
-
     console.log(`[${route}] ${requestId} - Fetching tokens for user: ${userId}`)
-
-    const projectId = process.env.FCM_PROJECT_ID || sa.project_id
 
     const { data: tokens, error } = await supabase
       .from('push_tokens')
-      .select('token')
+      .select('token, platform')
       .eq('user_id', userId)
 
     if (error) {
@@ -171,15 +191,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, sent: 0 })
     }
 
-    console.log(`[${route}] ${requestId} - Found ${tokens.length} token(s), sending FCM`)
+    const webTokens = tokens.filter((t: { platform: string }) => t.platform === 'web')
+    const nativeTokens = tokens.filter((t: { platform: string }) => t.platform !== 'web')
 
-    const accessToken = await getOAuth2Token(sa)
+    console.log(`[${route}] ${requestId} - Found ${webTokens.length} web, ${nativeTokens.length} native token(s)`)
 
-    const results = await Promise.allSettled(
-      (tokens as Pick<PushTokenRow, 'token'>[]).map((t) =>
-        sendFcmMessage(accessToken, projectId, t.token, title, body, data),
-      ),
-    )
+    const results: PromiseSettledResult<void>[] = []
+
+    if (nativeTokens.length > 0) {
+      const sa = getServiceAccount()
+      if (!sa) {
+        console.warn(`[${route}] ${requestId} - FCM not configured, skipping native tokens`)
+      } else {
+        const projectId = process.env.FCM_PROJECT_ID || sa.project_id
+        const accessToken = await getOAuth2Token(sa)
+        const fcmResults = await Promise.allSettled(
+          (nativeTokens as Pick<PushTokenRow, 'token'>[]).map((t) =>
+            sendFcmMessage(accessToken, projectId, t.token, title, body, data),
+          ),
+        )
+        results.push(...fcmResults)
+      }
+    }
+
+    if (webTokens.length > 0) {
+      const webResults = await Promise.allSettled(
+        (webTokens as Pick<PushTokenRow, 'token'>[]).map((t) =>
+          sendWebPushMessage(t.token, title, body, data),
+        ),
+      )
+      results.push(...webResults)
+    }
 
     const sent = results.filter((r) => r.status === 'fulfilled').length
     const failed = results.filter((r) => r.status === 'rejected').length

@@ -10,8 +10,8 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 | `log-crash/route.ts` | Client-side crash report ingestion |
 | `delete-account/route.ts` | Account deletion RPC |
 | `test-supabase/route.ts` | Supabase connectivity test |
-| `push/register/route.ts` | Register FCM device token for push notifications |
-| `push/send/route.ts` | Send push notification via FCM HTTP v1 API |
+| `push/register/route.ts` | Register device token for push (accepts `android`, `ios`, `web` platforms) |
+| `push/send/route.ts` | Send push notification — FCM for native, web-push for browser |
 | `subscription/verify/route.ts` | Verify Google Play purchase token → update Supabase |
 | `subscription/status/route.ts` | Get subscription status, re-verify with Google when needed |
 | `subscription/rtdn/route.ts` | RTDN webhook placeholder (future push-based updates) |
@@ -26,7 +26,10 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 - Subscription routes are rate-limited: verify 30/min, status 60/min (via `applyRateLimit()`).
 
 ## Dependencies
-- Supabase SSR client, `jose` (JWT signing for FCM + Google Play OAuth2)
+- Supabase SSR client, `jose` (JWT signing for FCM + Google Play OAuth2), `web-push` (push notifications for browser/web platform)
+
+## Recent Changes
+- **2026-07-17**: `/api/push/register` now accepts `platform: 'web'` in addition to `android`/`ios`. `/api/push/send` splits tokens by platform: native tokens use FCM HTTP v1, web tokens use `web-push` with VAPID keys. FCM config is only required when native tokens exist (web-only users work without FCM).
 
 ## Recent Changes
 - **2026-07-15**: Replaced Razorpay API routes with Google Play Billing subscription endpoints (`verify`, `status`, `rtdn`). Same jose JWT OAuth2 pattern as push notifications. Removed `razorpay/` directory entirely.

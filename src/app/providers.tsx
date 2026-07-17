@@ -27,6 +27,13 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
+
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('[SW] Service worker registration failed:', err)
+      })
+    }
+
     initPushNotifications().catch(() => {})
     SubscriptionService.setProvider(GooglePlayBillingProvider)
     SubscriptionService.initialize().catch(() => {})
