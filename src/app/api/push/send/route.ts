@@ -126,6 +126,17 @@ async function sendWebPushMessage(
   await webpush.sendNotification(pushSubscription as Parameters<typeof webpush.sendNotification>[0], payload)
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    },
+  })
+}
+
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID()
   const route = 'push/send'
