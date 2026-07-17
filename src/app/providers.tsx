@@ -9,7 +9,7 @@ import { registerCapacitorAuthListener } from '@/lib/capacitorAuth'
 import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
-import { initPushNotifications } from '@/features/push-notifications'
+import { initPushNotifications, clearCachedAccessToken } from '@/features/push-notifications'
 import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
 
@@ -41,11 +41,13 @@ export default function Providers({ children }: { children: ReactNode }) {
       })
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        initPushNotifications().catch(() => {})
+        const token = session?.access_token || ''
+        initPushNotifications(token).catch(() => {})
       }
       if (event === 'SIGNED_OUT') {
+        clearCachedAccessToken()
         localStorage.removeItem('chessduo_push_welcome_sent')
         try { localStorage.removeItem('chessduo_push_last_error') } catch { /* quota exceeded */ }
       }
