@@ -50,13 +50,16 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    console.warn('[Push] No session found, cannot register token')
+    const msg = '[Push] No session found, cannot register token — are you signed in?'
+    console.warn(msg)
+    try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
     return
   }
 
-  console.log('[Push] Session found, sending token to API')
+  const apiUrl = `${getApiBase()}/api/push/register`
+  console.log('[Push] POST', apiUrl, 'platform:', platform)
 
-  const res = await fetch(`${getApiBase()}/api/push/register`, {
+  const res = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -88,7 +91,9 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
       }, 1000)
     }
   } else {
-    console.error('[Push] Registration failed:', res.status, resText)
+    const msg = `[Push] Server rejected token: ${res.status} — ${resText}`
+    console.error(msg)
+    try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
   }
 }
 
@@ -137,6 +142,7 @@ async function registerBrowserPush(): Promise<boolean> {
     const msg = `[Push Web] ${err instanceof Error ? err.message : String(err)}`
     console.warn(msg)
     try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+    try { alert(`Push setup failed: ${msg}. Check Settings to retry.`) } catch { /* alert may be unavailable */ }
     return false
   }
 }
@@ -194,6 +200,7 @@ export async function registerDeviceToken(): Promise<void> {
       const msg = `[Push Setup] Capacitor Push plugin unavailable: ${err instanceof Error ? err.message : String(err)}`
       console.warn(msg)
       try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+      try { alert(`Push setup failed: ${msg}`) } catch { /* alert may be unavailable */ }
       return
     }
 
@@ -215,7 +222,10 @@ export async function registerDeviceToken(): Promise<void> {
       })
 
       PushNotifications.addListener('registrationError', (err) => {
-        console.error('[Push] Registration error:', err)
+        const msg = `[Push] FCM registration error: ${JSON.stringify(err)}`
+        console.error(msg)
+        try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+        try { alert(`Push setup failed: ${msg}. Check Settings to retry.`) } catch { /* alert may be unavailable */ }
       })
 
       await PushNotifications.register()
@@ -257,6 +267,7 @@ export async function registerDeviceToken(): Promise<void> {
     const msg = `[Push Setup] ${err instanceof Error ? err.message : String(err)}`
     console.warn(msg)
     try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+    try { alert(`Push setup failed: ${msg}`) } catch { /* alert may be unavailable */ }
   }
 }
 
