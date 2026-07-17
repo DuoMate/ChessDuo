@@ -259,6 +259,26 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_28%)] px-4 py-6 sm:px-6">
+      {googleLoading ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-10 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)]"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-400/15 via-transparent to-indigo-500/15" />
+          <div className="relative flex flex-col items-center text-center">
+            <ChessDuoLogo size="lg" />
+            <div className="mt-8">
+              <Spinner size="lg" />
+            </div>
+            <p className="mt-5 text-base font-semibold text-slate-900 dark:text-white">Signing in with Google</p>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Complete sign-in in your browser
+            </p>
+          </div>
+        </motion.div>
+      ) : (
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
@@ -445,6 +465,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
           </div>
         </div>
       </motion.div>
+      )}
     </div>
   )
 }
