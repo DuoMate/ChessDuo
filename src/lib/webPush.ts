@@ -81,9 +81,9 @@ async function derivePushKeys(
   const sharedKey = await crypto.subtle.importKey(
     'raw',
     sharedBits,
-    { name: 'HKDF' },
+    { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['deriveKey', 'deriveBits'],
+    ['sign'],
   )
 
   // Derive AES key (16 bytes) and nonce (12 bytes)
