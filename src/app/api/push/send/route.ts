@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { applyRateLimit } from '@/lib/rateLimit'
 import { cookies } from 'next/headers'
 import { SignJWT, importPKCS8 } from 'jose'
-import type { PushTokenRow } from '@/features/push-notifications/types'
 import { sendWebPush } from '@/lib/webPush'
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
@@ -199,43 +198,65 @@ export async function POST(request: Request) {
 
     console.log(`[${route}] ${requestId} - Found ${webTokens.length} web, ${nativeTokens.length} native token(s)`)
 
-    const results: PromiseSettledResult<void>[] = []
+    interface TokenResult { platform: string; tokenPreview: string; error?: string }
+    const tokenResults: TokenResult[] = []
+
+    function tokenPreview(token: string): string {
+      if (token.length <= 40) return token
+      return token.substring(0, 20) + '...' + token.substring(token.length - 16)
+    }
 
     if (nativeTokens.length > 0) {
       const sa = getServiceAccount()
       if (!sa) {
         console.warn(`[${route}] ${requestId} - FCM not configured, skipping native tokens`)
+        for (const t of nativeTokens) {
+          tokenResults.push({ platform: t.platform, tokenPreview: tokenPreview(t.token), error: 'FCM not configured' })
+        }
       } else {
         const projectId = process.env.FCM_PROJECT_ID || sa.project_id
         const accessToken = await getOAuth2Token(sa)
         const fcmResults = await Promise.allSettled(
-          (nativeTokens as Pick<PushTokenRow, 'token'>[]).map((t) =>
-            sendFcmMessage(accessToken, projectId, t.token, title, body, data),
-          ),
+          nativeTokens.map(async (t) => {
+            try {
+              await sendFcmMessage(accessToken, projectId, t.token, title, body, data)
+              return { platform: t.platform, tokenPreview: tokenPreview(t.token) }
+            } catch (e) {
+              return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: e instanceof Error ? e.message : String(e) }
+            }
+          }),
         )
-        results.push(...fcmResults)
+        for (const r of fcmResults) {
+          tokenResults.push(r.status === 'fulfilled' ? r.value : { platform: 'android', tokenPreview: '?', error: r.reason?.message || String(r.reason) })
+        }
       }
     }
 
     if (webTokens.length > 0) {
       const webResults = await Promise.allSettled(
-        (webTokens as Pick<PushTokenRow, 'token'>[]).map((t) =>
-          sendWebPushMessage(t.token, title, body, data),
-        ),
+        webTokens.map(async (t) => {
+          try {
+            await sendWebPushMessage(t.token, title, body, data)
+            return { platform: t.platform, tokenPreview: tokenPreview(t.token) }
+          } catch (e) {
+            return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: e instanceof Error ? e.message : String(e) }
+          }
+        }),
       )
-      webResults.forEach((r, i) => {
+      for (const r of webResults) {
         if (r.status === 'rejected') {
-          console.error(`[${route}] ${requestId} - Web push token ${i} failed: ${r.reason?.message || r.reason}`)
+          console.error(`[${route}] ${requestId} - Web push token failed: ${r.reason?.message || r.reason}`)
         }
-      })
-      results.push(...webResults)
+        tokenResults.push(r.status === 'fulfilled' ? r.value : { platform: 'web', tokenPreview: '?', error: r.reason?.message || String(r.reason) })
+      }
     }
 
-    const sent = results.filter((r) => r.status === 'fulfilled').length
-    const failed = results.filter((r) => r.status === 'rejected').length
+    const sent = tokenResults.filter((r) => !r.error).length
+    const failed = tokenResults.filter((r) => r.error).length
+    const failures = tokenResults.filter((r) => r.error).map((r) => ({ platform: r.platform, tokenPreview: r.tokenPreview, error: r.error }))
 
     console.log(`[${route}] ${requestId} - Sent: ${sent}, Failed: ${failed}`)
-    return NextResponse.json({ success: true, sent, failed })
+    return NextResponse.json({ success: true, sent, failed, failures })
   } catch (err) {
     console.error(`[${route}] ${requestId} - Exception: ${err instanceof Error ? err.message : String(err)}`)
     return NextResponse.json(

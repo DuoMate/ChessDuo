@@ -28,6 +28,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `appUrl.ts` | App URL helpers (deep links) |
 | `capacitorAuth.ts` | Capacitor-specific auth bridge |
 | `capgo-stub.ts` | Capgo social login stub |
+| `webPush.ts` | Web Push sender using native Web Crypto (Cloudflare Workers compatible) |
 
 ## Logic & Decisions
 - All Supabase channels registered via `subscriptionManager` for centralized cleanup.
@@ -41,5 +42,6 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - Razorpay SDK, Stockfish WASM
 
 ## Recent Changes
+- **2026-07-17**: Fixed `webPush.ts` HKDF key type bug — ECDH shared secret was imported as `{ name: 'HKDF' }` but `hkdf()` uses it for HMAC sign operations, causing `"Unable to use this key to sign"` error. Changed to import as `{ name: 'HMAC', hash: 'SHA-256' }` with `['sign']` usages. Added regression test (`webPush.test.ts`).
 - **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games (previously localStorage only). `rateLimit.ts` added push route limits (register: 30/min, send: 60/min).
 - **2026-07-12**: `settings.ts` now exposes `confirmMove: boolean` (default `false`) and a `setConfirmMove` setter. Used by `Game.tsx` to gate the move-commit flow behind a "Confirm Move" button.
