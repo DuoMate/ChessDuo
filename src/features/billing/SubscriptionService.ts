@@ -53,6 +53,13 @@ async function fetchServerStatus(): Promise<SubscriptionInfo> {
       const data = await res.json() as SubscriptionInfo
       return data
     }
+    if (res.status === 401) {
+      const retryHeaders = await getAuthHeaders()
+      const retryRes = await fetch(`${getApiBase()}/api/subscription/status`, { headers: retryHeaders })
+      if (retryRes.ok) {
+        return retryRes.json() as Promise<SubscriptionInfo>
+      }
+    }
   } catch { /* network error — use cached */ }
   return getDefaultStatus()
 }

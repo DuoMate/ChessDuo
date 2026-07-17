@@ -30,6 +30,4 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 
 ## Recent Changes
 - **2026-07-17**: `/api/push/register` now accepts `platform: 'web'` in addition to `android`/`ios`. `/api/push/send` splits tokens by platform: native tokens use FCM HTTP v1, web tokens use `web-push` with VAPID keys. FCM config is only required when native tokens exist (web-only users work without FCM).
-
-## Recent Changes
 - **2026-07-15**: Replaced Razorpay API routes with Google Play Billing subscription endpoints (`verify`, `status`, `rtdn`). Same jose JWT OAuth2 pattern as push notifications. Removed `razorpay/` directory entirely.
