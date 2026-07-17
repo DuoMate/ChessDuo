@@ -8,6 +8,7 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
+import { initPushNotifications } from '@/features/push-notifications'
 
 interface SettingsPanelProps {
   onClose: () => void
@@ -117,6 +118,9 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                   const next = !notifsEnabled
                   setNotifsEnabled(next)
                   localStorage.setItem('chessduo_push_disabled', next ? 'false' : 'true')
+                  if (next) {
+                    initPushNotifications().catch(() => {})
+                  }
                 }}
                 className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${notifsEnabled ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 aria-label="Toggle push notifications"

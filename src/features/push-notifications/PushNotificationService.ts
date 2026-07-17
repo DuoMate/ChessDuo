@@ -1,7 +1,11 @@
 import type { NotificationPayload, NotificationType } from './types'
 
 const PUSH_IN_PROGRESS_KEY = 'chessduo_push_in_progress'
+const PUSH_WELCOME_SENT_KEY = 'chessduo_push_welcome_sent'
+const PUSH_FCM_TOKEN_KEY = 'chessduo_fcm_token'
 const CRASH_GUARD_TIMEOUT_MS = 30_000
+
+let fcmRegistered = false
 
 function getApiBase(): string {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL) {
@@ -67,7 +71,9 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
   if (res.ok) {
     console.log('[Push] Token registered successfully')
 
-    if (session?.user) {
+    const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
+    if (session?.user && !welcomeSent) {
+      localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
       setTimeout(async () => {
         try {
           await sendPushNotification(session.user.id, 'friend_request', {
@@ -170,6 +176,15 @@ export async function registerDeviceToken(): Promise<void> {
       return
     }
 
+    if (fcmRegistered) {
+      const existingToken = typeof window !== 'undefined' ? localStorage.getItem(PUSH_FCM_TOKEN_KEY) : null
+      if (existingToken) {
+        console.log('[Push] Reusing existing FCM token')
+        await saveTokenToServer(existingToken, 'android')
+      }
+      return
+    }
+
     await new Promise(resolve => setTimeout(resolve, 500))
 
     let PushNotifications
@@ -193,6 +208,9 @@ export async function registerDeviceToken(): Promise<void> {
 
       PushNotifications.addListener('registration', async (token) => {
         console.log('[Push] Registration fired, token:', token.value.substring(0, 20) + '...')
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(PUSH_FCM_TOKEN_KEY, token.value)
+        }
         await saveTokenToServer(token.value, 'android')
       })
 
@@ -201,6 +219,7 @@ export async function registerDeviceToken(): Promise<void> {
       })
 
       await PushNotifications.register()
+      fcmRegistered = true
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         try {

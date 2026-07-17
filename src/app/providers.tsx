@@ -11,6 +11,7 @@ import { SplashHandler } from '@/components/SplashHandler'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { initPushNotifications } from '@/features/push-notifications'
 import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
+import { supabase } from '@/lib/supabase'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -27,16 +28,30 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
+    SubscriptionService.setProvider(GooglePlayBillingProvider)
+    SubscriptionService.initialize().catch(() => {})
+  }, [])
 
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((err) => {
         console.warn('[SW] Service worker registration failed:', err)
       })
     }
 
-    initPushNotifications().catch(() => {})
-    SubscriptionService.setProvider(GooglePlayBillingProvider)
-    SubscriptionService.initialize().catch(() => {})
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        initPushNotifications().catch(() => {})
+      }
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('chessduo_push_welcome_sent')
+        try { localStorage.removeItem('chessduo_push_last_error') } catch { /* quota exceeded */ }
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useScrollToTop()
