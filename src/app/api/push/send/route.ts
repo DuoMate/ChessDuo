@@ -3,6 +3,7 @@ import { applyRateLimit } from '@/lib/rateLimit'
 import { cookies } from 'next/headers'
 import { SignJWT, importPKCS8 } from 'jose'
 import type { PushTokenRow } from '@/features/push-notifications/types'
+import { sendWebPush } from '@/lib/webPush'
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
 
@@ -104,7 +105,6 @@ async function sendWebPushMessage(
   body: string,
   data?: Record<string, string>,
 ): Promise<void> {
-  const webpush = await import('web-push')
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || ''
   const subject = process.env.VAPID_SUBJECT || 'mailto:admin@chessduo.app'
@@ -113,17 +113,7 @@ async function sendWebPushMessage(
     throw new Error('VAPID keys not configured')
   }
 
-  webpush.setVapidDetails(subject, vapidPublicKey, vapidPrivateKey)
-
-  let pushSubscription: { endpoint: string; keys: { p256dh: string; auth: string } }
-  try {
-    pushSubscription = JSON.parse(subscription)
-  } catch {
-    throw new Error('Invalid web push subscription JSON')
-  }
-
-  const payload = JSON.stringify({ title, body, data, tag: `chessduo-${data?.type || 'default'}` })
-  await webpush.sendNotification(pushSubscription as Parameters<typeof webpush.sendNotification>[0], payload)
+  await sendWebPush(subscription, title, body, vapidPublicKey, vapidPrivateKey, subject, data)
 }
 
 export async function OPTIONS() {
@@ -233,6 +223,11 @@ export async function POST(request: Request) {
           sendWebPushMessage(t.token, title, body, data),
         ),
       )
+      webResults.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`[${route}] ${requestId} - Web push token ${i} failed: ${r.reason?.message || r.reason}`)
+        }
+      })
       results.push(...webResults)
     }
 
