@@ -6,6 +6,8 @@ const PUSH_FCM_TOKEN_KEY = 'chessduo_fcm_token'
 const CRASH_GUARD_TIMEOUT_MS = 30_000
 
 let fcmRegistered = false
+let pushInitInProgress = false
+let cachedAccessToken = ''
 
 function getApiBase(): string {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL) {
@@ -45,12 +47,9 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
-async function saveTokenToServer(token: string, platform: string): Promise<void> {
-  const { supabase } = await import('@/lib/supabase')
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    const msg = '[Push] No session found, cannot register token — are you signed in?'
+async function saveTokenToServer(token: string, platform: string, accessToken?: string): Promise<void> {
+  if (!accessToken) {
+    const msg = '[Push] No access token provided, cannot register token — are you signed in?'
     console.warn(msg)
     try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
     return
@@ -63,7 +62,7 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ token, platform }),
   })
@@ -75,15 +74,15 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
     console.log('[Push] Token registered successfully')
 
     const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
-    if (session?.user && !welcomeSent) {
+    if (!welcomeSent && accessToken) {
       localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
       setTimeout(async () => {
         try {
-          await sendPushNotification(session.user.id, 'friend_request', {
+          await sendPushNotification('system', 'friend_request', {
             senderId: 'system',
             senderName: 'ChessDuo',
             snippet: 'Welcome! Push notifications are now enabled.',
-          })
+          }, accessToken)
           console.log('[Push] Welcome notification sent')
         } catch (err) {
           console.warn('[Push] Failed to send welcome notification:', err)
@@ -97,7 +96,7 @@ async function saveTokenToServer(token: string, platform: string): Promise<void>
   }
 }
 
-async function registerBrowserPush(): Promise<boolean> {
+async function registerBrowserPush(accessToken?: string): Promise<boolean> {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.log('[Push] Browser push not supported')
@@ -115,7 +114,7 @@ async function registerBrowserPush(): Promise<boolean> {
     const existingSubscription = await registration.pushManager.getSubscription()
     if (existingSubscription) {
       console.log('[Push] Existing browser subscription found, reusing')
-      await saveTokenToServer(JSON.stringify(existingSubscription), 'web')
+      await saveTokenToServer(JSON.stringify(existingSubscription), 'web', accessToken)
       return true
     }
   } catch (err) {
@@ -136,7 +135,7 @@ async function registerBrowserPush(): Promise<boolean> {
       applicationServerKey,
     })
 
-    await saveTokenToServer(JSON.stringify(subscription), 'web')
+    await saveTokenToServer(JSON.stringify(subscription), 'web', accessToken)
     return true
   } catch (err) {
     const msg = `[Push Web] ${err instanceof Error ? err.message : String(err)}`
@@ -147,7 +146,17 @@ async function registerBrowserPush(): Promise<boolean> {
   }
 }
 
-export async function registerDeviceToken(): Promise<void> {
+export function clearCachedAccessToken(): void { cachedAccessToken = '' }
+
+export async function registerDeviceToken(accessToken?: string): Promise<void> {
+  if (accessToken) cachedAccessToken = accessToken
+
+  if (pushInitInProgress) {
+    console.log('[Push] Init already in progress, skipping')
+    return
+  }
+
+  pushInitInProgress = true
   try {
     if (typeof window !== 'undefined' && localStorage.getItem('chessduo_push_disabled') === 'true') return
 
@@ -175,7 +184,7 @@ export async function registerDeviceToken(): Promise<void> {
 
     if (!native) {
       console.log('[Push] Not on native platform, trying browser push')
-      const browserOk = await registerBrowserPush()
+      const browserOk = await registerBrowserPush(accessToken)
       if (!browserOk) {
         console.log('[Push] Browser push registration failed or not configured')
       }
@@ -186,7 +195,7 @@ export async function registerDeviceToken(): Promise<void> {
       const existingToken = typeof window !== 'undefined' ? localStorage.getItem(PUSH_FCM_TOKEN_KEY) : null
       if (existingToken) {
         console.log('[Push] Reusing existing FCM token')
-        await saveTokenToServer(existingToken, 'android')
+        await saveTokenToServer(existingToken, 'android', accessToken)
       }
       return
     }
@@ -218,7 +227,7 @@ export async function registerDeviceToken(): Promise<void> {
         if (typeof window !== 'undefined') {
           localStorage.setItem(PUSH_FCM_TOKEN_KEY, token.value)
         }
-        await saveTokenToServer(token.value, 'android')
+        await saveTokenToServer(token.value, 'android', accessToken)
       })
 
       PushNotifications.addListener('registrationError', (err) => {
@@ -268,6 +277,8 @@ export async function registerDeviceToken(): Promise<void> {
     console.warn(msg)
     try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
     try { alert(`Push setup failed: ${msg}`) } catch { /* alert may be unavailable */ }
+  } finally {
+    pushInitInProgress = false
   }
 }
 
@@ -275,6 +286,7 @@ export async function sendPushNotification(
   receiverId: string,
   type: NotificationType,
   data: Omit<NotificationPayload, 'type'>,
+  accessToken?: string,
 ): Promise<void> {
   const titles: Record<NotificationType, string> = {
     friend_request: 'Friend Request',
@@ -290,14 +302,14 @@ export async function sendPushNotification(
     game_invite: (d) => `${d.senderName || 'Someone'} invited you to a game`,
   }
 
+  const authHeader = (accessToken || cachedAccessToken)
+    ? { Authorization: `Bearer ${accessToken || cachedAccessToken}` }
+    : {}
+  if (!accessToken && !cachedAccessToken) {
+    console.warn('[Push] No access token, sending notification without auth header')
+  }
+
   try {
-    const { supabase } = await import('@/lib/supabase')
-    const { data: { session } } = await supabase.auth.getSession()
-
-    const authHeader = session?.access_token
-      ? { Authorization: `Bearer ${session.access_token}` }
-      : {}
-
     console.log('[Push] Sending notification to:', receiverId, 'type:', type)
 
     const res = await fetch(`${getApiBase()}/api/push/send`, {

@@ -1,9 +1,9 @@
-export { registerDeviceToken, sendPushNotification } from './PushNotificationService'
+export { registerDeviceToken, sendPushNotification, clearCachedAccessToken } from './PushNotificationService'
 export type { NotificationPayload, NotificationType, PushTokenRow } from './types'
 
-export async function initPushNotifications(): Promise<void> {
+export async function initPushNotifications(accessToken?: string): Promise<void> {
   const { registerDeviceToken } = await import('./PushNotificationService')
-  await registerDeviceToken()
+  await registerDeviceToken(accessToken)
 }
 
 export async function notifyFriendRequest(senderId: string, receiverId: string, senderName: string): Promise<void> {
