@@ -128,9 +128,11 @@ export async function GET(request: Request) {
     let supabase: any
 
     if (authHeader?.startsWith('Bearer ')) {
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(supabaseUrl, supabaseAnonKey)
       const token = authHeader.split(' ')[1]
+      const { createClient } = await import('@supabase/supabase-js')
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } }
+      })
       const { data } = await supabase.auth.getUser(token)
       user = data.user
       console.log(`[${route}] ${requestId} - Auth via Bearer token`)
