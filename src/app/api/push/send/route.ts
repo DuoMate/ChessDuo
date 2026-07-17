@@ -233,7 +233,13 @@ export async function POST(request: Request) {
               await sendFcmMessage(accessToken, projectId, t.token, title, body, data)
               return { platform: t.platform, tokenPreview: tokenPreview(t.token) }
             } catch (e) {
-              return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: e instanceof Error ? e.message : String(e) }
+              const msg = e instanceof Error ? e.message : String(e)
+              if (msg.includes('UNREGISTERED') || msg.includes('NOT_FOUND')) {
+                console.warn(`[${route}] ${requestId} - Cleaning up unregistered token for user ${userId}`)
+                const cleanupClient = serviceSupabase || supabase
+                try { await cleanupClient.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
+              }
+              return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: msg }
             }
           }),
         )
@@ -250,7 +256,13 @@ export async function POST(request: Request) {
             await sendWebPushMessage(t.token, title, body, data)
             return { platform: t.platform, tokenPreview: tokenPreview(t.token) }
           } catch (e) {
-            return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: e instanceof Error ? e.message : String(e) }
+            const msg = e instanceof Error ? e.message : String(e)
+            if (msg.includes('410') || msg.includes('404')) {
+              console.warn(`[${route}] ${requestId} - Cleaning up expired web subscription for user ${userId}`)
+              const cleanupClient = serviceSupabase || supabase
+              try { await cleanupClient.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
+            }
+            return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: msg }
           }
         }),
       )
