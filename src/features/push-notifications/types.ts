@@ -12,7 +12,7 @@ export interface PushTokenRow {
   id: string
   user_id: string
   token: string
-  platform: 'android' | 'ios'
+  platform: 'android' | 'ios' | 'web'
   created_at: string
   updated_at: string
 }

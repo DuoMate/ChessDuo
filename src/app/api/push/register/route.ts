@@ -50,9 +50,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing token or platform' }, { status: 400 })
     }
 
-    if (platform !== 'android' && platform !== 'ios') {
+    if (platform !== 'android' && platform !== 'ios' && platform !== 'web') {
       console.warn(`[${route}] ${requestId} - Invalid platform: ${platform}`)
-      return NextResponse.json({ error: 'Platform must be android or ios' }, { status: 400 })
+      return NextResponse.json({ error: 'Platform must be android, ios, or web' }, { status: 400 })
     }
 
     const { error } = await supabase.from('push_tokens').upsert(

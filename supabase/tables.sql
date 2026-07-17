@@ -624,7 +624,7 @@ CREATE TABLE IF NOT EXISTS push_tokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   token TEXT NOT NULL,
-  platform TEXT NOT NULL CHECK (platform IN ('android', 'ios')),
+  platform TEXT NOT NULL CHECK (platform IN ('android', 'ios', 'web')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE (user_id, token)
