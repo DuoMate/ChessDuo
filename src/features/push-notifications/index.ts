@@ -1,4 +1,4 @@
-export { registerDeviceToken, sendPushNotification, clearCachedAccessToken } from './PushNotificationService'
+export { registerDeviceToken, sendPushNotification, clearCachedAccessToken, setCachedAccessToken, resetPushState } from './PushNotificationService'
 export type { NotificationPayload, NotificationType, PushTokenRow } from './types'
 
 export async function initPushNotifications(accessToken?: string): Promise<void> {
