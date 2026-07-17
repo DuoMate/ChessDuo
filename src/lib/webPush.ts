@@ -302,7 +302,7 @@ export async function sendWebPush(
   )
 
   // Build the request
-  const keyId = base64UrlEncode(localPublicKey)
+  const keyId = vapidPublicKey
   const headers: Record<string, string> = {
     'Content-Type': 'application/octet-stream',
     'Content-Encoding': 'aes128gcm',
