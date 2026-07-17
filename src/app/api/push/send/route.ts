@@ -139,12 +139,14 @@ export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const authHeader = request.headers.get('authorization')
 
     console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
 
     let user = null
     let supabase: any
+    let serviceSupabase: any | null = null
 
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1]
@@ -171,6 +173,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
+    if (supabaseServiceRoleKey) {
+      const { createClient } = await import('@supabase/supabase-js')
+      serviceSupabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+    }
+
     console.log(`[${route}] ${requestId} - User: ${user.id}`)
 
     const { userId, title, body, data } = await request.json()
@@ -181,7 +188,8 @@ export async function POST(request: Request) {
 
     console.log(`[${route}] ${requestId} - Fetching tokens for user: ${userId}`)
 
-    const { data: tokens, error } = await supabase
+    const tokenClient = serviceSupabase || supabase
+    const { data: tokens, error } = await tokenClient
       .from('push_tokens')
       .select('token, platform')
       .eq('user_id', userId)
