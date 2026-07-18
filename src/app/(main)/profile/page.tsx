@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
@@ -111,6 +111,12 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <p className="text-slate-400 mb-4">Sign in to view your profile</p>
+        <button
+          onClick={() => router.push('/?signup=1')}
+          className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
+        >
+          Sign In
+        </button>
         <BackButton label="Go Home" alwaysFallback />
       </div>
     )
