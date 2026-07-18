@@ -16,11 +16,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     unreadBySender: {},
   })
   const mountedRef = useRef(true)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
+  const fetchCountsRef = useRef<() => Promise<void>>(async () => {})
 
   const fetchCounts = useCallback(async () => {
     if (!playerId) {
@@ -59,19 +55,31 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     }
   }, [playerId])
 
+  // Keep latest fetchCounts in a ref so realtime callbacks use current closure
+  fetchCountsRef.current = fetchCounts
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  // Initial fetch
   useEffect(() => {
     fetchCounts()
   }, [fetchCounts])
 
+  // Realtime subscriptions — only re-subscribe when playerId changes
   useEffect(() => {
     if (!playerId) return
+
+    const onUpdate = () => { if (mountedRef.current) fetchCountsRef.current() }
 
     const msgChannel = supabase
       .channel(`badge-messages-${playerId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${playerId}` },
-        () => { if (mountedRef.current) fetchCounts() }
+        onUpdate,
       )
       .subscribe()
 
@@ -80,12 +88,12 @@ export function useBadgeCount(playerId: string | null): BadgeData {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'friend_requests', filter: `receiver_id=eq.${playerId}` },
-        () => { if (mountedRef.current) fetchCounts() }
+        onUpdate,
       )
       .subscribe()
 
     const handleVisibility = () => {
-      if (!document.hidden && mountedRef.current) fetchCounts()
+      if (!document.hidden && mountedRef.current) fetchCountsRef.current()
     }
     document.addEventListener('visibilitychange', handleVisibility)
 
@@ -94,7 +102,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
       supabase.removeChannel(reqChannel)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
-  }, [playerId, fetchCounts])
+  }, [playerId])
 
   return badge
 }
