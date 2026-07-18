@@ -2050,8 +2050,31 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             closeAllPanels()
             setActiveBoardTab('game')
           }}
-          onForward={() => {
-            // Reserved for future use
+          onForward={() => {}}
+          onBackMove={() => {
+            const moves = moveHistoryRef.current
+            if (moves.length === 0) return
+            const current = playbackIndex ?? moves.length - 1
+            if (current <= 0) {
+              setPlaybackIndex(-1)
+              setPlaybackFen('')
+            } else {
+              setPlaybackIndex(current - 1)
+              setPlaybackFen(moves[current - 1]?.fenAfter || '')
+            }
+          }}
+          onForwardMove={() => {
+            const moves = moveHistoryRef.current
+            if (moves.length === 0) return
+            if (playbackIndex === null) return // already live
+            const current = playbackIndex ?? moves.length - 1
+            if (current >= moves.length - 1) {
+              setPlaybackIndex(null)
+              setPlaybackFen(null)
+            } else {
+              setPlaybackIndex(current + 1)
+              setPlaybackFen(moves[current + 1]?.fenAfter || '')
+            }
           }}
         />
       </div>

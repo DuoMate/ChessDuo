@@ -57,6 +57,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null)
   const [gameResult, setGameResult] = useState<string | null>(null)
   const [moveHistory, setMoveHistory] = useState<string[]>([])
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
+  const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [moveAccuracy, setMoveAccuracy] = useState<number | null>(null)
   const [opponentAccuracy, setOpponentAccuracy] = useState<number | null>(null)
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null)
@@ -517,6 +519,29 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onTabChange={(t) => setActiveBoardTab(t)}
           onBack={() => setActiveBoardTab('game')}
           onForward={() => {}}
+          onBackMove={() => {
+            if (moveHistory.length === 0) return
+            const current = playbackIndex ?? moveHistory.length - 1
+            if (current <= 0) {
+              setPlaybackIndex(-1)
+              setPlaybackFen('')
+            } else {
+              setPlaybackIndex(current - 1)
+              setPlaybackFen(null) // DuelGame doesn't store fenAfter, just shows move list
+            }
+          }}
+          onForwardMove={() => {
+            if (moveHistory.length === 0) return
+            if (playbackIndex === null) return
+            const current = playbackIndex ?? moveHistory.length - 1
+            if (current >= moveHistory.length - 1) {
+              setPlaybackIndex(null)
+              setPlaybackFen(null)
+            } else {
+              setPlaybackIndex(current + 1)
+              setPlaybackFen(null)
+            }
+          }}
         />
       </div>
 
