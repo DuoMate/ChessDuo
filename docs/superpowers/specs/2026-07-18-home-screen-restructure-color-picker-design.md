@@ -116,28 +116,179 @@ The bot *names* inside the game (visible in `BoardTopBar` and `PendingMovesRow`)
 
 ### 5.3 `ColorPicker` (new, `src/components/ColorPicker.tsx`)
 
-- 3 cards: White pawn icon + "White" / Black pawn icon + "Black" / Dice icon + "Random".
-- Selected card has the same blue-glow treatment as the inspiration image (`border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]`).
-- 44×44px touch targets, 11px+ font size, dark variants for every color.
-- Persists choice to `localStorage` under `chessduo_selected_color` (one of `white` | `black` | `random`).
-- Default: `white`.
-- Used in two places:
+- 3 cards side-by-side: White pawn icon + "White" / Black pawn icon + "Black" / Dice icon + "Random".
+- **Icon set (Lucide):** `ChessPawn` for White, `ChessPawn` (with `dark:` color override) for Black, `Dices` for Random. All `size={20}` (or `h-5 w-5`), `strokeWidth={1.8}` for consistent weight with the existing chess-piece icons. Same import path as the rest of the codebase (`import { ChessPawn, Dices } from 'lucide-react'`).
+- **Color treatment for the "Black" card icon:** the standard `ChessPawn` icon is a stroked outline; in dark mode it should appear in `text-slate-100`, in light mode `text-slate-800` (default). We don't need a separate "filled black pawn" icon — the surrounding card label "Black" + the dark slate color carries the meaning. (If a user explicitly requests a filled silhouette, we can swap to a custom SVG, but that's a future iteration.)
+- **Selected state:** `border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]` — matches the inspiration image and existing `GameModeCard` selected treatment.
+- **Unselected state:** `border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/60` — same as `GameModeCard`.
+- **Layout per card:**
+  ```
+  ┌────────────┐
+  │  [icon]    │  <- ChessPawn / Dices
+  │  White     │  <- 12px font, font-semibold
+  └────────────┘
+  ```
+  - min-h-[56px] min-w-[56px] (44×44 + breathing room)
+  - Centered icon + label, vertical layout
+  - `text-[11px]` for label (matches `GameModeCard` subtitle size)
+- **Persistence:** writes to `localStorage['chessduo_selected_color']` on every change.
+- **Default:** `white`.
+- **Used in two places:**
   - Browser: inside `ConfigurationPanel`.
   - Mobile: standalone section in the home page (after Bot Difficulty, before Join by Code).
 
 ### 5.4 `BotDifficultySelector` (refactor of existing)
 
-- The current home-page version uses a prev/next + dot-indicator design. Replace the *visual* on the home page with the 5-card row from the inspiration image (Easy / Medium / Hard / Expert / Master — each shows a chess piece glyph and label).
-- Selected card gets the same blue glow as `ColorPicker`.
-- No change to the *logic*: still writes `chessduo_selected_level` to localStorage, still defaults to `3` (Medium).
-- Only rendered on mobile (browser hardcodes `level=3`).
-- If the design from the image is too tall for the mobile viewport, the current prev/next selector remains a fallback (we'll pick whichever fits — see § 7.5).
+- The current home-page version uses a prev/next + dot-indicator design with **unicode chess piece glyphs** (♟♞♝♜♛♚). Replace the *visual* on the home page with the 5-card row from the inspiration image.
+- **Icon set (Lucide):** each level gets a chess piece icon (not the unicode glyphs we use today). Mapping:
+  | Level | Label        | Icon            | Icon size |
+  |-------|--------------|-----------------|-----------|
+  | 1     | Easy         | `ChessPawn`     | `h-6 w-6` |
+  | 2     | Medium       | `ChessKnight`   | `h-6 w-6` |
+  | 3     | Hard         | `ChessBishop`   | `h-6 w-6` |
+  | 4     | Expert       | `ChessRook`     | `h-6 w-6` |
+  | 5     | Master       | `ChessQueen`    | `h-6 w-6` |
+  | 6     | Grandmaster  | `ChessKing`     | `h-6 w-6` |
+
+  Note: the inspiration image shows 5 cards (Easy/Medium/Hard/Expert/Master) but the codebase has 6 levels in `DIFFICULTY_LEVELS`. **Decision:** keep 5 cards to match the image, dropping "Grandmaster" (level 6) from the home screen. The `level=6` value still works internally for power users via direct URL parameters, but the UI never offers it. (The existing `getAvailableSkillLevels()` helper in `src/features/bots/botConfig.ts` can be updated to return only 5 levels when called from the home screen, or we just hardcode the 5-level array in the new component.)
+
+- **Selected state:** same as `ColorPicker` — `border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]`. The icon color shifts to `text-blue-600 dark:text-blue-300` when selected.
+- **Unselected state:** same as `ColorPicker` (slate border + hover).
+- **Card layout (vertical):**
+  ```
+  ┌──────────┐
+  │  [icon]  │  <- 24px chess piece
+  │  Easy    │  <- 11px label
+  └──────────┘
+  ```
+  - min-h-[64px] min-w-[44px] — slightly taller than `ColorPicker` cards to fit the 24px icon
+  - The `Bot Difficulty` heading sits above the row, same uppercase tracking as `Game Mode` and `Choose Your Color` sections
+- **Logic unchanged:** still writes `chessduo_selected_level` to localStorage, still defaults to `3` (Medium).
+- **Only rendered on mobile** (browser hardcodes `level=3`).
+- **Compact fallback:** if viewport height < 700px, fall back to the existing prev/next dot-indicator (we keep it for the compact case to avoid truncation — see § 9.6).
 
 ---
 
-## 6. Data Flow
+## 6. Theme & Icon System
 
-### 6.1 Color selection
+This section documents the visual conventions all new components must follow to stay consistent with the rest of the app.
+
+### 6.1 Theme tokens (Tailwind v4 + CSS variables)
+
+| Token                  | Light          | Dark           | Usage                                 |
+|------------------------|----------------|----------------|---------------------------------------|
+| Page background        | `#f4f6fb` (`bg-slate-50` family) | `#0a0e1a` (`bg-[#0a0e1a]`) | Home / ConfigurationPanel            |
+| Surface (card)         | `bg-white` / `border-slate-200` | `bg-slate-900/40` / `border-slate-800` | ColorPicker / BotDifficultySelector cards |
+| Selected surface       | `bg-blue-50` / `border-blue-500` | `bg-blue-500/10` / `border-blue-400` | Selected state of all new cards       |
+| Selected glow          | `shadow-[var(--shadow-glow-blue-strong)]` | same | Blue ring around selected card       |
+| Text primary           | `text-slate-900` | `text-white` | Card labels                           |
+| Text muted             | `text-slate-500` | `text-slate-400` | Card subtitles, helper text          |
+| Play / Start button    | `bg-gradient-to-r from-emerald-500 to-green-500` (mobile) | `from-blue-500 to-blue-400` (browser) | Play/Start Game CTA         |
+
+**Every new card has both light and dark variants.** A "dark-only" component is not allowed by `CONTEXT-SYSTEM.md` rule "no dark-only components."
+
+### 6.2 Icon system
+
+All icons in the new components come from **lucide-react** (matching the existing codebase — see imports in `Game.tsx`, `WelcomeDisclaimer.tsx`, `home/page.tsx`). No emoji, no custom SVGs, no unicode glyphs.
+
+**Icons used in this spec:**
+
+| Component              | Icon         | lucide-react export       | Size               | Notes |
+|------------------------|--------------|---------------------------|--------------------|-------|
+| `ColorPicker` White    | Pawn         | `ChessPawn`               | `h-5 w-5`          | Default `text-slate-700 dark:text-slate-200` |
+| `ColorPicker` Black    | Pawn (inverted) | `ChessPawn`            | `h-5 w-5`          | Same icon; dark slate conveys "black" |
+| `ColorPicker` Random   | Dice         | `Dices`                   | `h-5 w-5`          | `text-blue-500` when selected |
+| `BotDifficultySelector` Easy    | Pawn     | `ChessPawn`               | `h-6 w-6`          | Same as ColorPicker White      |
+| `BotDifficultySelector` Medium  | Knight   | `ChessKnight`             | `h-6 w-6`          |                                    |
+| `BotDifficultySelector` Hard    | Bishop   | `ChessBishop`             | `h-6 w-6`          |                                    |
+| `BotDifficultySelector` Expert  | Rook     | `ChessRook`               | `h-6 w-6`          |                                    |
+| `BotDifficultySelector` Master  | Queen    | `ChessQueen`              | `h-6 w-6`          |                                    |
+| `SidebarNav`           | Per-tab      | `Home`, `History`, `Users`, `User` | `h-5 w-5` (icon) + `text-[11px]` (label) | Same as `HomeBottomNav`           |
+| `ConfigurationPanel`   | Star (highlighted mode) | `Star`          | `text-amber-500 text-xs` | Matches current home page `showStar` |
+
+**Stroke width:** `1.8` for all chess piece icons (matches `WelcomeDisclaimer` `PawnIcon` `strokeWidth={1.8}`). `2` for navigation icons (matches `HomeBottomNav` `strokeWidth={2}`). `2.5` when active (matches `HomeBottomNav` `strokeWidth={active(path) ? 2.5 : 2}`).
+
+**Sizing convention:**
+- Inside 64-72px cards: `h-6 w-6` (24×24) for difficulty, `h-5 w-5` (20×20) for color
+- Inside 32-40px button/avatar slots: `h-4 w-4` (16×16)
+- Sidebar nav: `h-5 w-5` (20×20) — same as bottom nav
+
+### 6.3 Selected-state pattern (canonical)
+
+Used uniformly by `GameModeCard`, `BotDifficultySelector`, `ColorPicker`, and `TimePills`:
+
+```tsx
+className={`
+  min-h-[44px] min-w-[44px]  // touch target
+  flex flex-col items-center justify-center gap-1
+  rounded-xl border-2 transition-all duration-200
+  ${selected
+    ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
+    : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/60'
+  }
+`}
+```
+
+The `:hover` styles in unselected state match the existing `GameModeCard` (lines 972–977 of `page.tsx`). No new shade introduced.
+
+### 6.4 Layout rules (mobile)
+
+- Touch target: `min-h-[44px] min-w-[44px]` (WCAG).
+- Body text: `text-xs` minimum, `text-[11px]` acceptable for labels.
+- Cards in a 3-column row: `gap-2` between cards, `gap-1` inside cards.
+- The 5-card difficulty row uses `grid-cols-5` on `sm:`, falls back to horizontal scroll on `xs:` (or wraps to 2 rows if `xs:` width is too narrow — we test on iPhone SE).
+- The 3-card color row uses `grid-cols-3`.
+- Safe-area padding: the home page already has `pb-20` (Play button clearance). After adding two new sections, increase to `pb-24` and ensure no content scrolls under the floating bottom nav.
+
+### 6.5 Layout rules (browser)
+
+- `ConfigurationPanel` is centered modal sheet, max-width 480px.
+- `SidebarNav` width: 80px on `md:`, 88px on `lg:`. Full height, fixed left.
+- Main content area: `ml-[80px] lg:ml-[88px]` to clear the sidebar.
+- Existing `(main)/layout.tsx` adjustments: same `ml-[80px]` offset for sub-pages.
+
+### 6.6 What this spec does NOT change
+
+- Font family: stays `font-game` (Chakra Petch) for headings, `font-sans` (Geist) for body.
+- Body gradient: stays amber + indigo radial gradient. (Home page overrides to solid `#0a0e1a` — also unchanged.)
+- Existing components: `HomeBottomNav`, `BoardTopBar`, `GameOverModal`, `MoveComparison` — all keep their current styling. Only the new components adopt the canonical selected-state pattern in § 6.3.
+- The existing prev/next `BotDifficultySelector` (line 1032 of `page.tsx`) gets replaced; the dot indicator at the bottom is removed. (We retain the prev/next only as a viewport-fallback when the 5-card row doesn't fit.)
+
+---
+
+## 7. Storage & Constants
+
+This section lists the new constants and localStorage keys added by this spec (also summarized in § 9.7). They're listed here in one place so the implementation plan can reference them directly.
+
+### 7.1 New constants (`src/features/shared/gameConstants.ts`)
+
+```ts
+export type PlayerColor = 'white' | 'black' | 'random'
+export const DEFAULT_PLAYER_COLOR: PlayerColor = 'white'
+
+export const BROWSER_BOT_LEVEL = 3  // hardcoded for browser
+export const MOBILE_DIFFICULTY_LEVELS: DifficultyLevel[] = [
+  { level: 1, label: 'Easy',   icon: 'pawn'   },
+  { level: 2, label: 'Medium', icon: 'knight' },
+  { level: 3, label: 'Hard',   icon: 'bishop' },
+  { level: 4, label: 'Expert', icon: 'rook'   },
+  { level: 5, label: 'Master', icon: 'queen'  },
+] as const
+```
+
+### 7.2 New localStorage keys
+
+| Key                              | Type   | Default | Read by                  | Written by                                       |
+|----------------------------------|--------|---------|--------------------------|--------------------------------------------------|
+| `chessduo_selected_color`        | string | `white` | home, ConfigurationPanel | ColorPicker on change                            |
+
+(Other keys already exist — see § 9.7 for the full table.)
+
+---
+
+## 8. Data Flow
+
+### 8.1 Color selection
 
 ```
 ColorPicker (select) ──► localStorage['chessduo_selected_color'] = 'white'|'black'|'random'
@@ -151,7 +302,7 @@ ColorPicker (select) ──► localStorage['chessduo_selected_color'] = 'white'
   export const DEFAULT_PLAYER_COLOR: PlayerColor = 'white'
   ```
 
-### 6.2 Starting a game
+### 8.2 Starting a game
 
 `GameInterface` gets one new optional parameter on `startMatch` / `startQuickPlay` / `startDuel`:
 
@@ -219,7 +370,7 @@ Both bots in Quick Play are already configured via `createBotConfig(level, level
 
 For Duo mode (online), the lobby already lets the host pick the bot skill level before creating the room. The same level applies to both bots regardless of which team they end up on.
 
-### 6.3 Pending game (offline bug)
+### 8.3 Pending game (offline bug)
 
 - `handleStartOffline` already stores `chessduo_pending_offline_game = { level, time, color }` in localStorage before navigating to `/welcome?mode=offline`.
 - `welcome/page.tsx` reads it, removes it, and pushes `/game?level=…&time=…&color=…`.
@@ -248,7 +399,7 @@ For Duo mode (online), the lobby already lets the host pick the bot skill level 
   - `router.replace` instead of `router.push` so the back button doesn't take the user back to the home page after the game starts.
   - Effect A uses `replace` because if the navigation succeeds the home page never actually renders the result of `router.replace` — by the time the effect runs we're already there, but it short-circuits any in-flight state.
 
-### 6.4 Game page (`/game`) reads the color
+### 8.4 Game page (`/game`) reads the color
 
 - `useSearchParams` in `src/app/game/page.tsx` reads `color` and forwards to `localGame.startMatch`.
 - `MobileChessBoard` and `ChessBoard` already accept an `orientation` prop; we set it from the resolved color.
@@ -256,9 +407,9 @@ For Duo mode (online), the lobby already lets the host pick the bot skill level 
 
 ---
 
-## 7. Detailed Behavior
+## 9. Detailed Behavior
 
-### 7.1 Browser home page
+### 9.1 Browser home page
 
 1. User sees sidebar (left) + main content (Logo, Time Control, 3 Game Mode cards, Join by Code, Play button).
 2. User taps **Quick Play** or **Duo**:
@@ -268,25 +419,25 @@ For Duo mode (online), the lobby already lets the host pick the bot skill level 
 3. `ConfigurationPanel` shows the selected mode (read-only) + Choose Your Color + Start Game.
 4. Start Game navigates to `/game?level=3&time=…&color=…` (browser always uses Medium).
 
-### 7.2 Mobile home page
+### 9.2 Mobile home page
 
 1. User sees Logo, Time Control, 3 Game Mode cards, Bot Difficulty (5-card row), Choose Your Color, Join by Code, Play button.
 2. Default values: Medium, White, last-used time control.
 3. Tapping Play starts the game (or shows the welcome disclaimer if not yet dismissed).
 4. No `ConfigurationPanel` — the home page is already the configuration.
 
-### 7.3 4-Player mode (both browser & mobile)
+### 9.3 4-Player mode (both browser & mobile)
 
 - 4-Player card has no CONFIGURATION panel and no color picker.
 - Tap → existing 4-player flow (create or join by code).
 
-### 7.4 Welcome disclaimer bug
+### 9.4 Welcome disclaimer bug
 
 - `welcome/page.tsx` already does `router.push('/game?level=…&time=…')`. With the home-page auto-start effect split into A and B (above), the redirect is now reliable:
   - If the user comes from welcome, they navigate to `/game?…` directly, so the home page never gets to mount its effect B.
   - If the user lands on home with a leftover pending game (e.g., they hit back from `/game` and then refresh), effect A picks it up.
 
-### 7.5 Color swap details
+### 9.5 Color swap details
 
 When the human picks Black, the following must change in the running game:
 
@@ -317,7 +468,7 @@ const teammateSlot = this._playerColor === 'white' ? 'player2' : 'player4'
 
 `MoveComparison.winnerId` and `loserId` are `'player1' | 'player2'` only — they refer to *which slot on the current team won*, not which is the human. The `MoveComparison` consumer (`MoveInsights`, `AccuracyBottomSheet`) already does the slot→human mapping via the `isPlayer1` check (line 53 of `AccuracyBottomSheet.tsx`). We need to thread the human's slot through that mapping so it knows whether `player1` is the human or the teammate.
 
-### 7.7 Truncation safety (mobile)
+### 9.6 Truncation safety (mobile)
 
 - The current home page is `h-screen overflow-hidden` (line 800) and uses compact spacing. Adding two new sections (Bot Difficulty cards + Color picker) risks overflow.
 - **Mitigation:**
@@ -326,7 +477,7 @@ const teammateSlot = this._playerColor === 'white' ? 'player2' : 'player4'
   - Add a `pb-24` to the scroll container (currently `pb-20`) to clear the Play button + bottom nav.
   - Manual test on iPhone SE (667×375 viewport) and iPhone 12 Pro (844×390) before merging.
 
-### 7.7 Storage keys
+### 9.7 Storage keys
 
 | Key                              | Type   | Default | Read by                       | Written by                                          |
 |----------------------------------|--------|---------|-------------------------------|-----------------------------------------------------|
@@ -338,7 +489,7 @@ const teammateSlot = this._playerColor === 'white' ? 'player2' : 'player4'
 
 ---
 
-## 8. Error Handling
+## 10. Error Handling
 
 - **Invalid color in URL** (`?color=foo`): game page falls back to `'white'`. No user-facing error.
 - **localStorage unavailable** (private mode): all reads/writes are wrapped in `try/catch` and fall back to defaults — same pattern as the existing `getInitialTime` / `getInitialLevel`.
@@ -348,7 +499,7 @@ const teammateSlot = this._playerColor === 'white' ? 'player2' : 'player4'
 
 ---
 
-## 9. Testing
+## 11. Testing
 
 Unit tests to add (`src/components/__tests__/`):
 
@@ -386,7 +537,7 @@ Manual test plan:
 
 ---
 
-## 10. Rollout
+## 12. Rollout
 
 - One PR, behind a feature flag `chessduo_color_picker_enabled` (default `true`).
 - Manual verification on Capacitor Android build + Chrome browser (desktop viewport + tablet viewport).
@@ -394,7 +545,7 @@ Manual test plan:
 
 ---
 
-## 11. Open Questions
+## 13. Open Questions
 
 None — all clarifications have been resolved via the brainstorming session.
 
@@ -412,7 +563,7 @@ None — all clarifications have been resolved via the brainstorming session.
 
 ---
 
-## 12. References
+## 14. References
 
 - Inspiration image: `docs/HomeScreenrestructure.png`
 - Existing home page: `src/app/page.tsx`
