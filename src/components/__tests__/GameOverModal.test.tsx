@@ -5,87 +5,60 @@ import { GameOverModal } from '../GameOverModal'
 describe('GameOverModal', () => {
   it('renders with close button when onClose is provided', () => {
     render(
-      <GameOverModal
-        winner="WHITE"
-        onPlayAgain={jest.fn()}
-        onClose={jest.fn()}
-      />
+      <GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} onClose={jest.fn()} />
     )
     expect(screen.getByLabelText('Close')).toBeDefined()
   })
 
   it('does not render close button when onClose is not provided', () => {
-    render(
-      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} />)
     expect(screen.queryByLabelText('Close')).toBeNull()
   })
 
   it('calls onClose when close button is clicked', () => {
     const onClose = jest.fn()
-    render(
-      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} onClose={onClose} />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} onClose={onClose} />)
     fireEvent.click(screen.getByLabelText('Close'))
     expect(onClose).toHaveBeenCalled()
   })
 
   it('calls onPlayAgain when button is clicked', () => {
     const onPlayAgain = jest.fn()
-    render(<GameOverModal winner="DRAW" onPlayAgain={onPlayAgain} />)
+    render(<GameOverModal open={true} winner="DRAW" onPlayAgain={onPlayAgain} />)
     fireEvent.click(screen.getByText('Play Again'))
     expect(onPlayAgain).toHaveBeenCalled()
   })
 
   it('shows Go Home for abandoned matches', () => {
-    render(
-      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} gameOverReason="abandoned" />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} gameOverReason="abandoned" />)
     expect(screen.getByText('Match Abandoned')).toBeDefined()
     expect(screen.getByText('Go Home')).toBeDefined()
   })
 
   it('does not render signup prompt', () => {
-    render(<GameOverModal winner="WHITE" onPlayAgain={jest.fn()} />)
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} />)
     expect(screen.queryByText(/create a profile/i)).toBeNull()
     expect(screen.queryByText(/enjoyed the game/i)).toBeNull()
   })
 
   it('renders Review Board button when onClose is provided', () => {
-    render(
-      <GameOverModal
-        winner="WHITE"
-        onPlayAgain={jest.fn()}
-        onClose={jest.fn()}
-      />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} onClose={jest.fn()} />)
     expect(screen.getByText('Review Board')).toBeDefined()
   })
 
   it('does not render Review Board button when onClose is not provided', () => {
-    render(
-      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} />)
     expect(screen.queryByText('Review Board')).toBeNull()
   })
 
   it('renders Review Board for abandoned matches', () => {
-    render(
-      <GameOverModal
-        winner="WHITE"
-        onPlayAgain={jest.fn()}
-        onClose={jest.fn()}
-        gameOverReason="abandoned"
-      />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} onClose={jest.fn()} gameOverReason="abandoned" />)
     expect(screen.getByText('Review Board')).toBeDefined()
   })
 
   it('calls onClose when Review Board button is clicked', () => {
     const onClose = jest.fn()
-    render(
-      <GameOverModal winner="WHITE" onPlayAgain={jest.fn()} onClose={onClose} />
-    )
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} onClose={onClose} />)
     fireEvent.click(screen.getByText('Review Board'))
     expect(onClose).toHaveBeenCalled()
   })

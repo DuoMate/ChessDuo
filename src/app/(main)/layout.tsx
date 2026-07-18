@@ -23,7 +23,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => { mountedRef.current = false }
   }, [])
 
-  useCapacitorBackButton(() => { router.push('/'); return true }, true)
+  useCapacitorBackButton(() => {
+    if (window.history.length > 2) { router.back(); return true }
+    router.push('/')
+    return true
+  }, true)
 
   return (
     <ErrorBoundary>
