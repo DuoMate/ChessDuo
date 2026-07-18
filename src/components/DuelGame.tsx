@@ -515,7 +515,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         <BoardBottomNav
           activeTab={activeBoardTab}
           onTabChange={(t) => setActiveBoardTab(t)}
-          onSurrender={() => setShowResignConfirm(true)}
+          onBack={() => setActiveBoardTab('game')}
+          onForward={() => {}}
         />
       </div>
 
