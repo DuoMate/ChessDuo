@@ -7,7 +7,7 @@ import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import type { GameInterface } from '@/features/shared/GameInterface'
-import { Team } from '@/features/game-engine/gameState'
+import { Team, Player } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
@@ -58,6 +58,7 @@ interface GameProps {
   timeLimitSeconds?: number
   challengeId?: string
   fourplayer?: boolean
+  playerColor?: 'white' | 'black' | 'random'
 }
 
 interface GameState {
@@ -163,11 +164,11 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
   )
 }
 
-export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, fourplayer = false }: GameProps) {
+export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFromProps, timeLimitSeconds, fourplayer = false, playerColor = 'white' }: GameProps) {
   const router = useRouter()
   DEBUG && console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, fourplayer })
   
-  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimitSeconds) : null)
+  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimitSeconds, playerColor) : null)
   const [onlineGame] = useState(() => {
     DEBUG && console.log('[Game] Creating OnlineGame, mode:', mode)
     return mode === 'online' ? new OnlineGame(timeLimitSeconds) : null
@@ -1538,10 +1539,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   useEffect(() => {
     if (!isOnline && game && game.status === GameStatus.WAITING) {
-      game.addPlayer('player1', Team.WHITE)
-      game.addPlayer('player2', Team.WHITE)
-      game.addPlayer('player3', Team.BLACK)
-      game.addPlayer('player4', Team.BLACK)
+      // Color-aware slot assignment. Bots swap teams so the human's teammate
+      // is always on the same color, and the opponents are on the opposite color.
+      // Slot IDs are kept stable (player1-player4) for MoveComparison mapping;
+      // the human slot is on their team (player1 for white humans, player3 for black).
+      const humanTeam = game.getPlayerColor() === 'white' ? Team.WHITE : Team.BLACK
+      const opponentTeam = humanTeam === Team.WHITE ? Team.BLACK : Team.WHITE
+      const humanSlot = game.getHumanSlot()
+      const teammateSlot = game.getTeammateSlot()
+      const opponentSlots: Player[] = humanTeam === Team.WHITE
+        ? ['player3', 'player4']
+        : ['player1', 'player2']
+      game.addPlayer(humanSlot, humanTeam)
+      game.addPlayer(teammateSlot, humanTeam)
+      for (const slot of opponentSlots) {
+        game.addPlayer(slot, opponentTeam)
+      }
       game.start()
       updateStateRef.current()
     }

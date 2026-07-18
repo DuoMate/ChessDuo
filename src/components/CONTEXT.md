@@ -34,6 +34,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `FriendsPanel.tsx` | Friends list + requests + chat — dark theme redesign |
 | `ChatPanel.tsx` | In-app messenger |
 | `InitialsAvatar.tsx` | **NEW** — Shared initials avatar component (sm/md/lg sizes, online indicator, premium variant) |
+| `ColorPicker.tsx` | **NEW** — 3-card White/Black/Random selector with Lucide icons. Used standalone on mobile home and inside `ConfigurationPanel` on browser. |
 | `BottomNav.tsx` | Mobile bottom navigation (used by DuelGame/ReplayView) |
 | `MobileStatusBar.tsx` | Mobile safe-area wrapper |
 | `NetworkOverlay.tsx` | Offline connection banner |

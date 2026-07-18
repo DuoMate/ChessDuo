@@ -20,6 +20,7 @@ Interfaces, constants, and utility functions shared across all game modes (onlin
 - Avatars: `getAvatarUrl(type, avatar?)` returns a path under `/avatars/`. Humans use named WebPs (`human-ace.webp` etc.); bots use the single `bot.webp`. The webps are near-square so they composite cleanly inside circular `rounded-full` containers.
 
 ## Recent Changes
+- **2026-07-18**: Added `PlayerColor` type (`'white' | 'black' | 'random'`), `ResolvedColor` type, `DEFAULT_PLAYER_COLOR`, `BROWSER_BOT_LEVEL = 3`, `SELECTED_COLOR_KEY` localStorage key, and `resolvePlayerColor()` helper. Used by the new `ColorPicker` component and `LocalGame` to support the choose-your-color feature.
 - **2026-07-12**: Added `avatars.ts` shared module — extracted from the duplicated constants in `src/app/page.tsx` and used by the new `BoardTopBar` component.
 
 ## Dependencies

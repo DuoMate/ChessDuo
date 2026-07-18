@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js'
 import { GameStatus, MoveComparison } from '../offline/game/localGame'
 import { Team, Player, CapturedPieces, PendingMoveInfo } from '../game-engine/gameState'
+import type { ResolvedColor } from './gameConstants'
 import type { GameEvaluator } from '../mobile-engine/evaluatorFactory'
 
 export interface GameInterface {
@@ -42,6 +43,12 @@ export interface GameInterface {
 
   /** Returns the viewer's team */
   getTeam(): 'WHITE' | 'BLACK'
+  /** Resolved color the human player occupies (random resolved at construction) */
+  getPlayerColor(): ResolvedColor
+  /** Slot ID of the human player on their team (depends on color) */
+  getHumanSlot(): Player
+  /** Slot ID of the teammate bot (same team as human) */
+  getTeammateSlot(): Player
   /** Whether this game is a 4-player (all-human) match */
   isFourPlayer(): boolean
   /** Get the team for a given player ID */

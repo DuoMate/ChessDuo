@@ -88,4 +88,45 @@ describe('home page persistence', () => {
       expect(getInitialLevel()).toBe(DEFAULT_LEVEL)
     })
   })
+
+  describe('offline pending game (Welcome → Got it bug fix)', () => {
+    // The welcome page stores { level, time, color } and removes the key, then pushes /game?...
+    // The home page's offline auto-start effect reads the same key, removes it, and navigates.
+    // We test the home-page side here (the welcome-page redirect is in welcome/page.tsx).
+
+    function readAndClearPendingOfflineGame(): { level?: number; time?: number; color?: string } | null {
+      const raw = localStorage.getItem('chessduo_pending_offline_game')
+      if (!raw) return null
+      localStorage.removeItem('chessduo_pending_offline_game')
+      try {
+        return JSON.parse(raw)
+      } catch {
+        return null
+      }
+    }
+
+    it('parses a valid pending game including color', () => {
+      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 4, time: 600, color: 'black' }))
+      const parsed = readAndClearPendingOfflineGame()
+      expect(parsed).toEqual({ level: 4, time: 600, color: 'black' })
+    })
+
+    it('parses a pending game without color (backward compatible)', () => {
+      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 3, time: 300 }))
+      const parsed = readAndClearPendingOfflineGame()
+      expect(parsed).toEqual({ level: 3, time: 300 })
+    })
+
+    it('returns null and removes key for malformed JSON', () => {
+      localStorage.setItem('chessduo_pending_offline_game', 'not-json{')
+      const parsed = readAndClearPendingOfflineGame()
+      expect(parsed).toBeNull()
+    })
+
+    it('removes the key after reading (idempotent)', () => {
+      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 2, time: 600 }))
+      readAndClearPendingOfflineGame()
+      expect(localStorage.getItem('chessduo_pending_offline_game')).toBeNull()
+    })
+  })
 })

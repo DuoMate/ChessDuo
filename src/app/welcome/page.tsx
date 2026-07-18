@@ -85,8 +85,9 @@ export default function WelcomePage() {
       localStorage.removeItem('chessduo_pending_offline_game')
       if (pending) {
         try {
-          const { level, time } = JSON.parse(pending)
-          router.push(`/game?level=${level}&time=${time}`)
+          const { level, time, color } = JSON.parse(pending)
+          const colorParam = color ? `&color=${color}` : ''
+          router.push(`/game?level=${level}&time=${time}${colorParam}`)
           return
         } catch { /* fall through */ }
       }
