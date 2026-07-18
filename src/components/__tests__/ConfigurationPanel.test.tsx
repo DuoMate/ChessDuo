@@ -5,7 +5,6 @@ import { ConfigurationPanel } from '../ConfigurationPanel'
 describe('ConfigurationPanel', () => {
   const defaultProps = {
     open: true,
-    mode: 'quick' as const,
     selectedColor: 'white' as const,
     onColorChange: jest.fn(),
     onClose: jest.fn(),

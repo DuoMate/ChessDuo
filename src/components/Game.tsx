@@ -1976,9 +1976,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 const currentTurn = gameState.currentTurn
                 const myTeamEnabled = isFourPlayer
                   ? currentTurn === myTeamRef.current
-                  : currentTurn === Team.WHITE
+                  : currentTurn === myTeamRef.current
                 const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)))
-                const boardOrientation = isFourPlayer && myTeamRef.current === 'BLACK' ? 'black' : 'white'
+                const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
                 return isMobile ? (
                   <MobileChessBoard
                     fen={playbackFen || gameState.fen}

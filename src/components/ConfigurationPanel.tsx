@@ -10,7 +10,6 @@ import type { PlayerColor } from '@/features/shared/gameConstants'
 
 interface ConfigurationPanelProps {
   open: boolean
-  mode: 'quick' | 'duo'
   selectedColor: PlayerColor
   onColorChange: (color: PlayerColor) => void
   onClose: () => void
@@ -23,7 +22,6 @@ interface ConfigurationPanelProps {
 
 export function ConfigurationPanel({
   open,
-  mode,
   selectedColor,
   onColorChange,
   onClose,

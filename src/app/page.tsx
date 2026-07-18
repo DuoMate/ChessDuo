@@ -334,7 +334,21 @@ export default function SetupPage() {
           if (room.mode === 'fourplayer') {
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
           } else {
-            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=${roomTime}`)
+            // Determine the joiner's team: opposite of host's team so the
+            // joiner auto-receives the opposite color. Fall back to WHITE
+            // if the host's team cannot be determined.
+            let joinerTeam: 'WHITE' | 'BLACK' = 'WHITE'
+            try {
+              const { data: existingPlayers } = await supabase
+                .from('room_players')
+                .select('team')
+                .eq('room_id', room.id)
+              const hostTeam = existingPlayers?.[0]?.team
+              joinerTeam = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+            } catch {
+              /* keep WHITE default */
+            }
+            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${joinerTeam}&playerId=${playerId}&time=${roomTime}`)
           }
         } else {
           setJoinError('Room not found or already started')
@@ -491,8 +505,15 @@ export default function SetupPage() {
       const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
       const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
 
-      let team: 'WHITE' | 'BLACK' = 'WHITE'
-      if (whiteSlots.length < 2) {
+      // Prefer the team with open slots. If both have space, prefer the
+      // opposite of the host's team (the host already occupies a slot).
+      const hostTeam = (existingPlayers || [])[0]?.team as 'WHITE' | 'BLACK' | undefined
+      const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+
+      let team: 'WHITE' | 'BLACK' = preferredTeam
+      if (whiteSlots.length < 2 && blackSlots.length < 2) {
+        team = preferredTeam
+      } else if (whiteSlots.length < 2) {
         team = 'WHITE'
       } else if (blackSlots.length < 2) {
         team = 'BLACK'
@@ -530,8 +551,8 @@ export default function SetupPage() {
     setJoinError(null)
     try {
       const pid = playerId as string
-      const result = await createOnlineRoom({ playerId: pid, timeSeconds })
-      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
+      const result = await createOnlineRoom({ playerId: pid, timeSeconds, hostColor: selectedColor })
+      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${selectedColor}`)
     } catch (err) {
       setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -852,7 +873,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden">
+      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden md:pl-20 lg:pl-22">
         <HeaderBar />
 
         <div className="flex flex-1 flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
@@ -979,7 +1000,6 @@ if (!gameMode) {
         {/* Configuration Panel — browser only, opens when Quick Play or Duo is selected */}
         <ConfigurationPanel
           open={!!configMode}
-          mode={configMode || 'quick'}
           selectedColor={selectedColor}
           onColorChange={setSelectedColor}
           onClose={() => setConfigMode(null)}
