@@ -192,6 +192,30 @@ export default function SetupPage() {
     try { localStorage.setItem(SELECTED_LEVEL_KEY, String(selectedLevel)) } catch {}
   }, [selectedLevel])
 
+  // Auto-start game after returning from Welcome page
+  useEffect(() => {
+    if (!sessionChecked || !playerId) return
+
+    const pendingOffline = localStorage.getItem('chessduo_pending_offline_game')
+    if (pendingOffline) {
+      localStorage.removeItem('chessduo_pending_offline_game')
+      try {
+        const { level, time } = JSON.parse(pendingOffline)
+        router.push(`/game?level=${level || selectedLevel}&time=${time || DEFAULT_TEAM_TIMER_SECONDS}`)
+      } catch {
+        router.push(`/game?level=${selectedLevel}&time=${selectedTime || DEFAULT_TEAM_TIMER_SECONDS}`)
+      }
+      return
+    }
+
+    const pendingOnline = localStorage.getItem('chessduo_pending_online_game')
+    if (pendingOnline) {
+      localStorage.removeItem('chessduo_pending_online_game')
+      handleStartOnline(selectedTime)
+      return
+    }
+  }, [sessionChecked, playerId, selectedLevel, selectedTime, router])
+
   useEffect(() => {
     if (gameMode !== null) {
       window.history.pushState({ gameMode }, '', window.location.href)
@@ -490,6 +514,8 @@ export default function SetupPage() {
 
   const handleStartOffline = () => {
     if (!hasSeenOfflineDisclaimer) {
+      const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: selectedLevel, time }))
       router.push('/welcome?mode=offline')
       return
     }
@@ -503,6 +529,8 @@ export default function SetupPage() {
       return
     }
     if (showOnlineDisclaimer) {
+      const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+      localStorage.setItem('chessduo_pending_online_game', JSON.stringify({ time }))
       router.push('/welcome?mode=online')
     } else {
       handleStartOnline(selectedTime)
