@@ -97,7 +97,7 @@ class SoundEngine {
     bandpass.Q.setValueAtTime(0.8, now)
 
     const noiseGain = ctx.createGain()
-    noiseGain.gain.setValueAtTime(0.12, now)
+    noiseGain.gain.setValueAtTime(0.2, now)
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
 
     noise.connect(bandpass)
@@ -112,7 +112,7 @@ class SoundEngine {
     osc.frequency.setValueAtTime(120, now)
 
     const thudGain = ctx.createGain()
-    thudGain.gain.setValueAtTime(0.25, now)
+    thudGain.gain.setValueAtTime(0.4, now)
     thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
 
     osc.connect(thudGain)
