@@ -77,9 +77,21 @@ export default function WelcomePage() {
     setNavigating(true)
     if (dontShow) {
       localStorage.setItem('chessduo_welcome_dismissed', 'true')
-    } else {
-      localStorage.removeItem('chessduo_welcome_dismissed')
     }
+
+    if (mode === 'offline') {
+      // Redirect directly to game — no home page detour
+      const pending = localStorage.getItem('chessduo_pending_offline_game')
+      localStorage.removeItem('chessduo_pending_offline_game')
+      if (pending) {
+        try {
+          const { level, time } = JSON.parse(pending)
+          router.push(`/game?level=${level}&time=${time}`)
+          return
+        } catch { /* fall through */ }
+      }
+    }
+    // For online: keep pending_online_game in localStorage — home page will use it
     router.push('/')
   }
 
