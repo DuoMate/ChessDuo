@@ -229,7 +229,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
   const { data } = await supabase
     .from('profiles')
     .select('id, username, display_name')
-    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%,id.eq.${query}`)
+    .or(`username.ilike.%${query}%,id.eq.${query}`)
     .neq('id', currentUserId)
     .limit(20)
 
