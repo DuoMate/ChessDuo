@@ -30,5 +30,5 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 - Supabase JS SDK (for `useBadgeCount`)
 
 ## Recent Changes
-- **2026-07-18**: Added `useBadgeCount` hook — centralized unread message + pending friend request counting with Supabase Realtime on both `messages` and `friend_requests` tables. Replaces the 30s polling and dual-state pattern that caused badge staleness.
+- **2026-07-18**: Added `useBadgeCount` hook — centralized unread message + pending friend request counting with Supabase Realtime on both `messages` and `friend_requests` tables. No polling. Fixed race condition with unique channel names per instance. Replaces the 30s polling and dual-state pattern that caused badge staleness.
 - **2026-07-15**: `useScrollLock` refactored with module-level lock counter to prevent nested lock interference.

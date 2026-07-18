@@ -27,6 +27,7 @@ All application source code for the Next.js frontend. Organized by App Router pa
 - Next.js 16, React 19, Tailwind CSS v4, Supabase JS SDK
 
 ## Recent Changes
+- **2026-07-18**: Major session — converted panels to pages (/friends, /settings, /welcome), fixed badge (useBadgeCount hook), fixed Google avatars, fixed sounds, fixed favicon, fixed auth timing, UI/UX bug hunt (34 fixes), notification deep-link routing. All changes merged to prod.
 - **2026-07-12**: Board page UI revamp — dark glassmorphism theme, chess board sized to ~80% of viewport, new `BoardTopBar` / `BoardBottomNav` / `PendingMovesRow` / `ConfirmMoveButton` / `MoveResolvedInline` / `RoundHistorySidebar` components. New `confirmMove` setting (off by default). Applied to `Game.tsx`, `DuelGame.tsx`, and `ReplayView.tsx`.
 - **2026-07-12**: Added `confirmMove: boolean` to `useSettings()` (default false).
 - **2026-07-12**: Avatar styling unified on home page — `TeamIcon` type reverted, all icons `w-10 h-10 rounded-full` with `object-contain`, icon column fixed to `w-[200px]` for uniform text alignment. `bot.webp` regenerated as a clean square (160x168).

@@ -46,6 +46,6 @@ Route group for non-game pages that share a common layout with `HomeBottomNav`. 
 - `@/hooks/useCapacitorBackButton` — Android hardware back
 
 ## Recent Changes
-- **2026-07-18**: Converted all slide-over panels to full pages (`/friends` and `/settings` new). Removed slide-over state from `layout.tsx` — layout is now a pure shell. `HomeBottomNav` uses route-based navigation. Centralized badge counting into `useBadgeCount` hook.
+- **2026-07-18**: Major overhaul — converted all slide-over panels to full pages (`/friends`, `/settings` new). `HomeBottomNav` uses router navigation with pathname-based active detection. `useBadgeCount` hook centralizes badge counting. Profile page restored with all menu items (edit, share, premium, history, settings, manage account, sign out, theme toggle). BackButton uses `alwaysFallback` for nav pages. Added sign-in buttons to unauthenticated states. Loading skeletons for `/friends` and `/settings`.
 - **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to Profile, Premium, and History pages. All panels now use `InitialsAvatar` component for user avatars.
 - **2026-07-13**: Created `(main)/` route group. Pages moved here: history, profile, premium, privacy, delete-account, four-player.
