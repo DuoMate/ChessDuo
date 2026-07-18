@@ -313,11 +313,13 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
           if (!type) return
           switch (type) {
             case 'friend_request':
-              if (data.senderId) window.location.href = `/invite/${data.senderId}`
+              window.location.href = '/friends'
               break
             case 'invite_accepted':
+              window.location.href = '/friends'
+              break
             case 'chat_message':
-              window.location.href = '/'
+              window.location.href = '/friends'
               break
             case 'game_invite':
               if (data.roomId) window.location.href = `/duel?room=${data.roomId}`

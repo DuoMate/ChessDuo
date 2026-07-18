@@ -27,8 +27,10 @@ self.addEventListener('notificationclick', (event) => {
   const type = data.type
 
   let url = '/'
-  if (type === 'friend_request' && data.senderId) {
-    url = `/invite/${data.senderId}`
+  if (type === 'friend_request' || type === 'invite_accepted') {
+    url = '/friends'
+  } else if (type === 'chat_message') {
+    url = '/friends'
   } else if (type === 'game_invite' && data.roomId) {
     url = `/duel?room=${data.roomId}`
   }
