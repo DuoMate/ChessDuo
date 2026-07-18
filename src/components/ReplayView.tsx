@@ -170,7 +170,7 @@ export function ReplayView({ game }: ReplayViewProps) {
               setPlaybackFen(initialFen)
             } else {
               setPlaybackIndex(current - 1)
-              setPlaybackFen(moves[current - 1]?.fenAfter || '')
+              setPlaybackFen(moves[current - 1]?.fenAfter || initialFen)
             }
           }}
           onForwardMove={() => {

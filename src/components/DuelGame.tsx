@@ -524,10 +524,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             const current = playbackIndex ?? moveHistory.length - 1
             if (current <= 0) {
               setPlaybackIndex(-1)
-              setPlaybackFen('')
+              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             } else {
               setPlaybackIndex(current - 1)
-              setPlaybackFen(null) // DuelGame doesn't store fenAfter, just shows move list
+              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             }
           }}
           onForwardMove={() => {

@@ -266,14 +266,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     onAttemptLeave: () => setShowLeaveModal(true),
   })
 
-  const handleHardwareBack = useCallback(() => {
-    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING) {
-      setShowLeaveModal(true)
-      return true
-    }
-    return false
-  }, [gameState.status])
-  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING)
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -305,6 +297,24 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
+
+  const handleHardwareBack = useCallback(() => {
+    // First: close any open submenu
+    if (showRoundHistory) { setShowRoundHistory(false); return true }
+    if (showInsights) { setShowInsights(false); return true }
+    if (showChat) { setShowChat(false); return true }
+    if (showSettings) { setShowSettings(false); return true }
+    if (showResignConfirm) { setShowResignConfirm(false); return true }
+    if (showLeaveModal) { setShowLeaveModal(false); return true }
+    // Second: if game is active, show leave confirmation
+    if (gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING) {
+      setShowLeaveModal(true)
+      return true
+    }
+    return false
+  }, [gameState.status, showRoundHistory, showInsights, showChat, showSettings, showResignConfirm, showLeaveModal])
+
+  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING)
 
   useEffect(() => {
     let active = true
@@ -2057,10 +2067,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             const current = playbackIndex ?? moves.length - 1
             if (current <= 0) {
               setPlaybackIndex(-1)
-              setPlaybackFen('')
+              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             } else {
               setPlaybackIndex(current - 1)
-              setPlaybackFen(moves[current - 1]?.fenAfter || '')
+              setPlaybackFen(moves[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             }
           }}
           onForwardMove={() => {
