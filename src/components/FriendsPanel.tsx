@@ -457,6 +457,7 @@ function FriendList({
             <InitialsAvatar
               username={friend.friend_username}
               size="md"
+              src={friend.friend_avatar_url || null}
               online={onlineFriends.has(friend.friend_id)}
             />
             <div className="min-w-0">
@@ -533,7 +534,7 @@ function RequestsTab({
           {pending.incoming.map((req) => (
             <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">
-                <InitialsAvatar username={req.friend_username} size="md" />
+                <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
                 <div>
                   <span className="text-white text-sm font-medium">{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Wants to be your friend</p>
@@ -554,7 +555,7 @@ function RequestsTab({
           {pending.outgoing.map((req) => (
             <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">
-                <InitialsAvatar username={req.friend_username} size="md" />
+                <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
                 <div>
                   <span className="text-white text-sm font-medium">{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Request sent</p>
@@ -609,7 +610,7 @@ function BlockedTab({
       {blocked.map((b) => (
         <div key={b.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl">
           <div className="flex items-center gap-3">
-            <InitialsAvatar username={b.friend_username} size="md" />
+            <InitialsAvatar username={b.friend_username} size="md" src={b.friend_avatar_url || null} />
             <span className="text-white text-sm font-medium">{b.friend_username}</span>
           </div>
           <button onClick={() => onUnblock(b.receiver_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors">Unblock</button>

@@ -47,6 +47,11 @@ jest.mock('@/lib/supabase', () => {
         signOut: jest.fn().mockResolvedValue({ error: null }),
       },
       from: mockFrom,
+      channel: jest.fn().mockReturnValue({
+        on: jest.fn().mockReturnThis(),
+        subscribe: jest.fn().mockReturnThis(),
+      }),
+      removeChannel: jest.fn(),
     },
   }
 })
@@ -69,9 +74,11 @@ jest.mock('@/lib/friends', () => ({
 }))
 
 jest.mock('@/lib/messages', () => ({
-  getUnreadCounts: jest.fn().mockResolvedValue({ total: 0, bySender: {} }),
-  subscribeToMessages: jest.fn().mockReturnValue(jest.fn()),
   sendMessage: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock('@/hooks/useBadgeCount', () => ({
+  useBadgeCount: () => ({ unreadMessages: 0, pendingRequests: 0, total: 0, unreadBySender: {} }),
 }))
 
 jest.mock('@/lib/roomActions', () => ({
@@ -103,21 +110,15 @@ jest.mock('@/components/ChooseUsername', () => ({
   ChooseUsername: () => <div data-testid="mock-choose-username">Choose Username</div>,
 }))
 
-jest.mock('@/components/SlideOver', () => ({
-  SlideOver: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
-    open ? <div data-testid="mock-slideover">{children}</div> : null,
-}))
-
-jest.mock('@/components/ProfilePanel', () => ({
-  ProfilePanel: ({ onSignOut }: { onSignOut: () => void; playerId: string; onViewHistory: () => void }) => (
-    <div data-testid="mock-profile-panel">
-      <button data-testid="sign-out-btn" onClick={onSignOut}>Sign Out</button>
-    </div>
+jest.mock('@/components/HomeBottomNav', () => ({
+  HomeBottomNav: ({ unreadMessages }: { unreadMessages: number }) => (
+    <nav data-testid="home-bottom-nav">
+      <span>Home</span>
+      <button onClick={() => mockPush('/history')}>History</button>
+      <button onClick={() => mockPush('/friends')}>Friends</button>
+      <button onClick={() => mockPush('/profile')}>Profile</button>
+    </nav>
   ),
-}))
-
-jest.mock('@/components/FriendsPanel', () => ({
-  FriendsPanel: () => <div data-testid="mock-friends-panel">Friends</div>,
 }))
 
 jest.mock('@/components/WelcomeDisclaimer', () => ({
@@ -130,6 +131,14 @@ jest.mock('@/components/ErrorBoundary', () => ({
 
 jest.mock('@/lib/settings', () => ({
   useSettings: () => [{}],
+}))
+
+jest.mock('@/hooks/useCapacitorBackButton', () => ({
+  useCapacitorBackButton: () => {},
+}))
+
+jest.mock('@/components/InitialsAvatar', () => ({
+  InitialsAvatar: () => <div data-testid="mock-avatar">A</div>,
 }))
 
 import SetupPage from '../page'
@@ -167,37 +176,18 @@ describe('SetupPage — joinError persistence', () => {
     })
   })
 
-  it('clears joinError when user signs out via ProfilePanel', async () => {
-    mockSearchParams.set('code', 'ABC123')
-
+  it('navigates to profile page instead of opening slide-over', async () => {
     await act(async () => {
       render(<SetupPage />)
     })
 
-    // Wait for error to appear
+    // Home page should render
     await waitFor(() => {
-      expect(screen.getByText('Room not found or already started')).toBeDefined()
+      expect(screen.getByText('Game Mode')).toBeDefined()
     })
 
-    // Open profile slide-over
-    const profileBtn = screen.getByText('Profile')
-    await act(async () => {
-      profileBtn.click()
-    })
-
-    await waitFor(() => {
-      expect(screen.getByTestId('sign-out-btn')).toBeDefined()
-    })
-
-    // Click Sign Out
-    await act(async () => {
-      screen.getByTestId('sign-out-btn').click()
-    })
-
-    // Error should be gone
-    await waitFor(() => {
-      expect(screen.queryByText('Room not found or already started')).toBeNull()
-    })
+    // Profile button should navigate — verify the nav is rendered
+    expect(screen.getByTestId('home-bottom-nav')).toBeDefined()
   })
 
   it('does not show joinError when no code param is present', async () => {

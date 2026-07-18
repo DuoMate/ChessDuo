@@ -35,13 +35,14 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - `settings.ts` persists to localStorage with Supabase sync when authenticated.
 - `sounds.ts` uses Web Audio API with preloaded buffers.
 - `chessUtils.ts` handles SAN-to-UCI conversion for Stockfish compatibility.
+- `friends.ts` now includes `friend_avatar_url` in `FriendWithProfile` — sourced from `profiles.avatar_url`.
+- `supabaseAuthUtils.ts` captures Google `avatar_url` from `user_metadata` after OAuth sign-in.
 - Co-located `__tests__/` and `__mocks__/` directories.
 
 ## Dependencies
 - `@supabase/supabase-js`, `chess.js`, `@capacitor/*` (optional)
-- Razorpay SDK, Stockfish WASM
 
 ## Recent Changes
-- **2026-07-17**: Fixed `webPush.ts` HKDF key type bug — ECDH shared secret was imported as `{ name: 'HKDF' }` but `hkdf()` uses it for HMAC sign operations, causing `"Unable to use this key to sign"` error. Changed to import as `{ name: 'HMAC', hash: 'SHA-256' }` with `['sign']` usages. Added regression test (`webPush.test.ts`).
-- **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games (previously localStorage only). `rateLimit.ts` added push route limits (register: 30/min, send: 60/min).
-- **2026-07-12**: `settings.ts` now exposes `confirmMove: boolean` (default `false`) and a `setConfirmMove` setter. Used by `Game.tsx` to gate the move-commit flow behind a "Confirm Move" button.
+- **2026-07-18**: `supabaseAuthUtils.ts` now captures Google profile `avatar_url` from `user.user_metadata.avatar_url` during native OAuth sign-in. `friends.ts` queries and returns `avatar_url` in `FriendWithProfile` for all friend list queries. No binary storage — only URL strings from Google CDN.
+- **2026-07-17**: Fixed `webPush.ts` HKDF key type bug — ECDH shared secret was imported as `{ name: 'HKDF' }` but `hkdf()` uses it for HMAC sign operations. Changed to import as `{ name: 'HMAC', hash: 'SHA-256' }` with `['sign']` usages. Added regression test (`webPush.test.ts`).
+- **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games. `rateLimit.ts` added push route limits.

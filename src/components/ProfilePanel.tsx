@@ -27,6 +27,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [username, setUsername] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
   const { theme, setTheme } = useSettings()
 
@@ -39,12 +40,13 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
       SubscriptionService.isPremium(),
       supabase
         .from('profiles')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', playerId)
         .maybeSingle(),
     ]).then(([premium, profileResult]) => {
       setIsPremium(premium)
       if (profileResult.data?.username) setUsername(profileResult.data.username)
+      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
       setCheckingPremium(false)
     }).catch(() => {
       setCheckingPremium(false)
@@ -139,7 +141,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             onClick={() => setEditingProfile(true)}
             className="w-full p-4 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
           >
-            <InitialsAvatar username={username || 'U'} size="sm" premium={isPremium} />
+            <InitialsAvatar username={username || 'U'} size="sm" src={avatarUrl} premium={isPremium} />
             <div className="flex-1 text-left min-w-0">
               <p className="text-sm font-semibold text-white truncate">{username || 'Player'}</p>
               <p className="text-xs text-slate-400">Tap to edit profile</p>

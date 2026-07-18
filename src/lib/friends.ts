@@ -102,6 +102,7 @@ export async function unblockUser(userId: string, blockedUserId: string): Promis
 
 export interface FriendWithProfile extends Friendship {
   friend_username: string
+  friend_avatar_url: string | null
   friend_id: string
   direction: 'sent' | 'received'
   request_sender_id: string
@@ -124,16 +125,18 @@ export async function getFriendsList(userId: string): Promise<FriendWithProfile[
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, username')
+    .select('id, username, avatar_url')
     .in('id', friendIds)
 
   const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || [])
+  const avatarMap = new Map(profiles?.map(p => [p.id, p.avatar_url || null]) || [])
 
   return friendships.map(f => {
     const friendId = f.sender_id === userId ? f.receiver_id : f.sender_id
     return {
       ...f,
       friend_username: profileMap.get(friendId) || 'Unknown',
+      friend_avatar_url: avatarMap.get(friendId) || null,
       friend_id: friendId,
       direction: f.sender_id === userId ? 'sent' : 'received',
       request_sender_id: f.sender_id,
@@ -161,10 +164,11 @@ export async function getPendingRequests(userId: string): Promise<{
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, username')
+    .select('id, username, avatar_url')
     .in('id', allUserIds)
 
   const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || [])
+  const avatarMap = new Map(profiles?.map(p => [p.id, p.avatar_url || null]) || [])
 
   const incoming: FriendWithProfile[] = []
   const outgoing: FriendWithProfile[] = []
@@ -174,6 +178,7 @@ export async function getPendingRequests(userId: string): Promise<{
     const withProfile: FriendWithProfile = {
       ...f,
       friend_username: profileMap.get(friendId) || 'Unknown',
+      friend_avatar_url: avatarMap.get(friendId) || null,
       friend_id: friendId,
       direction: f.sender_id === userId ? 'sent' : 'received',
       request_sender_id: f.sender_id,
@@ -201,14 +206,16 @@ export async function getBlockedUsers(userId: string): Promise<FriendWithProfile
   const blockedIds = friendships.map(f => f.receiver_id)
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, username')
+    .select('id, username, avatar_url')
     .in('id', blockedIds)
 
   const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || [])
+  const avatarMap = new Map(profiles?.map(p => [p.id, p.avatar_url || null]) || [])
 
   return friendships.map(f => ({
     ...f,
     friend_username: profileMap.get(f.receiver_id) || 'Unknown',
+    friend_avatar_url: avatarMap.get(f.receiver_id) || null,
     friend_id: f.receiver_id,
     direction: 'sent' as const,
     request_sender_id: f.sender_id,

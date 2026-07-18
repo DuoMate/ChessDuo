@@ -1,21 +1,22 @@
 # Module: Main Route Group
 
 ## Purpose
-Route group for non-game pages that share a common layout with `HomeBottomNav` (the task bar) and SlideOver panels for Profile, Friends, and Match History.
+Route group for non-game pages that share a common layout with `HomeBottomNav`. All panels (Friends, Profile, History, Settings) are now full pages with proper browser history entries instead of slide-overs.
 
 ## Layout (`layout.tsx`)
 - Client component that checks Supabase session for `playerId`
 - Renders `HomeBottomNav` fixed at bottom with 4 tabs: Home, History, Friends, Profile
-- History and Friends tabs open SlideOver panels (not page navigation)
-- Profile tab opens ProfilePanel SlideOver with sign-out support
-- Fetches unread message counts for Friends badge
+- History, Friends, and Profile tabs navigate to dedicated routes (`/history`, `/friends`, `/profile`)
+- Uses central `useBadgeCount` hook for Friends badge with Supabase Realtime
 - Wraps children in `ErrorBoundary` and adds `pb-20` spacing for the fixed bottom nav
 
 ## Routes in This Group
 | Route | Page |
 |-------|------|
 | `/history` | Match history list with stats |
-| `/profile` | Profile editor |
+| `/profile` | Profile editor with Google avatar support |
+| `/friends` | Friends list, requests, and chat |
+| `/settings` | App settings panel |
 | `/premium` | Premium subscription pricing |
 | `/privacy` | Privacy policy |
 | `/delete-account` | Account deletion flow |
@@ -32,19 +33,19 @@ Route group for non-game pages that share a common layout with `HomeBottomNav` (
 | `/replay/[gameId]` | Match replay viewer (root level — needs server component for `generateStaticParams`) |
 
 ## Logic & Decisions
-- Smart back: all pages in this group use `BackButton` which calls `router.back()` (falls back to home or appropriate parent).
+- All panels converted from slide-overs to full pages — each creates a proper browser history entry. This fixes back-button inconsistencies (Bugs #2 and #3).
+- `HomeBottomNav` uses `router.push()` + `usePathname()` for navigation and active state detection instead of callback props.
+- `useBadgeCount` hook centralizes unread message + pending friend request counting with Supabase Realtime on both `messages` and `friend_requests` tables. No polling.
+- Smart back: all pages use `BackButton` which calls `router.back()` (falls back to home or appropriate parent).
 - All pages have `pb-20` on their main container to prevent overlap with the fixed bottom nav.
-- `HistoryPanel` and `ProfilePanel` inside SlideOvers use the same components as standalone pages.
-- Direct URL access to pages still works (e.g., `/history` from a bookmark).
 
 ## Dependencies
 - `@/components/HomeBottomNav` — shared bottom navigation bar
 - `@/components/BackButton` — smart back navigation button
-- `@/components/SlideOver` — slide-over panel container
-- `@/components/ProfilePanel`, `@/components/HistoryPanel`, `@/components/FriendsPanel` — slide-over content
-- `@/lib/messages` — unread message counts
+- `@/hooks/useBadgeCount` — centralized badge count hook
+- `@/hooks/useCapacitorBackButton` — Android hardware back
 
 ## Recent Changes
-- **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to Profile, Premium, and History pages. All panels now use `InitialsAvatar` component for user avatars. Premium page redesigned with new layout (crown header, monthly/annual cards with blue/green buttons, benefits list). Profile page redesigned with large initials avatar, menu items (Share Profile, Upgrade to Premium, View History, Manage Account, Sign Out). History page redesigned with stats cards and game list items.
-- **2026-07-13**: Created `(main)/` route group. Pages moved here: history, profile, premium, privacy, delete-account, four-player. Each page now uses `BackButton` instead of `HomeButton`. HomeBottomNav added to layout (visible on all non-game-room pages). History tab opens SlideOver instead of navigating to `/history`. Taglines fixed: Duo → "You + Friend vs Bots", Four Players → "Friends Battle".
-- **2026-07-13**: Moved `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` OUT of `(main)/` route group to root level. Reason: `(main)/layout.tsx` is `'use client'`, which prevents child pages from using server-only `generateStaticParams()`. Root-level pages use server component `page.tsx` importing client component. `generateStaticParams()` returns placeholder params `[{param: 'placeholder'}]` for static export compatibility.
+- **2026-07-18**: Converted all slide-over panels to full pages (`/friends` and `/settings` new). Removed slide-over state from `layout.tsx` — layout is now a pure shell. `HomeBottomNav` uses route-based navigation. Centralized badge counting into `useBadgeCount` hook.
+- **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to Profile, Premium, and History pages. All panels now use `InitialsAvatar` component for user avatars.
+- **2026-07-13**: Created `(main)/` route group. Pages moved here: history, profile, premium, privacy, delete-account, four-player.
