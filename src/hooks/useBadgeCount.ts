@@ -32,7 +32,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     try {
       const [msgResult, reqResult] = await Promise.all([
         supabase.from('messages').select('sender_id').eq('receiver_id', playerId).eq('read', false),
-        supabase.from('friend_requests').select('id', { count: 'exact', head: true }).eq('receiver_id', playerId).eq('status', 'pending'),
+        supabase.from('friendships').select('id', { count: 'exact', head: true }).eq('receiver_id', playerId).eq('status', 'pending'),
       ])
 
       if (!mountedRef.current) return
@@ -90,7 +90,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
       .channel(`badge-friend-requests-${playerId}-${instanceId.current}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'friend_requests', filter: `receiver_id=eq.${playerId}` },
+        { event: '*', schema: 'public', table: 'friendships', filter: `receiver_id=eq.${playerId}` },
         onUpdate,
       )
       .subscribe()
