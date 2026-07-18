@@ -1,17 +1,31 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { BackButton } from '@/components/BackButton'
-import { motion } from 'framer-motion'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
+import { SubscriptionService } from '@/features/billing'
+import { useSettings } from '@/lib/settings'
+import { getProfileLink } from '@/lib/friends'
+import { motion } from 'framer-motion'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil } from 'lucide-react'
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileCopied, setProfileCopied] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
+  const [checkingPremium, setCheckingPremium] = useState(true)
+  const { theme, setTheme } = useSettings()
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -23,28 +37,66 @@ export default function ProfilePage() {
     supabase.auth.getSession().then((result: { data: { session: any } }) => {
       if (!mountedRef.current) return
       const session = result.data.session
-      if (session?.user) {
-        setPlayerId(session.user.id)
-      }
+      if (session?.user) setPlayerId(session.user.id)
       setLoading(false)
     }).catch(() => {
-      if (!mountedRef.current) return
-      setLoading(false)
+      if (!mountedRef.current) setLoading(false)
     })
   }, [])
 
   useEffect(() => {
     if (!playerId) return
-    supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', playerId)
-      .maybeSingle()
-      .then((result) => {
-        if (!mountedRef.current) return
-        if (result.data?.username) setUsername(result.data.username)
-      }).catch(() => {})
+
+    Promise.all([
+      SubscriptionService.isPremium(),
+      supabase.from('profiles').select('username, avatar_url').eq('id', playerId).maybeSingle(),
+    ]).then(([premium, profileResult]) => {
+      if (!mountedRef.current) return
+      setIsPremium(premium)
+      if (profileResult.data?.username) setUsername(profileResult.data.username)
+      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+      setCheckingPremium(false)
+    }).catch(() => {
+      if (mountedRef.current) setCheckingPremium(false)
+    })
+
+    const channel = supabase
+      .channel('profile-changes')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${playerId}` },
+        async () => {
+          const [premium, profileResult] = await Promise.all([
+            SubscriptionService.isPremium(),
+            supabase.from('profiles').select('username, avatar_url').eq('id', playerId).maybeSingle(),
+          ])
+          if (mountedRef.current) {
+            setIsPremium(premium)
+            if (profileResult.data?.username) setUsername(profileResult.data.username)
+            if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [playerId])
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
+
+  const copyProfileLink = () => {
+    if (!playerId) return
+    navigator.clipboard.writeText(getProfileLink(playerId))
+    setProfileCopied(true)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   if (loading) {
     return (
@@ -70,25 +122,143 @@ export default function ProfilePage() {
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>
-            <BackButton alwaysFallback />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <Sun size={20} className="text-amber-400" />
+                ) : (
+                  <Moon size={20} className="text-sky-400" />
+                )}
+              </button>
+              <BackButton alwaysFallback />
+            </div>
           </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
+            className="space-y-3"
           >
             {/* Profile Card */}
-            <div className="p-6 bg-slate-800/50 border border-white/5 rounded-2xl flex flex-col items-center">
-              <InitialsAvatar username={username || 'U'} size="lg" />
-              <div className="mt-4 w-full">
+            {editingProfile ? (
+              <div className="p-4 bg-slate-800/50 border border-white/5 rounded-2xl">
                 <ProfileEditor playerId={playerId} />
+                <button
+                  onClick={() => setEditingProfile(false)}
+                  className="mt-3 w-full min-h-[44px] text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  Done
+                </button>
               </div>
-            </div>
+            ) : (
+              <button
+                onClick={() => setEditingProfile(true)}
+                className="w-full p-4 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
+              >
+                <InitialsAvatar username={username || 'U'} size="sm" src={avatarUrl} premium={isPremium} />
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{username || 'Player'}</p>
+                  <p className="text-xs text-slate-400">Tap to edit profile</p>
+                </div>
+                <Pencil size={16} className="text-slate-500 flex-shrink-0" />
+              </button>
+            )}
 
-            <div className="text-center">
-              <BackButton label="Go Home" alwaysFallback />
-            </div>
+            {/* Share Profile */}
+            <button
+              onClick={copyProfileLink}
+              className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Share2 size={20} className="text-amber-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-amber-400">{profileCopied ? 'Link copied!' : 'Share Profile'}</p>
+                <p className="text-xs text-slate-400">Share your profile with friends</p>
+              </div>
+              <span className="text-slate-500">&rsaquo;</span>
+            </button>
+
+            {/* Upgrade to Premium */}
+            {!checkingPremium && !isPremium && (
+              <button
+                onClick={() => router.push('/premium')}
+                className="w-full p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl flex items-center gap-3 hover:from-purple-500/15 hover:to-indigo-500/15 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <Crown size={20} className="text-purple-400" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-semibold text-purple-400">Upgrade to Premium</p>
+                  <p className="text-xs text-slate-400">Unlock powerful features</p>
+                </div>
+                <span className="text-slate-500">&rsaquo;</span>
+              </button>
+            )}
+
+            {/* View All Match History */}
+            <button
+              onClick={() => router.push('/history')}
+              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <History size={20} className="text-blue-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-blue-400">View All Match History</p>
+                <p className="text-xs text-slate-400">Check your past games</p>
+              </div>
+              <span className="text-slate-500">&rsaquo;</span>
+            </button>
+
+            {/* Settings */}
+            <button
+              onClick={() => router.push('/settings')}
+              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={20} className="text-blue-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-blue-400">Settings</p>
+                <p className="text-xs text-slate-400">Sound, theme &amp; preferences</p>
+              </div>
+              <span className="text-slate-500">&rsaquo;</span>
+            </button>
+
+            {/* Manage Account */}
+            <Link
+              href="/delete-account"
+              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={20} className="text-blue-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-blue-400">Manage Account</p>
+                <p className="text-xs text-slate-400">Security, privacy &amp; delete</p>
+              </div>
+              <span className="text-slate-500">&rsaquo;</span>
+            </Link>
+
+            {/* Sign Out */}
+            <button
+              onClick={handleSignOut}
+              className="w-full p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 hover:bg-rose-500/15 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+                <LogOut size={20} className="text-rose-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold text-rose-400">Sign Out</p>
+                <p className="text-xs text-slate-400">Log out from your account</p>
+              </div>
+              <span className="text-slate-500">&rsaquo;</span>
+            </button>
           </motion.div>
         </div>
       </div>
