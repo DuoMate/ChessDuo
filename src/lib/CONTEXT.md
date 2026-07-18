@@ -43,6 +43,6 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - `@supabase/supabase-js`, `chess.js`, `@capacitor/*` (optional)
 
 ## Recent Changes
-- **2026-07-18**: `supabaseAuthUtils.ts` now captures Google profile `avatar_url` from `user.user_metadata.avatar_url` during native OAuth sign-in. `friends.ts` queries and returns `avatar_url` in `FriendWithProfile` for all friend list queries. No binary storage — only URL strings from Google CDN.
+- **2026-07-18**: `supabaseAuthUtils.ts` now captures Google profile `avatar_url` and `display_name` from `user.user_metadata`. `friends.ts` queries and returns `avatar_url` in `FriendWithProfile` for all friend list queries. `searchUsers` also returns `display_name`. `sounds.ts` — chess.com-style synthesized sounds (wooden click, double-tap capture, two-tone check, ascending chord checkmate). `play()` always triggers immediately without blocking on `ctx.resume()`.
 - **2026-07-17**: Fixed `webPush.ts` HKDF key type bug — ECDH shared secret was imported as `{ name: 'HKDF' }` but `hkdf()` uses it for HMAC sign operations. Changed to import as `{ name: 'HMAC', hash: 'SHA-256' }` with `['sign']` usages. Added regression test (`webPush.test.ts`).
 - **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games. `rateLimit.ts` added push route limits.
