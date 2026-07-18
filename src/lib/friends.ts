@@ -223,12 +223,12 @@ export async function getBlockedUsers(userId: string): Promise<FriendWithProfile
   }))
 }
 
-export async function searchUsers(query: string, currentUserId: string): Promise<{ id: string; username: string }[]> {
+export async function searchUsers(query: string, currentUserId: string): Promise<{ id: string; username: string; display_name: string | null }[]> {
   if (!query.trim()) return []
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, username')
+    .select('id, username, display_name')
     .or(`username.ilike.%${query}%,id.eq.${query}`)
     .neq('id', currentUserId)
     .limit(20)

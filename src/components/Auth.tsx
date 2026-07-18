@@ -52,7 +52,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       if (session?.user) {
-        fetchAndCompleteAuth(session.user.id, session.user.email || '', undefined, session.user.user_metadata?.avatar_url || null)
+        fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
       }
     })
     return () => subscription.unsubscribe()
@@ -67,8 +67,8 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       .eq('id', userId)
       .maybeSingle()
     if (data?.username) {
-      if (googleAvatarUrl) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl }, { onConflict: 'id' }) } catch { /* best effort */ }
+      if (googleAvatarUrl || googleDisplayName) {
+        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* best effort */ }
       }
       onAuthComplete(userId, data.username)
       if (googleAuthInProgressRef.current) {
@@ -243,6 +243,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
+        // Dismiss Google loading immediately — profile query runs in background
+        setGoogleLoading(false)
+        googleAuthInProgressRef.current = false
         await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName, result.avatarUrl)
       } else if (result.error) {
         setError(result.error)
