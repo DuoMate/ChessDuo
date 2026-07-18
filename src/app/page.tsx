@@ -20,9 +20,12 @@ import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS, PlayerColor, SELECTED_COLOR_KEY, DEFAULT_PLAYER_COLOR } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
 import { ColorPicker } from '@/components/ColorPicker'
+import { ConfigurationPanel } from '@/components/ConfigurationPanel'
+import { SidebarNav } from '@/components/SidebarNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -123,6 +126,8 @@ export default function SetupPage() {
   })
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
+  const isMobile = useIsMobile()
+  const [configMode, setConfigMode] = useState<'quick' | 'duo' | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
@@ -544,6 +549,29 @@ export default function SetupPage() {
     router.push(`/game?level=${selectedLevel}&time=${time}&color=${selectedColor}`)
   }
 
+  /**
+   * Handler for the ConfigurationPanel's Start Game button on browser.
+   * Browser hardcodes bot difficulty to Medium (3) per spec.
+   */
+  const handleBrowserConfigStart = (color: PlayerColor) => {
+    setSelectedColor(color)
+    if (configMode === 'quick') {
+      // Offline quick play — no auth required
+      const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+      const hasSeen = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
+      if (!hasSeen) {
+        localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 3, time, color }))
+        router.push('/welcome?mode=offline')
+      } else {
+        router.push(`/game?level=3&time=${time}&color=${color}`)
+      }
+    } else if (configMode === 'duo') {
+      // Online duo — needs auth
+      handleTwoPlayerClick()
+    }
+    setConfigMode(null)
+  }
+
   const handleTwoPlayerClick = () => {
     if (!playerId) {
       setShowAuthOverlay(true)
@@ -616,6 +644,11 @@ export default function SetupPage() {
 
   const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
     if (selectedGameMode === mode) {
+      // Already selected: start immediately on mobile, open config panel on browser
+      if (!isMobile && mode !== 'four') {
+        setConfigMode(mode)
+        return
+      }
       switch (mode) {
         case 'quick':
           handleStartOffline()
@@ -629,6 +662,10 @@ export default function SetupPage() {
       }
     } else {
       setSelectedGameMode(mode)
+      // On browser, open config panel right when a non-4 mode is selected
+      if (!isMobile && mode !== 'four') {
+        setConfigMode(mode)
+      }
     }
   }
 
@@ -857,8 +894,8 @@ if (!gameMode) {
               </div>
             </div>
 
-          {/* Bot Difficulty — visible only for Quick Play and Duo */}
-          {selectedGameMode && selectedGameMode !== 'four' && (
+          {/* Bot Difficulty — visible only for Quick Play and Duo on mobile */}
+          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Bot Difficulty</p>
               <BotDifficultySelector
@@ -868,8 +905,8 @@ if (!gameMode) {
             </div>
           )}
 
-          {/* Choose Your Color — visible only for Quick Play and Duo */}
-          {selectedGameMode && selectedGameMode !== 'four' && (
+          {/* Choose Your Color — visible only for Quick Play and Duo on mobile */}
+          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
                 Choose Your <span className="text-blue-500">Color</span>
@@ -932,8 +969,26 @@ if (!gameMode) {
           </div>
         )}
 
-        {/* Bottom Navigation — outside overflow-hidden container */}
-        <HomeBottomNav unreadMessages={unreadMessages} />
+        {/* Navigation — sidebar on browser, bottom nav on mobile */}
+        {isMobile ? (
+          <HomeBottomNav unreadMessages={unreadMessages} />
+        ) : (
+          <SidebarNav unreadMessages={unreadMessages} />
+        )}
+
+        {/* Configuration Panel — browser only, opens when Quick Play or Duo is selected */}
+        <ConfigurationPanel
+          open={!!configMode}
+          mode={configMode || 'quick'}
+          selectedColor={selectedColor}
+          onColorChange={setSelectedColor}
+          onClose={() => setConfigMode(null)}
+          onStart={handleBrowserConfigStart}
+          modeTitle={configMode === 'duo' ? 'Duo' : 'Quick Play'}
+          modeSubtitle={configMode === 'duo' ? 'You + Friend vs Bots' : 'You + Bot vs Bots'}
+          botLevelLabel="Medium"
+          botLevelDescription="Medium-strength bot. Balanced play that doesn't punish mistakes too harshly."
+        />
       </ErrorBoundary>
     )
   }
