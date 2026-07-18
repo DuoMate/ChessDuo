@@ -20,12 +20,12 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
       className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
     >
-      <div className="flex items-center h-14 w-[95%] max-w-md px-2 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        {/* Moves tab */}
+      <div className="flex items-center justify-around h-14 w-[95%] max-w-md px-1 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        {/* Moves */}
         <button
           type="button"
           onClick={() => onTabChange('moves')}
-          className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] ${
+          className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
             activeTab === 'moves' ? 'bg-blue-500/15 text-blue-300' : 'text-slate-400 hover:text-slate-300'
           }`}
           aria-label="Moves"
@@ -34,11 +34,11 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           <span className="text-[10px] font-bold leading-none">Moves</span>
         </button>
 
-        {/* Chat tab */}
+        {/* Chat */}
         <button
           type="button"
           onClick={() => onTabChange('chat')}
-          className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] ${
+          className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
             activeTab === 'chat' ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-400 hover:text-slate-300'
           }`}
           aria-label="Chat"
@@ -52,14 +52,14 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           )}
         </button>
 
-        {/* Insights — premium/featured button */}
+        {/* Insights — premium graph icon */}
         <button
           type="button"
           onClick={() => onTabChange('insights')}
-          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[52px] gap-0.5 rounded-xl px-3 transition-all ${
+          className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
             activeTab === 'insights'
-              ? 'bg-gradient-to-b from-purple-500/25 to-purple-600/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
-              : 'bg-gradient-to-b from-purple-500/10 to-purple-600/5 text-purple-400 hover:from-purple-500/15 hover:to-purple-600/10 hover:text-purple-300'
+              ? 'bg-gradient-to-b from-purple-500/25 to-indigo-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
+              : 'bg-gradient-to-b from-purple-500/10 to-indigo-500/5 text-purple-400 hover:from-purple-500/15 hover:to-indigo-500/10'
           }`}
           aria-label="Insights"
         >
@@ -67,27 +67,26 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           <span className="text-[10px] font-bold leading-none">Insights</span>
         </button>
 
-        {/* Divider */}
-        <div className="w-px h-8 bg-slate-200/60 dark:bg-slate-700/50 mx-1" />
-
-        {/* Back/Forward */}
+        {/* Back */}
         <button
           type="button"
           onClick={onBackMove}
-          className="flex flex-col items-center justify-center min-h-[44px] min-w-[40px] gap-0.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 text-slate-400 hover:text-slate-200"
           aria-label="Previous move"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
-          <span className="text-[9px] font-bold leading-none">Back</span>
+          <span className="text-[10px] font-bold leading-none">Back</span>
         </button>
+
+        {/* Forward */}
         <button
           type="button"
           onClick={onForwardMove}
-          className="flex flex-col items-center justify-center min-h-[44px] min-w-[40px] gap-0.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 text-slate-400 hover:text-slate-200"
           aria-label="Next move"
         >
           <ChevronRight size={18} strokeWidth={2.5} />
-          <span className="text-[9px] font-bold leading-none">Fwd</span>
+          <span className="text-[10px] font-bold leading-none">Fwd</span>
         </button>
       </div>
     </nav>
