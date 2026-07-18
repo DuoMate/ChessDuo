@@ -161,7 +161,8 @@ export function ReplayView({ game }: ReplayViewProps) {
         <BoardBottomNav
           activeTab="game"
           onTabChange={() => {}}
-          onSurrender={() => router.push('/history')}
+          onBack={() => router.push('/history')}
+          onForward={() => {}}
         />
       </div>
     </div>

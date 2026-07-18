@@ -2046,7 +2046,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             }
             setActiveBoardTab(t)
           }}
-          onSurrender={() => gameState.status !== GameStatus.GAME_OVER && setShowResignConfirm(true)}
+          onBack={() => {
+            closeAllPanels()
+            setActiveBoardTab('game')
+          }}
+          onForward={() => {
+            // Reserved for future use
+          }}
         />
       </div>
 

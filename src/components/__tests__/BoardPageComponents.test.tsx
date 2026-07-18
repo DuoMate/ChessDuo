@@ -152,32 +152,32 @@ describe('RoundHistorySidebar', () => {
 })
 
 describe('BoardBottomNav', () => {
-  it('renders all five tabs', () => {
+  it('renders all tabs and navigation buttons', () => {
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} />
     )
     expect(screen.getByText('Moves')).toBeInTheDocument()
-    expect(screen.getByText('Game')).toBeInTheDocument()
-    expect(screen.getByText('Surrender')).toBeInTheDocument()
     expect(screen.getByText('Insights')).toBeInTheDocument()
     expect(screen.getByText('Chat')).toBeInTheDocument()
+    expect(screen.getByText('Back')).toBeInTheDocument()
+    expect(screen.getByText('Forward')).toBeInTheDocument()
   })
 
   it('calls onTabChange when a tab is tapped', () => {
     const onTabChange = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={onTabChange} />
+      <BoardBottomNav activeTab="game" onTabChange={onTabChange} onBack={jest.fn()} onForward={jest.fn()} />
     )
     fireEvent.click(screen.getByText('Moves'))
     expect(onTabChange).toHaveBeenCalledWith('moves')
   })
 
-  it('calls onSurrender when the Surrender tab is tapped', () => {
-    const onSurrender = jest.fn()
+  it('calls onBack when Back button is tapped', () => {
+    const onBack = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onSurrender={onSurrender} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={onBack} onForward={jest.fn()} />
     )
-    fireEvent.click(screen.getByText('Surrender'))
-    expect(onSurrender).toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Back'))
+    expect(onBack).toHaveBeenCalled()
   })
 })

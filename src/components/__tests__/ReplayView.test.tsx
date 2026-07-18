@@ -167,7 +167,7 @@ describe('ReplayView Component', () => {
 
   test('renders back button', () => {
     render(<ReplayView game={mockGame} />)
-    expect(screen.getByText('Back')).toBeDefined()
+    expect(screen.getByRole('button', { name: /back to history/i })).toBeDefined()
   })
 
   test('renders game mode indicator', () => {
