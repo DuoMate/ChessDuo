@@ -39,7 +39,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   const [pending, setPending] = useState<{ incoming: FriendWithProfile[]; outgoing: FriendWithProfile[] }>({ incoming: [], outgoing: [] })
   const [blocked, setBlocked] = useState<FriendWithProfile[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<{ id: string; username: string }[]>([])
+  const [searchResults, setSearchResults] = useState<{ id: string; username: string; display_name: string | null }[]>([])
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'friends' | 'requests' | 'blocked'>('friends')
@@ -171,8 +171,9 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
       setSearchQuery('')
       setSearchResults([])
       loadData()
-      const username = searchResults.find((u) => u.id === receiverId)?.username || 'Someone'
-      notifyFriendRequest(playerId, receiverId, username)
+      const user = searchResults.find((u) => u.id === receiverId)
+      const senderName = user?.display_name || user?.username || 'Someone'
+      notifyFriendRequest(playerId, receiverId, senderName)
     }
   }
 

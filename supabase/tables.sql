@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS insights_reveals_used INTEGER DEFAULT 0;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT false;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_provider TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS display_name TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_plan TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS purchase_token TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_expiry_date TIMESTAMPTZ;

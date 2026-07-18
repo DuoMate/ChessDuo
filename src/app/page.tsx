@@ -154,6 +154,10 @@ export default function SetupPage() {
         setUsername('')
         setJoinError(null)
         setJoinCode('')
+        // Dismiss auth overlay immediately on sign-in
+        if (_event === 'SIGNED_IN' && showAuthOverlay) {
+          setShowAuthOverlay(false)
+        }
         if (_event === 'SIGNED_IN') {
           localStorage.removeItem('chessduo_history')
         }
@@ -494,7 +498,10 @@ export default function SetupPage() {
   }
 
   const handleTwoPlayerClick = () => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) {
+      setShowAuthOverlay(true)
+      return
+    }
     if (showOnlineDisclaimer) {
       router.push('/welcome?mode=online')
     } else {
