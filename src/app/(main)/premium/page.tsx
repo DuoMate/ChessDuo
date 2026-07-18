@@ -147,7 +147,7 @@ export default function PremiumPage() {
               </div>
             </div>
 
-            <p className="text-slate-400 text-sm mb-6">
+            <p className="text-slate-400 text-sm mb-6 text-center">
               Unlock the best tools.<br />
               Play smarter. Win more.
             </p>
@@ -198,16 +198,16 @@ export default function PremiumPage() {
                         </svg>
                       </div>
                       <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="flex flex-col items-center gap-3 mb-3">
                           <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                             <Calendar size={20} className="text-blue-400" />
                           </div>
-                          <div>
+                          <div className="text-center">
                             <h3 className="text-lg font-bold text-white">Monthly</h3>
                             <p className="text-xs text-slate-400">Flexible &amp; cancel anytime</p>
                           </div>
                         </div>
-                        <div className="mb-4">
+                        <div className="mb-4 text-center">
                           {plansLoading ? (
                             <div className="h-10 w-32 bg-slate-700/50 rounded-lg animate-pulse" />
                           ) : (
@@ -246,16 +246,16 @@ export default function PremiumPage() {
                         </svg>
                       </div>
                       <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-3 mt-2">
+                        <div className="flex flex-col items-center gap-3 mb-3 mt-2">
                           <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
                             <Star size={20} className="text-emerald-400" />
                           </div>
-                          <div>
+                          <div className="text-center">
                             <h3 className="text-lg font-bold text-white">Annual</h3>
                             <p className="text-xs text-slate-400">Most popular choice</p>
                           </div>
                         </div>
-                        <div className="mb-1">
+                        <div className="mb-1 text-center">
                           {plansLoading ? (
                             <div className="h-10 w-32 bg-slate-700/50 rounded-lg animate-pulse" />
                           ) : (
@@ -343,7 +343,7 @@ function BenefitRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
       <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-400">
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 text-center">
         <p className="text-white text-sm font-semibold">{title}</p>
         <p className="text-slate-400 text-xs">{desc}</p>
       </div>
