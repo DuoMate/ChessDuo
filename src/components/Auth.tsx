@@ -52,13 +52,13 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       if (session?.user) {
-        fetchAndCompleteAuth(session.user.id, session.user.email || '')
+        fetchAndCompleteAuth(session.user.id, session.user.email || '', undefined, session.user.user_metadata?.avatar_url || null)
       }
     })
     return () => subscription.unsubscribe()
   }, [onAuthComplete])
 
-  const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string) => {
+  const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string, googleAvatarUrl?: string | null) => {
     if (authCompletedRef.current === userId) return
     authCompletedRef.current = userId
     const { data } = await supabase
@@ -67,6 +67,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       .eq('id', userId)
       .maybeSingle()
     if (data?.username) {
+      if (googleAvatarUrl) {
+        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl }, { onConflict: 'id' }) } catch { /* best effort */ }
+      }
       onAuthComplete(userId, data.username)
       if (googleAuthInProgressRef.current) {
         setGoogleLoading(false)
@@ -91,7 +94,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         return
       }
       try {
-        await supabase.from('profiles').upsert({ id: userId, username: displayName }, { onConflict: 'id' })
+        await supabase.from('profiles').upsert({ id: userId, username: displayName, avatar_url: googleAvatarUrl || undefined }, { onConflict: 'id' })
       } catch { console.error('[Auth] Failed to upsert profile') }
       onAuthComplete(userId, displayName)
       if (googleAuthInProgressRef.current) {
@@ -240,7 +243,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
-        await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName)
+        await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName, result.avatarUrl)
       } else if (result.error) {
         setError(result.error)
         setGoogleLoading(false)

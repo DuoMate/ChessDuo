@@ -37,6 +37,7 @@ async function authenticateWithGoogleNative(): Promise<{
   cancelled?: boolean
   userId?: string
   email?: string
+  avatarUrl?: string | null
   error?: string
 }> {
   try {
@@ -127,6 +128,7 @@ async function authenticateWithGoogleNative(): Promise<{
       success: true,
       userId: data.user?.id,
       email: data.user?.email,
+      avatarUrl: data.user?.user_metadata?.avatar_url || null,
     }
   } catch (err: any) {
     console.error('[NativeAuth] Exception:', err)
@@ -199,6 +201,7 @@ export async function authenticateWithGoogle(): Promise<{
   userId?: string
   email?: string
   displayName?: string
+  avatarUrl?: string | null
   error?: string
 }> {
   const isNative = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()

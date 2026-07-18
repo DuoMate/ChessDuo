@@ -7,13 +7,9 @@ import { supabase } from '@/lib/supabase'
 import { getFriendsList, FriendWithProfile } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
-import { SlideOver } from '@/components/SlideOver'
-import { ProfilePanel } from '@/components/ProfilePanel'
-import { HistoryPanel } from '@/components/HistoryPanel'
-import { FriendsPanel } from '@/components/FriendsPanel'
 import { HomeBottomNav } from '@/components/HomeBottomNav'
 import { Room } from '@/lib/supabase'
-import { getUnreadCounts, subscribeToMessages, sendMessage } from '@/lib/messages'
+import { sendMessage } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
@@ -24,6 +20,8 @@ import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { useBadgeCount } from '@/hooks/useBadgeCount'
+import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
 
 export const dynamic = 'force-dynamic'
@@ -105,9 +103,6 @@ export default function SetupPage() {
   const [creatingTime, setCreatingTime] = useState<number | null>(null)
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [friendsOpen, setFriendsOpen] = useState(false)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(false)
   const hasSeenOfflineDisclaimer = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
@@ -118,8 +113,7 @@ export default function SetupPage() {
     }
     return false
   })
-  const [unreadMessages, setUnreadMessages] = useState(0)
-  const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({})
+  const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
@@ -316,30 +310,6 @@ export default function SetupPage() {
   }, [searchParams, sessionChecked, playerId, router])
 
   useEffect(() => {
-    if (playerId) {
-      const update = () => getUnreadCounts(playerId).then(({ total, bySender }) => {
-        if (!mountedRef.current) return
-        setUnreadMessages(total)
-        setUnreadBySender(bySender)
-      }).catch(() => {
-        // Message counts unavailable
-      })
-      update()
-      const interval = setInterval(update, 30000)
-      const unsub = subscribeToMessages(playerId, () => {
-        getUnreadCounts(playerId).then(({ total, bySender }) => {
-          if (!mountedRef.current) return
-          setUnreadMessages(total)
-          setUnreadBySender(bySender)
-        }).catch(() => {
-          // Message counts unavailable
-        })
-      })
-      return () => { clearInterval(interval); unsub() }
-    }
-  }, [playerId])
-
-  useEffect(() => {
     if (gameMode === 'duel' && playerId && !duelFriend) {
       setDuelFriendsLoading(true)
       getFriendsList(playerId).then((friends) => {
@@ -414,8 +384,6 @@ export default function SetupPage() {
     clearInsightsKeys()
     setPlayerId(null)
     setUsername('')
-    setProfileOpen(false)
-    setFriendsOpen(false)
     setJoinError(null)
     setJoinCode('')
     autoJoinAttemptedRef.current = null
@@ -659,32 +627,6 @@ export default function SetupPage() {
 
   const showTopBar = !gameMode
 
-  const slideOvers = (
-    <>
-      <SlideOver open={profileOpen} onClose={() => setProfileOpen(false)}>
-        {playerId ? (
-          <ProfilePanel playerId={playerId} onViewHistory={() => { setProfileOpen(false); setHistoryOpen(true) }} onSignOut={handleSignOut} onClose={() => setProfileOpen(false)} />
-        ) : (
-          <SignInPrompt onSignIn={() => { setProfileOpen(false); setShowAuthOverlay(true) }} />
-        )}
-      </SlideOver>
-      <SlideOver open={historyOpen} onClose={() => setHistoryOpen(false)}>
-        {playerId ? (
-          <HistoryPanel playerId={playerId} onClose={() => setHistoryOpen(false)} />
-        ) : (
-          <SignInPrompt onSignIn={() => { setHistoryOpen(false); setShowAuthOverlay(true) }} />
-        )}
-      </SlideOver>
-      <SlideOver open={friendsOpen} onClose={() => { setFriendsOpen(false); if (playerId) { getUnreadCounts(playerId).then(({ total, bySender }) => { if (mountedRef.current) { setUnreadMessages(total); setUnreadBySender(bySender) } }).catch(() => {}) } }}>
-        {playerId ? (
-          <FriendsPanel playerId={playerId} unreadBySender={unreadBySender} onClose={() => setFriendsOpen(false)} />
-        ) : (
-          <SignInPrompt onSignIn={() => { setFriendsOpen(false); setShowAuthOverlay(true) }} />
-        )}
-      </SlideOver>
-    </>
-  )
-
   const authOverlay = showAuthOverlay && (
     <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm">
       <Auth
@@ -741,9 +683,11 @@ export default function SetupPage() {
                       onClick={() => setDuelFriend({ id: friend.friend_id, name: friend.friend_username })}
                       className="w-full min-h-[60px] flex items-center gap-3 p-4 rounded-2xl border-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all text-left group"
                     >
-                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center text-lg font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                        {friend.friend_username.charAt(0).toUpperCase()}
-                      </div>
+                      <InitialsAvatar
+                        username={friend.friend_username}
+                        size="md"
+                        src={friend.friend_avatar_url || null}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-sm text-slate-900 dark:text-white truncate">{friend.friend_username}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-500">Challenge to a 1v1 duel</div>
@@ -761,7 +705,9 @@ export default function SetupPage() {
               </div>
             </div>
           </div>
-          {slideOvers}
+
+
+
           {authOverlay}
         </div>
       </ErrorBoundary>
@@ -821,7 +767,9 @@ export default function SetupPage() {
               </div>
             </div>
           </div>
-          {slideOvers}
+
+
+
           {authOverlay}
           {showOfflineDisclaimer && (
             <WelcomeDisclaimer
@@ -935,7 +883,9 @@ if (!gameMode) {
             )}
           </div>
 
-          {slideOvers}
+
+
+
           {authOverlay}
           {showOnboarding && (
             <WelcomeDisclaimer
@@ -976,12 +926,7 @@ if (!gameMode) {
         )}
 
         {/* Bottom Navigation — outside overflow-hidden container */}
-        <HomeBottomNav
-          onProfile={() => { if (!playerId) { setShowAuthOverlay(true); return }; setProfileOpen(true) }}
-          onHistory={() => { if (!playerId) { setShowAuthOverlay(true); return }; setHistoryOpen(true) }}
-          onFriends={() => { if (!playerId) { setShowAuthOverlay(true); return }; setFriendsOpen(true) }}
-          unreadMessages={unreadMessages}
-        />
+        <HomeBottomNav unreadMessages={unreadMessages} />
       </ErrorBoundary>
     )
   }
@@ -1180,26 +1125,6 @@ function BotDifficultySelector({
 }
 
 // ============================================
-// Sign In Prompt Component
-// ============================================
-function SignInPrompt({ onSignIn }: { onSignIn: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="text-4xl mb-4">🔒</div>
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Sign in required</h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
-        Sign in to access your profile, match history, and friends.
-      </p>
-      <button
-        onClick={onSignIn}
-        className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
-      >
-        Sign In
-      </button>
-    </div>
-  )
-}
-
 // ============================================
 // Player Icons Component (offline mode)
 // ============================================

@@ -76,6 +76,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
         <InitialsAvatar
           username={player.label}
           size="md"
+          src={player.profileImageUrl || null}
           online={player.online}
           ringClass={ringClass}
         />
