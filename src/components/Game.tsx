@@ -1853,27 +1853,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       {gameState.pendingPromotion && (
         <PromotionModal onSelect={handlePromotionSelect} />
       )}
-      {gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed && (
-        <GameOverModal
-          winner={gameState.winner || 'DRAW'}
-          onPlayAgain={() => router.push('/')}
-          onClose={() => setShowGameOverDismissed(true)}
-          gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
-          gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
-        />
-      )}
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
-      {showResignConfirm && (
-        <ResignConfirmModal
-          onConfirm={() => {
-            setShowResignConfirm(false)
-            handleResign()
-          }}
-          onCancel={() => setShowResignConfirm(false)}
-        />
-      )}
+      <GameOverModal
+        open={gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed}
+        winner={gameState.winner || 'DRAW'}
+        onPlayAgain={() => router.push('/')}
+        onClose={() => setShowGameOverDismissed(true)}
+        gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
+        gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}
+      />
+      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
+      <ResignConfirmModal
+        open={showResignConfirm}
+        onConfirm={() => { setShowResignConfirm(false); handleResign() }}
+        onCancel={() => setShowResignConfirm(false)}
+      />
       <LeaveConfirmModal
         open={showLeaveModal}
         onConfirm={() => handleLeaveConfirm()}

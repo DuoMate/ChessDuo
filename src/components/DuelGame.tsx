@@ -519,29 +519,21 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         />
       </div>
 
-      {status === 'game_over' && winner && gameResult && !showGameOverDismissed && (
-        <GameOverModal
-          winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
-          onPlayAgain={() => router.push('/')}
-          onClose={() => setShowGameOverDismissed(true)}
-          gameResult={gameResult}
-        />
-      )}
+      <GameOverModal
+        open={status === 'game_over' && winner && gameResult && !showGameOverDismissed}
+        winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
+        onPlayAgain={() => router.push('/')}
+        onClose={() => setShowGameOverDismissed(true)}
+        gameResult={gameResult}
+      />
 
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
+      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
 
-      {showResignConfirm && (
-        <ResignConfirmModal
-          onConfirm={() => {
-            setShowResignConfirm(false)
-            gameRef.current?.resign()
-            setTimeout(() => onLeave(), 150)
-          }}
-          onCancel={() => setShowResignConfirm(false)}
-        />
-      )}
+      <ResignConfirmModal
+        open={showResignConfirm}
+        onConfirm={() => { setShowResignConfirm(false); gameRef.current?.resign(); setTimeout(() => onLeave(), 150) }}
+        onCancel={() => setShowResignConfirm(false)}
+      />
       <LeaveConfirmModal
         open={showLeaveModal}
         onConfirm={() => {

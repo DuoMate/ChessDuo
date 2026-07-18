@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
@@ -21,6 +22,7 @@ const reasonLabels: Record<string, string> = {
 }
 
 export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
+  const router = useRouter()
   const [games, setGames] = useState<CompletedGame[]>([])
   const [playerStats, setPlayerStats] = useState<Awaited<ReturnType<typeof getPlayerStats>>>(null)
   const [loading, setLoading] = useState(true)
@@ -44,6 +46,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
           event: 'INSERT',
           schema: 'public',
           table: 'completed_games',
+          filter: `player_id=eq.${playerId}`,
         },
         () => {
           getMatchHistory(50, playerId).then(setGames).catch(() => {})
@@ -193,7 +196,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      window.location.href = `/replay/${game.id}`
+                      router.push(`/replay/${game.id}`)
                     }}
                     className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1"
                   >
