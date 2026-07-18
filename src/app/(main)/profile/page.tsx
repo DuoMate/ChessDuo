@@ -59,7 +59,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-2xl font-bold mb-4">Profile</h1>
         <p className="text-slate-400 mb-4">Sign in to view your profile</p>
-        <BackButton label="Go Home" />
+        <BackButton label="Go Home" alwaysFallback />
       </div>
     )
   }
@@ -70,7 +70,7 @@ export default function ProfilePage() {
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>
-            <BackButton />
+            <BackButton alwaysFallback />
           </div>
 
           <motion.div
@@ -87,12 +87,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="text-center">
-              <button
-                onClick={() => window.history.back()}
-                className="text-slate-400 hover:text-amber-400 text-sm transition-colors"
-              >
-                &larr; Back
-              </button>
+              <BackButton label="Go Home" alwaysFallback />
             </div>
           </motion.div>
         </div>
