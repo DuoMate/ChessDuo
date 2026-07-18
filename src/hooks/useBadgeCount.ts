@@ -8,6 +8,8 @@ interface BadgeData {
   unreadBySender: Record<string, number>
 }
 
+let channelCounter = 0
+
 export function useBadgeCount(playerId: string | null): BadgeData {
   const [badge, setBadge] = useState<BadgeData>({
     unreadMessages: 0,
@@ -17,6 +19,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
   })
   const mountedRef = useRef(true)
   const fetchCountsRef = useRef<() => Promise<void>>(async () => {})
+  const instanceId = useRef(++channelCounter)
 
   const fetchCounts = useCallback(async () => {
     if (!playerId) {
@@ -75,7 +78,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     const onUpdate = () => { if (mountedRef.current) fetchCountsRef.current() }
 
     const msgChannel = supabase
-      .channel(`badge-messages-${playerId}`)
+      .channel(`badge-messages-${playerId}-${instanceId.current}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${playerId}` },
@@ -84,7 +87,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
       .subscribe()
 
     const reqChannel = supabase
-      .channel(`badge-friend-requests-${playerId}`)
+      .channel(`badge-friend-requests-${playerId}-${instanceId.current}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'friend_requests', filter: `receiver_id=eq.${playerId}` },
