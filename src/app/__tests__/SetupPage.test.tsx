@@ -137,6 +137,14 @@ jest.mock('@/hooks/useCapacitorBackButton', () => ({
   useCapacitorBackButton: () => {},
 }))
 
+jest.mock('@/hooks/useIsMobile', () => ({
+  useIsMobile: () => true,  // default to mobile in tests
+}))
+
+jest.mock('@/components/SidebarNav', () => ({
+  SidebarNav: () => <nav data-testid="sidebar-nav" />,
+}))
+
 jest.mock('@/components/InitialsAvatar', () => ({
   InitialsAvatar: () => <div data-testid="mock-avatar">A</div>,
 }))

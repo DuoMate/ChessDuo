@@ -157,6 +157,33 @@ export class OnlineGame {
     return this._team
   }
 
+  /**
+   * Online color is determined by the team prop passed in `joinRoom`.
+   * For Duo mode the host picks a color; the joiner auto-receives the opposite.
+   */
+  getPlayerColor(): 'white' | 'black' {
+    return this._team === 'WHITE' ? 'white' : 'black'
+  }
+
+  /**
+   * In online mode the human slot is the player's actual ID (not the synthetic
+   * 'player1'..'player4' used by LocalGame). Consumers should check getPlayerTeam()
+   * or compare against the player's real ID rather than relying on slot strings.
+   * Returns an empty string here to keep the interface consistent — callers must
+   * not use this for online games.
+   */
+  getHumanSlot(): string {
+    return ''
+  }
+
+  /**
+   * Teammate slot is not meaningful in online mode (teammate is a real human with
+   * a UUID, not a slot string). Returns an empty string.
+   */
+  getTeammateSlot(): string {
+    return ''
+  }
+
   isFourPlayer(): boolean {
     return this._room?.mode === 'fourplayer'
   }

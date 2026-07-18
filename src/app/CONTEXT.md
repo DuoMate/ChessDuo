@@ -26,7 +26,7 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - `providers.tsx` is the single source of truth for client context. No other layout wrappers.
 - `middleware.ts` redirects unauthenticated users away from `/game`.
 - Home page MUST NOT return `null` during session check — always show loading UI.
-- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered), TimePills (time selector), GameModeCard (Quick Play/Duo/Four Players — single click selects, double-click starts), PlayButton (green gradient, enabled when mode selected), BotDifficultySelector (visible for Quick Play and Duo only), and HomeBottomNav (floating pill style).
+- Home page (`page.tsx`) uses a mockup-based dark layout with: HeaderBar (logo centered), TimePills (time selector), GameModeCard (Quick Play/Duo/Four Players — single click selects, double-click starts), PlayButton (green gradient, enabled when mode selected), BotDifficultySelector (5-card grid with Lucide chess-piece icons, visible for Quick Play and Duo only), ColorPicker (3-card White/Black/Random selector with Lucide icons, visible for Quick Play and Duo only), and HomeBottomNav (floating pill style).
 - Non-game-room pages (history, profile, premium, privacy, delete-account, four-player) are in the `(main)/` route group and share a layout with HomeBottomNav + SlideOver panels for Profile, Friends, and History.
 - Dynamic routes `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` are at root level (not in `(main)/`) because they need server component `page.tsx` with `generateStaticParams()` for static export.
 - Pages in `(main)/` use `BackButton` instead of `HomeButton` for smart back navigation (`router.back()` with fallback to home).

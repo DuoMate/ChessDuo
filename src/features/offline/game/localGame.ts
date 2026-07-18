@@ -2,7 +2,7 @@ import { Chess, Move } from 'chess.js'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
-import { CHECKMATE_SCORE } from '../../shared/gameConstants'
+import { CHECKMATE_SCORE, PlayerColor, ResolvedColor, resolvePlayerColor } from '../../shared/gameConstants'
 import { DEBUG } from '../../../lib/debug'
 
 const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
@@ -62,17 +62,19 @@ export class LocalGame {
   private _lastMove: { from: string; to: string } | null = null
   private _lastMoveComparison: MoveComparison | null = null
   private initialized = false
+  private _playerColor: ResolvedColor
 
-  constructor(timeLimitSeconds: number = 600) {
+  constructor(timeLimitSeconds: number = 600, playerColor: PlayerColor = 'white') {
+    this._playerColor = resolvePlayerColor(playerColor)
     this.gameState = new GameState(timeLimitSeconds)
-    
+
     this.evaluator = createEvaluator(SERVER_URL)
     if (this.evaluator.isUsingStockfish()) {
       DEBUG && console.log(`[LocalGame] Using Stockfish evaluator`)
     } else {
       console.warn('[LocalGame] No evaluator configured - evaluations will fail')
     }
-    
+
     this._status = GameStatus.WAITING
     this.stats = {
       movesPlayed: 0,
@@ -182,7 +184,7 @@ export class LocalGame {
   }
 
   get player1Id(): string {
-    return 'player1'
+    return this.getHumanSlot()
   }
 
   getTurnState(): string {
@@ -693,7 +695,34 @@ export class LocalGame {
   }
 
   getTeam(): 'WHITE' | 'BLACK' {
-    return 'WHITE'
+    return this._playerColor === 'white' ? 'WHITE' : 'BLACK'
+  }
+
+  /**
+   * Returns the resolved color the human player is on.
+   * 'random' is resolved once at construction time.
+   */
+  getPlayerColor(): ResolvedColor {
+    return this._playerColor
+  }
+
+  /**
+   * Returns the slot ID of the human player on the team.
+   * - White player: 'player1' (first white slot)
+   * - Black player: 'player3' (first black slot — slots are assigned in order
+   *   white[1,2], black[3,4], so black humans land on slot 3)
+   */
+  getHumanSlot(): Player {
+    return this._playerColor === 'white' ? 'player1' : 'player3'
+  }
+
+  /**
+   * Returns the slot ID of the teammate bot (same team as human).
+   * - White player: 'player2' (second white slot)
+   * - Black player: 'player4' (second black slot)
+   */
+  getTeammateSlot(): Player {
+    return this._playerColor === 'white' ? 'player2' : 'player4'
   }
 
   isFourPlayer(): boolean {

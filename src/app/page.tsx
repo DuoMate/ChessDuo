@@ -14,14 +14,18 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, ChevronRight, Play } from 'lucide-react'
+import { Swords, ChevronRight, Play, ChessPawn, ChessKnight, ChessBishop, ChessRook, ChessQueen } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useSettings } from '@/lib/settings'
-import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
+import { DEFAULT_TEAM_TIMER_SECONDS, PlayerColor, SELECTED_COLOR_KEY, DEFAULT_PLAYER_COLOR } from '@/features/shared/gameConstants'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
+import { ColorPicker } from '@/components/ColorPicker'
+import { ConfigurationPanel } from '@/components/ConfigurationPanel'
+import { SidebarNav } from '@/components/SidebarNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,12 +45,11 @@ const TIME_OPTIONS: TimeOption[] = [
 ]
 
 const DIFFICULTY_LEVELS = [
-  { level: 1, label: 'Beginner', icon: '♟' },
-  { level: 2, label: 'Novice', icon: '♞' },
-  { level: 3, label: 'Intermediate', icon: '♝' },
-  { level: 4, label: 'Advanced', icon: '♜' },
-  { level: 5, label: 'Expert', icon: '♛' },
-  { level: 6, label: 'Master', icon: '♚' },
+  { level: 1, label: 'Easy',   Icon: ChessPawn },
+  { level: 2, label: 'Medium', Icon: ChessKnight },
+  { level: 3, label: 'Hard',   Icon: ChessBishop },
+  { level: 4, label: 'Expert', Icon: ChessRook },
+  { level: 5, label: 'Master', Icon: ChessQueen },
 ]
 
 type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
@@ -88,6 +91,16 @@ function getInitialLevel(): number {
   return 3
 }
 
+function getInitialColor(): PlayerColor {
+  try {
+    const saved = localStorage.getItem(SELECTED_COLOR_KEY)
+    if (saved === 'white' || saved === 'black' || saved === 'random') {
+      return saved
+    }
+  } catch {}
+  return DEFAULT_PLAYER_COLOR
+}
+
 export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -97,6 +110,7 @@ export default function SetupPage() {
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
   const [selectedLevel, setSelectedLevel] = useState<number>(getInitialLevel)
+  const [selectedColor, setSelectedColor] = useState<PlayerColor>(getInitialColor)
   const [sessionChecked, setSessionChecked] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [creatingTime, setCreatingTime] = useState<number | null>(null)
@@ -112,6 +126,8 @@ export default function SetupPage() {
   })
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
+  const isMobile = useIsMobile()
+  const [configMode, setConfigMode] = useState<'quick' | 'duo' | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
@@ -192,29 +208,39 @@ export default function SetupPage() {
     try { localStorage.setItem(SELECTED_LEVEL_KEY, String(selectedLevel)) } catch {}
   }, [selectedLevel])
 
-  // Auto-start game after returning from Welcome page
+  useEffect(() => {
+    try { localStorage.setItem(SELECTED_COLOR_KEY, selectedColor) } catch {}
+  }, [selectedColor])
+
+  // Auto-start offline game after returning from Welcome page
+  // Runs on mount (no deps on session/player) so guest users aren't blocked.
+  // BUG FIX: previously combined with the online auto-start behind `!playerId` guard,
+  // which short-circuited the offline path for guest users and dropped them on home.
+  useEffect(() => {
+    const pendingOffline = localStorage.getItem('chessduo_pending_offline_game')
+    if (!pendingOffline) return
+    localStorage.removeItem('chessduo_pending_offline_game')
+    try {
+      const { level, time, color } = JSON.parse(pendingOffline)
+      const colorParam = color ? `&color=${color}` : ''
+      router.replace(`/game?level=${level || selectedLevel}&time=${time || DEFAULT_TEAM_TIMER_SECONDS}${colorParam}`)
+    } catch {
+      router.replace(`/game?level=${selectedLevel}&time=${selectedTime || DEFAULT_TEAM_TIMER_SECONDS}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-start online game after returning from Welcome page.
+  // Needs an authenticated session because online games hit Supabase.
   useEffect(() => {
     if (!sessionChecked || !playerId) return
 
-    const pendingOffline = localStorage.getItem('chessduo_pending_offline_game')
-    if (pendingOffline) {
-      localStorage.removeItem('chessduo_pending_offline_game')
-      try {
-        const { level, time } = JSON.parse(pendingOffline)
-        router.push(`/game?level=${level || selectedLevel}&time=${time || DEFAULT_TEAM_TIMER_SECONDS}`)
-      } catch {
-        router.push(`/game?level=${selectedLevel}&time=${selectedTime || DEFAULT_TEAM_TIMER_SECONDS}`)
-      }
-      return
-    }
-
     const pendingOnline = localStorage.getItem('chessduo_pending_online_game')
-    if (pendingOnline) {
-      localStorage.removeItem('chessduo_pending_online_game')
-      handleStartOnline(selectedTime)
-      return
-    }
-  }, [sessionChecked, playerId, selectedLevel, selectedTime, router])
+    if (!pendingOnline) return
+    localStorage.removeItem('chessduo_pending_online_game')
+    handleStartOnline(selectedTime)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionChecked, playerId, selectedTime, router])
 
   useEffect(() => {
     if (gameMode !== null) {
@@ -308,7 +334,21 @@ export default function SetupPage() {
           if (room.mode === 'fourplayer') {
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
           } else {
-            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=WHITE&playerId=${playerId}&time=${roomTime}`)
+            // Determine the joiner's team: opposite of host's team so the
+            // joiner auto-receives the opposite color. Fall back to WHITE
+            // if the host's team cannot be determined.
+            let joinerTeam: 'WHITE' | 'BLACK' = 'WHITE'
+            try {
+              const { data: existingPlayers } = await supabase
+                .from('room_players')
+                .select('team')
+                .eq('room_id', room.id)
+              const hostTeam = existingPlayers?.[0]?.team
+              joinerTeam = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+            } catch {
+              /* keep WHITE default */
+            }
+            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${joinerTeam}&playerId=${playerId}&time=${roomTime}`)
           }
         } else {
           setJoinError('Room not found or already started')
@@ -465,8 +505,15 @@ export default function SetupPage() {
       const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
       const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
 
-      let team: 'WHITE' | 'BLACK' = 'WHITE'
-      if (whiteSlots.length < 2) {
+      // Prefer the team with open slots. If both have space, prefer the
+      // opposite of the host's team (the host already occupies a slot).
+      const hostTeam = (existingPlayers || [])[0]?.team as 'WHITE' | 'BLACK' | undefined
+      const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+
+      let team: 'WHITE' | 'BLACK' = preferredTeam
+      if (whiteSlots.length < 2 && blackSlots.length < 2) {
+        team = preferredTeam
+      } else if (whiteSlots.length < 2) {
         team = 'WHITE'
       } else if (blackSlots.length < 2) {
         team = 'BLACK'
@@ -504,8 +551,8 @@ export default function SetupPage() {
     setJoinError(null)
     try {
       const pid = playerId as string
-      const result = await createOnlineRoom({ playerId: pid, timeSeconds })
-      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}`)
+      const result = await createOnlineRoom({ playerId: pid, timeSeconds, hostColor: selectedColor })
+      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${selectedColor}`)
     } catch (err) {
       setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -515,12 +562,35 @@ export default function SetupPage() {
   const handleStartOffline = () => {
     if (!hasSeenOfflineDisclaimer) {
       const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: selectedLevel, time }))
+      localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: selectedLevel, time, color: selectedColor }))
       router.push('/welcome?mode=offline')
       return
     }
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-    router.push(`/game?level=${selectedLevel}&time=${time}`)
+    router.push(`/game?level=${selectedLevel}&time=${time}&color=${selectedColor}`)
+  }
+
+  /**
+   * Handler for the ConfigurationPanel's Start Game button on browser.
+   * Browser hardcodes bot difficulty to Medium (3) per spec.
+   */
+  const handleBrowserConfigStart = (color: PlayerColor) => {
+    setSelectedColor(color)
+    if (configMode === 'quick') {
+      // Offline quick play — no auth required
+      const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
+      const hasSeen = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
+      if (!hasSeen) {
+        localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 3, time, color }))
+        router.push('/welcome?mode=offline')
+      } else {
+        router.push(`/game?level=3&time=${time}&color=${color}`)
+      }
+    } else if (configMode === 'duo') {
+      // Online duo — needs auth
+      handleTwoPlayerClick()
+    }
+    setConfigMode(null)
   }
 
   const handleTwoPlayerClick = () => {
@@ -595,6 +665,11 @@ export default function SetupPage() {
 
   const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
     if (selectedGameMode === mode) {
+      // Already selected: start immediately on mobile, open config panel on browser
+      if (!isMobile && mode !== 'four') {
+        setConfigMode(mode)
+        return
+      }
       switch (mode) {
         case 'quick':
           handleStartOffline()
@@ -608,6 +683,10 @@ export default function SetupPage() {
       }
     } else {
       setSelectedGameMode(mode)
+      // On browser, open config panel right when a non-4 mode is selected
+      if (!isMobile && mode !== 'four') {
+        setConfigMode(mode)
+      }
     }
   }
 
@@ -794,10 +873,10 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden">
+      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden md:pl-20 lg:pl-22">
         <HeaderBar />
 
-        <div className="flex flex-1 flex-col px-4 pb-20 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+        <div className="flex flex-1 flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
           {/* Time Control */}
           <div className="mb-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
@@ -814,7 +893,7 @@ if (!gameMode) {
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
-                  subtitle="You + WhiteBot vs BlackBots"
+                  subtitle="You + Bot vs Bots"
                   showStar
                 />
                 <GameModeCard
@@ -836,13 +915,26 @@ if (!gameMode) {
               </div>
             </div>
 
-          {/* Bot Difficulty — visible only for Quick Play and Duo */}
-          {selectedGameMode && selectedGameMode !== 'four' && (
+          {/* Bot Difficulty — visible only for Quick Play and Duo on mobile */}
+          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Bot Difficulty</p>
               <BotDifficultySelector
                 selectedLevel={selectedLevel}
                 onSelect={setSelectedLevel}
+              />
+            </div>
+          )}
+
+          {/* Choose Your Color — visible only for Quick Play and Duo on mobile */}
+          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
+            <div className="mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                Choose Your <span className="text-blue-500">Color</span>
+              </p>
+              <ColorPicker
+                value={selectedColor}
+                onChange={setSelectedColor}
               />
             </div>
           )}
@@ -898,8 +990,25 @@ if (!gameMode) {
           </div>
         )}
 
-        {/* Bottom Navigation — outside overflow-hidden container */}
-        <HomeBottomNav unreadMessages={unreadMessages} />
+        {/* Navigation — sidebar on browser, bottom nav on mobile */}
+        {isMobile ? (
+          <HomeBottomNav unreadMessages={unreadMessages} />
+        ) : (
+          <SidebarNav unreadMessages={unreadMessages} />
+        )}
+
+        {/* Configuration Panel — browser only, opens when Quick Play or Duo is selected */}
+        <ConfigurationPanel
+          open={!!configMode}
+          selectedColor={selectedColor}
+          onColorChange={setSelectedColor}
+          onClose={() => setConfigMode(null)}
+          onStart={handleBrowserConfigStart}
+          modeTitle={configMode === 'duo' ? 'Duo' : 'Quick Play'}
+          modeSubtitle={configMode === 'duo' ? 'You + Friend vs Bots' : 'You + Bot vs Bots'}
+          botLevelLabel="Medium"
+          botLevelDescription="Medium-strength bot. Balanced play that doesn't punish mistakes too harshly."
+        />
       </ErrorBoundary>
     )
   }
@@ -1028,6 +1137,8 @@ function GameModeCard({
 
 // ============================================
 // Bot Difficulty Selector Component
+// 5-card grid with Lucide chess-piece icons (Easy/Medium/Hard/Expert/Master).
+// See spec § 5.4 for the canonical pattern.
 // ============================================
 function BotDifficultySelector({
   selectedLevel,
@@ -1036,63 +1147,40 @@ function BotDifficultySelector({
   selectedLevel: number
   onSelect: (level: number) => void
 }) {
-  const currentDifficulty = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel) || DIFFICULTY_LEVELS[2]
-  const totalDots = 6
-  const filledDots = selectedLevel
-
-  const goPrev = () => {
-    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
-    const prev = idx > 0 ? DIFFICULTY_LEVELS[idx - 1].level : DIFFICULTY_LEVELS[DIFFICULTY_LEVELS.length - 1].level
-    onSelect(prev)
-  }
-
-  const goNext = () => {
-    const idx = DIFFICULTY_LEVELS.findIndex(d => d.level === selectedLevel)
-    const next = idx < DIFFICULTY_LEVELS.length - 1 ? DIFFICULTY_LEVELS[idx + 1].level : DIFFICULTY_LEVELS[0].level
-    onSelect(next)
-  }
-
   return (
-    <div className="p-3 rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 space-y-2.5">
-      {/* Difficulty picker row */}
-      <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={goPrev}
-          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
-          aria-label="Previous difficulty"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 4l-4 4 4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-
-        <div className="flex items-center gap-2 text-slate-900 dark:text-white">
-          <span className="text-xl">{currentDifficulty.icon}</span>
-          <span className="font-bold text-base">{currentDifficulty.label}</span>
-        </div>
-
-        <button
-          onClick={goNext}
-          className="flex items-center justify-center w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
-          aria-label="Next difficulty"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-      </div>
-
-      {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-3">
-        <span className="text-xs text-slate-400 dark:text-slate-500">Easy</span>
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: totalDots }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                i < filledDots ? 'bg-blue-500 shadow-[var(--shadow-glow-blue-dot)]' : 'bg-slate-200 border border-slate-300 dark:bg-slate-700 dark:border-slate-600'
-              }`}
+    <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Bot difficulty">
+      {DIFFICULTY_LEVELS.map(({ level, label, Icon }) => {
+        const selected = level === selectedLevel
+        return (
+          <button
+            key={level}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={`${label} difficulty`}
+            onClick={() => onSelect(level)}
+            className={[
+              'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-1',
+              'rounded-xl border-2 px-1 py-2 transition-all duration-200',
+              selected
+                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
+                : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/60',
+            ].join(' ')}
+          >
+            <Icon
+              size={22}
+              strokeWidth={1.8}
+              className={selected
+                ? 'text-blue-600 dark:text-blue-300'
+                : 'text-slate-700 dark:text-slate-300'}
+              aria-hidden="true"
             />
-          ))}
-        </div>
-        <span className="text-xs text-slate-400 dark:text-slate-500">Hard</span>
-      </div>
+            <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+              {label}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }

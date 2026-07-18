@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { PlayerColor, resolvePlayerColor } from '@/features/shared/gameConstants'
 
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -12,10 +13,15 @@ export function generateRoomCode(): string {
 export async function createOnlineRoom(options: {
   playerId: string
   timeSeconds: number
-}): Promise<{ roomId: string; roomCode: string; team: 'WHITE'; playerId: string; time: number }> {
-  const { playerId, timeSeconds } = options
+  hostColor?: PlayerColor
+}): Promise<{ roomId: string; roomCode: string; team: 'WHITE' | 'BLACK'; playerId: string; time: number }> {
+  const { playerId, timeSeconds, hostColor = 'white' } = options
   const code = generateRoomCode()
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
+  // Resolve the host's color once at room creation. The host always sits on
+  // this color; the joiner auto-receives the opposite when they enter.
+  const hostTeam: 'WHITE' | 'BLACK' = resolvePlayerColor(hostColor) === 'white' ? 'WHITE' : 'BLACK'
 
   const { data: room, error: roomError } = await supabase
     .from('rooms')
@@ -39,7 +45,7 @@ export async function createOnlineRoom(options: {
     .insert({
       room_id: room.id,
       player_id: playerId,
-      team: 'WHITE',
+      team: hostTeam,
       slot: 0,
       status: 'waiting',
     })
@@ -51,7 +57,7 @@ export async function createOnlineRoom(options: {
   return {
     roomId: room.id,
     roomCode: room.code,
-    team: 'WHITE',
+    team: hostTeam,
     playerId,
     time: timeSeconds,
   }

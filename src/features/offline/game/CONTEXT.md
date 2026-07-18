@@ -20,3 +20,6 @@ Fully client-side 2v2 game implementation. No network dependency — supports lo
 ## Dependencies
 - `GameState` from `game-engine/`, `GameInterface` from `shared/`
 - Stockfish server (`NEXT_PUBLIC_STOCKFISH_SERVER_URL`) for evaluation
+
+## Recent Changes
+- **2026-07-18**: `LocalGame` constructor accepts `playerColor: PlayerColor` (default `'white'`). `'random'` is resolved once at construction. `getPlayerColor()`, `getHumanSlot()`, `getTeammateSlot()` added. `getTeam()` now returns the resolved color. `player1Id` returns the human's slot ID (so `MoveComparison` consumer "isPlayer1" logic is correct after color swap).

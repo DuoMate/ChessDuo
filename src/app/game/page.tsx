@@ -28,6 +28,10 @@ function GameContent() {
   const timeLimit = searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : undefined
   const challengeId = searchParams.get('challengeId')
   const fourplayer = searchParams.get('fourplayer') === '1'
+  const colorParam = searchParams.get('color')
+  const playerColor: 'white' | 'black' | 'random' =
+    colorParam === 'black' ? 'black' :
+    colorParam === 'random' ? 'random' : 'white'
   const [validated, setValidated] = useState(false)
   const validatedRef = useRef(false)
 
@@ -97,6 +101,7 @@ function GameContent() {
         timeLimitSeconds={timeLimit}
         challengeId={challengeId}
         fourplayer={fourplayer}
+        playerColor={playerColor}
       />
     </ErrorBoundary>
   )
