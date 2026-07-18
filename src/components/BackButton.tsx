@@ -7,13 +7,15 @@ import { ArrowLeft } from 'lucide-react'
 interface BackButtonProps {
   label?: string
   fallbackHref?: string
+  /** Always navigate to fallbackHref — skip router.back() even if history exists. */
+  alwaysFallback?: boolean
 }
 
-export function BackButton({ label = 'Back', fallbackHref = '/' }: BackButtonProps) {
+export function BackButton({ label = 'Back', fallbackHref = '/', alwaysFallback = false }: BackButtonProps) {
   const router = useRouter()
 
   const handleClick = () => {
-    if (window.history.length > 2) {
+    if (!alwaysFallback && window.history.length > 2) {
       router.back()
     } else {
       router.push(fallbackHref)
