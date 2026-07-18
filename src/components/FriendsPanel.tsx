@@ -274,7 +274,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
                   onClick={() => handleAddFriend(user.id)}
                   className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors flex items-center justify-between min-h-[44px]"
                 >
-                  <span>{user.username}</span>
+                  <span>{user.display_name || user.username}</span>
                   <span className="text-blue-400 text-xs">+ Invite</span>
                 </button>
               ))}
