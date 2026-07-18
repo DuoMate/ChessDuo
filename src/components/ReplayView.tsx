@@ -163,6 +163,27 @@ export function ReplayView({ game }: ReplayViewProps) {
           onTabChange={() => {}}
           onBack={() => router.push('/history')}
           onForward={() => {}}
+          onBackMove={() => {
+            const current = playbackIndex ?? moves.length - 1
+            if (current <= 0) {
+              setPlaybackIndex(-1)
+              setPlaybackFen(initialFen)
+            } else {
+              setPlaybackIndex(current - 1)
+              setPlaybackFen(moves[current - 1]?.fenAfter || '')
+            }
+          }}
+          onForwardMove={() => {
+            if (playbackIndex === null) return
+            const current = playbackIndex ?? moves.length - 1
+            if (current >= moves.length - 1) {
+              setPlaybackIndex(null)
+              setPlaybackFen(null)
+            } else {
+              setPlaybackIndex(current + 1)
+              setPlaybackFen(moves[current + 1]?.fenAfter || '')
+            }
+          }}
         />
       </div>
     </div>

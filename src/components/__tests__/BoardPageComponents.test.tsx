@@ -154,30 +154,30 @@ describe('RoundHistorySidebar', () => {
 describe('BoardBottomNav', () => {
   it('renders all tabs and navigation buttons', () => {
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
     )
     expect(screen.getByText('Moves')).toBeInTheDocument()
     expect(screen.getByText('Insights')).toBeInTheDocument()
     expect(screen.getByText('Chat')).toBeInTheDocument()
     expect(screen.getByText('Back')).toBeInTheDocument()
-    expect(screen.getByText('Forward')).toBeInTheDocument()
+    expect(screen.getByText('Fwd')).toBeInTheDocument()
   })
 
   it('calls onTabChange when a tab is tapped', () => {
     const onTabChange = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={onTabChange} onBack={jest.fn()} onForward={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={onTabChange} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
     )
     fireEvent.click(screen.getByText('Moves'))
     expect(onTabChange).toHaveBeenCalledWith('moves')
   })
 
-  it('calls onBack when Back button is tapped', () => {
-    const onBack = jest.fn()
+  it('calls onBackMove when Back button is tapped', () => {
+    const onBackMove = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={onBack} onForward={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={onBackMove} onForwardMove={jest.fn()} />
     )
     fireEvent.click(screen.getByText('Back'))
-    expect(onBack).toHaveBeenCalled()
+    expect(onBackMove).toHaveBeenCalled()
   })
 })
