@@ -13,7 +13,6 @@ import { sendMessage } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
-import { WelcomeDisclaimer } from '@/components/WelcomeDisclaimer'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Swords, ChevronRight, Play } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
@@ -104,9 +103,7 @@ export default function SetupPage() {
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
-  const [showOfflineDisclaimer, setShowOfflineDisclaimer] = useState(false)
   const hasSeenOfflineDisclaimer = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
-  const offlineDisclaimerShouldStartRef = useRef(false)
   const [showOnlineDisclaimer, setShowOnlineDisclaimer] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('chessduo_welcome_dismissed') !== 'true'
@@ -121,7 +118,6 @@ export default function SetupPage() {
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
-  const [showOnboarding, setShowOnboarding] = useState(false)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -209,15 +205,6 @@ export default function SetupPage() {
 
   useCapacitorBackButton(
     () => {
-      if (showOnboarding) {
-        setShowOnboarding(false)
-        return true
-      }
-      if (showOfflineDisclaimer) {
-        setShowOfflineDisclaimer(false)
-        offlineDisclaimerShouldStartRef.current = false
-        return true
-      }
       if (gameMode !== null) {
         setGameMode(null)
         setJoinCode('')
@@ -229,7 +216,7 @@ export default function SetupPage() {
       }
       return false
     },
-    gameMode !== null || !!duelFriend || showOnboarding || showOfflineDisclaimer
+    gameMode !== null || !!duelFriend
   )
 
   useEffect(() => {
@@ -499,8 +486,7 @@ export default function SetupPage() {
 
   const handleStartOffline = () => {
     if (!hasSeenOfflineDisclaimer) {
-      offlineDisclaimerShouldStartRef.current = true
-      setShowOfflineDisclaimer(true)
+      router.push('/welcome?mode=offline')
       return
     }
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
@@ -510,18 +496,10 @@ export default function SetupPage() {
   const handleTwoPlayerClick = () => {
     if (!playerId) { setShowAuthOverlay(true); return }
     if (showOnlineDisclaimer) {
-      setShowOnboarding(true)
+      router.push('/welcome?mode=online')
     } else {
       handleStartOnline(selectedTime)
     }
-  }
-
-  const handleOnboardingDismiss = () => {
-    // DON'T dismiss the overlay here — it stays visible during room creation
-    // to prevent flashing the home page. Navigation happens after the room
-    // is created (see handleStartOnline). On error, the overlay is dismissed
-    // in the catch block.
-    handleStartOnline(selectedTime)
   }
 
   const handleStartFourPlayer = async (timeSeconds: number) => {
@@ -576,7 +554,6 @@ export default function SetupPage() {
       }
     } catch (err) {
       setCreatingTime(null)
-      setShowOnboarding(false)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
     }
   }
@@ -748,7 +725,7 @@ export default function SetupPage() {
                 ))}
               </div>
               <div className="text-center mb-4">
-                <button type="button" onClick={() => setShowOfflineDisclaimer(true)} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
+                <button type="button" onClick={() => router.push('/welcome?mode=offline')} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
                   How to play?
                 </button>
               </div>
@@ -771,22 +748,6 @@ export default function SetupPage() {
 
 
           {authOverlay}
-          {showOfflineDisclaimer && (
-            <WelcomeDisclaimer
-              open={showOfflineDisclaimer}
-              onDismiss={() => {
-                if (offlineDisclaimerShouldStartRef.current) {
-                  offlineDisclaimerShouldStartRef.current = false
-                  const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-                  router.push(`/game?level=${selectedLevel}&time=${time}`)
-                } else {
-                  setShowOfflineDisclaimer(false)
-                }
-              }}
-              storageKey="chessduo_offline_disclaimer_dismissed"
-              mode="offline"
-            />
-          )}
         </div>
       </ErrorBoundary>
     )
@@ -887,29 +848,6 @@ if (!gameMode) {
 
 
           {authOverlay}
-          {showOnboarding && (
-            <WelcomeDisclaimer
-              open={showOnboarding}
-              onDismiss={handleOnboardingDismiss}
-              mode="online"
-            />
-          )}
-          {showOfflineDisclaimer && (
-            <WelcomeDisclaimer
-              open={showOfflineDisclaimer}
-              onDismiss={() => {
-                if (offlineDisclaimerShouldStartRef.current) {
-                  offlineDisclaimerShouldStartRef.current = false
-                  const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-                  router.push(`/game?level=${selectedLevel}&time=${time}`)
-                } else {
-                  setShowOfflineDisclaimer(false)
-                }
-              }}
-              storageKey="chessduo_offline_disclaimer_dismissed"
-              mode="offline"
-            />
-          )}
         </div>
 
         {/* Play Button Row — above the bottom nav */}

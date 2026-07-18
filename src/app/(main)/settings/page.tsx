@@ -45,6 +45,12 @@ export default function SettingsPage() {
         <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
           <h1 className="text-2xl font-bold mb-4">Settings</h1>
           <p className="text-slate-400 mb-4">Sign in to access your settings</p>
+          <button
+            onClick={() => router.push('/?signup=1')}
+            className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
+          >
+            Sign In
+          </button>
           <BackButton label="Go Home" alwaysFallback />
         </div>
       </ErrorBoundary>
