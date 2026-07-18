@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     description: "Play smarter, together. Coordinate moves with your teammate against AI.",
   },
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.ico",
     apple: "/favicon.png",
   },
   appleWebApp: {
