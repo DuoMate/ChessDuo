@@ -1064,7 +1064,7 @@ if (!gameMode) {
                 >
                   <div className="w-[360px] h-full overflow-y-auto">
                     <div className="sticky top-0 px-5 pt-4 pb-2 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/50">
-                      <h2 className="text-sm font-bold uppercase tracking-wider text-purple-500 dark:text-purple-400">Configuration</h2>
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400">Configuration</h2>
                     </div>
                     <ConfigurationPanel
                       selectedLevel={selectedLevel}
