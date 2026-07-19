@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { History, Users, User, Home as HomeIcon, Play, Loader2 } from 'lucide-react'
+import { History, Users, User, Home as HomeIcon, Loader2 } from 'lucide-react'
 import ChessDuoLogo from './ChessDuoLogo'
 
 interface DesktopSidebarProps {
@@ -16,7 +16,6 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
 
   const tabs = [
     { label: 'Home', icon: HomeIcon, path: '/' },
-    { label: 'Play', icon: Play, path: '/play' },
     { label: 'History', icon: History, path: '/history' },
     { label: 'Friends', icon: Users, path: '/friends' },
     { label: 'Profile', icon: User, path: '/profile' },
