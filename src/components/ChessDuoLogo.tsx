@@ -1,6 +1,6 @@
 'use client'
 
-import { Crown } from 'lucide-react'
+import Image from 'next/image'
 
 interface ChessDuoLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -10,22 +10,10 @@ interface ChessDuoLogoProps {
 }
 
 const sizeConfig = {
-  sm: {
-    crown: 20,
-    text: 'text-lg',
-  },
-  md: {
-    crown: 28,
-    text: 'text-2xl',
-  },
-  lg: {
-    crown: 36,
-    text: 'text-3xl',
-  },
-  xl: {
-    crown: 48,
-    text: 'text-4xl',
-  },
+  sm: 20,
+  md: 28,
+  lg: 36,
+  xl: 48,
 }
 
 export default function ChessDuoLogo({
@@ -34,17 +22,19 @@ export default function ChessDuoLogo({
   animate = false,
   className = '',
 }: ChessDuoLogoProps) {
-  const config = sizeConfig[size]
+  const px = sizeConfig[size]
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Crown
-        size={config.crown}
-        strokeWidth={1.5}
-        className={`text-blue-500 dark:text-blue-400 drop-shadow-[var(--drop-shadow-glow-blue)] ${animate ? 'animate-pulse' : ''}`}
+      <Image
+        src="/logo.png"
+        alt="ChessDuo"
+        width={px}
+        height={px}
+        className={`shrink-0 ${animate ? 'animate-pulse' : ''}`}
       />
       {showText && (
-        <h1 className={`${config.text} font-black tracking-tight`}>
+        <h1 className={`text-${size === 'sm' ? 'lg' : size === 'md' ? '2xl' : size === 'lg' ? '3xl' : '4xl'} font-black tracking-tight`}>
           <span className="text-slate-900 dark:text-white">Chess</span>
           <span className="text-blue-600 dark:text-blue-500">Duo</span>
         </h1>

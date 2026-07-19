@@ -879,6 +879,36 @@ if (!gameMode) {
               </div>
             </div>
 
+            {/* Join by Code */}
+            <div className="mt-1 mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="Enter room code"
+                  maxLength={36}
+                  className="flex-1 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                />
+                <button
+                  onClick={handleJoinByCode}
+                  disabled={joinLoading || !joinCode.trim()}
+                  className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
+                >
+                  {joinLoading ? (
+                    <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
+                  ) : (
+                    'Join'
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {joinError && (
+              <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
+            )}
+
             {/* Play / Start Game Button — inside Game Mode section, aligned with cards */}
             {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
               <div className="mt-3 mb-2">
@@ -937,36 +967,6 @@ if (!gameMode) {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* Join by Code */}
-            <div className="mt-1 mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="Enter room code"
-                  maxLength={36}
-                  className="flex-1 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                />
-                <button
-                  onClick={handleJoinByCode}
-                  disabled={joinLoading || !joinCode.trim()}
-                  className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
-                >
-                  {joinLoading ? (
-                    <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
-                  ) : (
-                    'Join'
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {joinError && (
-              <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
-            )}
 
             {authOverlay}
           </div>
@@ -1237,7 +1237,8 @@ function BotDifficultySelector({
   onSelect: (level: number) => void
 }) {
   return (
-    <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Bot difficulty">
+    <div className="overflow-x-auto -mx-1 px-1">
+      <div className="grid grid-cols-5 gap-2 min-w-[280px]" role="radiogroup" aria-label="Bot difficulty">
       {DIFFICULTY_LEVELS.map(({ level, label, Icon }) => {
         const selected = level === selectedLevel
         return (
@@ -1270,6 +1271,7 @@ function BotDifficultySelector({
           </button>
         )
       })}
+    </div>
     </div>
   )
 }

@@ -6,7 +6,7 @@ Route group for non-game pages that share a common layout with `HomeBottomNav`. 
 ## Layout (`layout.tsx`)
 - Client component that checks Supabase session for `playerId`
 - Renders `HomeBottomNav` fixed at bottom with 4 tabs: Home, History, Friends, Profile
-- **Desktop**: Renders `DesktopSidebar` (wide 220px/240px with labels, ChessDuoLogo, tagline, loading progress bar) fixed left
+- **Desktop**: Renders `DesktopSidebar` (wide 220px/240px with labels, ChessDuoLogo image mark, tagline, loading progress bar) fixed left
 - **Mobile**: Renders `HomeBottomNav` floating pill style
 - History, Friends, and Profile tabs navigate to dedicated routes (`/history`, `/friends`, `/profile`)
 - Uses central `useBadgeCount` hook for Friends badge with Supabase Realtime
@@ -48,6 +48,7 @@ Route group for non-game pages that share a common layout with `HomeBottomNav`. 
 - `@/hooks/useCapacitorBackButton` — Android hardware back
 
 ## Recent Changes
+- **2026-07-19**: Logo replacement — DesktopSidebar description updated to note image mark logo.
 - **2026-07-19**: Browser UI unification — migrated from `SidebarNav` (narrow 80px icons-only) to `DesktopSidebar` (wide 220px/240px with labels) for History, Friends, Profile pages. Updated layout.tsx to use `DesktopSidebar` on desktop. Mobile unchanged.
 - **2026-07-18**: Major overhaul — converted all slide-over panels to full pages (`/friends`, `/settings` new). `HomeBottomNav` uses router navigation with pathname-based active detection. `useBadgeCount` hook centralizes badge counting. Profile page restored with all menu items (edit, share, premium, history, settings, manage account, sign out, theme toggle). BackButton uses `alwaysFallback` for nav pages. Added sign-in buttons to unauthenticated states. Loading skeletons for `/friends` and `/settings`.
 - **2026-07-14**: Page redesign — dark navy theme (`#0a0e1a`) applied to Profile, Premium, and History pages. All panels now use `InitialsAvatar` component for user avatars.

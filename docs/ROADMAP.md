@@ -672,7 +672,7 @@ Completed as part of go-live preparation:
 - **Security headers** — Added `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `X-XSS-Protection` to `public/_headers`.
 - **PWA manifest** — Added `public/manifest.json` with 512px icon, standalone display, theme-color. Linked in `layout.tsx`.
 - **Open Graph metadata** — Added `openGraph`, `twitter:card`, `icons`, `appleWebApp` to layout metadata for social sharing previews.
-- **Favicon / Apple touch icon** — `loading/icon-512.webp` referenced as both favicon and apple-touch-icon.
+- **Favicon / Apple touch icon** — `/favicon.ico` and `/favicon.png` referenced in layout metadata.
 
 ### P1 — Crash Reporting
 - **`SplashHandler` wired to `/api/log-crash`** — Global `window.onerror` and `unhandledrejection` handlers now POST error data to the existing crash endpoint. Best-effort delivery with network failure suppression.

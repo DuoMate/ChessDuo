@@ -55,7 +55,7 @@ Same variables in dark mode use darker values (e.g. `--color-page-bg: #060816`).
 
 ## Home Page Design (Revamped)
 - Background: `#0a0e1a` (deep navy dark)
-- HeaderBar: centered ChessDuo logo (Crown + "Chess" white / "Duo" blue-500), profile icon left, messages icon right with badge
+- HeaderBar: centered ChessDuo logo (image mark + "Chess" white / "Duo" blue-500), profile icon left, messages icon right with badge
 - TimePills: horizontal row of 5 pills (3, 5, 10, 15, 30 min), selected = blue-600 with glow shadow
 - GameModeCard: 3 cards (Quick Play, Duo★, Four Players), selected = blue-500/60 border with blue glow
 - BotDifficultySelector: knight icon + difficulty name + 6-dot indicator (Easy→Hard) + dropdown
@@ -79,4 +79,5 @@ Same variables in dark mode use darker values (e.g. `--color-page-bg: #060816`).
 - Focus rings on interactive elements
 
 ## Recent Changes
+- **2026-07-19**: Logo replacement — HeaderBar logo changed from Crown icon to image mark (`/logo.png`).
 - **2026-07-11**: Home page UI revamp — new dark theme (#0a0e1a), blue accent for selected states, green gradient Play button, horizontal time pills, game mode cards with team icons, bot difficulty selector with dot indicators, bottom navigation bar (Home/History/Friends/Profile).

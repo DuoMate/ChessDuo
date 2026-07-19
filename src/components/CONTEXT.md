@@ -33,6 +33,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `HistoryPanel.tsx` | Match history list — dark theme redesign |
 | `FriendsPanel.tsx` | Friends list + requests + chat — dark theme redesign |
 | `ChatPanel.tsx` | In-app messenger |
+| `ChessDuoLogo.tsx` | In-app logo — renders image mark from `/logo.png` + "ChessDuo" text |
 | `InitialsAvatar.tsx` | **NEW** — Shared initials avatar component (sm/md/lg sizes, online indicator, premium variant) |
 | `ColorPicker.tsx` | **NEW** — 3-card White/Black/Random selector with Lucide icons. Used inline on the home screen configuration panel. |
 | `DesktopSidebar.tsx` | **NEW** — Left vertical navigation for browser viewports (Home/History/Friends/Profile, 220-240px wide, fixed). Replaces `SidebarNav` on `md:`+ breakpoints across all `(main)/` pages. |
@@ -85,6 +86,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-19**: Logo replacement — `ChessDuoLogo` now renders image mark from `/logo.png` instead of Lucide `Crown` icon. Added to key files table.
 - **2026-07-19**: Phase 9 Confirm Moves — new `ConfirmMoveBar` floating 50/50 split bar with glassmorphism styling replaces inline `ConfirmMoveButton`. Integrated in `Game.tsx`, `DuelGame.tsx`, and 4-player mode (via Game.tsx). Toggle added to `GameMenu` hamburger dropdown. 23 new tests covering all scenarios. Deleted legacy `ConfirmMoveButton.tsx`.
 - **2026-07-19**: Browser UI unification — migrated History, Friends, Profile pages from `SidebarNav` (narrow 80px icons-only) to `DesktopSidebar` (wide 220px/240px with labels). Updated `src/app/(main)/layout.tsx` to use `DesktopSidebar` for all non-game pages on desktop. Mobile unchanged (HomeBottomNav floating pill).
 - **2026-07-18**: Home screen restructure — added `ColorPicker` (3-card White/Black/Random with Lucide icons), `SidebarNav` (left vertical nav for browser), inline configuration panel (Quick/Duo). Mobile `BotDifficultySelector` replaced with 5-card grid using Lucide chess-piece icons. `LocalGame` accepts `playerColor` param; bots swap teams when human picks Black. `GameInterface` gets `getPlayerColor`/`getHumanSlot`/`getTeammateSlot`. Welcome page redirect now passes color; offline auto-start effect split (runs on mount, no longer requires `playerId`) — fixes Quick Play → Got it → home bug for guest users.
