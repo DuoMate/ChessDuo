@@ -94,19 +94,19 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0a0e1a] text-slate-900 dark:text-white">
+    <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <User size={18} className="text-white" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Profile</h2>
+          <h2 className="text-lg font-bold text-white">Profile</h2>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? (
@@ -116,7 +116,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             )}
           </button>
           {onClose && (
-            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
               <span className="text-slate-400 text-lg">&times;</span>
             </button>
           )}
@@ -127,11 +127,11 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {/* Profile Card — compact row matching menu items */}
         {editingProfile ? (
-          <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl">
+          <div className="p-4 bg-slate-800/50 border border-white/5 rounded-2xl">
             <ProfileEditor playerId={playerId} />
             <button
               onClick={() => setEditingProfile(false)}
-              className="mt-3 w-full min-h-[44px] text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="mt-3 w-full min-h-[44px] text-sm text-slate-400 hover:text-white transition-colors"
             >
               Done
             </button>
@@ -139,11 +139,11 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
         ) : (
           <button
             onClick={() => setEditingProfile(true)}
-            className="w-full p-4 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors"
+            className="w-full p-4 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
           >
             <InitialsAvatar username={username || 'U'} size="sm" src={avatarUrl} premium={isPremium} />
             <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{username || 'Player'}</p>
+              <p className="text-sm font-semibold text-white truncate">{username || 'Player'}</p>
               <p className="text-xs text-slate-400">Tap to edit profile</p>
             </div>
             <Pencil size={16} className="text-slate-500 flex-shrink-0" />

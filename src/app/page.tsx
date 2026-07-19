@@ -837,17 +837,15 @@ if (!gameMode) {
         <HeaderBar />
 
         <div className="flex flex-1 flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
-          {/* Time Control + Game Mode — side by side */}
-          <div className="flex gap-3 mb-2">
-            {/* Time Control */}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
-              <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
-            </div>
+          {/* Time Control */}
+          <div className="mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
+            <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
+          </div>
 
-            {/* Game Mode */}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+          {/* Game Mode */}
+          <div className="mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
               <div className="space-y-1.5">
                 <GameModeCard
                   onClick={() => handleGameModeClick('quick')}
@@ -876,7 +874,6 @@ if (!gameMode) {
                 />
               </div>
             </div>
-          </div>
 
           {/* Inline Configuration — visible for Quick Play and Duo on all viewports */}
           {selectedGameMode && selectedGameMode !== 'four' && (
