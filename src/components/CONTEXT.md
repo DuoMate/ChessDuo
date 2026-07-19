@@ -86,7 +86,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
-- **2026-07-19**: ConfirmMoveBar redesigned — repositioned directly above BoardBottomNav (flush, no gap), full-width green gradient play-button texture, single Confirm button centered with X cancel on right.
+- **2026-07-19**: ConfirmMoveBar redesigned — restored two-button Cancel/Confirm layout with play-button green gradient texture, positioned above BoardBottomNav. Board resets to original position on cancel via `boardKey` remount.
 - **2026-07-19**: Logo replacement — `ChessDuoLogo` now renders image mark from `/logo.png` instead of Lucide `Crown` icon. Added to key files table.
 - **2026-07-19**: Phase 9 Confirm Moves — new `ConfirmMoveBar` floating 50/50 split bar with glassmorphism styling replaces inline `ConfirmMoveButton`. Integrated in `Game.tsx`, `DuelGame.tsx`, and 4-player mode (via Game.tsx). Toggle added to `GameMenu` hamburger dropdown. 23 new tests covering all scenarios. Deleted legacy `ConfirmMoveButton.tsx`.
 - **2026-07-19**: Browser UI unification — migrated History, Friends, Profile pages from `SidebarNav` (narrow 80px icons-only) to `DesktopSidebar` (wide 220px/240px with labels). Updated `src/app/(main)/layout.tsx` to use `DesktopSidebar` for all non-game pages on desktop. Mobile unchanged (HomeBottomNav floating pill).

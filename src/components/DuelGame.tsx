@@ -64,6 +64,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [opponentAccuracy, setOpponentAccuracy] = useState<number | null>(null)
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null)
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
+  const [boardKey, setBoardKey] = useState(0)
   const [waiting, setWaiting] = useState(true)
   const [opponentUsername, setOpponentUsername] = useState('Opponent')
   const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null)
@@ -389,6 +390,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   const handleCancelHeldMove = useCallback(() => {
     setHeldMove(null)
+    setBoardKey(k => k + 1)
   }, [])
 
   const handlePromotionSelect = useCallback(async (piece: PromotionPiece) => {
@@ -484,6 +486,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
               {isMobile ? (
                 <MobileChessBoard
+                  key={boardKey}
                   fen={fen}
                   onMove={handleMove}
                   enabled={isMyTurn && !pendingPromotion}
@@ -492,6 +495,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
                 />
               ) : (
                 <ChessBoard
+                  key={boardKey}
                   fen={fen}
                   onMove={handleMove}
                   enabled={isMyTurn && !pendingPromotion}

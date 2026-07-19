@@ -294,6 +294,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     setOverlayMode('none')
   }, [])
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
+  const [boardKey, setBoardKey] = useState(0)
   const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
@@ -1670,6 +1671,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const handleCancelHeldMove = useCallback(() => {
     setHeldMove(null)
+    setBoardKey(k => k + 1)
   }, [])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
@@ -2061,6 +2063,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
                 return isMobile ? (
                   <MobileChessBoard
+                    key={boardKey}
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
@@ -2073,6 +2076,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   />
                 ) : (
                   <ChessBoard
+                    key={boardKey}
                     fen={playbackFen || gameState.fen}
                     onMove={handleMove}
                     enabled={isBoardEnabled}
