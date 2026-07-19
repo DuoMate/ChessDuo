@@ -24,7 +24,6 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
 import { ColorPicker } from '@/components/ColorPicker'
-import { SidebarNav } from '@/components/SidebarNav'
 import { DesktopSidebar } from '@/components/DesktopSidebar'
 import { ConfigurationPanel } from '@/components/ConfigurationPanel'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -839,46 +838,93 @@ if (!gameMode) {
       <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
-        {/* Desktop: Two-panel layout */}
-        <div className="hidden md:flex flex-1 min-h-0">
-          {/* Left Panel — Main Content */}
-          <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+        {isMobile ? (
+          // Mobile: Single column layout
+          <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
             {/* Time Control */}
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
               <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
             </div>
 
-            {/* Game Mode */}
+            {/* Game Mode + Configuration — animated vertical expand on mobile */}
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
-              <div className="space-y-1.5">
-                <GameModeCard
-                  onClick={() => handleGameModeClick('quick')}
-                  selected={selectedGameMode === 'quick'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Quick Play"
-                  subtitle="You + Bot vs Bots"
-                  showStar
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('duo')}
-                  selected={selectedGameMode === 'duo'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Duo"
-                  subtitle="You + Friend vs Bots"
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('four')}
-                  selected={selectedGameMode === 'four'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
-                  title="4 Player"
-                  subtitle="Friends Battle"
-                />
-              </div>
+              <motion.div
+                layout
+                className={`${selectedGameMode && selectedGameMode !== 'four' ? 'md:grid md:grid-cols-2 md:gap-3' : ''}`}
+              >
+                {/* Game Mode cards */}
+                <div className="space-y-1.5">
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('quick')}
+                    selected={selectedGameMode === 'quick'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Quick Play"
+                    subtitle="You + Bot vs Bots"
+                    showStar
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('duo')}
+                    selected={selectedGameMode === 'duo'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Duo"
+                    subtitle="You + Friend vs Bots"
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('four')}
+                    selected={selectedGameMode === 'four'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
+                    title="4 Player"
+                    subtitle="Friends Battle"
+                  />
+                </div>
+
+                {/* Configuration — slides in on Quick Play / Duo */}
+                <AnimatePresence>
+                  {selectedGameMode && selectedGameMode !== 'four' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
+                      <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-5 shadow-2xl">
+                        {/* Bot Difficulty */}
+                        <section className="mb-4">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
+                          <BotDifficultySelector
+                            selectedLevel={selectedLevel}
+                            onSelect={setSelectedLevel}
+                          />
+                          {(() => {
+                            const selected = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel)
+                            if (!selected) return null
+                            return (
+                              <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/30 p-3">
+                                {selected.description}
+                              </p>
+                            )
+                          })()}
+                        </section>
+
+                        {/* Choose Your Color */}
+                        <section className="mb-0">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">
+                            Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
+                          </p>
+                          <ColorPicker value={selectedColor} onChange={setSelectedColor} />
+                        </section>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </div>
 
             {/* Join by Code */}
@@ -907,177 +953,132 @@ if (!gameMode) {
               </div>
             </div>
 
-            {/* Error message */}
             {joinError && (
               <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
             )}
 
             {authOverlay}
           </div>
-
-          {/* Right Panel — Configuration (desktop only) */}
-          <AnimatePresence>
-            {selectedGameMode && selectedGameMode !== 'four' && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 360, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="overflow-hidden border-l border-slate-200/60 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-900/50"
-              >
-                <div className="w-[360px] h-full overflow-y-auto">
-                  <div className="sticky top-0 px-5 pt-4 pb-2 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/50">
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-purple-500 dark:text-purple-400">Configuration</h2>
-                  </div>
-                  <ConfigurationPanel
-                    selectedLevel={selectedLevel}
-                    onSelectLevel={setSelectedLevel}
-                    selectedColor={selectedColor}
-                    onSelectColor={setSelectedColor}
-                    difficultyLevels={DIFFICULTY_LEVELS}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Mobile: Single column layout */}
-        <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
-          {/* Time Control */}
-          <div className="mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
-            <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
-          </div>
-
-          {/* Game Mode + Configuration — animated vertical expand on mobile */}
-          <div className="mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
-            <motion.div
-              layout
-              className={`${selectedGameMode && selectedGameMode !== 'four' ? 'md:grid md:grid-cols-2 md:gap-3' : ''}`}
-            >
-              {/* Game Mode cards */}
-              <div className="space-y-1.5">
-                <GameModeCard
-                  onClick={() => handleGameModeClick('quick')}
-                  selected={selectedGameMode === 'quick'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Quick Play"
-                  subtitle="You + Bot vs Bots"
-                  showStar
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('duo')}
-                  selected={selectedGameMode === 'duo'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Duo"
-                  subtitle="You + Friend vs Bots"
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('four')}
-                  selected={selectedGameMode === 'four'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
-                  title="4 Player"
-                  subtitle="Friends Battle"
-                />
+        ) : (
+          // Desktop: Two-panel layout
+          <div className="hidden md:flex flex-1 min-h-0">
+            {/* Left Panel — Main Content */}
+            <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+              {/* Time Control */}
+              <div className="mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
+                <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
               </div>
 
-              {/* Configuration — slides in on Quick Play / Duo */}
-              <AnimatePresence>
-                {selectedGameMode && selectedGameMode !== 'four' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+              {/* Game Mode */}
+              <div className="mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+                <div className="space-y-1.5">
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('quick')}
+                    selected={selectedGameMode === 'quick'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Quick Play"
+                    subtitle="You + Bot vs Bots"
+                    showStar
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('duo')}
+                    selected={selectedGameMode === 'duo'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Duo"
+                    subtitle="You + Friend vs Bots"
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('four')}
+                    selected={selectedGameMode === 'four'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
+                    title="4 Player"
+                    subtitle="Friends Battle"
+                  />
+                </div>
+              </div>
+
+              {/* Join by Code */}
+              <div className="mt-1 mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Enter room code"
+                    maxLength={36}
+                    className="flex-1 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  />
+                  <button
+                    onClick={handleJoinByCode}
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
-                    <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-5 shadow-2xl">
-                      {/* Bot Difficulty */}
-                      <section className="mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
-                        <BotDifficultySelector
-                          selectedLevel={selectedLevel}
-                          onSelect={setSelectedLevel}
-                        />
-                        {(() => {
-                          const selected = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel)
-                          if (!selected) return null
-                          return (
-                            <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/30 p-3">
-                              {selected.description}
-                            </p>
-                          )
-                        })()}
-                      </section>
+                    {joinLoading ? (
+                      <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
+                    ) : (
+                      'Join'
+                    )}
+                  </button>
+                </div>
+              </div>
 
-                      {/* Choose Your Color */}
-                      <section className="mb-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">
-                          Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
-                        </p>
-                        <ColorPicker value={selectedColor} onChange={setSelectedColor} />
-                      </section>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </div>
+              {joinError && (
+                <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
+              )}
 
-          {/* Join by Code */}
-          <div className="mt-1 mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                placeholder="Enter room code"
-                maxLength={36}
-                className="flex-1 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-900 placeholder:text-slate-400 dark:border-slate-800 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-              />
-              <button
-                onClick={handleJoinByCode}
-                disabled={joinLoading || !joinCode.trim()}
-                className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
-              >
-                {joinLoading ? (
-                  <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
-                ) : (
-                  'Join'
-                )}
-              </button>
+              {authOverlay}
             </div>
-          </div>
 
-          {/* Error message */}
-          {joinError && (
-            <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
-          )}
+            {/* Desktop: Fixed Play Button at bottom, aligned with Game Mode section */}
+            {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
+              <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center px-4 pb-6 md:pl-[220px] lg:pl-[240px]">
+                <div className="w-full max-w-lg">
+                  <button
+                    onClick={handlePlay}
+                    className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
+                      selectedGameMode === 'four'
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
+                        : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
+                    }`}
+                  >
+                    <Play size={20} strokeWidth={2.5} fill="currentColor" />
+                    {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {authOverlay}
-        </div>
-
-        {/* Floating Button Row — visible for all game modes */}
-        {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
-          <div className="fixed bottom-[72px] left-0 right-0 z-30 flex justify-center px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <button
-              onClick={handlePlay}
-              className={`w-full max-w-xs min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                selectedGameMode === 'four'
-                  ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
-                  : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-              }`}
-            >
-              <Play size={20} strokeWidth={2.5} fill="currentColor" />
-              {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
-            </button>
+            {/* Right Panel — Configuration (desktop only) */}
+            <AnimatePresence>
+              {selectedGameMode && selectedGameMode !== 'four' && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 360, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden border-l border-slate-200/60 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-900/50"
+                >
+                  <div className="w-[360px] h-full overflow-y-auto">
+                    <div className="sticky top-0 px-5 pt-4 pb-2 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/50">
+                      <h2 className="text-sm font-bold uppercase tracking-wider text-purple-500 dark:text-purple-400">Configuration</h2>
+                    </div>
+                    <ConfigurationPanel
+                      selectedLevel={selectedLevel}
+                      onSelectLevel={setSelectedLevel}
+                      selectedColor={selectedColor}
+                      onSelectColor={setSelectedColor}
+                      difficultyLevels={DIFFICULTY_LEVELS}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
@@ -1089,8 +1090,8 @@ if (!gameMode) {
         )}
       </div>
     </ErrorBoundary>
-    )
-  }
+  )
+}
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
