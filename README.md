@@ -2,6 +2,9 @@
 
 A real-time 2v2 chess game where teammates make simultaneous moves and compete against an opposing team.
 
+## Live Demo
+https://chessduo.chessdoubles27.workers.dev/
+
 ## Architecture
 
 | Service | URL | Description | Config |
@@ -24,6 +27,33 @@ A real-time 2v2 chess game where teammates make simultaneous moves and compete a
 | Variable | Value |
 |----------|-------|
 | `PORT` | `3001` |
+
+## Current Status (July 2026)
+
+**✅ Web MVP Complete** — All core features live:
+- **2v2 Chess**: Simultaneous team moves with parallel blind evaluation
+- **Online Multiplayer**: Supabase real-time sync with Coordinator pattern
+- **Move Playback**: Click-to-replay move history with shadow moves
+- **Move Insights**: Heuristic analysis — move classification, engine comparison (3 free/account)
+- **Premium**: Freemium model — 3 free insights, then upgrade for unlimited (Google Play Billing)
+- **Match History**: Per-player stats, sync rate, accuracy trends (`/history`)
+- **User Profiles**: Username editing, match stats overview (`/profile`)
+- **Friends & Chat**: Real-time messaging, challenges, friend requests (`/friends`)
+- **Auth**: Email/password signup with verification, anonymous guest play, logout
+- **6 Bot Difficulties**: 1000-2600 ELO via Stockfish server
+- **Supabase RLS**: Per-room access control with SECURITY DEFINER functions
+- **Rate Limiting**: In-memory per-endpoint rate limiting on API routes
+- **Auth Guard**: Next.js middleware protects `/game` route
+
+**✅ Browser UI Unification Complete (July 2026)**:
+- **Home Page**: Mockup-based layout with HeaderBar, TimePills, GameModeCard, BotDifficultySelector, PlayButton, HomeBottomNav
+- **DesktopSidebar**: Unified wide sidebar (220px/240px) with labels across Home, History, Friends, Profile pages
+- **Dark Navy Theme**: Consistent `#0a0e1a` background across all browser pages
+- **Mobile**: HomeBottomNav floating pill style unchanged
+
+**⚠️ Mobile Apps Pending**:
+- Android APK build scripts ready (`npm run cap:build`), Play Store submission pending
+- iOS IPA build not started
 
 ## Features
 
@@ -123,13 +153,15 @@ CREATE TABLE IF NOT EXISTS room_players (
 
 ```
 ChessDuo/
-├���─ src/
+├── src/
 │   ├── app/              # Next.js pages
 │   ├── components/       # React components
 │   │   ├── Auth.tsx    # Login/signup
 │   │   ├── Room.tsx    # Create/join room
 │   │   ├── Game.tsx    # Main game
 │   │   ├── ChessBoard.tsx
+│   │   ├── DesktopSidebar.tsx  # Browser nav (Home/History/Friends/Profile)
+│   │   ├── HomeBottomNav.tsx   # Mobile nav
 │   │   └── ...
 │   └── lib/
 │       ├── supabase.ts  # Supabase client

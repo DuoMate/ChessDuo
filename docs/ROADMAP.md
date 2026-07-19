@@ -530,7 +530,7 @@ Key files:
 
 ---
 
-*Last Updated: 2026-07-15 — Migrated from Razorpay to Google Play Billing subscriptions*
+*Last Updated: 2026-07-19 — Browser UI unification complete (Phase 8: DesktopSidebar across all pages)*
 
 ---
 
@@ -610,6 +610,24 @@ Add `console.error` to critical empty catch blocks in:
 - Un-skip 19 test suites (game state, accuracy/move trail, move validation, game over detection, bot integration)
 - Write tests for the 9 completed bug fixes
 - Fix pre-existing test failures in `messages.test.ts` and `ChallengePicker.test.tsx`
+
+---
+
+## Browser UI Unification (July 2026)
+
+### Phase 8: Unified Wide Sidebar Navigation
+**Goal**: Unified wide sidebar navigation across all browser pages
+
+- [x] 8.1 Home page: new mockup-based layout with HeaderBar, TimePills, GameModeCard, BotDifficultySelector, PlayButton, HomeBottomNav
+- [x] 8.2 DesktopSidebar component — wider (220px/240px) with labels, ChessDuoLogo, tagline, loading progress bar
+- [x] 8.3 History, Friends, Profile pages — migrate from SidebarNav (narrow 80px icons) to DesktopSidebar
+- [x] 8.4 Main layout (`src/app/(main)/layout.tsx`) uses DesktopSidebar for all non-game pages on desktop
+- [x] 8.5 Mobile unchanged — HomeBottomNav floating pill style remains
+- [x] 8.6 Consistent dark navy theme (#0a0e1a) across all pages
+
+**Key Files**: `src/components/DesktopSidebar.tsx`, `src/app/(main)/layout.tsx`, `src/app/page.tsx`
+
+**Deliverable**: ✅ Unified browser navigation — Home, History, Friends, Profile all share the same wide sidebar with labels and active state
 
 ---
 
