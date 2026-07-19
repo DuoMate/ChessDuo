@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Check } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 interface ConfirmMoveBarProps {
   visible: boolean
@@ -19,28 +19,28 @@ export function ConfirmMoveBar({ visible, onConfirm, onCancel, disabled }: Confi
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-20 left-0 right-0 z-40 flex justify-center px-3 pointer-events-none"
+          className="fixed left-0 right-0 z-40 flex justify-center px-3 pointer-events-none"
+          style={{ bottom: 'calc(56px + max(12px, env(safe-area-inset-bottom, 12px)))' }}
         >
-          <div className="flex w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/60 bg-white/95 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/95 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] pointer-events-auto">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] rounded-l-2xl text-rose-600 transition-colors hover:bg-rose-50 active:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:active:bg-rose-500/20"
-              aria-label="Cancel move"
-            >
-              <X size={20} strokeWidth={2.5} />
-              <span className="text-sm font-bold">Cancel</span>
-            </button>
-            <div className="w-px bg-slate-200/60 dark:bg-slate-700/50" />
+          <div className="relative flex w-full max-w-md items-center justify-center min-h-[56px] rounded-t-2xl bg-gradient-to-r from-emerald-500 to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)] pointer-events-auto">
             <button
               type="button"
               onClick={onConfirm}
               disabled={disabled}
-              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] rounded-r-2xl bg-gradient-to-r from-green-500 to-emerald-500 text-slate-900 font-bold transition-all hover:from-green-400 hover:to-emerald-400 active:from-green-600 active:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 w-full min-h-[56px] text-white font-bold text-sm transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Confirm move"
             >
-              <Check size={20} strokeWidth={3} />
-              <span className="text-sm font-bold">Confirm Move</span>
+              <Check size={22} strokeWidth={3} />
+              <span className="text-base font-bold tracking-tight">Confirm Move</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onCancel}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center min-h-[44px] min-w-[44px] rounded-xl text-white/80 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors"
+              aria-label="Cancel move"
+            >
+              <X size={18} strokeWidth={2.5} />
             </button>
           </div>
         </motion.div>
