@@ -14,7 +14,7 @@ import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, ChevronRight, Play, ChessPawn, ChessKnight, ChessBishop, ChessRook, ChessQueen } from 'lucide-react'
+import { Swords, ChevronRight, Play, ChessPawn, ChessKnight, ChessBishop, ChessRook, Crown } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useSettings } from '@/lib/settings'
 import { DEFAULT_TEAM_TIMER_SECONDS, PlayerColor, SELECTED_COLOR_KEY, DEFAULT_PLAYER_COLOR } from '@/features/shared/gameConstants'
@@ -24,7 +24,6 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
 import { ColorPicker } from '@/components/ColorPicker'
-import { ConfigurationPanel } from '@/components/ConfigurationPanel'
 import { SidebarNav } from '@/components/SidebarNav'
 
 export const dynamic = 'force-dynamic'
@@ -45,11 +44,11 @@ const TIME_OPTIONS: TimeOption[] = [
 ]
 
 const DIFFICULTY_LEVELS = [
-  { level: 1, label: 'Easy',   Icon: ChessPawn },
-  { level: 2, label: 'Medium', Icon: ChessKnight },
-  { level: 3, label: 'Hard',   Icon: ChessBishop },
-  { level: 4, label: 'Expert', Icon: ChessRook },
-  { level: 5, label: 'Master', Icon: ChessQueen },
+  { level: 1, label: 'Easy',   Icon: ChessPawn, description: 'Great for learning. Bots make occasional mistakes and miss tactical opportunities.' },
+  { level: 2, label: 'Medium', Icon: ChessKnight, description: 'Balanced play that does not punish mistakes too harshly. Good for casual games.' },
+  { level: 3, label: 'Hard',   Icon: ChessBishop, description: 'Bots play solid chess and capitalize on obvious errors. Expect a challenge.' },
+  { level: 4, label: 'Expert', Icon: ChessRook, description: 'Strong positional moves and punishing tactics. Recommended for experienced players.' },
+  { level: 5, label: 'Master', Icon: Crown, description: 'Near-perfect play with deep calculation. Only for the most skilled players.' },
 ]
 
 type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
@@ -127,7 +126,6 @@ export default function SetupPage() {
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
   const isMobile = useIsMobile()
-  const [configMode, setConfigMode] = useState<'quick' | 'duo' | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
@@ -570,29 +568,6 @@ export default function SetupPage() {
     router.push(`/game?level=${selectedLevel}&time=${time}&color=${selectedColor}`)
   }
 
-  /**
-   * Handler for the ConfigurationPanel's Start Game button on browser.
-   * Browser hardcodes bot difficulty to Medium (3) per spec.
-   */
-  const handleBrowserConfigStart = (color: PlayerColor) => {
-    setSelectedColor(color)
-    if (configMode === 'quick') {
-      // Offline quick play — no auth required
-      const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-      const hasSeen = typeof window !== 'undefined' && localStorage.getItem('chessduo_offline_disclaimer_dismissed') === 'true'
-      if (!hasSeen) {
-        localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: 3, time, color }))
-        router.push('/welcome?mode=offline')
-      } else {
-        router.push(`/game?level=3&time=${time}&color=${color}`)
-      }
-    } else if (configMode === 'duo') {
-      // Online duo — needs auth
-      handleTwoPlayerClick()
-    }
-    setConfigMode(null)
-  }
-
   const handleTwoPlayerClick = () => {
     if (!playerId) {
       setShowAuthOverlay(true)
@@ -665,28 +640,13 @@ export default function SetupPage() {
 
   const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
     if (selectedGameMode === mode) {
-      // Already selected: start immediately on mobile, open config panel on browser
-      if (!isMobile && mode !== 'four') {
-        setConfigMode(mode)
-        return
+      // Already selected: for Four Player, start immediately
+      if (mode === 'four') {
+        handleStartFourPlayer(selectedTime)
       }
-      switch (mode) {
-        case 'quick':
-          handleStartOffline()
-          break
-        case 'duo':
-          handleTwoPlayerClick()
-          break
-        case 'four':
-          handleStartFourPlayer(selectedTime)
-          break
-      }
+      // For quick/duo, do nothing (user clicks Start Game in inline config)
     } else {
       setSelectedGameMode(mode)
-      // On browser, open config panel right when a non-4 mode is selected
-      if (!isMobile && mode !== 'four') {
-        setConfigMode(mode)
-      }
     }
   }
 
@@ -915,27 +875,62 @@ if (!gameMode) {
               </div>
             </div>
 
-          {/* Bot Difficulty — visible only for Quick Play and Duo on mobile */}
-          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
+          {/* Inline Configuration — visible for Quick Play and Duo on all viewports */}
+          {selectedGameMode && selectedGameMode !== 'four' && (
             <div className="mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Bot Difficulty</p>
-              <BotDifficultySelector
-                selectedLevel={selectedLevel}
-                onSelect={setSelectedLevel}
-              />
-            </div>
-          )}
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
+              <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-5 shadow-2xl">
+                {/* Game Mode */}
+                <section className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Game Mode</p>
+                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/30 p-3.5 flex items-center gap-3">
+                    <Swords size={20} className="text-blue-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{selectedGameMode === 'duo' ? 'Duo' : 'Quick Play'}</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{selectedGameMode === 'duo' ? 'You + Friend vs Bots' : 'You + Bot vs Bots'}</div>
+                    </div>
+                  </div>
+                </section>
 
-          {/* Choose Your Color — visible only for Quick Play and Duo on mobile */}
-          {isMobile && selectedGameMode && selectedGameMode !== 'four' && (
-            <div className="mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                Choose Your <span className="text-blue-500">Color</span>
-              </p>
-              <ColorPicker
-                value={selectedColor}
-                onChange={setSelectedColor}
-              />
+                {/* Bot Difficulty */}
+                <section className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
+                  <BotDifficultySelector
+                    selectedLevel={selectedLevel}
+                    onSelect={setSelectedLevel}
+                  />
+                  {(() => {
+                    const selected = DIFFICULTY_LEVELS.find(d => d.level === selectedLevel)
+                    if (!selected) return null
+                    return (
+                      <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/30 p-3">
+                        {selected.description}
+                      </p>
+                    )
+                  })()}
+                </section>
+
+                {/* Choose Your Color */}
+                <section className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">
+                    Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
+                  </p>
+                  <ColorPicker value={selectedColor} onChange={setSelectedColor} />
+                </section>
+
+                {/* Start Game */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedGameMode === 'quick') handleStartOffline()
+                    else if (selectedGameMode === 'duo') handleTwoPlayerClick()
+                  }}
+                  className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 text-white font-bold text-sm transition-all duration-200 shadow-[0_4px_24px_rgba(59,130,246,0.35)] active:scale-[0.98]"
+                >
+                  <Play size={18} strokeWidth={2.5} fill="currentColor" />
+                  Start Game
+                </button>
+              </div>
             </div>
           )}
 
@@ -977,8 +972,8 @@ if (!gameMode) {
           {authOverlay}
         </div>
 
-        {/* Play Button Row — above the bottom nav */}
-        {selectedGameMode && (
+        {/* Play Button Row — only for 4 Player (Quick Play / Duo use inline Start Game) */}
+        {selectedGameMode === 'four' && (
           <div className="fixed bottom-[72px] left-0 right-0 z-30 flex justify-center px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <button
               onClick={handlePlay}
@@ -996,19 +991,6 @@ if (!gameMode) {
         ) : (
           <SidebarNav unreadMessages={unreadMessages} />
         )}
-
-        {/* Configuration Panel — browser only, opens when Quick Play or Duo is selected */}
-        <ConfigurationPanel
-          open={!!configMode}
-          selectedColor={selectedColor}
-          onColorChange={setSelectedColor}
-          onClose={() => setConfigMode(null)}
-          onStart={handleBrowserConfigStart}
-          modeTitle={configMode === 'duo' ? 'Duo' : 'Quick Play'}
-          modeSubtitle={configMode === 'duo' ? 'You + Friend vs Bots' : 'You + Bot vs Bots'}
-          botLevelLabel="Medium"
-          botLevelDescription="Medium-strength bot. Balanced play that doesn't punish mistakes too harshly."
-        />
       </ErrorBoundary>
     )
   }

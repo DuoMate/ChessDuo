@@ -42,9 +42,7 @@ const COLOR_OPTIONS: ColorOption[] = [
 
 /**
  * 3-card color picker for choosing White / Black / Random pieces.
- * Used both standalone on the mobile home screen and inside the
- * `ConfigurationPanel` modal on browser. See
- * `docs/superpowers/specs/2026-07-18-home-screen-restructure-color-picker-design.md` § 5.3.
+ * Used inline on the home screen configuration panel.
  */
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   return (
