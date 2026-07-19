@@ -843,37 +843,39 @@ if (!gameMode) {
             <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
           </div>
 
-          {/* Game Mode */}
-          <div className="mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
-              <div className="space-y-1.5">
-                <GameModeCard
-                  onClick={() => handleGameModeClick('quick')}
-                  selected={selectedGameMode === 'quick'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Quick Play"
-                  subtitle="You + Bot vs Bots"
-                  showStar
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('duo')}
-                  selected={selectedGameMode === 'duo'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
-                  title="Duo"
-                  subtitle="You + Friend vs Bots"
-                />
-                <GameModeCard
-                  onClick={() => handleGameModeClick('four')}
-                  selected={selectedGameMode === 'four'}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
-                  title="4 Player"
-                  subtitle="Friends Battle"
-                />
+          {/* Game Mode — hidden when Quick Play or Duo is selected */}
+          {(!selectedGameMode || selectedGameMode === 'four') && (
+            <div className="mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+                <div className="space-y-1.5">
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('quick')}
+                    selected={selectedGameMode === 'quick'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Quick Play"
+                    subtitle="You + Bot vs Bots"
+                    showStar
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('duo')}
+                    selected={selectedGameMode === 'duo'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    title="Duo"
+                    subtitle="You + Friend vs Bots"
+                  />
+                  <GameModeCard
+                    onClick={() => handleGameModeClick('four')}
+                    selected={selectedGameMode === 'four'}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
+                    rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
+                    title="4 Player"
+                    subtitle="Friends Battle"
+                  />
+                </div>
               </div>
-            </div>
+          )}
 
           {/* Inline Configuration — visible for Quick Play and Duo on all viewports */}
           {selectedGameMode && selectedGameMode !== 'four' && (
@@ -918,18 +920,6 @@ if (!gameMode) {
                   <ColorPicker value={selectedColor} onChange={setSelectedColor} />
                 </section>
 
-                {/* Start Game */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedGameMode === 'quick') handleStartOffline()
-                    else if (selectedGameMode === 'duo') handleTwoPlayerClick()
-                  }}
-                  className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 text-white font-bold text-sm transition-all duration-200 shadow-[0_4px_24px_rgba(59,130,246,0.35)] active:scale-[0.98]"
-                >
-                  <Play size={18} strokeWidth={2.5} fill="currentColor" />
-                  Start Game
-                </button>
               </div>
             </div>
           )}
@@ -972,15 +962,19 @@ if (!gameMode) {
           {authOverlay}
         </div>
 
-        {/* Play Button Row — only for 4 Player (Quick Play / Duo use inline Start Game) */}
-        {selectedGameMode === 'four' && (
+        {/* Floating Button Row — visible for all game modes */}
+        {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
           <div className="fixed bottom-[72px] left-0 right-0 z-30 flex justify-center px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <button
               onClick={handlePlay}
-              className="w-full max-w-xs min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold text-sm shadow-[0_4px_24px_rgba(16,185,129,0.35)] transition-all duration-200 hover:from-emerald-400 hover:to-green-400 active:scale-[0.97]"
+              className={`w-full max-w-xs min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
+                selectedGameMode === 'four'
+                  ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
+              }`}
             >
               <Play size={20} strokeWidth={2.5} fill="currentColor" />
-              Play
+              {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
             </button>
           </div>
         )}
