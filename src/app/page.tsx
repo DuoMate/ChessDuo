@@ -837,7 +837,7 @@ if (!gameMode) {
       <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden md:pl-20 lg:pl-22">
         <HeaderBar />
 
-        <div className="flex flex-1 flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+        <div className="flex flex-1 flex-col px-4 pb-24 pt-2 max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto w-full min-h-0 overflow-hidden">
           {/* Time Control */}
           <div className="mb-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
