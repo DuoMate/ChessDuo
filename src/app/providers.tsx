@@ -12,6 +12,7 @@ import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { initPushNotifications, clearCachedAccessToken, setCachedAccessToken, resetPushState } from '@/features/push-notifications'
 import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
+import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -29,6 +30,10 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
     SubscriptionService.setProvider(GooglePlayBillingProvider)
+    
+    // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
+    // (especially critical when human plays as Black - White bots move first)
+    createEvaluator()
   }, [])
 
   useEffect(() => {
