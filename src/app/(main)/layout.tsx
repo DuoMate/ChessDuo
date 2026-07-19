@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { HomeBottomNav } from '@/components/HomeBottomNav'
-import { SidebarNav } from '@/components/SidebarNav'
+import { DesktopSidebar } from '@/components/DesktopSidebar'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -41,8 +41,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </>
       ) : (
         <>
-          <SidebarNav unreadMessages={unreadMessages} />
-          <div className="md:pl-20 lg:pl-22">{children}</div>
+          <DesktopSidebar unreadMessages={unreadMessages} />
+          <div className="md:pl-[220px] lg:pl-[240px]">{children}</div>
         </>
       )}
     </ErrorBoundary>
