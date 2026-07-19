@@ -732,12 +732,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const comp = g.lastMoveComparison as MoveComparison | null
     if (comp && moveHistoryRef.current.length === 0 ||
         (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+      const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+      const isHumanWinner = comp.winnerId === humanSlot
       const entry: MoveEntry = {
         turn: moveHistoryRef.current.length + 1,
         team: prevTurn || currentTurn,
         winningMove: comp.winningMove,
         winningMoveUci: comp.winningMove || '',
-        shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+        shadowMove: comp.isSync ? null : (isHumanWinner ? comp.player2Move : comp.player1Move),
         shadowMoveUci: '',
         isSync: comp.isSync,
         player1Accuracy: comp.player1Accuracy,
@@ -1016,18 +1018,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     // Accuracy transition detection (for coordinator who uses updateStateRef)
     const prevTurn = prevTurnRef.current
-    if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
+    const viewerTeam = team || (g as GameInterface).getTeam()
+    if (prevTurn === viewerTeam && currentTurn !== viewerTeam) {
       const comp = g.lastMoveComparison as MoveComparison | null
       if (comp) {
-        if (!isFourPlayer || myTeam === 'WHITE') {
-          DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) WHITE→BLACK detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
-          setAccuracyComparison(comp)
-        }
-      }
-    } else if (isFourPlayer && prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
-      const comp = g.lastMoveComparison as MoveComparison | null
-      if (comp && myTeam === 'BLACK') {
-        DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) BLACK→WHITE detected, SET accuracy for Black team', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
+        DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) human→opponent detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
         setAccuracyComparison(comp)
       }
     }
@@ -1164,14 +1159,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         updateStateRef.current()
 
         const fbComp = g.lastMoveComparison as MoveComparison | null
+        const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+        const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
         if (fbComp && (moveHistoryRef.current.length === 0 ||
             fbComp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+          const isHumanWinner = fbComp.winnerId === humanSlot
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
             team: opponentTeam,
             winningMove: fbComp.winningMove,
             winningMoveUci: fbComp.winningMove || '',
-            shadowMove: fbComp.isSync ? null : (fbComp.winningMove === fbComp.player1Move ? fbComp.player2Move : fbComp.player1Move),
+            shadowMove: fbComp.isSync ? null : (isHumanWinner ? fbComp.player2Move : fbComp.player1Move),
             shadowMoveUci: '',
             isSync: fbComp.isSync,
             player1Accuracy: fbComp.player1Accuracy,
@@ -1201,14 +1199,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     updateStateRef.current()
 
     const comp = g.lastMoveComparison as MoveComparison | null
+    const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+    const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
     if (comp && (moveHistoryRef.current.length === 0 ||
         comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+      const isHumanWinner = comp.winnerId === humanSlot
       const entry: MoveEntry = {
         turn: moveHistoryRef.current.length + 1,
         team: opponentTeam,
         winningMove: comp.winningMove,
         winningMoveUci: comp.winningMove || '',
-        shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+        shadowMove: comp.isSync ? null : (isHumanWinner ? comp.player2Move : comp.player1Move),
         shadowMoveUci: '',
         isSync: comp.isSync,
         player1Accuracy: comp.player1Accuracy,
@@ -1317,20 +1318,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               const isValidSquare = (sq: string): sq is string => 
                 !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
-              const highlightSquares: HighlightSquares = {}
-              const isPlayer1 = playerId === (g as GameInterface).player1Id
+              const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+              const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
+              const isHumanWinner = comparison.winnerId === humanSlot
               
-              if (comparison.winningMove && comparison.player1Move) {
-                const wf = comparison.winningMove.substring(0, 2)
-                const wt = comparison.winningMove.substring(2, 4)
+              const winningMove = isHumanWinner ? comparison.player1Move : comparison.player2Move
+              const losingMove = isHumanWinner ? comparison.player2Move : comparison.player1Move
+              
+              const highlightSquares: HighlightSquares = {}
+
+              if (winningMove) {
+                const wf = winningMove.substring(0, 2)
+                const wt = winningMove.substring(2, 4)
                 if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
                 if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-                if (!comparison.isSync) {
-                  const loserMove = comparison.winningMove === comparison.player1Move ? comparison.player2Move : comparison.player1Move
-                  const lf = loserMove?.substring(0, 2)
-                  const lt = loserMove?.substring(2, 4)
-                  if (lf && isValidSquare(lf)) highlightSquares.loserFrom = lf
-                  if (lt && isValidSquare(lt)) highlightSquares.loserTo = lt
+                if (!comparison.isSync && losingMove) {
+                  const lf = losingMove.substring(0, 2)
+                  const lt = losingMove.substring(2, 4)
+                  if (isValidSquare(lf)) highlightSquares.loserFrom = lf
+                  if (isValidSquare(lt)) highlightSquares.loserTo = lt
                 }
               }
               
@@ -1343,8 +1349,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             
             // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
             // In 4-player mode, skip bot handling — humans manage BLACK turn
-            if (!isFourPlayer && newTurn === Team.BLACK && bot && playerId && g.isCoordinator()) {
-              DEBUG && console.log(`[RESOLVE] Coordinator handling BLACK bot moves...`)
+            // Use opponentTeam instead of hardcoded BLACK so it works when human is Black
+            const myTeam = (g as GameInterface).getTeam()
+            const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
+            if (!isFourPlayer && newTurn === opponentTeam && bot && playerId && g.isCoordinator()) {
+              DEBUG && console.log(`[RESOLVE] Coordinator handling ${opponentTeam} bot moves...`)
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
               const currentFen = g.board.fen()
@@ -1537,12 +1546,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const comp = g.lastMoveComparison as MoveComparison | null
         if (comp && moveHistoryRef.current.length === 0 ||
             (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+          const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+          const isHumanWinner = comp.winnerId === humanSlot
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
             team: myTeam,
             winningMove: comp.winningMove,
             winningMoveUci: comp.winningMove || '',
-            shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
+            shadowMove: comp.isSync ? null : (isHumanWinner ? comp.player2Move : comp.player1Move),
             shadowMoveUci: '',
             isSync: comp.isSync,
             player1Accuracy: comp.player1Accuracy,
