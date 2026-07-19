@@ -35,7 +35,8 @@ All React components — co-located by feature, not by type. Components handle r
 | `ChatPanel.tsx` | In-app messenger |
 | `InitialsAvatar.tsx` | **NEW** — Shared initials avatar component (sm/md/lg sizes, online indicator, premium variant) |
 | `ColorPicker.tsx` | **NEW** — 3-card White/Black/Random selector with Lucide icons. Used inline on the home screen configuration panel. |
-| `SidebarNav.tsx` | **NEW** — Left vertical navigation for browser viewports (replaces `HomeBottomNav` on `md:`+). 4 tabs (Home/History/Friends/Profile), 80-88px wide, fixed. |
+| `DesktopSidebar.tsx` | **NEW** — Left vertical navigation for browser viewports (Home/History/Friends/Profile, 220-240px wide, fixed). Replaces `SidebarNav` on `md:`+ breakpoints across all `(main)/` pages. |
+| `SidebarNav.tsx` | **LEGACY** — Narrow left vertical navigation (80-88px icons only). Kept for reference; replaced by `DesktopSidebar` on all `(main)/` pages. |
 | `BottomNav.tsx` | Mobile bottom navigation (used by DuelGame/ReplayView) |
 | `MobileStatusBar.tsx` | Mobile safe-area wrapper |
 | `NetworkOverlay.tsx` | Offline connection banner |
@@ -84,6 +85,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-19**: Browser UI unification — migrated History, Friends, Profile pages from `SidebarNav` (narrow 80px icons-only) to `DesktopSidebar` (wide 220px/240px with labels). Updated `src/app/(main)/layout.tsx` to use `DesktopSidebar` for all non-game pages on desktop. Mobile unchanged (HomeBottomNav floating pill).
 - **2026-07-18**: Home screen restructure — added `ColorPicker` (3-card White/Black/Random with Lucide icons), `SidebarNav` (left vertical nav for browser), inline configuration panel (Quick/Duo). Mobile `BotDifficultySelector` replaced with 5-card grid using Lucide chess-piece icons. `LocalGame` accepts `playerColor` param; bots swap teams when human picks Black. `GameInterface` gets `getPlayerColor`/`getHumanSlot`/`getTeammateSlot`. Welcome page redirect now passes color; offline auto-start effect split (runs on mount, no longer requires `playerId`) — fixes Quick Play → Got it → home bug for guest users.
 - **2026-07-18**: Modal exit animations fixed — GameOverModal, ResignConfirmModal, SettingsPanel now use `open` prop pattern with AnimatePresence for proper exit animations. Game.tsx/DuelGame.tsx always render modals with `open` prop. UI/UX bug hunt: z-index standardization, text overflow fixes, emoji → Lucide icons, loading states. HomeBottomNav: spinner on navigating button, loading progress bar, pathname-based active detection. BackButton: `alwaysFallback` prop for nav pages.
 - **2026-07-15**: Google Play Billing migration — `InsightsGate` and `ProfilePanel` now use `SubscriptionService.isPremium()` instead of direct `profiles.is_premium` queries. Premium checks are delegated to the provider-agnostic billing module.

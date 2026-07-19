@@ -16,27 +16,32 @@ src/
 │   ├── game/page.tsx             # /game → dynamic(lazy) Game component
 │   ├── duel/page.tsx             # /duel → dynamic(lazy) DuelGame component
 │   ├── replay/[gameId]/page.tsx  # /replay → dynamic(lazy) ReplayView component
-│   ├── history/page.tsx          # Match history
-│   ├── profile/page.tsx          # User profile
-│   ├── premium/page.tsx          # Premium upsell
-│   ├── privacy/page.tsx          # Privacy policy
+│   ├── (main)/                   # Route group for non-game pages
+│   │   ├── layout.tsx            # Shared layout (DesktopSidebar + HomeBottomNav)
+│   │   ├── history/page.tsx      # Match history
+│   │   ├── profile/page.tsx      # User profile
+│   │   ├── friends/page.tsx      # Friends list + chat
+│   │   ├── settings/page.tsx     # App settings
+│   │   ├── premium/page.tsx      # Premium upsell
+│   │   ├── privacy/page.tsx      # Privacy policy
+│   │   ├── delete-account/page.tsx # Account deletion flow
+│   │   └── four-player/page.tsx  # 4-player lobby
 │   ├── invite/[userId]/page.tsx  # Friend invite landing
 │   └── challenge/[code]/page.tsx # Challenge link landing
 │
 ├── components/                   # React components (co-located by feature)
-│   ├── Game.tsx                  # Main 2v2 game (online + offline)
-│   ├── DuelGame.tsx              # 1v1 duel mode
+│   ├── Game.tsx                  # Main 2v2 game (online + offline) — board-page revamp v2
+│   ├── DuelGame.tsx              # 1v1 duel mode — board-page revamp v2
 │   ├── ChessBoard.tsx            # Chess board + annotations
-│   ├── MobileChessBoard.tsx      # Touch-optimized board
-│   ├── AccuracyBottomSheet.tsx   # Move accuracy breakdown
-│   ├── MoveComparison.tsx        # Side-by-side move comparison
-│   ├── MovePlayback.tsx          # Timeline scrubber
+│   ├── MobileChessBoard.tsx      # Touch-optimized board for Capacitor
 │   ├── GameOverModal.tsx         # End-game result modal
-│   ├── TeamTimer.tsx             # Team-level countdown
-│   ├── MatchTimer.tsx            # Match-level countdown
-│   ├── GameLoading.tsx           # Pre-game lobby/waiting
 │   ├── GameLobby.tsx             # Matchmaking lobby
+│   ├── GameLoading.tsx           # Pre-game waiting state
 │   ├── GameMenu.tsx              # In-game menu (resign, settings)
+│   ├── MovePlayback.tsx          # Timeline scrubber
+│   ├── MoveComparison.tsx        # Side-by-side move comparison
+│   ├── TeamTimer.tsx             # Team-level countdown timer
+│   ├── MatchTimer.tsx            # Match-level countdown timer (circular SVG)
 │   ├── SettingsPanel.tsx         # Settings slide-over
 │   ├── ResignConfirmModal.tsx    # Resign confirmation
 │   ├── LeaveConfirmModal.tsx     # Leave game confirmation
@@ -44,25 +49,36 @@ src/
 │   ├── AnalyzingIndicator.tsx    # Stockfish thinking spinner
 │   ├── EvaluatingLoader.tsx      # Full-screen evaluation loader
 │   ├── SlideOver.tsx             # Generic slide-over container
-│   ├── ProfilePanel.tsx          # Profile + stats
-│   ├── HistoryPanel.tsx          # Match history list
-│   ├── FriendsPanel.tsx          # Friends + requests + chat
-│   ├── ChatPanel.tsx             # In-app messenger
-│   ├── BottomNav.tsx             # Mobile bottom navigation
-│   ├── MobileStatusBar.tsx       # Mobile safe-area wrapper
 │   ├── Auth.tsx                  # Auth form (login/signup)
 │   ├── ChooseUsername.tsx        # Username selection post-signup
 │   ├── WelcomeDisclaimer.tsx     # First-time welcome modal
 │   ├── GameTour.tsx              # Onboarding tutorial
 │   ├── ChallengePicker.tsx       # Challenge mode/time picker
-│   ├── InsightsGate.tsx          # Premium insight gate
-│   ├── TeamIndicator.tsx         # Team crown/bot icons
+│   ├── InsightsGate.tsx          # Premium insight gate — uses `SubscriptionService.isPremium()`
+│   ├── TeamIndicator.tsx         # Team crown/bot icons — legacy, replaced by `BoardTopBar`
 │   ├── TurnStatusArea.tsx        # Turn phase indicator
 │   ├── CapturedPieces.tsx        # Captured pieces display
-│   ├── NetworkOverlay.tsx        # Offline banner
+│   ├── NetworkOverlay.tsx        # Offline connection banner
 │   ├── ErrorBoundary.tsx         # React error boundary
 │   ├── Toast.tsx                 # Toast notification system
 │   ├── PromotionModal.tsx        # Pawn promotion selector
+│   ├── InitialsAvatar.tsx        # Shared initials avatar (sm/md/lg, online indicator, premium variant)
+│   ├── ColorPicker.tsx           # 3-card White/Black/Random selector with Lucide icons
+│   ├── DesktopSidebar.tsx        # Left vertical nav for browser (Home/History/Friends/Profile, 220-240px)
+│   ├── SidebarNav.tsx            # Legacy narrow sidebar (80-88px) — kept for reference
+│   ├── BottomNav.tsx             # Mobile bottom navigation (used by DuelGame/ReplayView)
+│   ├── MobileStatusBar.tsx       # Mobile safe-area wrapper
+│   ├── ProfilePanel.tsx          # Profile + stats view — dark theme redesign
+│   ├── HistoryPanel.tsx          # Match history list — dark theme redesign
+│   ├── FriendsPanel.tsx          # Friends list + requests + chat — dark theme redesign
+│   ├── ChatPanel.tsx             # In-app messenger
+│   ├── BoardTopBar.tsx           # Board-page revamp — team avatars row + center timer card
+│   ├── TeamHexagon.tsx           # Board-page revamp — decorative team-position hexagon
+│   ├── PendingMovesRow.tsx       # Board-page revamp — Your Move / Teammate status cards
+│   ├── ConfirmMoveButton.tsx     # Board-page revamp — gated by `useSettings().confirmMove`
+│   ├── MoveResolvedCard.tsx      # Board-page revamp — 3-column resolution modal
+│   ├── RoundHistorySidebar.tsx   # Board-page revamp — right-side panel of past rounds
+│   ├── BoardBottomNav.tsx        # Board-page revamp — 5-tab in-game nav (Moves/Game/Surrender/Insights/Chat)
 │   └── __tests__/                # Component tests (co-located)
 │
 ├── features/                     # Domain logic (framework-free)
@@ -386,4 +402,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-06-04 — Architecture bible established after comprehensive code quality pass*
+*Last Updated: 2026-07-19 — DesktopSidebar unified across all browser pages (Home, History, Friends, Profile)*
