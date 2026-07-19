@@ -10,6 +10,7 @@ interface Settings {
   autoQueen: boolean
   lowTimeWarning: boolean
   confirmMove: boolean
+  soundEnabled: boolean
   theme: Theme
 }
 
@@ -17,6 +18,7 @@ const DEFAULTS: Settings = {
   autoQueen: false,
   lowTimeWarning: true,
   confirmMove: false,
+  soundEnabled: true,
   theme: 'dark',
 }
 
@@ -29,6 +31,7 @@ function loadSettings(): Settings {
         autoQueen: parsed.autoQueen ?? DEFAULTS.autoQueen,
         lowTimeWarning: parsed.lowTimeWarning ?? DEFAULTS.lowTimeWarning,
         confirmMove: parsed.confirmMove ?? DEFAULTS.confirmMove,
+        soundEnabled: parsed.soundEnabled ?? DEFAULTS.soundEnabled,
         theme: parsed.theme === 'light' ? 'light' : (parsed.theme === 'dark' ? 'dark' : DEFAULTS.theme),
       }
     }
@@ -92,14 +95,24 @@ export function useSettings() {
     })
   }, [])
 
+  const setSoundEnabled = useCallback((value: boolean) => {
+    setSettingsState(prev => {
+      const updated = { ...prev, soundEnabled: value }
+      saveSettings(updated)
+      return updated
+    })
+  }, [])
+
   return {
     autoQueen: settings.autoQueen,
     lowTimeWarning: settings.lowTimeWarning,
     confirmMove: settings.confirmMove,
+    soundEnabled: settings.soundEnabled,
     theme: settings.theme,
     setAutoQueen,
     setLowTimeWarning,
     setTheme,
     setConfirmMove,
+    setSoundEnabled,
   }
 }
