@@ -62,16 +62,16 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
 
   if (loading) {
     return (
-    <div className="flex flex-col h-full min-h-full bg-white dark:bg-[#0a0e1a] text-slate-900 dark:text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
+    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <History size={18} className="text-white" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Match History</h2>
+            <h2 className="text-lg font-bold text-white">Match History</h2>
           </div>
           {onClose && (
-            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
               <span className="text-slate-400 text-lg">&times;</span>
             </button>
           )}
@@ -84,17 +84,17 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-full bg-white dark:bg-[#0a0e1a] text-slate-900 dark:text-white">
+    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <History size={18} className="text-white" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Match History</h2>
+          <h2 className="text-lg font-bold text-white">Match History</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
             <span className="text-slate-400 text-lg">&times;</span>
           </button>
         )}
@@ -109,14 +109,14 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-3 gap-2"
           >
-            <div className="bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <Target size={14} className="text-blue-400" />
               </div>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{playerStats.totalGames}</p>
+              <p className="text-lg font-bold text-white">{playerStats.totalGames}</p>
               <p className="text-xs text-slate-400">Games</p>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-emerald-500/20 flex items-center justify-center">
                 <TrendingUp size={14} className="text-emerald-400" />
               </div>
@@ -129,11 +129,11 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
               </p>
               <p className="text-xs text-slate-400">W/L/D</p>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <Clock size={14} className="text-purple-400" />
               </div>
-              <p className="text-lg font-bold text-slate-900 dark:text-white">{Math.round(playerStats.avgSyncRate * 100)}%</p>
+              <p className="text-lg font-bold text-white">{Math.round(playerStats.avgSyncRate * 100)}%</p>
               <p className="text-xs text-slate-400">Avg Sync</p>
             </div>
           </motion.div>
@@ -142,7 +142,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
         {/* Games List */}
         {games.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-200 dark:bg-slate-700/50 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-700/50 flex items-center justify-center">
               <History size={24} className="text-slate-400" />
             </div>
             <p className="text-slate-300 text-sm font-medium mb-1">No matches yet</p>
@@ -157,7 +157,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 p-3 rounded-2xl hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors"
+                className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl hover:bg-slate-800/70 transition-colors"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">

@@ -229,20 +229,20 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   const totalRequests = pending.incoming.length
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0a0e1a] text-slate-900 dark:text-white">
+    <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <Users size={18} className="text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Friends</h2>
+            <h2 className="text-lg font-bold text-white">Friends</h2>
             <p className="text-xs text-slate-400">Connect, play &amp; grow together</p>
           </div>
         </div>
         {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
             <span className="text-slate-400 text-lg">&times;</span>
           </button>
         )}
@@ -258,21 +258,21 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name or username..."
-            className="w-full min-h-[44px] pl-10 pr-12 py-2 bg-gray-50 dark:bg-slate-800/50 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-white/5 focus:border-blue-500/50 focus:outline-none text-sm placeholder:text-slate-500"
+            className="w-full min-h-[44px] pl-10 pr-12 py-2 bg-slate-800/50 text-white rounded-xl border border-white/5 focus:border-blue-500/50 focus:outline-none text-sm placeholder:text-slate-500"
           />
-          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
             <SlidersHorizontal size={16} />
           </button>
           {searching && (
             <p className="text-slate-500 text-xs mt-1">Searching...</p>
           )}
           {searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden z-20 shadow-lg">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-xl overflow-hidden z-20 shadow-lg">
               {searchResults.map((user) => (
                 <button
                   key={user.id}
                   onClick={() => handleAddFriend(user.id)}
-                  className="w-full text-left px-4 py-3 text-sm text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors flex items-center justify-between min-h-[44px]"
+                  className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors flex items-center justify-between min-h-[44px]"
                 >
                   <span>{user.username}</span>
                   <span className="text-blue-400 text-xs">+ Invite</span>
@@ -298,7 +298,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
         </button>
 
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-white/5">
+        <div className="flex border-b border-white/5">
           <button
             onClick={() => setTab('friends')}
             className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
@@ -452,7 +452,7 @@ function FriendList({
       {friends.map((friend) => (
         <div
           key={friend.friend_id}
-          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors"
+          className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl hover:bg-slate-800/70 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
             <InitialsAvatar
@@ -463,7 +463,7 @@ function FriendList({
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-slate-900 dark:text-white text-sm font-medium truncate">{friend.friend_username}</span>
+                <span className="text-white text-sm font-medium truncate">{friend.friend_username}</span>
                 {unreadBySender[friend.friend_id] && (
                   <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
                     {unreadBySender[friend.friend_id]}
@@ -486,7 +486,7 @@ function FriendList({
             )}
             <button
               onClick={() => onMessage(friend)}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
             >
               <MessageCircle size={16} />
             </button>
@@ -507,7 +507,7 @@ function FriendList({
             <Crown size={20} className="text-purple-400" />
           </div>
           <div className="flex-1">
-            <p className="text-slate-900 dark:text-white text-sm font-semibold mb-1">More friends, more fun!</p>
+            <p className="text-white text-sm font-semibold mb-1">More friends, more fun!</p>
             <p className="text-slate-400 text-xs">Challenge your friends and climb the ranks together.</p>
           </div>
         </div>
@@ -533,17 +533,17 @@ function RequestsTab({
         <div>
           <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Incoming</p>
           {pending.incoming.map((req) => (
-            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl mb-2">
+            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">
                 <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
                 <div>
-                  <span className="text-slate-900 dark:text-white text-sm font-medium">{req.friend_username}</span>
+                  <span className="text-white text-sm font-medium">{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Wants to be your friend</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => onAccept(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors">Accept</button>
-                <button onClick={() => onReject(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Reject</button>
+                <button onClick={() => onReject(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors">Reject</button>
               </div>
             </div>
           ))}
@@ -554,17 +554,17 @@ function RequestsTab({
         <div>
           <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Outgoing Requests</p>
           {pending.outgoing.map((req) => (
-            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl mb-2">
+            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
               <div className="flex items-center gap-3">
                 <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
                 <div>
-                  <span className="text-slate-900 dark:text-white text-sm font-medium">{req.friend_username}</span>
+                  <span className="text-white text-sm font-medium">{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Request sent</p>
                 </div>
               </div>
               <button
                 onClick={() => onCancel(req.receiver_id || req.sender_id)}
-                className="px-3 py-1 min-h-[44px] min-w-[44px] bg-slate-200 dark:bg-slate-700/50 hover:bg-red-500/20 text-slate-500 dark:text-slate-400 hover:text-red-400 text-xs font-medium rounded-full transition-colors border border-slate-300 dark:border-slate-600/50 hover:border-red-500/30"
+                className="px-3 py-1 min-h-[44px] min-w-[44px] bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs font-medium rounded-full transition-colors border border-slate-600/50 hover:border-red-500/30"
               >
                 Cancel
               </button>
@@ -597,7 +597,7 @@ function BlockedTab({
   if (blocked.length === 0) {
     return (
       <div className="text-center py-8">
-        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-200 dark:bg-slate-700/50 flex items-center justify-center">
+        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-700/50 flex items-center justify-center">
           <span className="text-2xl">⊘</span>
         </div>
         <p className="text-slate-300 text-sm font-medium mb-1">No blocked users</p>
@@ -609,12 +609,12 @@ function BlockedTab({
   return (
     <div className="space-y-2">
       {blocked.map((b) => (
-        <div key={b.receiver_id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-2xl">
+        <div key={b.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl">
           <div className="flex items-center gap-3">
             <InitialsAvatar username={b.friend_username} size="md" src={b.friend_avatar_url || null} />
-            <span className="text-slate-900 dark:text-white text-sm font-medium">{b.friend_username}</span>
+            <span className="text-white text-sm font-medium">{b.friend_username}</span>
           </div>
-          <button onClick={() => onUnblock(b.receiver_id)} className="min-h-[44px] px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Unblock</button>
+          <button onClick={() => onUnblock(b.receiver_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors">Unblock</button>
         </div>
       ))}
     </div>
