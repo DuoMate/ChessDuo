@@ -130,7 +130,18 @@ jest.mock('@/components/ErrorBoundary', () => ({
 }))
 
 jest.mock('@/lib/settings', () => ({
-  useSettings: () => [{}],
+  useSettings: () => ({
+    autoQueen: false,
+    lowTimeWarning: true,
+    confirmMove: false,
+    soundEnabled: true,
+    theme: 'dark',
+    setAutoQueen: jest.fn(),
+    setLowTimeWarning: jest.fn(),
+    setTheme: jest.fn(),
+    setConfirmMove: jest.fn(),
+    setSoundEnabled: jest.fn(),
+  }),
 }))
 
 jest.mock('@/hooks/useCapacitorBackButton', () => ({
@@ -143,6 +154,14 @@ jest.mock('@/hooks/useIsMobile', () => ({
 
 jest.mock('@/components/SidebarNav', () => ({
   SidebarNav: () => <nav data-testid="sidebar-nav" />,
+}))
+
+jest.mock('@/components/DesktopSidebar', () => ({
+  DesktopSidebar: () => <nav data-testid="desktop-sidebar" />,
+}))
+
+jest.mock('@/components/ConfigurationPanel', () => ({
+  ConfigurationPanel: () => <div data-testid="configuration-panel" />,
 }))
 
 jest.mock('@/components/InitialsAvatar', () => ({
