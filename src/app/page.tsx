@@ -882,18 +882,6 @@ if (!gameMode) {
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
               <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-5 shadow-2xl">
-                {/* Game Mode */}
-                <section className="mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Game Mode</p>
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-gray-50 dark:bg-slate-800/30 p-3.5 flex items-center gap-3">
-                    <Swords size={20} className="text-blue-400 shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-bold text-sm text-slate-900 dark:text-slate-100">{selectedGameMode === 'duo' ? 'Duo' : 'Quick Play'}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{selectedGameMode === 'duo' ? 'You + Friend vs Bots' : 'You + Bot vs Bots'}</div>
-                    </div>
-                  </div>
-                </section>
-
                 {/* Bot Difficulty */}
                 <section className="mb-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
