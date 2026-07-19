@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Flag, Settings, Volume2, VolumeX, User } from 'lucide-react'
+import { Menu, X, Flag, Settings, Volume2, VolumeX, User, ShieldCheck } from 'lucide-react'
 
 interface GameMenuProps {
   onResign?: () => void
@@ -10,9 +10,11 @@ interface GameMenuProps {
   soundEnabled?: boolean
   onToggleSound?: () => void
   onOpenProfile?: () => void
+  confirmMove?: boolean
+  onToggleConfirmMove?: () => void
 }
 
-export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound, onOpenProfile }: GameMenuProps) {
+export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound, onOpenProfile, confirmMove, onToggleConfirmMove }: GameMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -63,6 +65,33 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
                   {soundEnabled ? <Volume2 size={16} className="text-slate-500 dark:text-slate-400" /> : <VolumeX size={16} className="text-slate-500 dark:text-slate-400" />}
                   {soundEnabled ? 'Sound On' : 'Sound Off'}
                 </button>
+                <div className="h-px bg-slate-200 dark:bg-slate-700" />
+              </>
+            )}
+            {onToggleConfirmMove !== undefined && (
+              <>
+                <div className="flex items-center justify-between px-4 py-3 min-h-[44px]">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck size={16} className="text-slate-500 dark:text-slate-400" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Confirm Moves</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Add confirmation before final move</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!!confirmMove}
+                    onClick={() => { onToggleConfirmMove(); setOpen(false) }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
+                      confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      confirmMove ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
                 <div className="h-px bg-slate-200 dark:bg-slate-700" />
               </>
             )}

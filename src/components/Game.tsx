@@ -34,7 +34,7 @@ import { useSettings } from '@/lib/settings'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
-import { ConfirmMoveButton } from './ConfirmMoveButton'
+import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
@@ -2038,6 +2038,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 soundEnabled={soundEnabled}
                 onToggleSound={() => setSoundEnabled(!soundEnabled)}
                 onOpenProfile={() => setOverlayMode('profile')}
+                confirmMove={settings.confirmMove}
+                onToggleConfirmMove={() => settings.setConfirmMove(!settings.confirmMove)}
               />
             </div>
           </div>
@@ -2112,18 +2114,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             <MoveResolvedInline
               data={resolutionData}
               onNext={() => setAccuracyComparison(null)}
-            />
-          </div>
-        )}
-
-        {/* Confirm Move button (only when setting enabled and game playing) */}
-        {gameState.status === GameStatus.PLAYING && (
-          <div className="pb-2">
-            <ConfirmMoveButton
-              visible={settings.confirmMove}
-              hasPendingMove={!!heldMove}
-              onConfirm={handleConfirmHeldMove}
-              onCancel={handleCancelHeldMove}
             />
           </div>
         )}
@@ -2308,6 +2298,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <p className="text-gray-400 text-center py-4">Sign in to view match history</p>
         )}
       </SlideOver>
+
+      {/* Floating Confirm Move Bar — overlays above BoardBottomNav */}
+      {gameState.status === GameStatus.PLAYING && (
+        <ConfirmMoveBar
+          visible={settings.confirmMove && !!heldMove}
+          onConfirm={handleConfirmHeldMove}
+          onCancel={handleCancelHeldMove}
+        />
+      )}
     </div>
   )
 }
