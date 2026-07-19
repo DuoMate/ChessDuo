@@ -1594,8 +1594,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Auto-trigger opponent bot when it's their turn in offline mode
   useEffect(() => {
-    if (isOnline || !gameRef.current || gameState.status !== GameStatus.PLAYING) return
+    if (isOnline || !gameRef.current) return
     const g = gameRef.current
+    if (g.status !== GameStatus.PLAYING) return
     const myTeam = (g as GameInterface).getTeam()
     if (!myTeam) return
     const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
