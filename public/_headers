@@ -6,6 +6,15 @@
   Cache-Control: public,max-age=31536000,immutable
   Content-Type: image/webp
 
+# ── Deep linking verification files ──
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public,max-age=3600
+
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public,max-age=3600
+
 # ── Security headers (all routes) ──
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; frame-src https://api.razorpay.com

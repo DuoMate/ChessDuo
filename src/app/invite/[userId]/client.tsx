@@ -8,6 +8,7 @@ import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ArrowLeft } from 'lucide-react'
+import InstallBanner from '@/components/InstallBanner'
 
 function GoHomeButton() {
   const router = useRouter()
@@ -107,101 +108,116 @@ export default function InvitePageClient() {
 
   if (needsUsername) {
     return (
-      <ErrorBoundary>
-        <ChooseUsername
-          userId={needsUsername.userId}
-          suggestedName={needsUsername.suggestedName}
-          onAuthComplete={handleUsernameChosen}
-        />
-      </ErrorBoundary>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <ChooseUsername
+            userId={needsUsername.userId}
+            suggestedName={needsUsername.suggestedName}
+            onAuthComplete={handleUsernameChosen}
+          />
+        </ErrorBoundary>
+      </>
     )
   }
 
   if (isSelf) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-          <div className="max-w-sm w-full text-center space-y-4">
-            <div className="text-5xl mb-2">⚠️</div>
-            <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
-            <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
-            <GoHomeButton />
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+            <div className="max-w-sm w-full text-center space-y-4">
+              <div className="text-5xl mb-2">⚠️</div>
+              <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
+              <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
+              <GoHomeButton />
+            </div>
           </div>
-        </div>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </>
     )
   }
 
   if (loading) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-          <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-        </div>
-      </ErrorBoundary>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+            <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+          </div>
+        </ErrorBoundary>
+      </>
     )
   }
 
   if (!playerId) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-          <div className="max-w-sm w-full text-center space-y-6">
-            <div className="text-5xl mb-2">👥</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
-            {targetUsername && (
-              <p className="text-gray-500 dark:text-gray-400">{targetUsername} invited you to be friends</p>
-            )}
-            <p className="text-gray-500 text-sm">Sign in to accept this friend request</p>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+            <div className="max-w-sm w-full text-center space-y-6">
+              <div className="text-5xl mb-2">👥</div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
+              {targetUsername && (
+                <p className="text-gray-500 dark:text-gray-400">{targetUsername} invited you to be friends</p>
+              )}
+              <p className="text-gray-500 text-sm">Sign in to accept this friend request</p>
 
-            <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+              <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+            </div>
           </div>
-        </div>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </>
     )
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-      <div className="max-w-sm w-full text-center space-y-4">
-        {status === 'loading' && (
-          <p className="text-gray-500 dark:text-gray-400">Sending friend request...</p>
-        )}
+    <>
+      <InstallBanner />
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="max-w-sm w-full text-center space-y-4">
+          {status === 'loading' && (
+            <p className="text-gray-500 dark:text-gray-400">Sending friend request...</p>
+          )}
 
-        {status === 'already_friends' && (
-          <>
-            <div className="text-5xl mb-2">🤝</div>
-            <h1 className="text-2xl font-bold text-yellow-400">Already Friends!</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
-            </p>
-            <GoHomeButton />
-          </>
-        )}
+          {status === 'already_friends' && (
+            <>
+              <div className="text-5xl mb-2">🤝</div>
+              <h1 className="text-2xl font-bold text-yellow-400">Already Friends!</h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
+              </p>
+              <GoHomeButton />
+            </>
+          )}
 
-        {status === 'sent' && (
-          <>
-            <div className="text-5xl mb-2">✉️</div>
-            <h1 className="text-2xl font-bold text-yellow-400">Friend Request Sent!</h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
-            </p>
-            <p className="text-gray-500 text-sm">They will see your request in their friends panel</p>
-            <GoHomeButton />
-          </>
-        )}
+          {status === 'sent' && (
+            <>
+              <div className="text-5xl mb-2">✉️</div>
+              <h1 className="text-2xl font-bold text-yellow-400">Friend Request Sent!</h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
+              </p>
+              <p className="text-gray-500 text-sm">They will see your request in their friends panel</p>
+              <GoHomeButton />
+            </>
+          )}
 
-        {status === 'error' && (
-          <>
-            <div className="text-5xl mb-2">⚠️</div>
-            <h1 className="text-xl font-bold text-red-400">Something went wrong</h1>
-            <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
-            <GoHomeButton />
-          </>
-        )}
+          {status === 'error' && (
+            <>
+              <div className="text-5xl mb-2">⚠️</div>
+              <h1 className="text-xl font-bold text-red-400">Something went wrong</h1>
+              <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
+              <GoHomeButton />
+            </>
+          )}
+        </div>
       </div>
-    </div>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </>
   )
 }
