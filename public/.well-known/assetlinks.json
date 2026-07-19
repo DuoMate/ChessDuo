@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.navron.chessduo",
+    "sha256_cert_fingerprints": [
+      "01:15:78:43:CD:23:DF:5E:31:56:0C:8D:29:CE:55:A1:8E:F9:AB:7A:14:5F:0B:0D:D2:A4:8D:21:90:67:54:F9"
+    ]
+  }
+}]

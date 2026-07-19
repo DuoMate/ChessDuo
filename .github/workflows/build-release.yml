@@ -79,8 +79,10 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
-      - name: Add OAuth deep link intent filter
+      - name: Add deep link intent filters (OAuth + App Links + Custom Scheme)
         run: bash scripts/add-deep-link.sh
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
 
       - name: Patch MainActivity for Google auth intent forwarding
         run: bash scripts/patch-main-activity.sh

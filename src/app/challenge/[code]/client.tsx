@@ -8,6 +8,7 @@ import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
+import InstallBanner from '@/components/InstallBanner'
 
 export default function ChallengePageClient() {
   const params = useParams()
@@ -135,82 +136,94 @@ export default function ChallengePageClient() {
 
   if (needsUsername) {
     return (
-      <ErrorBoundary>
-        <ChooseUsername
-          userId={needsUsername.userId}
-          suggestedName={needsUsername.suggestedName}
-          onAuthComplete={handleUsernameChosen}
-        />
-      </ErrorBoundary>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <ChooseUsername
+            userId={needsUsername.userId}
+            suggestedName={needsUsername.suggestedName}
+            onAuthComplete={handleUsernameChosen}
+          />
+        </ErrorBoundary>
+      </>
     )
   }
 
   if (loading) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-          <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
-        </div>
-      </ErrorBoundary>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+            <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
+          </div>
+        </ErrorBoundary>
+      </>
     )
   }
 
   if (status === 'need_auth' || (!playerId && !loading && status === 'loading')) {
     return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-          <div className="max-w-sm w-full text-center space-y-6">
-            <div className="text-5xl mb-2">⚡</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
-            <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
+      <>
+        <InstallBanner />
+        <ErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+            <div className="max-w-sm w-full text-center space-y-6">
+              <div className="text-5xl mb-2">⚡</div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
+              <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
 
-            <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+              <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />
+            </div>
           </div>
-        </div>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </>
     )
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-      <div className="max-w-sm w-full text-center space-y-4">
-        {status === 'invalid' && (
-          <>
-            <div className="text-5xl mb-2">🔗</div>
-            <h1 className="text-xl font-bold text-red-400">Invalid Challenge</h1>
-            <p className="text-gray-500 dark:text-gray-400">This challenge link is invalid or has already been used</p>
-            <BackButton label="Go Home" />
-          </>
-        )}
+    <>
+      <InstallBanner />
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="max-w-sm w-full text-center space-y-4">
+          {status === 'invalid' && (
+            <>
+              <div className="text-5xl mb-2">🔗</div>
+              <h1 className="text-xl font-bold text-red-400">Invalid Challenge</h1>
+              <p className="text-gray-500 dark:text-gray-400">This challenge link is invalid or has already been used</p>
+              <BackButton label="Go Home" />
+            </>
+          )}
 
-        {status === 'expired' && (
-          <>
-            <div className="text-5xl mb-2">⏰</div>
-            <h1 className="text-xl font-bold text-red-400">Challenge Expired</h1>
-            <p className="text-gray-500 dark:text-gray-400">This challenge link has expired (24h limit)</p>
-            <BackButton label="Go Home" />
-          </>
-        )}
+          {status === 'expired' && (
+            <>
+              <div className="text-5xl mb-2">⏰</div>
+              <h1 className="text-xl font-bold text-red-400">Challenge Expired</h1>
+              <p className="text-gray-500 dark:text-gray-400">This challenge link has expired (24h limit)</p>
+              <BackButton label="Go Home" />
+            </>
+          )}
 
-        {status === 'joining' && (
-          <>
-            <div className="animate-spin text-4xl mb-2">⚡</div>
-            <h1 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Joining Challenge...</h1>
-            <p className="text-gray-500 dark:text-gray-400">Setting up the game room</p>
-          </>
-        )}
+          {status === 'joining' && (
+            <>
+              <div className="animate-spin text-4xl mb-2">⚡</div>
+              <h1 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Joining Challenge...</h1>
+              <p className="text-gray-500 dark:text-gray-400">Setting up the game room</p>
+            </>
+          )}
 
-        {status === 'error' && (
-          <>
-            <div className="text-5xl mb-2">⚠️</div>
-            <h1 className="text-xl font-bold text-red-400">Error</h1>
-            <p className="text-gray-500 dark:text-gray-400">{errorMsg}</p>
-            <BackButton label="Go Home" />
-          </>
-        )}
+          {status === 'error' && (
+            <>
+              <div className="text-5xl mb-2">⚠️</div>
+              <h1 className="text-xl font-bold text-red-400">Error</h1>
+              <p className="text-gray-500 dark:text-gray-400">{errorMsg}</p>
+              <BackButton label="Go Home" />
+            </>
+          )}
+        </div>
       </div>
-    </div>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </>
   )
 }
