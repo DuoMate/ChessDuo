@@ -11,6 +11,7 @@ import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
 import { GameMenu } from './GameMenu'
+import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { SettingsPanel } from './SettingsPanel'
@@ -62,6 +63,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [moveAccuracy, setMoveAccuracy] = useState<number | null>(null)
   const [opponentAccuracy, setOpponentAccuracy] = useState<number | null>(null)
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string } | null>(null)
+  const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
   const [waiting, setWaiting] = useState(true)
   const [opponentUsername, setOpponentUsername] = useState('Opponent')
   const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null)
@@ -331,6 +333,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     const game = gameRef.current
     if (!game) return
 
+    if (settings.confirmMove) {
+      setHeldMove({ move: uci, promotion })
+      return
+    }
+
     if (promotion) {
       if (settings.autoQueen) {
         const result = await game.makeMove(uci.replace('-', '') + 'q')
@@ -350,7 +357,39 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       setMoveAccuracy(result.accuracy)
       captureMoveEntry(result.accuracy)
     }
-  }, [settings.autoQueen, captureMoveEntry])
+  }, [settings.autoQueen, settings.confirmMove, captureMoveEntry])
+
+  const handleConfirmHeldMove = useCallback(async () => {
+    if (!heldMove) return
+    const { move, promotion } = heldMove
+    setHeldMove(null)
+    const game = gameRef.current
+    if (!game) return
+
+    if (promotion) {
+      if (settings.autoQueen) {
+        const result = await game.makeMove(move.replace('-', '') + 'q')
+        if (result.success && result.accuracy !== undefined) {
+          setMoveAccuracy(result.accuracy)
+          captureMoveEntry(result.accuracy)
+        }
+        return
+      }
+      const [from, to] = move.split('-')
+      setPendingPromotion({ from, to })
+      return
+    }
+
+    const result = await game.makeMove(move.replace('-', ''))
+    if (result.success && result.accuracy !== undefined) {
+      setMoveAccuracy(result.accuracy)
+      captureMoveEntry(result.accuracy)
+    }
+  }, [heldMove, settings.autoQueen, captureMoveEntry])
+
+  const handleCancelHeldMove = useCallback(() => {
+    setHeldMove(null)
+  }, [])
 
   const handlePromotionSelect = useCallback(async (piece: PromotionPiece) => {
     if (!pendingPromotion) return
@@ -419,6 +458,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
                 onOpenSettings={() => setShowSettings(true)}
                 soundEnabled={soundEnabled}
                 onToggleSound={() => setSoundEnabled(!soundEnabled)}
+                confirmMove={settings.confirmMove}
+                onToggleConfirmMove={() => settings.setConfirmMove(!settings.confirmMove)}
               />
             </div>
           </div>
@@ -543,6 +584,15 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             }
           }}
         />
+
+        {/* Floating Confirm Move Bar — overlays above BoardBottomNav */}
+        {status === 'playing' && (
+          <ConfirmMoveBar
+            visible={settings.confirmMove && !!heldMove}
+            onConfirm={handleConfirmHeldMove}
+            onCancel={handleCancelHeldMove}
+          />
+        )}
       </div>
 
       <GameOverModal

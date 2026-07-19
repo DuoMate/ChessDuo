@@ -51,7 +51,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `BoardTopBar.tsx` | **Board-page revamp** — team avatars row + center timer card (uses InitialsAvatar for humans, images for bots) |
 | `TeamHexagon.tsx` | **Board-page revamp** — decorative team-position hexagon |
 | `PendingMovesRow.tsx` | **Board-page revamp** — Your Move / Teammate status cards |
-| `ConfirmMoveButton.tsx` | **Board-page revamp** — gated by `useSettings().confirmMove` |
+| `ConfirmMoveBar.tsx` | **Board-page revamp** — floating 50/50 confirmation bar, replaces `ConfirmMoveButton.tsx` |
 | `MoveResolvedCard.tsx` | **Board-page revamp** — 3-column resolution modal |
 | `RoundHistorySidebar.tsx` | **Board-page revamp** — right-side panel of past rounds |
 | `BoardBottomNav.tsx` | **Board-page revamp** — 5-tab in-game nav (Moves / Game / Surrender / Insights / Chat) |
@@ -68,7 +68,7 @@ All React components — co-located by feature, not by type. Components handle r
 ## Board Page Revamp (2026-07-12)
 - Dark glassmorphism theme (`#0a0e1a` background + slate-900/70 cards + backdrop-blur).
 - Chess board sized to ~80% of viewport (`maxWidth: min(95vw, 80vh, 720px)`).
-- New layout shell: `BoardTopBar` (compact team avatars + center timer) → turn pill → board → `PendingMovesRow` → `ConfirmMoveButton` → `BoardBottomNav`.
+- New layout shell: `BoardTopBar` (compact team avatars + center timer) → turn pill → board → `PendingMovesRow` → `ConfirmMoveBar` (floating overlay) → `BoardBottomNav`.
 - New `confirmMove` setting (off by default) gates `handleMove` so the move is held until the user taps Confirm.
 - `MoveResolvedInline` (was `MoveResolvedCard`) renders below the `PendingMovesRow` when `accuracyComparison` is available, with insights-style phrasing (move impact, sync/winner line, blunder warning, quality verdict).
 - `RoundHistorySidebar` is a right-side slide-over opened by the Moves tab.
@@ -85,6 +85,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-19**: Phase 9 Confirm Moves — new `ConfirmMoveBar` floating 50/50 split bar with glassmorphism styling replaces inline `ConfirmMoveButton`. Integrated in `Game.tsx`, `DuelGame.tsx`, and 4-player mode (via Game.tsx). Toggle added to `GameMenu` hamburger dropdown. 23 new tests covering all scenarios. Deleted legacy `ConfirmMoveButton.tsx`.
 - **2026-07-19**: Browser UI unification — migrated History, Friends, Profile pages from `SidebarNav` (narrow 80px icons-only) to `DesktopSidebar` (wide 220px/240px with labels). Updated `src/app/(main)/layout.tsx` to use `DesktopSidebar` for all non-game pages on desktop. Mobile unchanged (HomeBottomNav floating pill).
 - **2026-07-18**: Home screen restructure — added `ColorPicker` (3-card White/Black/Random with Lucide icons), `SidebarNav` (left vertical nav for browser), inline configuration panel (Quick/Duo). Mobile `BotDifficultySelector` replaced with 5-card grid using Lucide chess-piece icons. `LocalGame` accepts `playerColor` param; bots swap teams when human picks Black. `GameInterface` gets `getPlayerColor`/`getHumanSlot`/`getTeammateSlot`. Welcome page redirect now passes color; offline auto-start effect split (runs on mount, no longer requires `playerId`) — fixes Quick Play → Got it → home bug for guest users.
 - **2026-07-18**: Modal exit animations fixed — GameOverModal, ResignConfirmModal, SettingsPanel now use `open` prop pattern with AnimatePresence for proper exit animations. Game.tsx/DuelGame.tsx always render modals with `open` prop. UI/UX bug hunt: z-index standardization, text overflow fixes, emoji → Lucide icons, loading states. HomeBottomNav: spinner on navigating button, loading progress bar, pathname-based active detection. BackButton: `alwaysFallback` prop for nav pages.

@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamHexagon } from '../TeamHexagon'
 import { BoardTopBar } from '../BoardTopBar'
 import { PendingMovesRow } from '../PendingMovesRow'
-import { ConfirmMoveButton } from '../ConfirmMoveButton'
 import { MoveResolvedInline, type MoveResolutionData } from '../MoveResolvedInline'
 import { RoundHistorySidebar } from '../RoundHistorySidebar'
 import { BoardBottomNav } from '../BoardBottomNav'
@@ -66,31 +65,6 @@ describe('PendingMovesRow', () => {
     )
     const submitted = screen.getAllByText(/Submitted/i)
     expect(submitted.length).toBe(2)
-  })
-})
-
-describe('ConfirmMoveButton', () => {
-  it('returns null when not visible', () => {
-    const { container } = render(
-      <ConfirmMoveButton visible={false} hasPendingMove={true} onConfirm={jest.fn()} />
-    )
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('shows the button when visible', () => {
-    render(
-      <ConfirmMoveButton visible={true} hasPendingMove={true} onConfirm={jest.fn()} />
-    )
-    expect(screen.getByRole('button')).toBeInTheDocument()
-  })
-
-  it('calls onConfirm when clicked', () => {
-    const onConfirm = jest.fn()
-    render(
-      <ConfirmMoveButton visible={true} hasPendingMove={true} onConfirm={onConfirm} />
-    )
-    fireEvent.click(screen.getByRole('button'))
-    expect(onConfirm).toHaveBeenCalled()
   })
 })
 

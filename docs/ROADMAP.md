@@ -631,14 +631,28 @@ Add `console.error` to critical empty catch blocks in:
 
 ---
 
-## Test Health
+### Phase 9: Confirm Moves Feature (July 2026)
+**Goal**: Floating confirmation bar for move verification — optional setting to prevent accidental moves
+
+- [x] 9.1 Create `ConfirmMoveBar` component — floating 50/50 split X (Cancel) / ✓ (Confirm) bar above BoardBottomNav
+- [x] 9.2 Add "Confirm Moves" toggle to GameMenu (hamburger dropdown) with ShieldCheck icon
+- [x] 9.3 Integrate in `Game.tsx` — replace inline ConfirmMoveButton with floating ConfirmMoveBar
+- [x] 9.4 Integrate in `DuelGame.tsx` — full confirm flow for 1v1 mode
+- [x] 9.5 Delete legacy `ConfirmMoveButton.tsx` — replaced by ConfirmMoveBar
+- [x] 9.6 z-index layering — ConfirmBar `z-40`, BoardBottomNav `z-30`, glassmorphism styling
+- [x] 9.7 Touch targets ≥ 44px, dark mode, Framer Motion slide-up/slide-down animations
+- [x] 9.8 Test coverage — 23 new tests covering ConfirmMoveBar, GameMenu toggle, and confirm flow integration
+
+**Key Files**: `src/components/ConfirmMoveBar.tsx` (new), `src/components/GameMenu.tsx`, `src/components/Game.tsx`, `src/components/DuelGame.tsx`
+
+**Deliverable**: ✅ Optional move confirmation — user selects move → floating bar appears → tap ✓ to confirm, ✕ to cancel without broadcasting
+
+**Test Health Updated**:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 52 | 50 pass, 2 skip (pre-existing) |
-| Individual tests | 683 | 566 pass, 117 skip (pre-existing, Stockfish-dependent) |
-
-**Status**: ✅ All passing tests green after bug bounty fixes (June 2026)
+| Test suites | 78 (76 run) | 74 pass, 2 skip, 2 pre-existing server failure |
+| Individual tests | 931 | 810 pass, 117 skip, 4 pre-existing server failure |
 
 ---
 
