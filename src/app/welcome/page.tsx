@@ -1,16 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Crown, Pointer, Scale, Loader2 } from 'lucide-react'
 import { ChessBoard } from '@/components/ChessBoard'
 import { BackButton } from '@/components/BackButton'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import type { PlayerColor } from '@/features/shared/gameConstants'
 
-const TOUR_FEN = 'rnbqkbnr/pppppppp/8/8/2P1P3/8/PP1P1PPP/RNBQKBNR w KQkq - 0 1'
-const TOUR_HIGHLIGHT = { winnerFrom: 'e2', winnerTo: 'e4', loserFrom: 'c2', loserTo: 'c4' }
-const TOUR_LAST_MOVE = { from: 'e2', to: 'e4' }
+const TOUR_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+
+function getSquareCenter(square: string, orientation: 'white' | 'black') {
+  const file = square.charCodeAt(0) - 97
+  const rank = parseInt(square[1]) - 1
+  const isFlipped = orientation === 'black'
+  const left = (isFlipped ? 7 - file : file) * 12.5 + 6.25
+  const top = (isFlipped ? rank : 7 - rank) * 12.5 + 6.25
+  return { left: `${left}%`, top: `${top}%` }
+}
 
 function PawnIcon({ className }: { className?: string }) {
   return (
@@ -39,6 +47,34 @@ export default function WelcomePage() {
 
   const isOffline = mode === 'offline'
   const partnerLabel = isOffline ? 'Botmate' : 'Teammate'
+
+  const [pendingColor, setPendingColor] = useState<PlayerColor>('white')
+  useEffect(() => {
+    if (mode === 'offline') {
+      const pending = localStorage.getItem('chessduo_pending_offline_game')
+      if (pending) {
+        try {
+          const { color } = JSON.parse(pending)
+          if (color === 'white' || color === 'black' || color === 'random') {
+            setPendingColor(color)
+          }
+        } catch { /* ignore */ }
+      }
+    }
+  }, [mode])
+
+  const isBlackDemo = pendingColor === 'black'
+  const demoOrientation = isBlackDemo ? 'black' : 'white'
+  const tourHighlight = isBlackDemo
+    ? { winnerFrom: 'e7', winnerTo: 'e5', loserFrom: 'c7', loserTo: 'c5' }
+    : { winnerFrom: 'e2', winnerTo: 'e4', loserFrom: 'c2', loserTo: 'c4' }
+  const tourLastMove = isBlackDemo
+    ? { from: 'e7', to: 'e5' }
+    : { from: 'e2', to: 'e4' }
+  const youSquare = isBlackDemo ? 'e7' : 'e2'
+  const partnerSquare = isBlackDemo ? 'c7' : 'c2'
+  const youPos = getSquareCenter(youSquare, demoOrientation)
+  const partnerPos = getSquareCenter(partnerSquare, demoOrientation)
 
   const steps = [
     {
@@ -97,7 +133,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
+    <div className="min-h-screen bg-gray-100 text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col items-center justify-center p-4 pb-20">
       <div className="w-full max-w-md mb-4 flex justify-start">
         <BackButton label="Skip" alwaysFallback />
       </div>
@@ -106,49 +142,49 @@ export default function WelcomePage() {
         initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-        className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[#0a0e1a] p-6 shadow-2xl"
+        className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-6 shadow-2xl"
       >
         {/* Header */}
         <div className="mb-5 text-center">
           <div className="flex items-center justify-center gap-0 text-3xl font-black tracking-tight">
-            <span className="text-white">Chess</span>
+            <span className="text-slate-900 dark:text-white">Chess</span>
             <span className="relative text-blue-500">
               Duo
               <Crown size={18} className="absolute -left-0.5 -top-3.5 text-blue-400" fill="currentColor" strokeWidth={0} />
             </span>
           </div>
-          <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-400">
-            <span className="text-blue-400/70">&#9670;</span>
+          <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+            <span className="text-blue-500/70 dark:text-blue-400/70">&#9670;</span>
             <span>How it works</span>
-            <span className="text-blue-400/70">&#9670;</span>
+            <span className="text-blue-500/70 dark:text-blue-400/70">&#9670;</span>
           </div>
         </div>
 
         {/* Board */}
-        <div className="mb-5 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
+        <div className="mb-5 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/30 p-4">
           <div className="relative mx-auto aspect-square w-full max-w-[260px] onboarding-board">
-            <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
-            <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
+            <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation={demoOrientation} highlightSquares={tourHighlight} lastMove={tourLastMove} />
+            <div className="pointer-events-none absolute z-10" style={{ left: youPos.left, top: youPos.top, transform: 'translate(-50%, -50%)' }}>
               <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">You</span>
             </div>
-            <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
+            <div className="pointer-events-none absolute z-10" style={{ left: partnerPos.left, top: partnerPos.top, transform: 'translate(-50%, -50%)' }}>
               <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-center gap-6">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-              <span className="text-xs font-semibold text-slate-200">Your Move</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Your Move</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-              <span className="text-xs font-semibold text-slate-200">{partnerLabel}</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{partnerLabel}</span>
             </div>
           </div>
-          <p className="mt-3 text-center text-sm font-medium leading-relaxed text-slate-300">
+          <p className="mt-3 text-center text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             {isOffline
-              ? <>You and your botmate — <span className="font-semibold text-amber-400">the best move wins.</span></>
-              : <>Two players, one board — <span className="font-semibold text-amber-400">the best move wins.</span></>}
+              ? <>You and your botmate — <span className="font-semibold text-amber-500 dark:text-amber-400">the best move wins.</span></>
+              : <>Two players, one board — <span className="font-semibold text-amber-500 dark:text-amber-400">the best move wins.</span></>}
           </p>
         </div>
 
@@ -156,10 +192,10 @@ export default function WelcomePage() {
         <div className="mb-5 flex items-stretch justify-between">
           {steps.map((step, index) => (
             <div key={step.word} className="flex flex-1 items-center">
-              <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
+              <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/30 p-3">
                 {step.icon}
-                <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
-                <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-400">{step.desc}</span>
+                <span className="mt-2 text-sm font-bold text-slate-900 dark:text-white">{step.word}</span>
+                <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-500 dark:text-slate-400">{step.desc}</span>
               </div>
               {index < steps.length - 1 && <Chevron />}
             </div>
@@ -168,8 +204,8 @@ export default function WelcomePage() {
 
         {/* Don't show again */}
         <label className="mb-4 flex cursor-pointer items-center gap-2.5">
-          <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0" />
-          <span className="text-sm text-slate-400">Don&apos;t show this again</span>
+          <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0" />
+          <span className="text-sm text-slate-500 dark:text-slate-400">Don&apos;t show this again</span>
         </label>
 
         {/* Got it */}

@@ -710,21 +710,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
-          if (isFourPlayer) {
-            const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
-            DEBUG && console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected (4-player)', {
-              hasComparison: !!comp,
-              compPlayer1Move: comp?.player1Move,
-              compPlayer2Move: comp?.player2Move,
-              compWinnerId: comp?.winnerId,
-              isSync: comp?.isSync
-            })
-            if (comp && myTeam === 'BLACK') {
+          const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
+          DEBUG && console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected', {
+            hasComparison: !!comp,
+            compPlayer1Move: comp?.player1Move,
+            compPlayer2Move: comp?.player2Move,
+            compWinnerId: comp?.winnerId,
+            isSync: comp?.isSync
+          })
+          if (comp) {
+            if (!isFourPlayer || myTeam === 'BLACK') {
               setAccuracyComparison(comp)
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for Black team')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
             }
           } else {
-            DEBUG && console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected, keeping accuracy displayed')
+            DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         }
     prevTurnRef.current = currentTurn
@@ -913,7 +913,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     // In 2-player mode: detailed status only when it's WHITE's turn
     const isMyTurnToAct = isFourPlayer
       ? currentTurn === myTeam
-      : currentTurn === Team.WHITE
+      : currentTurn === myTeamRef.current
     let turnStatus: GameState['turnStatus'] = 'waiting'
     if (g.status === GameStatus.PLAYING && isMyTurnToAct) {
       if (isOnline && playerId) {
@@ -954,7 +954,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         winner: newWinner,
         fen: g.board.fen(),
         currentTurn,
-        selectedMove: isOnline ? null : g.getSelectedMove('player1'),
+        selectedMove: isOnline ? null : g.getSelectedMove((g as GameInterface).getHumanSlot?.() || 'player1'),
         phase: g.status === GameStatus.PLAYING ? 'selecting' : 'waiting',
         capturedByWhite: captured.white,
         capturedByBlack: captured.black,
@@ -968,7 +968,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         pendingOverlay,
         myPendingOverlay,
         isLoading: g.status === GameStatus.WAITING ? prev.isLoading : false,
-        isBotThinking: isFourPlayer ? false : (currentTurn === Team.BLACK ? prev.isBotThinking : false),
+        isBotThinking: isFourPlayer ? false : (currentTurn !== myTeamRef.current ? prev.isBotThinking : false),
         highlightSquares: null as HighlightSquares | null,
         turnStatus
       }
@@ -1066,20 +1066,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (comparison) {
       const winnerId = comparison.winnerId
       const loserId = comparison.loserId
+      const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+      const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
 
       const highlightSquares: HighlightSquares = {}
 
-      if (winnerId === 'player1' && humanMove) {
+      if (winnerId === humanSlot && humanMove) {
         if (isValidSquare(humanMove.from)) highlightSquares.winnerFrom = humanMove.from
         if (isValidSquare(humanMove.to)) highlightSquares.winnerTo = humanMove.to
-        if (!comparison.isSync && loserId === 'player2' && teammateMove) {
+        if (!comparison.isSync && loserId === teammateSlot && teammateMove) {
           if (isValidSquare(teammateMove.from)) highlightSquares.loserFrom = teammateMove.from
           if (isValidSquare(teammateMove.to)) highlightSquares.loserTo = teammateMove.to
         }
-      } else if (winnerId === 'player2' && teammateMove) {
+      } else if (winnerId === teammateSlot && teammateMove) {
         if (isValidSquare(teammateMove.from)) highlightSquares.winnerFrom = teammateMove.from
         if (isValidSquare(teammateMove.to)) highlightSquares.winnerTo = teammateMove.to
-        if (!comparison.isSync && loserId === 'player1' && humanMove) {
+        if (!comparison.isSync && loserId === humanSlot && humanMove) {
           if (isValidSquare(humanMove.from)) highlightSquares.loserFrom = humanMove.from
           if (isValidSquare(humanMove.to)) highlightSquares.loserTo = humanMove.to
         }
@@ -1112,9 +1114,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return
     }
     
+    const myTeam = (g as GameInterface).getTeam()
+    const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
+    const opponentSlots = g.getPlayers(opponentTeam)
+    
+    if (opponentSlots.length === 0) {
+      DEBUG && console.warn(`[OPPONENT] No opponent slots found`)
+      opponentInProgressRef.current = false
+      return
+    }
+    
+    // Guard: only run when it's actually the opponent's turn
+    if (g.currentTurn !== opponentTeam) {
+      DEBUG && console.warn(`[OPPONENT] Not opponent's turn (${opponentTeam}), current: ${g.currentTurn}`)
+      opponentInProgressRef.current = false
+      return
+    }
+    
     opponentInProgressRef.current = true
     
-    DEBUG && console.log(`[OPPONENT] Starting... currentTurn=${g.currentTurn}`)
+    DEBUG && console.log(`[OPPONENT] Starting... currentTurn=${g.currentTurn}, opponentTeam=${opponentTeam}, slots=${opponentSlots.join(',')}`)
     
     const currentFen = g.board.fen()
     const currentTurn = g.currentTurn
@@ -1133,10 +1152,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const fallback = legalMoves[Math.floor(Math.random() * legalMoves.length)]
         const fallbackUci = fallback.from + fallback.to + (fallback.promotion || '')
         const sanMove = uciToSan(fallbackUci, currentFen)
-        g.selectMove('player3', sanMove)
-        g.selectMove('player4', sanMove)
-        g.lockMove('player3')
-        g.lockMove('player4')
+        g.selectMove(opponentSlots[0], sanMove)
+        if (opponentSlots[1]) {
+          g.selectMove(opponentSlots[1], sanMove)
+        }
+        g.lockMove(opponentSlots[0])
+        if (opponentSlots[1]) {
+          g.lockMove(opponentSlots[1])
+        }
         await g.resolveLegacy(true)
         updateStateRef.current()
 
@@ -1145,7 +1168,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             fbComp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
-            team: Team.BLACK,
+            team: opponentTeam,
             winningMove: fbComp.winningMove,
             winningMoveUci: fbComp.winningMove || '',
             shadowMove: fbComp.isSync ? null : (fbComp.winningMove === fbComp.player1Move ? fbComp.player2Move : fbComp.player1Move),
@@ -1165,10 +1188,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const sanMove = uciToSan(botUciMove, currentFen)
     DEBUG && console.log(`[OPPONENT] Selected move: ${sanMove}`)
     
-    g.selectMove('player3', sanMove)
-    g.selectMove('player4', sanMove)
-    g.lockMove('player3')
-    g.lockMove('player4')
+    g.selectMove(opponentSlots[0], sanMove)
+    if (opponentSlots[1]) {
+      g.selectMove(opponentSlots[1], sanMove)
+    }
+    g.lockMove(opponentSlots[0])
+    if (opponentSlots[1]) {
+      g.lockMove(opponentSlots[1])
+    }
     
     await g.resolveLegacy(true)
     updateStateRef.current()
@@ -1178,7 +1205,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
       const entry: MoveEntry = {
         turn: moveHistoryRef.current.length + 1,
-        team: Team.BLACK,
+        team: opponentTeam,
         winningMove: comp.winningMove,
         winningMoveUci: comp.winningMove || '',
         shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
@@ -1399,14 +1426,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       const startTime = Date.now()
       const currentTurn = g.currentTurn
 
-      DEBUG && console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn})`)
+      const myTeam = (g as GameInterface).getTeam()
+      const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
+      const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
+      const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
 
-      if (currentTurn !== Team.WHITE) {
-        DEBUG && console.warn(`[HUMAN] BLOCKED - Not WHITE's turn! Current: ${currentTurn}`)
+      DEBUG && console.log(`\n[HUMAN] Attempting move: ${uciMove} (current turn: ${currentTurn}, myTeam: ${myTeam})`)
+
+      if (currentTurn !== myTeam) {
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Not ${myTeam}'s turn! Current: ${currentTurn}`)
         return
       }
 
-      DEBUG && console.log(`[HUMAN] Turn confirmed as WHITE - processing move...`)
+      DEBUG && console.log(`[HUMAN] Turn confirmed as ${myTeam} - processing move...`)
 
       try {
         g.startPendingTurn()
@@ -1424,8 +1456,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         DEBUG && console.log(`[HUMAN] SAN: ${sanMove}, moveInfo:`, moveInfo)
 
         if (moveInfo) {
-          g.setPendingMove('player1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-          DEBUG && console.log(`[HUMAN] Pending move SET for player1`)
+          g.setPendingMove(humanSlot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+          DEBUG && console.log(`[HUMAN] Pending move SET for ${humanSlot}`)
           setGameState(prev => ({
             ...prev,
             selectedMove: sanMove,
@@ -1458,14 +1490,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
           if (teammateMoveInfo) {
             const { from, to, piece } = teammateMoveInfo
-            g.setPendingMove('player2', teammateSanMove, from, to, piece)
-            g.lockPendingMove('player2')
+            g.setPendingMove(teammateSlot, teammateSanMove, from, to, piece)
+            g.lockPendingMove(teammateSlot)
 
             const botMoveKey = `${from}-${to}`
             const isNewBotMove = botMoveKey !== lastTeammateLabelMoveKeyRef.current
             setGameState(prev => ({
               ...prev,
-              pendingOverlay: { from, to, piece, color: 'white', showTeammateLabel: teammateLabelShownRef.current < 3 },
+              pendingOverlay: { from, to, piece, color: myTeam === 'WHITE' ? 'white' : 'black', showTeammateLabel: teammateLabelShownRef.current < 3 },
               myPendingOverlay: null
             }))
             if (teammateLabelShownRef.current < 3 && isNewBotMove) {
@@ -1480,12 +1512,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           teammateSanMove = sanMove
           teammateMoveInfo = moveInfo
           if (moveInfo) {
-            g.setPendingMove('player2', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+            g.setPendingMove(teammateSlot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
           }
-          g.lockPendingMove('player2')
+          g.lockPendingMove(teammateSlot)
         }
 
-        g.lockPendingMove('player1')
+        g.lockPendingMove(humanSlot)
 
         DEBUG && console.log(`[RESOLVE] Both moves locked, waiting...`)
         DEBUG && console.log(`[RESOLVE] isBothPendingLocked: ${g.isBothPendingLocked()}`)
@@ -1507,7 +1539,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
-            team: Team.WHITE,
+            team: myTeam,
             winningMove: comp.winningMove,
             winningMoveUci: comp.winningMove || '',
             shadowMove: comp.isSync ? null : (comp.winningMove === comp.player1Move ? comp.player2Move : comp.player1Move),
@@ -1521,13 +1553,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
 
         const newTurn = g.currentTurn
-        pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === Team.BLACK)
+        pendingOpponentTurnRef.current = (g.status !== GameStatus.GAME_OVER && newTurn === opponentTeam)
 
         if (!pendingOpponentTurnRef.current) {
           DEBUG && console.log(`[HUMAN] Turn time: ${Date.now() - startTime}ms`)
           g.startPendingTurn()
         } else {
-          DEBUG && console.log(`[HUMAN] Triggering opponent turn after WHITE resolution`)
+          DEBUG && console.log(`[HUMAN] Triggering opponent turn after ${myTeam} resolution`)
           await handleResolutionComplete()
         }
       } catch (e) {
@@ -1559,6 +1591,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       updateStateRef.current()
     }
   }, [isOnline, game])
+
+  // Auto-trigger opponent bot when it's their turn in offline mode
+  useEffect(() => {
+    if (isOnline || !gameRef.current || gameState.status !== GameStatus.PLAYING) return
+    const g = gameRef.current
+    const myTeam = (g as GameInterface).getTeam()
+    if (!myTeam) return
+    const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
+    if (g.currentTurn === opponentTeam && !opponentInProgressRef.current) {
+      DEBUG && console.log(`[AUTO-BOT] Triggering bot for ${opponentTeam} turn`)
+      executeBotMove()
+    }
+  }, [isOnline, gameState.status, gameState.currentTurn, executeBotMove])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
@@ -1674,7 +1719,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       setGameState(prev => ({ ...prev, isBotThinking: true }))
       await executeBotMove()
 // FIX: Reset resolution state when BLACK completes and WHITE turn starts
-              DEBUG && console.log('[RESOLVE-CLEANUP] Clearing resolution state for new WHITE turn')
+              DEBUG && console.log('[RESOLVE-CLEANUP] Clearing resolution state for new human turn')
               setGameState(prev => ({ 
                 ...prev, 
                 isBotThinking: false, 
@@ -1713,7 +1758,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     let hasBot = false
     ids.slice(0, 2).forEach((id, idx) => {
       const isBot = isOfflineBotId(id)
-      const isYou = id === playerId || (!isOnline && idx === 0)
+      const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
+      const isYou = id === playerId || (!isOnline && id === humanSlot)
       if (isYou) {
         out.push({
           id,
@@ -1761,11 +1807,28 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const ids = g?.getPlayers(Team.BLACK) || []
     const labels = teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim())
     const out: BoardTopBarPlayer[] = []
-    ids.slice(0, 2).forEach((id) => {
+    let hasYou = false
+    let hasBot = false
+    ids.slice(0, 2).forEach((id, idx) => {
       const isBot = isOfflineBotId(id)
-      if (isBot) {
+      const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
+      const isYou = id === playerId || (!isOnline && id === humanSlot)
+      if (isYou) {
         out.push({
-          id: `black-bot-${id}`,
+          id,
+          label: userProfile.username || 'You',
+          type: 'human',
+          avatar: 'ace' as const,
+          profileImageUrl: userProfile.avatarUrl,
+          isYou: true,
+          online: true,
+          submitted: !!gameState.myPendingOverlay,
+        })
+        hasYou = true
+      } else if (isBot) {
+        if (hasBot) return
+        out.push({
+          id: 'black-bot',
           label: 'BlackBot',
           type: 'bot',
           avatar: 'ace' as const,
@@ -1774,6 +1837,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           online: true,
           submitted: !!gameState.pendingOverlay,
         })
+        hasBot = true
       } else {
         const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
         out.push({
@@ -1789,11 +1853,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.black, gameState.pendingOverlay, isOnline, gameState.status])
+  }, [teamLabels.black, playerId, userProfile, gameState.pendingOverlay, gameState.myPendingOverlay, isOnline, gameState.status])
 
   const yourMoveForRow: PendingMove | null = (() => {
+    const humanColor = myTeamRef.current === 'WHITE' ? 'white' as const : 'black' as const
     if (heldMove) {
-      return { san: heldMove.move.split('-').join(' '), piece: 'P', color: 'white' as const }
+      return { san: heldMove.move.split('-').join(' '), piece: 'P', color: humanColor }
     }
     // First check the engine's pending-moves map (works for locked moves too).
     if (playerId) {
@@ -1806,7 +1871,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           from: myPending.from,
           to: myPending.to,
           piece: myPending.piece && myPending.piece !== 'unknown' ? myPending.piece : 'P',
-          color: 'white' as const,
+          color: humanColor,
         }
       }
     }
@@ -1822,7 +1887,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     // Last resort: just show the SAN if we have one but no engine data.
     if (gameState.selectedMove) {
-      return { san: gameState.selectedMove, piece: 'P', color: 'white' as const }
+      return { san: gameState.selectedMove, piece: 'P', color: humanColor }
     }
     return null
   })()
@@ -1833,8 +1898,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const resolutionData: MoveResolutionData | null = accuracyComparison
     ? {
-        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: 'white' },
-        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: 'black' },
+        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
+        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
         engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
         yourAccuracy: accuracyComparison.player1Accuracy || 0,
         teammateAccuracy: accuracyComparison.player2Accuracy || 0,
@@ -1854,11 +1919,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const moves = moveHistoryRef.current
     return moves.slice(-10).map((m, i) => {
       const isWhite = m.team === 'WHITE'
+      const isMyTeam = m.team === myTeamRef.current
       const san = m.winningMoveUci || m.winningMove
       const pieceChar = san ? san[0] : 'P'
       return {
         round: Math.floor(m.turn / 2) + 1,
-        playerLabel: isWhite ? 'You' : 'Teammate',
+        playerLabel: isMyTeam ? 'You' : 'Teammate',
         moveSan: m.winningMove,
         pieceColor: isWhite ? 'white' : 'black',
         pieceChar: pieceChar,
@@ -1931,7 +1997,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100">
       {commonModals}
 
       {showGameOn && (
@@ -1940,7 +2006,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
         {/* Compact top bar — header + team avatars + timer + controls */}
-        <div className="w-full bg-[#0a0e1a] border-b border-white/5 px-3 py-2">
+        <div className="w-full bg-white dark:bg-[#0a0e1a] border-b border-slate-200 dark:border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
@@ -2018,7 +2084,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               yourLabel="Your Move"
               teammateLabel="Teammate"
               yourName={!isOnline ? (userProfile.username || 'You') : undefined}
-              teammateName={!isOnline ? (whitePlayers.find(p => p.id === 'white-bot')?.label) : undefined}
+              teammateName={!isOnline ? (
+                (myTeamRef.current === 'WHITE'
+                  ? whitePlayers.find(p => p.id === 'white-bot')
+                  : blackPlayers.find(p => p.id === 'black-bot')
+                )?.label
+              ) : undefined}
             />
           </div>
         )}
