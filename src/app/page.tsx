@@ -1002,6 +1002,23 @@ if (!gameMode) {
                 </div>
               </div>
 
+              {/* Play / Start Game Button — inside Game Mode section, aligned with cards */}
+              {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
+                <div className="mt-3">
+                  <button
+                    onClick={handlePlay}
+                    className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
+                      selectedGameMode === 'four'
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
+                        : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
+                    }`}
+                  >
+                    <Play size={20} strokeWidth={2.5} fill="currentColor" />
+                    {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                  </button>
+                </div>
+              )}
+
               {/* Join by Code */}
               <div className="mt-1 mb-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
@@ -1034,25 +1051,6 @@ if (!gameMode) {
 
               {authOverlay}
             </div>
-
-            {/* Desktop: Fixed Play Button at bottom, aligned with Game Mode section */}
-            {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
-              <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center px-4 pb-6 md:pl-[220px] lg:pl-[240px]">
-                <div className="w-full max-w-lg">
-                  <button
-                    onClick={handlePlay}
-                    className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                      selectedGameMode === 'four'
-                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
-                        : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                    }`}
-                  >
-                    <Play size={20} strokeWidth={2.5} fill="currentColor" />
-                    {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Right Panel — Configuration (desktop only) */}
             <AnimatePresence>
