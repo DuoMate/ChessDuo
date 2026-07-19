@@ -58,6 +58,22 @@ export class BrowserMoveEvaluator {
     return this._ready && !this._initError
   }
 
+  async waitForReady(timeoutMs = 15000): Promise<void> {
+    if (this._ready && !this._initError) return
+    if (this._initError) throw new Error(`Stockfish failed: ${this._initError}`)
+    
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Stockfish wait timed out')), timeoutMs)
+      const check = setInterval(() => {
+        if (this._ready) {
+          clearTimeout(timeout)
+          clearInterval(check)
+          resolve()
+        }
+      }, 100)
+    })
+  }
+
   isUsingStockfish(): boolean {
     return true
   }
