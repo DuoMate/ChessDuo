@@ -56,15 +56,25 @@ describe('InsightsGate Component', () => {
 
   test('shows premium upsell when no reveals remain', async () => {
     const insights = require('@/lib/insights')
+    const billing = require('@/features/billing')
+    billing.SubscriptionService.isPremium.mockResolvedValue(false)
     insights.getUserInsightsState.mockResolvedValue({
       revealsUsed: 3,
       isPremium: false,
       revealsRemaining: 0,
     })
     render(<InsightsGate {...baseProps} />)
-    const upsell = await screen.findByText(/Get Premium/i)
+    const upsell = await screen.findByText(/UPGRADE NOW/i)
     expect(upsell).toBeDefined()
-    expect(screen.getByText(/0\/3 free insights used/i)).toBeDefined()
+    // Text is split across elements (UNLOCK <span>PREMIUM</span> INSIGHTS)
+    const headings = await screen.findAllByRole('heading')
+    const hasPremiumHeading = headings.some(h =>
+      h.textContent?.includes('UNLOCK') &&
+      h.textContent?.includes('PREMIUM') &&
+      h.textContent?.includes('INSIGHTS')
+    )
+    expect(hasPremiumHeading).toBe(true)
+    expect(screen.getByText(/VIEW PLANS/i)).toBeDefined()
   })
 
   test('shows MoveInsights immediately when user is premium', async () => {
@@ -73,6 +83,22 @@ describe('InsightsGate Component', () => {
     render(<InsightsGate {...baseProps} />)
     await waitFor(() => {
       expect(screen.getByTestId('move-insights')).toBeDefined()
+    })
+  })
+
+  test('calls onStateChange with insights state after loading', async () => {
+    const onStateChange = jest.fn()
+    const insights = require('@/lib/insights')
+    const billing = require('@/features/billing')
+    billing.SubscriptionService.isPremium.mockResolvedValue(false)
+    insights.getUserInsightsState.mockResolvedValue({
+      revealsUsed: 1,
+      isPremium: false,
+      revealsRemaining: 2,
+    })
+    render(<InsightsGate {...baseProps} onStateChange={onStateChange} />)
+    await waitFor(() => {
+      expect(onStateChange).toHaveBeenCalledWith({ isPremium: false, revealsRemaining: 2 })
     })
   })
 })

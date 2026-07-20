@@ -154,4 +154,22 @@ describe('BoardBottomNav', () => {
     fireEvent.click(screen.getByText('Back'))
     expect(onBackMove).toHaveBeenCalled()
   })
+
+  it('shows lock badge on Insights tab when insightsLocked is true', () => {
+    render(
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked />
+    )
+    const lockIcons = screen.getAllByLabelText('Insights')[0].querySelectorAll('svg')
+    // There should be 2 SVGs: BarChart3 + Lock
+    expect(lockIcons.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('does not show lock badge on Insights tab when insightsLocked is false', () => {
+    render(
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked={false} />
+    )
+    const lockIcons = screen.getAllByLabelText('Insights')[0].querySelectorAll('svg')
+    // Only BarChart3 SVG, no extra Lock SVG
+    expect(lockIcons.length).toBe(1)
+  })
 })

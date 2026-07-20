@@ -1,6 +1,6 @@
 'use client'
 
-import { History, BarChart3, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { History, BarChart3, MessageCircle, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 
 export type BoardTab = 'moves' | 'game' | 'insights' | 'chat'
 
@@ -12,9 +12,10 @@ interface BoardBottomNavProps {
   onBackMove?: () => void
   onForwardMove?: () => void
   unreadChat?: number
+  insightsLocked?: boolean
 }
 
-export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBackMove, onForwardMove, unreadChat }: BoardBottomNavProps) {
+export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked }: BoardBottomNavProps) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
@@ -56,14 +57,21 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
         <button
           type="button"
           onClick={() => onTabChange('insights')}
-          className={`flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
+          className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
             activeTab === 'insights'
               ? 'bg-gradient-to-b from-purple-500/25 to-indigo-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
               : 'bg-gradient-to-b from-purple-500/10 to-indigo-500/5 text-purple-400 hover:from-purple-500/15 hover:to-indigo-500/10'
           }`}
           aria-label="Insights"
         >
-          <BarChart3 size={20} strokeWidth={activeTab === 'insights' ? 2.5 : 2} />
+          <div className="relative">
+            <BarChart3 size={20} strokeWidth={activeTab === 'insights' ? 2.5 : 2} />
+            {insightsLocked && (
+              <span className="absolute -top-1.5 -right-2.5 flex items-center justify-center w-4 h-4 rounded-full bg-blue-500 text-white">
+                <Lock size={8} strokeWidth={3} />
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-bold leading-none">Insights</span>
         </button>
 

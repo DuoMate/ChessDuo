@@ -39,7 +39,7 @@ import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInlin
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
-import { MoveInsights } from './MoveInsights'
+import { InsightsGate } from './InsightsGate'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
@@ -285,6 +285,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showRoundHistory, setShowRoundHistory] = useState(false)
   const [showInsights, setShowInsights] = useState(false)
   const [showChat, setShowChat] = useState(false)
+  const [insightsState, setInsightsState] = useState<{ isPremium: boolean; revealsRemaining: number | null }>({ isPremium: false, revealsRemaining: null })
 
   const closeAllPanels = useCallback(() => {
     setShowRoundHistory(false)
@@ -2173,6 +2174,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               setPlaybackFen(moves[current + 1]?.fenAfter || '')
             }
           }}
+          insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>
 
@@ -2210,7 +2212,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
         {accuracyComparison ? (
           <div className="text-slate-100">
-            <MoveInsights
+            <InsightsGate
+              playerId={playerId || 'guest'}
               player1Move={accuracyComparison.player1Move || '?'}
               player2Move={accuracyComparison.player2Move || '?'}
               player1Accuracy={accuracyComparison.player1Accuracy || 0}
@@ -2221,6 +2224,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               winnerId={accuracyComparison.winnerId}
               bestEngineMove={accuracyComparison.bestEngineMove}
               bestEngineScore={accuracyComparison.bestEngineScore}
+              onStateChange={setInsightsState}
             />
           </div>
         ) : (
