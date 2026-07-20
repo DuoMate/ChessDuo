@@ -832,7 +832,7 @@ if (!gameMode) {
         <HeaderBar />
 
         {isMobile ? (
-          // Mobile: Single column layout
+          <>
           <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
             {/* Time Control */}
             <div className="mb-2">
@@ -902,24 +902,7 @@ if (!gameMode) {
               <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
             )}
 
-            {/* Play / Start Game Button — inside Game Mode section, aligned with cards */}
-            {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
-              <div className="mt-3 mb-2">
-                <button
-                  onClick={handlePlay}
-                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                    selectedGameMode === 'four'
-                      ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
-                      : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                  }`}
-                >
-                  <Play size={20} strokeWidth={2.5} fill="currentColor" />
-                  {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
-                </button>
-              </div>
-            )}
-
-            {/* Configuration — slides in on Quick Play / Duo (below Game Mode) */}
+            {/* Configuration — slides in on Quick Play / Duo */}
             <AnimatePresence>
               {selectedGameMode && selectedGameMode !== 'four' && (
                 <motion.div
@@ -961,10 +944,32 @@ if (!gameMode) {
               )}
             </AnimatePresence>
 
+            {/* Spacer so last content scrolls above the fixed Start Game button */}
+            <div className="min-h-[60px]" />
+
             {authOverlay}
           </div>
+
+          {/* Fixed Start Game button — stacked on top of the floating nav */}
+          {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
+            <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4" style={{ bottom: 'max(78px, calc(env(safe-area-inset-bottom, 12px) + 66px))' }}>
+              <div className="w-full max-w-lg">
+                <button
+                  onClick={handlePlay}
+                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
+                    selectedGameMode === 'four'
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
+                      : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
+                  }`}
+                >
+                  <Play size={20} strokeWidth={2.5} fill="currentColor" />
+                  {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
         ) : (
-          // Desktop: Two-panel layout
           <div className="hidden md:flex flex-1 min-h-0">
             {/* Left Panel — Main Content */}
             <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
