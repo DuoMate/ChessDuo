@@ -8,6 +8,7 @@ import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
 import { supabase } from '@/lib/supabase'
 import { InitialsAvatar } from './InitialsAvatar'
+import { Spinner } from './Spinner'
 import { SubscriptionService } from '@/features/billing'
 import { useSettings } from '@/lib/settings'
 
@@ -165,7 +166,11 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           <span className="text-slate-500">&rsaquo;</span>
         </button>
 
-        {!checkingPremium && !isPremium && (
+        {checkingPremium ? (
+          <div className="w-full p-4 bg-slate-800/30 border border-white/5 rounded-2xl flex justify-center">
+            <Spinner size="sm" />
+          </div>
+        ) : !isPremium ? (
           <button
             onClick={() => router.push('/premium')}
             className="w-full p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl flex items-center gap-3 hover:from-purple-500/15 hover:to-indigo-500/15 transition-all"
@@ -179,7 +184,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             </div>
             <span className="text-slate-500">&rsaquo;</span>
           </button>
-        )}
+        ) : null}
 
         <button
           onClick={onViewHistory}

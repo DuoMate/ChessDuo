@@ -25,6 +25,7 @@ import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InitialsAvatar } from './InitialsAvatar'
+import { Spinner } from './Spinner'
 import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip } from 'lucide-react'
 
 interface FriendsPanelProps {
@@ -297,51 +298,52 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
           <span className="text-slate-500">&rsaquo;</span>
         </button>
 
-        {/* Tabs */}
-        <div className="flex border-b border-white/5">
-          <button
-            onClick={() => setTab('friends')}
-            className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              tab === 'friends'
-                ? 'text-blue-400 border-b-2 border-blue-500'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            <Users size={14} />
-            Friends ({friends.length})
-          </button>
-          <button
-            onClick={() => setTab('requests')}
-            className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              tab === 'requests'
-                ? 'text-blue-400 border-b-2 border-blue-500'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            <Send size={14} />
-            Requests
-            {totalRequests > 0 && (
-              <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalRequests}</span>
-            )}
-          </button>
-          <button
-            onClick={() => setTab('blocked')}
-            className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-              tab === 'blocked'
-                ? 'text-blue-400 border-b-2 border-blue-500'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            <span className="text-base">⊘</span>
-            Blocked
-          </button>
-        </div>
-
-        {/* Tab Content */}
+        {/* Tabs + Content */}
         {loading ? (
-          <p className="text-slate-500 text-xs text-center py-4">Loading...</p>
+          <div className="flex justify-center py-12">
+            <Spinner size="sm" />
+          </div>
         ) : (
           <>
+            <div className="flex border-b border-white/5">
+              <button
+                onClick={() => setTab('friends')}
+                className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  tab === 'friends'
+                    ? 'text-blue-400 border-b-2 border-blue-500'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <Users size={14} />
+                Friends ({friends.length})
+              </button>
+              <button
+                onClick={() => setTab('requests')}
+                className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  tab === 'requests'
+                    ? 'text-blue-400 border-b-2 border-blue-500'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <Send size={14} />
+                Requests
+                {totalRequests > 0 && (
+                  <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full">{totalRequests}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setTab('blocked')}
+                className={`flex-1 min-h-[44px] px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  tab === 'blocked'
+                    ? 'text-blue-400 border-b-2 border-blue-500'
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <span className="text-base">⊘</span>
+                Blocked
+              </button>
+            </div>
+
             {tab === 'friends' && (
               <FriendList
                 friends={friends}
