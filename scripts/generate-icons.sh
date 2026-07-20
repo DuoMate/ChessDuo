@@ -3,19 +3,19 @@ set -euo pipefail
 
 # ──────────────────────────────────────────────────
 # ChessDuo App Icon Generator
-# Converts resources/icon.svg to all required Android sizes
-# Requires: ImageMagick (convert) or Inkscape
+# Converts resources/icon.png to all required Android sizes
+# Requires: ImageMagick (convert or magick)
 # Run: bash scripts/generate-icons.sh
 # ──────────────────────────────────────────────────
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-SVG="resources/icon.svg"
+SOURCE="resources/icon.png"
 ANDROID_RES="android/app/src/main/res"
 
-if [ ! -f "$SVG" ]; then
-    echo "[ICONS] No icon.svg found in resources/, skipping."
+if [ ! -f "$SOURCE" ]; then
+    echo "[ICONS] No icon.png found in resources/, skipping."
     exit 0
 fi
 
@@ -25,7 +25,7 @@ if [ ! -d "$ANDROID_RES" ]; then
 fi
 
 GREEN='\033[0;32m' NC='\033[0m'
-echo -e "${GREEN}[ICONS]${NC} Generating Android app icons..."
+echo -e "${GREEN}[ICONS]${NC} Generating Android app icons from $SOURCE..."
 
 # Find available converter
 if command -v magick &>/dev/null; then
@@ -34,7 +34,7 @@ elif command -v convert &>/dev/null; then
     CONVERTER="convert"  # ImageMagick v6
 else
     echo "[ICONS] ImageMagick not found. Install with: sudo apt-get install imagemagick"
-    echo "[ICONS] Skipping icon generation. SVG source is ready in resources/icon.svg"
+    echo "[ICONS] Skipping icon generation. Source is ready in $SOURCE"
     exit 0
 fi
 
@@ -52,8 +52,8 @@ for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     dir="$ANDROID_RES/mipmap-$density"
     mkdir -p "$dir"
 
-    "$CONVERTER" "$SVG" -resize "${size}x${size}" -background none -flatten "$dir/ic_launcher.png" 2>/dev/null
-    "$CONVERTER" "$SVG" -resize "${size}x${size}" -background none -flatten "$dir/ic_launcher_round.png" 2>/dev/null
+    "$CONVERTER" "$SOURCE" -resize "${size}x${size}" "$dir/ic_launcher.png" 2>/dev/null
+    "$CONVERTER" "$SOURCE" -resize "${size}x${size}" "$dir/ic_launcher_round.png" 2>/dev/null
 done
 
 # Adaptive icon components (108dp)
@@ -70,11 +70,11 @@ for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     dir="$ANDROID_RES/mipmap-anydpi-v26"
     mkdir -p "$dir"
 
-    "$CONVERTER" "$SVG" -resize "${size}x${size}" -background none -flatten "$dir/ic_launcher_foreground.png" 2>/dev/null
+    "$CONVERTER" "$SOURCE" -resize "${size}x${size}" "$dir/ic_launcher_foreground.png" 2>/dev/null
 done
 
 # Play Store listing icon (512x512)
-"$CONVERTER" "$SVG" -resize 512x512 -background none -flatten "resources/icon-playstore.png" 2>/dev/null
+"$CONVERTER" "$SOURCE" -resize 512x512 "resources/icon-playstore.png" 2>/dev/null
 
 echo -e "${GREEN}[ICONS]${NC} App icons generated in android/app/src/main/res/mipmap-*"
 echo -e "${GREEN}[ICONS]${NC} Play Store icon: resources/icon-playstore.png"
