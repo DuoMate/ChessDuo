@@ -32,7 +32,11 @@ self.addEventListener('notificationclick', (event) => {
   } else if (type === 'chat_message') {
     url = '/friends'
   } else if (type === 'game_invite' && data.roomId) {
-    url = `/duel?room=${data.roomId}`
+    let duelUrl = `/duel?room=${data.roomId}`
+    if (data.code) duelUrl += `&code=${data.code}`
+    if (data.joinPlayerId) duelUrl += `&playerId=${data.joinPlayerId}`
+    if (data.joinTeam) duelUrl += `&team=${data.joinTeam}`
+    url = duelUrl
   }
 
   event.waitUntil(

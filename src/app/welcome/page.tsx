@@ -77,7 +77,8 @@ export default function WelcomePage() {
     if (navigating) return
     setNavigating(true)
     if (dontShow) {
-      localStorage.setItem('chessduo_welcome_dismissed', 'true')
+      const key = mode === 'offline' ? 'chessduo_offline_disclaimer_dismissed' : 'chessduo_welcome_dismissed'
+      localStorage.setItem(key, 'true')
     }
 
     if (mode === 'offline') {

@@ -34,7 +34,7 @@ export default function InvitePageClient() {
   const [targetUsername, setTargetUsername] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const requestSent = useRef(false)
-  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -96,8 +96,8 @@ export default function InvitePageClient() {
     requestSent.current = false
   }
 
-  const handleNeedUsername = (userId: string, suggestedName: string) => {
-    setNeedsUsername({ userId, suggestedName })
+  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
+    setNeedsUsername({ userId, suggestedName, avatarUrl })
   }
 
   const handleUsernameChosen = (userId: string) => {
@@ -114,6 +114,7 @@ export default function InvitePageClient() {
           <ChooseUsername
             userId={needsUsername.userId}
             suggestedName={needsUsername.suggestedName}
+            avatarUrl={needsUsername.avatarUrl}
             onAuthComplete={handleUsernameChosen}
           />
         </ErrorBoundary>

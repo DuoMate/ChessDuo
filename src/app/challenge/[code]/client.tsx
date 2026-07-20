@@ -25,7 +25,7 @@ export default function ChallengePageClient() {
     time_seconds: number
     creator_id: string
   } | null>(null)
-  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -125,8 +125,8 @@ export default function ChallengePageClient() {
     setPlayerId(userId)
   }
 
-  const handleNeedUsername = (userId: string, suggestedName: string) => {
-    setNeedsUsername({ userId, suggestedName })
+  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
+    setNeedsUsername({ userId, suggestedName, avatarUrl })
   }
 
   const handleUsernameChosen = (userId: string) => {
@@ -142,6 +142,7 @@ export default function ChallengePageClient() {
           <ChooseUsername
             userId={needsUsername.userId}
             suggestedName={needsUsername.suggestedName}
+            avatarUrl={needsUsername.avatarUrl}
             onAuthComplete={handleUsernameChosen}
           />
         </ErrorBoundary>

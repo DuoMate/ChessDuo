@@ -35,6 +35,20 @@ function GameContent() {
   const [validated, setValidated] = useState(false)
   const validatedRef = useRef(false)
 
+  const buildGameRedirect = () => {
+    const params = new URLSearchParams()
+    if (mode) params.set('mode', mode)
+    if (roomId) params.set('room', roomId)
+    if (roomCode) params.set('code', roomCode)
+    if (team) params.set('team', team)
+    if (playerId) params.set('playerId', playerId)
+    if (timeLimit) params.set('time', String(timeLimit))
+    if (challengeId) params.set('challengeId', challengeId)
+    if (fourplayer) params.set('fourplayer', '1')
+    const redirectUrl = encodeURIComponent(`/game?${params.toString()}`)
+    return `/?redirect=${redirectUrl}`
+  }
+
   useEffect(() => {
     if (validatedRef.current) return
     const isMultiplayer = mode === 'online' || mode === 'fourplayer'
@@ -45,32 +59,12 @@ function GameContent() {
     validatedRef.current = true
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user || session.user.id !== playerId) {
-        const params = new URLSearchParams()
-        if (mode) params.set('mode', mode)
-        if (roomId) params.set('room', roomId)
-        if (roomCode) params.set('code', roomCode)
-        if (team) params.set('team', team)
-        if (playerId) params.set('playerId', playerId)
-        if (timeLimit) params.set('time', String(timeLimit))
-        if (challengeId) params.set('challengeId', challengeId)
-        if (fourplayer) params.set('fourplayer', '1')
-        const redirectUrl = encodeURIComponent(`/game?${params.toString()}`)
-        router.replace(`/?redirect=${redirectUrl}`)
+        router.replace(buildGameRedirect())
         return
       }
       setValidated(true)
     }).catch(() => {
-      const params = new URLSearchParams()
-      if (mode) params.set('mode', mode)
-      if (roomId) params.set('room', roomId)
-      if (roomCode) params.set('code', roomCode)
-      if (team) params.set('team', team)
-      if (playerId) params.set('playerId', playerId)
-      if (timeLimit) params.set('time', String(timeLimit))
-      if (challengeId) params.set('challengeId', challengeId)
-      if (fourplayer) params.set('fourplayer', '1')
-      const redirectUrl = encodeURIComponent(`/game?${params.toString()}`)
-      router.replace(`/?redirect=${redirectUrl}`)
+      router.replace(buildGameRedirect())
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

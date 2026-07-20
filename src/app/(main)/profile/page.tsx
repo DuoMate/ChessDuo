@@ -95,6 +95,8 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    try { localStorage.removeItem('chessduo_history') } catch { /* quota exceeded */ }
+    try { localStorage.removeItem('chessduo_settings') } catch { /* quota exceeded */ }
     router.push('/')
   }
 

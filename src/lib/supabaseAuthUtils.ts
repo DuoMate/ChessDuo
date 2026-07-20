@@ -37,6 +37,7 @@ async function authenticateWithGoogleNative(): Promise<{
   cancelled?: boolean
   userId?: string
   email?: string
+  displayName?: string | null
   avatarUrl?: string | null
   error?: string
 }> {
@@ -128,6 +129,7 @@ async function authenticateWithGoogleNative(): Promise<{
       success: true,
       userId: data.user?.id,
       email: data.user?.email,
+      displayName: data.user?.user_metadata?.full_name || data.user?.user_metadata?.name || null,
       avatarUrl: data.user?.user_metadata?.avatar_url || null,
     }
   } catch (err: any) {

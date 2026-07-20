@@ -169,6 +169,7 @@ export async function resetPushState(): Promise<void> {
   if (typeof window !== 'undefined') {
     try { localStorage.removeItem(PUSH_FCM_TOKEN_KEY) } catch { /* quota exceeded */ }
     try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
+    try { localStorage.removeItem('chessduo_push_disabled') } catch { /* quota exceeded */ }
   }
 }
 
@@ -322,7 +323,14 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
               window.location.href = '/friends'
               break
             case 'game_invite':
-              if (data.roomId) window.location.href = `/duel?room=${data.roomId}`
+              if (data.roomId) {
+                const params = new URLSearchParams()
+                params.set('room', data.roomId)
+                if (data.code) params.set('code', data.code)
+                if (data.joinPlayerId) params.set('playerId', data.joinPlayerId)
+                if (data.joinTeam) params.set('team', data.joinTeam)
+                window.location.href = `/duel?${params.toString()}`
+              }
               break
             default: {
               const msg = `[Push Debug] Unknown type: ${JSON.stringify(data)}`

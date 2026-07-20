@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
@@ -196,8 +195,8 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           <span className="text-slate-500">&rsaquo;</span>
         </button>
 
-        <Link
-          href="/delete-account"
+        <button
+          onClick={() => router.push('/delete-account')}
           className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
         >
           <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -208,7 +207,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             <p className="text-xs text-slate-400">Security, privacy &amp; preferences</p>
           </div>
           <span className="text-slate-500">&rsaquo;</span>
-        </Link>
+        </button>
 
         {onSignOut && (
           <button

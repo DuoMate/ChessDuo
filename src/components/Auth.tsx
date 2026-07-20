@@ -30,7 +30,7 @@ interface AuthProps {
   onAuthComplete: (userId: string, username: string) => void
   defaultSignup?: boolean
   redirectUrl?: string
-  onNeedUsername?: (userId: string, suggestedName: string) => void
+  onNeedUsername?: (userId: string, suggestedName: string, avatarUrl?: string | null) => void
   onClose?: () => void
 }
 
@@ -93,7 +93,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* best effort */ }
       }
       const suggested = googleDisplayName || email.split('@')[0]
-      onNeedUsername(userId, suggested)
+      onNeedUsername(userId, suggested, googleAvatarUrl)
       if (googleAuthInProgressRef.current) {
         setGoogleLoading(false)
         googleAuthInProgressRef.current = false
@@ -110,7 +110,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         return
       }
       try {
-        await supabase.from('profiles').upsert({ id: userId, username: displayName, avatar_url: googleAvatarUrl || undefined }, { onConflict: 'id' })
+        await supabase.from('profiles').upsert({ id: userId, username: displayName, display_name: googleDisplayName || undefined, avatar_url: googleAvatarUrl || undefined }, { onConflict: 'id' })
       } catch { console.error('[Auth] Failed to upsert profile') }
       onAuthComplete(userId, displayName)
       if (googleAuthInProgressRef.current) {

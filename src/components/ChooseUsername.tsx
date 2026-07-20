@@ -9,6 +9,7 @@ import ChessDuoLogo from '@/components/ChessDuoLogo'
 interface ChooseUsernameProps {
   userId: string
   suggestedName?: string
+  avatarUrl?: string | null
   onAuthComplete: (userId: string, username: string) => void
 }
 
@@ -21,7 +22,7 @@ export function sanitizeDisplayName(name: string): string {
     .substring(0, 30)
 }
 
-export function ChooseUsername({ userId, suggestedName, onAuthComplete }: ChooseUsernameProps) {
+export function ChooseUsername({ userId, suggestedName, avatarUrl, onAuthComplete }: ChooseUsernameProps) {
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -99,7 +100,8 @@ export function ChooseUsername({ userId, suggestedName, onAuthComplete }: Choose
         .from('profiles')
         .upsert({
           id: userId,
-          username: username.trim()
+          username: username.trim(),
+          avatar_url: avatarUrl || undefined,
         }, { onConflict: 'id' })
 
       if (profileError) {

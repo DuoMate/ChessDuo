@@ -128,7 +128,7 @@ export default function SetupPage() {
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
   const isMobile = useIsMobile()
-  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string } | null>(null)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
@@ -395,8 +395,8 @@ export default function SetupPage() {
     }
   }
 
-  const handleNeedUsername = (userId: string, suggestedName: string) => {
-    setNeedsUsername({ userId, suggestedName })
+  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
+    setNeedsUsername({ userId, suggestedName, avatarUrl })
     setShowAuthOverlay(false)
   }
 
@@ -688,6 +688,7 @@ export default function SetupPage() {
     <ChooseUsername
       userId={needsUsername.userId}
       suggestedName={needsUsername.suggestedName}
+      avatarUrl={needsUsername.avatarUrl}
       onAuthComplete={handleUsernameChosen}
     />
   )

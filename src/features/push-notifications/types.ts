@@ -5,6 +5,9 @@ export interface NotificationPayload {
   senderId: string
   senderName?: string
   roomId?: string
+  code?: string
+  joinPlayerId?: string
+  joinTeam?: string
   snippet?: string
 }
 

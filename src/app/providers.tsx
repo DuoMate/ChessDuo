@@ -62,7 +62,8 @@ export default function Providers({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         clearCachedAccessToken()
         resetPushState().catch(() => {})
-        localStorage.removeItem('chessduo_push_welcome_sent')
+        try { localStorage.removeItem('chessduo_push_disabled') } catch { /* quota exceeded */ }
+        try { localStorage.removeItem('chessduo_push_welcome_sent') } catch { /* quota exceeded */ }
         try { localStorage.removeItem('chessduo_push_last_error') } catch { /* quota exceeded */ }
       }
     })

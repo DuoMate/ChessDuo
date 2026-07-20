@@ -31,7 +31,10 @@ export async function notifyGameInvite(
   senderId: string,
   senderName: string,
   roomId: string,
+  code?: string,
+  joinPlayerId?: string,
+  joinTeam?: string,
 ): Promise<void> {
   const { sendPushNotification } = await import('./PushNotificationService')
-  await sendPushNotification(receiverId, 'game_invite', { senderId, senderName, roomId })
+  await sendPushNotification(receiverId, 'game_invite', { senderId, senderName, roomId, code, joinPlayerId, joinTeam })
 }

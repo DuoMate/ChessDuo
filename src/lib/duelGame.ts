@@ -320,7 +320,7 @@ export class DuelGame {
       const promotion = uci.length > 4 ? uci.slice(4) : undefined
       const move = this.chess.move({ from, to, promotion })
       this._lastMove = { from: move.from, to: move.to }
-      this._moveHistory.push(move.san)
+      this._moveHistory = [...this._moveHistory, move.san]
 
       let accuracy: number | null = null
       if (this.evaluator) {
@@ -381,7 +381,7 @@ export class DuelGame {
     try {
       this.chess.move(payload.move)
       this._lastMove = { from: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.from, to: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.to }
-      this._moveHistory.push(payload.move)
+      this._moveHistory = [...this._moveHistory, payload.move]
       this.notify()
       if (this.chess.isGameOver()) {
         this.handleGameOver()
