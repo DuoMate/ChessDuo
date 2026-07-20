@@ -828,7 +828,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white md:pl-[220px] lg:pl-[240px]">
+      <div className="relative flex min-h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
         {isMobile ? (
@@ -952,7 +952,7 @@ if (!gameMode) {
 
           {/* Fixed Start Game button — stacked on top of the floating nav */}
           {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
-            <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4" style={{ bottom: 'max(78px, calc(env(safe-area-inset-bottom, 12px) + 66px))' }}>
+            <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4" style={{ bottom: '84px' }}>
               <div className="w-full max-w-lg">
                 <button
                   onClick={handlePlay}
@@ -1237,8 +1237,8 @@ function BotDifficultySelector({
   onSelect: (level: number) => void
 }) {
   return (
-    <div className="overflow-x-auto -mx-1 px-1">
-      <div className="grid grid-cols-5 gap-2 min-w-[280px]" role="radiogroup" aria-label="Bot difficulty">
+    <div>
+      <div className="grid grid-cols-5 gap-1" role="radiogroup" aria-label="Bot difficulty">
       {DIFFICULTY_LEVELS.map(({ level, label, Icon }) => {
         const selected = level === selectedLevel
         return (
@@ -1250,7 +1250,7 @@ function BotDifficultySelector({
             aria-label={`${label} difficulty`}
             onClick={() => onSelect(level)}
             className={[
-              'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-1',
+              'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-0.5',
               'rounded-xl border-2 px-1 py-2 transition-all duration-200',
               selected
                 ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
@@ -1258,14 +1258,14 @@ function BotDifficultySelector({
             ].join(' ')}
           >
             <Icon
-              size={22}
+              size={18}
               strokeWidth={1.8}
               className={selected
                 ? 'text-blue-600 dark:text-blue-300'
                 : 'text-slate-700 dark:text-slate-300'}
               aria-hidden="true"
             />
-            <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+            <span className="text-[9px] font-semibold text-slate-700 dark:text-slate-200">
               {label}
             </span>
           </button>

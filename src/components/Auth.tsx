@@ -51,21 +51,21 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const googleAuthInProgressRef = useRef(false)
 
   useEffect(() => {
+    let authStateReceived = false
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
-      } else {
-        setInitialSessionChecked(true)
       }
-    }).catch(() => {
-      setInitialSessionChecked(true)
     })
-  }, [])
 
-  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
+      }
+      if (!authStateReceived) {
+        authStateReceived = true
+        setInitialSessionChecked(true)
       }
     })
     return () => subscription.unsubscribe()

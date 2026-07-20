@@ -28,11 +28,10 @@ GREEN='\033[0;32m' NC='\033[0m'
 echo -e "${GREEN}[ICONS]${NC} Generating Android app icons..."
 
 # Find available converter
-if command -v convert &>/dev/null; then
+if command -v magick &>/dev/null; then
     CONVERTER="magick"  # ImageMagick v7+
-    convert -version 2>/dev/null | head -1 || true
-elif command -v magick &>/dev/null; then
-    CONVERTER="magick"
+elif command -v convert &>/dev/null; then
+    CONVERTER="convert"  # ImageMagick v6
 else
     echo "[ICONS] ImageMagick not found. Install with: sudo apt-get install imagemagick"
     echo "[ICONS] Skipping icon generation. SVG source is ready in resources/icon.svg"
