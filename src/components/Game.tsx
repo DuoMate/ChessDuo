@@ -251,7 +251,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     winner: null
   })
 
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const toast = useGameToast()
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
   const [showGameOn, setShowGameOn] = useState(false)
@@ -445,8 +444,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   // Update sound engine when setting changes
   useEffect(() => {
-    setEngineSoundEnabled(soundEnabled)
-  }, [soundEnabled])
+    setEngineSoundEnabled(settings.soundEnabled)
+  }, [settings.soundEnabled])
 
   // Initialize AudioContext on user gesture for browsers / mobile WebView
   useEffect(() => {
@@ -2037,11 +2036,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               <GameMenu
                 onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
                 onOpenSettings={() => setShowSettings(true)}
-                soundEnabled={soundEnabled}
-                onToggleSound={() => setSoundEnabled(!soundEnabled)}
+                soundEnabled={settings.soundEnabled}
+                onToggleSound={() => settings.setSoundEnabled(!settings.soundEnabled)}
                 onOpenProfile={() => setOverlayMode('profile')}
-                confirmMove={settings.confirmMove}
-                onToggleConfirmMove={() => settings.setConfirmMove(!settings.confirmMove)}
               />
             </div>
           </div>

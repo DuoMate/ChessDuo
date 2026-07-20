@@ -146,6 +146,7 @@ async function authenticateWithGoogleCapacitorBrowser(): Promise<{
   userId?: string
   email?: string
   displayName?: string
+  avatarUrl?: string | null
   error?: string
 }> {
   try {
@@ -176,6 +177,7 @@ async function authenticateWithGoogleWeb(): Promise<{
   userId?: string
   email?: string
   displayName?: string
+  avatarUrl?: string | null
   error?: string
 }> {
   try {

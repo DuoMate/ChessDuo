@@ -44,10 +44,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return localStorage.getItem('soundEnabled') !== 'false'
-  })
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
   const [currentTurn, setCurrentTurn] = useState<'w' | 'b'>('w')
@@ -162,8 +158,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   }, [roomId, playerId, team, timeLimit])
 
   useEffect(() => {
-    setEngineSoundEnabled(soundEnabled)
-  }, [soundEnabled])
+    setEngineSoundEnabled(settings.soundEnabled)
+  }, [settings.soundEnabled])
 
   useEffect(() => {
     const tryResumeAudio = () => {
@@ -458,10 +454,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               <GameMenu
                 onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
                 onOpenSettings={() => setShowSettings(true)}
-                soundEnabled={soundEnabled}
-                onToggleSound={() => setSoundEnabled(!soundEnabled)}
-                confirmMove={settings.confirmMove}
-                onToggleConfirmMove={() => settings.setConfirmMove(!settings.confirmMove)}
+                soundEnabled={settings.soundEnabled}
+                onToggleSound={() => settings.setSoundEnabled(!settings.soundEnabled)}
               />
             </div>
           </div>

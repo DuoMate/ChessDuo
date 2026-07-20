@@ -51,6 +51,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
             className="w-full h-full object-contain p-0.5"
             loading="lazy"
             decoding="async"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
           {player.submitted && (
             <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${checkClass} flex items-center justify-center ring-2 ring-white dark:ring-slate-900`}>

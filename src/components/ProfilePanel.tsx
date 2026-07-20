@@ -67,12 +67,13 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             SubscriptionService.isPremium(),
             supabase
               .from('profiles')
-              .select('username')
+              .select('username, avatar_url')
               .eq('id', playerId)
               .maybeSingle(),
           ])
           setIsPremium(premium)
           if (profileResult.data?.username) setUsername(profileResult.data.username)
+          if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
         }
       )
       .subscribe()

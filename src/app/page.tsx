@@ -230,17 +230,10 @@ export default function SetupPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-start online game after returning from Welcome page.
-  // Needs an authenticated session because online games hit Supabase.
-  useEffect(() => {
-    if (!sessionChecked || !playerId) return
-
-    const pendingOnline = localStorage.getItem('chessduo_pending_online_game')
-    if (!pendingOnline) return
-    localStorage.removeItem('chessduo_pending_online_game')
-    handleStartOnline(selectedTime)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionChecked, playerId, selectedTime, router])
+  // Online games are now started directly from the Welcome page.
+  // The pending_online_game key is consumed there — see welcome/page.tsx.
+  // This useEffect is intentionally removed to eliminate the 3-step
+  // Home → Welcome → Home → Game navigation flash (Bug 10).
 
   useEffect(() => {
     if (gameMode !== null) {
@@ -577,7 +570,7 @@ export default function SetupPage() {
     }
     if (showOnlineDisclaimer) {
       const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-      localStorage.setItem('chessduo_pending_online_game', JSON.stringify({ time }))
+      localStorage.setItem('chessduo_pending_online_game', JSON.stringify({ time, playerId, color: selectedColor }))
       router.push('/welcome?mode=online')
     } else {
       handleStartOnline(selectedTime)
@@ -835,12 +828,12 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white overflow-hidden md:pl-[220px] lg:pl-[240px]">
+      <div className="relative flex h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
         {isMobile ? (
           // Mobile: Single column layout
-          <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+          <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
             {/* Time Control */}
             <div className="mb-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
@@ -974,7 +967,7 @@ if (!gameMode) {
           // Desktop: Two-panel layout
           <div className="hidden md:flex flex-1 min-h-0">
             {/* Left Panel — Main Content */}
-            <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
               {/* Time Control */}
               <div className="mb-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
@@ -1187,6 +1180,7 @@ function GameModeCard({
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             </div>
           ))}
@@ -1203,6 +1197,7 @@ function GameModeCard({
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
               />
             </div>
           ))}
@@ -1300,6 +1295,7 @@ function PlayerIcons({ left, right }: {
               loading="lazy"
               decoding="async"
               className="w-full h-full object-contain"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           </div>
         ))}
@@ -1322,6 +1318,7 @@ function PlayerIcons({ left, right }: {
               loading="lazy"
               decoding="async"
               className="w-full h-full object-contain"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           </div>
         ))}

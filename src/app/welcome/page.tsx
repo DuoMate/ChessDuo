@@ -7,6 +7,7 @@ import { Crown, Pointer, Scale, Loader2 } from 'lucide-react'
 import { ChessBoard } from '@/components/ChessBoard'
 import { BackButton } from '@/components/BackButton'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { createOnlineRoom } from '@/lib/roomActions'
 
 const TOUR_FEN = 'rnbqkbnr/pppppppp/8/8/2P1P3/8/PP1P1PPP/RNBQKBNR w KQkq - 0 1'
 const TOUR_HIGHLIGHT = { winnerFrom: 'e2', winnerTo: 'e4', loserFrom: 'c2', loserTo: 'c4' }
@@ -72,7 +73,7 @@ export default function WelcomePage() {
 
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
-  const handleDismiss = () => {
+  const handleDismiss = async () => {
     if (navigating) return
     setNavigating(true)
     if (dontShow) {
@@ -80,7 +81,6 @@ export default function WelcomePage() {
     }
 
     if (mode === 'offline') {
-      // Redirect directly to game — no home page detour
       const pending = localStorage.getItem('chessduo_pending_offline_game')
       localStorage.removeItem('chessduo_pending_offline_game')
       if (pending) {
@@ -92,7 +92,20 @@ export default function WelcomePage() {
         } catch { /* fall through */ }
       }
     }
-    // For online: keep pending_online_game in localStorage — home page will use it
+
+    if (mode === 'online') {
+      const pending = localStorage.getItem('chessduo_pending_online_game')
+      localStorage.removeItem('chessduo_pending_online_game')
+      if (pending) {
+        try {
+          const { time, playerId, color } = JSON.parse(pending)
+          const result = await createOnlineRoom({ playerId, timeSeconds: time, hostColor: color })
+          router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color || 'white'}`)
+          return
+        } catch { /* fall through */ }
+      }
+    }
+
     router.push('/')
   }
 

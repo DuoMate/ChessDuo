@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCallback, useState, useEffect } from 'react'
 import { useSettings } from '@/lib/settings'
-import { ArrowLeft, Sun, Moon, BellOff } from 'lucide-react'
+import { ArrowLeft, Sun, Moon, BellOff, ShieldCheck, Volume2, VolumeX } from 'lucide-react'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
@@ -16,7 +16,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
-  const { autoQueen, lowTimeWarning, theme, setAutoQueen, setLowTimeWarning, setTheme } = useSettings()
+  const { autoQueen, lowTimeWarning, theme, confirmMove, soundEnabled, setAutoQueen, setLowTimeWarning, setTheme, setConfirmMove, setSoundEnabled } = useSettings()
   const [notifsEnabled, setNotifsEnabled] = useState(true)
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm overflow-y-auto"
           onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
         >
           <motion.div
@@ -90,6 +90,42 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                 </div>
                 <button onClick={() => setLowTimeWarning(!lowTimeWarning)} className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${lowTimeWarning ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-label="Toggle low time warning">
                   <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="h-px bg-gray-200 dark:bg-gray-700" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Confirm Moves</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Add confirmation before final move</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={confirmMove}
+                  onClick={() => setConfirmMove(!confirmMove)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${confirmMove ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <div className="h-px bg-gray-200 dark:bg-gray-700" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Sound Effects</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Play sounds for moves and events</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={soundEnabled}
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${soundEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
 
