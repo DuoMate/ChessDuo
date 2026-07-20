@@ -89,6 +89,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         googleAuthInProgressRef.current = false
       }
     } else if (onNeedUsername) {
+      if (googleAvatarUrl || googleDisplayName) {
+        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* best effort */ }
+      }
       const suggested = googleDisplayName || email.split('@')[0]
       onNeedUsername(userId, suggested)
       if (googleAuthInProgressRef.current) {
@@ -278,7 +281,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_28%)] px-4 py-6 sm:px-6">
-      {googleLoading || !initialSessionChecked ? (
+      {googleLoading || loading || !initialSessionChecked ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -292,7 +295,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
               <Spinner size="lg" />
             </div>
             <p className="mt-5 text-base font-semibold text-slate-900 dark:text-white">
-              {googleLoading ? 'Signing in with Google' : 'Checking session...'}
+              {googleLoading ? 'Signing in with Google' : loading ? 'Signing in...' : 'Checking session...'}
             </p>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               {googleLoading ? 'Complete sign-in in your browser' : 'Please wait'}

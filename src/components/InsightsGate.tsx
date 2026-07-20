@@ -21,9 +21,10 @@ interface InsightsGateProps {
   bestEngineMove?: string
   bestEngineScore?: number
   onStateChange?: (state: { isPremium: boolean; revealsRemaining: number | null }) => void
+  onUpgradeClick?: () => void
 }
 
-export function InsightsGate({ playerId, onStateChange, ...comparison }: InsightsGateProps) {
+export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...comparison }: InsightsGateProps) {
   const [isPremium, setIsPremium] = useState(false)
   const [revealsRemaining, setRevealsRemaining] = useState<number | null>(null)
   const [showInsights, setShowInsights] = useState(false)
@@ -91,13 +92,13 @@ export function InsightsGate({ playerId, onStateChange, ...comparison }: Insight
               </p>
             </div>
           </div>
-          <a
-            href="/premium"
+          <button
+            onClick={onUpgradeClick}
             className="mt-3 w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 active:scale-[0.98] transition-all"
           >
             <Crown size={16} className="text-white" />
             UPGRADE NOW
-          </a>
+          </button>
         </div>
 
         {/* Bottom premium teaser banner */}
@@ -108,12 +109,12 @@ export function InsightsGate({ playerId, onStateChange, ...comparison }: Insight
               Premium members get real-time insights and win more games.
             </span>
           </div>
-          <a
-            href="/premium"
+          <button
+            onClick={onUpgradeClick}
             className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-[11px] font-bold hover:bg-blue-500/10 transition-colors min-h-[32px] flex items-center"
           >
             VIEW PLANS
-          </a>
+          </button>
         </div>
       </motion.div>
     )

@@ -40,6 +40,7 @@ import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySideb
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
 import { InsightsGate } from './InsightsGate'
+import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
@@ -253,6 +254,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const toast = useGameToast()
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
+  const [accuracyHistory, setAccuracyHistory] = useState<MoveComparison[]>([])
   const [showGameOn, setShowGameOn] = useState(false)
   const settings = useSettings()
   const [showSettings, setShowSettings] = useState(false)
@@ -286,6 +288,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showInsights, setShowInsights] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [insightsState, setInsightsState] = useState<{ isPremium: boolean; revealsRemaining: number | null }>({ isPremium: false, revealsRemaining: null })
+  const [insightsUnlocked, setInsightsUnlocked] = useState(false)
 
   const closeAllPanels = useCallback(() => {
     setShowRoundHistory(false)
@@ -293,6 +296,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     setShowChat(false)
     setOverlayMode('none')
   }, [])
+
+  const handleUpgradeClick = useCallback(() => {
+    router.push('/premium')
+  }, [router])
   const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
   const [boardKey, setBoardKey] = useState(0)
   const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
@@ -705,6 +712,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           if (comp) {
             if (!isFourPlayer || myTeam === 'WHITE') {
               setAccuracyComparison(comp)
+              setAccuracyHistory(prev => {
+                const last = prev[prev.length - 1]
+                if (last && last.turnStartFen === comp.turnStartFen) return prev
+                return [...prev, comp]
+              })
               DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
             }
           } else {
@@ -722,6 +734,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           if (comp) {
             if (!isFourPlayer || myTeam === 'BLACK') {
               setAccuracyComparison(comp)
+              setAccuracyHistory(prev => {
+                const last = prev[prev.length - 1]
+                if (last && last.turnStartFen === comp.turnStartFen) return prev
+                return [...prev, comp]
+              })
               DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
             }
           } else {
@@ -2210,22 +2227,52 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             ✕
           </button>
         </div>
-        {accuracyComparison ? (
-          <div className="text-slate-100">
-            <InsightsGate
-              playerId={playerId || 'guest'}
-              player1Move={accuracyComparison.player1Move || '?'}
-              player2Move={accuracyComparison.player2Move || '?'}
-              player1Accuracy={accuracyComparison.player1Accuracy || 0}
-              player2Accuracy={accuracyComparison.player2Accuracy || 0}
-              player1Loss={accuracyComparison.player1Loss || 0}
-              player2Loss={accuracyComparison.player2Loss || 0}
-              isSync={accuracyComparison.isSync}
-              winnerId={accuracyComparison.winnerId}
-              bestEngineMove={accuracyComparison.bestEngineMove}
-              bestEngineScore={accuracyComparison.bestEngineScore}
-              onStateChange={setInsightsState}
-            />
+        {accuracyHistory.length > 0 ? (
+          <div className="text-slate-100 space-y-3">
+            {insightsUnlocked || insightsState.isPremium ? (
+              accuracyHistory.map((comp, i) => (
+                <div key={i} className={i < accuracyHistory.length - 1 ? 'mb-3 pb-3 border-b border-slate-700/30' : ''}>
+                  {accuracyHistory.length > 1 && (
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Move {i + 1}
+                    </p>
+                  )}
+                  <MoveInsights
+                    player1Move={comp.player1Move || '?'}
+                    player2Move={comp.player2Move || '?'}
+                    player1Accuracy={comp.player1Accuracy || 0}
+                    player2Accuracy={comp.player2Accuracy || 0}
+                    player1Loss={comp.player1Loss || 0}
+                    player2Loss={comp.player2Loss || 0}
+                    isSync={comp.isSync}
+                    winnerId={comp.winnerId}
+                    bestEngineMove={comp.bestEngineMove}
+                    bestEngineScore={comp.bestEngineScore}
+                  />
+                </div>
+              ))
+            ) : (
+              <InsightsGate
+                playerId={playerId || 'guest'}
+                player1Move={accuracyHistory[accuracyHistory.length - 1].player1Move || '?'}
+                player2Move={accuracyHistory[accuracyHistory.length - 1].player2Move || '?'}
+                player1Accuracy={accuracyHistory[accuracyHistory.length - 1].player1Accuracy || 0}
+                player2Accuracy={accuracyHistory[accuracyHistory.length - 1].player2Accuracy || 0}
+                player1Loss={accuracyHistory[accuracyHistory.length - 1].player1Loss || 0}
+                player2Loss={accuracyHistory[accuracyHistory.length - 1].player2Loss || 0}
+                isSync={accuracyHistory[accuracyHistory.length - 1].isSync}
+                winnerId={accuracyHistory[accuracyHistory.length - 1].winnerId}
+                bestEngineMove={accuracyHistory[accuracyHistory.length - 1].bestEngineMove}
+                bestEngineScore={accuracyHistory[accuracyHistory.length - 1].bestEngineScore}
+                onStateChange={(state) => {
+                  setInsightsState(state)
+                  if (state.isPremium || (state.revealsRemaining !== null && state.revealsRemaining < 3)) {
+                    setInsightsUnlocked(true)
+                  }
+                }}
+                onUpgradeClick={handleUpgradeClick}
+              />
+            )}
           </div>
         ) : (
           <div className="text-center py-12 text-slate-400 text-sm">

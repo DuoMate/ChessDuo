@@ -7,15 +7,18 @@ let listenerRegistered = false
 function getPathFromUrl(url: string): string | null {
   try {
     if (url.startsWith('chessduo://')) {
-      const path = url.slice('chessduo://'.length)
-      return '/' + path.split('?')[0]
+      const rest = url.slice('chessduo://'.length)
+      const q = rest.includes('?') ? '?' + rest.split('?')[1] : ''
+      return '/' + rest.split('?')[0] + q
     }
     if (url.startsWith('http')) {
       const parsed = new URL(url)
-      return parsed.pathname
+      return parsed.pathname + parsed.search
     }
     if (url.startsWith('com.navron.chessduo://')) {
-      return null
+      const rest = url.slice('com.navron.chessduo://'.length)
+      const q = rest.includes('?') ? '?' + rest.split('?')[1] : ''
+      return '/' + rest.split('?')[0] + q
     }
     return null
   } catch {
@@ -72,6 +75,6 @@ export async function registerCapacitorAuthListener() {
       return
     }
 
-    window.location.href = '/'
+    window.location.href = path || '/'
   })
 }

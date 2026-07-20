@@ -289,7 +289,7 @@ export default function SetupPage() {
       return
     }
 
-    if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam && !sessionStorage.getItem(`chessduo_left_${codeParam}`)) {
+    if (codeParam && sessionChecked && playerId && autoJoinAttemptedRef.current !== codeParam) {
       const isValidRoomCode = /^[A-Z0-9]{6}$/.test(codeParam)
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(codeParam)
       if (!isValidRoomCode && !isValidUUID) {
@@ -324,6 +324,9 @@ export default function SetupPage() {
 
         if (room) {
           const roomTime = room.time_seconds || 600
+          const url = new URL(window.location.href)
+          url.searchParams.delete('code')
+          window.history.replaceState(null, '', url.toString())
           if (room.mode === 'fourplayer') {
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
           } else {
@@ -348,10 +351,6 @@ export default function SetupPage() {
           setJoinCode('')
         }
         setJoinLoading(false)
-
-        const url = new URL(window.location.href)
-        url.searchParams.delete('code')
-        window.history.replaceState(null, '', url.toString())
       }
       doAutoJoin()
     }

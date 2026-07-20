@@ -31,6 +31,7 @@ export default function ChessDuoLogo({
         alt="ChessDuo"
         width={px}
         height={px}
+        unoptimized
         className={`shrink-0 ${animate ? 'animate-pulse' : ''}`}
       />
       {showText && (
