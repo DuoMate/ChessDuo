@@ -87,7 +87,13 @@ jobs:
       - name: Patch MainActivity for Google auth intent forwarding
         run: bash scripts/patch-main-activity.sh
 
-      - name: Copy custom app icons
+      - name: Install ImageMagick (icon generation)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+
+      - name: Generate app icons from SVG
+        run: bash scripts/generate-icons.sh
+
+      - name: Copy custom splash screens
         run: bash scripts/copy-app-icons.sh
 
       - name: Reconstruct keystore from secret
