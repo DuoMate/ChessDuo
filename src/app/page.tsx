@@ -128,7 +128,7 @@ export default function SetupPage() {
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
   const isMobile = useIsMobile()
-  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
+  const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null; displayName?: string | null } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
@@ -153,7 +153,9 @@ export default function SetupPage() {
             setUsername(name)
           } else {
             const suggested = session.user.email?.split('@')[0] || 'player'
-            setNeedsUsername({ userId: session.user.id, suggestedName: suggested })
+            const avatarUrl = session.user.user_metadata?.avatar_url || null
+            const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || null
+            setNeedsUsername({ userId: session.user.id, suggestedName: suggested, avatarUrl, displayName })
           }
         })
       }
@@ -183,7 +185,9 @@ export default function SetupPage() {
             setUsername(name)
           } else {
             const suggested = session.user.email?.split('@')[0] || 'player'
-            setNeedsUsername({ userId: session.user.id, suggestedName: suggested })
+            const avatarUrl = session.user.user_metadata?.avatar_url || null
+            const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || null
+            setNeedsUsername({ userId: session.user.id, suggestedName: suggested, avatarUrl, displayName })
           }
         })
       } else {
@@ -395,8 +399,8 @@ export default function SetupPage() {
     }
   }
 
-  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
-    setNeedsUsername({ userId, suggestedName, avatarUrl })
+  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null, displayName?: string | null) => {
+    setNeedsUsername({ userId, suggestedName, avatarUrl, displayName })
     setShowAuthOverlay(false)
   }
 
@@ -679,7 +683,19 @@ export default function SetupPage() {
         defaultSignup={searchParams.get('signup') === '1'}
         redirectUrl={redirectUrlRef.current || undefined}
         onNeedUsername={handleNeedUsername}
-        onClose={() => setShowAuthOverlay(false)}
+        onClose={() => {
+          setShowAuthOverlay(false)
+          redirectUrlRef.current = null
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href)
+            const changed = url.searchParams.has('redirect') || url.searchParams.has('signup')
+            if (changed) {
+              url.searchParams.delete('redirect')
+              url.searchParams.delete('signup')
+              window.history.replaceState(null, '', url.pathname)
+            }
+          }
+        }}
       />
     </div>
   )
@@ -689,6 +705,7 @@ export default function SetupPage() {
       userId={needsUsername.userId}
       suggestedName={needsUsername.suggestedName}
       avatarUrl={needsUsername.avatarUrl}
+      displayName={needsUsername.displayName}
       onAuthComplete={handleUsernameChosen}
     />
   )

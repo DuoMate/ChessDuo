@@ -10,6 +10,7 @@ interface ChooseUsernameProps {
   userId: string
   suggestedName?: string
   avatarUrl?: string | null
+  displayName?: string | null
   onAuthComplete: (userId: string, username: string) => void
 }
 
@@ -22,7 +23,7 @@ export function sanitizeDisplayName(name: string): string {
     .substring(0, 30)
 }
 
-export function ChooseUsername({ userId, suggestedName, avatarUrl, onAuthComplete }: ChooseUsernameProps) {
+export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, onAuthComplete }: ChooseUsernameProps) {
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +103,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, onAuthComplet
           id: userId,
           username: username.trim(),
           avatar_url: avatarUrl || undefined,
+          display_name: displayName || undefined,
         }, { onConflict: 'id' })
 
       if (profileError) {

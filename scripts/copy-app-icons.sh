@@ -33,6 +33,16 @@ for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
   fi
 done
 
+echo "[INFO] Copying adaptive-icon XML descriptors..."
+ADAPTIVE_SRC="android-patches/mipmap-anydpi-v26"
+ADAPTIVE_DST="android/app/src/main/res/mipmap-anydpi-v26"
+if [ -d "$ADAPTIVE_SRC" ]; then
+  mkdir -p "$ADAPTIVE_DST"
+  cp "$ADAPTIVE_SRC/ic_launcher.xml" "$ADAPTIVE_DST/"
+  cp "$ADAPTIVE_SRC/ic_launcher_round.xml" "$ADAPTIVE_DST/"
+  echo "       Copied adaptive-icon XML descriptors"
+fi
+
 echo "[INFO] Copying custom splash screens..."
 
 for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do

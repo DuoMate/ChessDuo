@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
+import { AuthGate } from '@/components/AuthGate'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -19,10 +20,20 @@ const reasonLabels: Record<string, string> = {
 
 export default function HistoryPage() {
   const router = useRouter()
+  useCapacitorBackButton(() => { router.push('/'); return true }, true)
+
+  return (
+    <AuthGate pageTitle="Match History" pageEmoji="📜" subtitle="Sign in to view your match history">
+      {(playerId) => <HistoryContent playerId={playerId} />}
+    </AuthGate>
+  )
+}
+
+function HistoryContent({ playerId }: { playerId: string }) {
+  const router = useRouter()
   const [games, setGames] = useState<CompletedGame[]>([])
   const [playerStats, setPlayerStats] = useState<Awaited<ReturnType<typeof getPlayerStats>>>(null)
   const [loading, setLoading] = useState(true)
-  const [playerId, setPlayerId] = useState<string | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -31,23 +42,20 @@ export default function HistoryPage() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+    Promise.all([
+      getMatchHistory(50, playerId),
+      getPlayerStats(playerId),
+    ]).then(([g, s]) => {
       if (!mountedRef.current) return
-      const session = result.data.session
-      if (session?.user) {
-        setPlayerId(session.user.id)
-      }
+      setGames(g)
+      setPlayerStats(s)
       setLoading(false)
     }).catch(() => {
       if (!mountedRef.current) return
+      setGames([])
+      setPlayerStats(null)
       setLoading(false)
     })
-  }, [])
-
-  useEffect(() => {
-    if (!playerId) return
-    getMatchHistory(50, playerId).then(setGames).catch(() => setGames([]))
-    getPlayerStats(playerId).then(setPlayerStats).catch(() => setPlayerStats(null))
   }, [playerId])
 
   if (loading) {
@@ -55,24 +63,6 @@ export default function HistoryPage() {
       <ErrorBoundary>
         <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
           <p className="text-slate-400">Loading...</p>
-        </div>
-      </ErrorBoundary>
-    )
-  }
-
-  if (!playerId) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
-          <h1 className="text-2xl font-bold mb-4">Match History</h1>
-          <p className="text-slate-400 mb-4">Sign in to view your match history</p>
-          <button
-            onClick={() => router.push('/?signup=1')}
-            className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
-          >
-            Sign In
-          </button>
-          <BackButton label="Go Home" alwaysFallback />
         </div>
       </ErrorBoundary>
     )
@@ -153,10 +143,10 @@ export default function HistoryPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        game.winner === 'WHITE' 
-                          ? 'bg-emerald-500/20' 
-                          : game.winner === 'DRAW' 
-                            ? 'bg-amber-500/20' 
+                        game.winner === 'WHITE'
+                          ? 'bg-emerald-500/20'
+                          : game.winner === 'DRAW'
+                            ? 'bg-amber-500/20'
                             : 'bg-rose-500/20'
                       }`}>
                         {game.winner === 'WHITE' ? (
@@ -169,10 +159,10 @@ export default function HistoryPage() {
                       </div>
                       <div>
                         <span className={`text-base font-semibold ${
-                          game.winner === 'WHITE' 
-                            ? 'text-emerald-400' 
-                            : game.winner === 'DRAW' 
-                              ? 'text-amber-400' 
+                          game.winner === 'WHITE'
+                            ? 'text-emerald-400'
+                            : game.winner === 'DRAW'
+                              ? 'text-amber-400'
                               : 'text-rose-400'
                         }`}>
                           {game.winner === 'WHITE' ? 'White Wins' : game.winner === 'DRAW' ? 'Draw' : 'Black Wins'}

@@ -81,7 +81,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       .maybeSingle()
     if (data?.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* best effort */ }
+        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch (e) { console.warn('[Auth] Failed to upsert profile metadata on existing user:', e) }
       }
       onAuthComplete(userId, data.username)
       if (googleAuthInProgressRef.current) {
@@ -90,7 +90,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
       }
     } else if (onNeedUsername) {
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* best effort */ }
+        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch (e) { console.warn('[Auth] Failed to upsert profile metadata before username selection:', e) }
       }
       const suggested = googleDisplayName || email.split('@')[0]
       onNeedUsername(userId, suggested, googleAvatarUrl)
@@ -259,9 +259,6 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     try {
       const result = await authenticateWithGoogle()
       if (result.success && result.userId) {
-        // Dismiss Google loading immediately — profile query runs in background
-        setGoogleLoading(false)
-        googleAuthInProgressRef.current = false
         await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName, result.avatarUrl)
       } else if (result.error) {
         setError(result.error)
@@ -340,7 +337,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             disabled={googleLoading || loading}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-100 dark:hover:bg-slate-700/80"
           >
-            <svg className="h-5 w-5" viewBox="0 0 48 48">
+            <svg className="h-5 w-5 shrink-0" width="20" height="20" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
               <path fill="#FBBC05" d="M10.54 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.78l7.98-6.19z"/>

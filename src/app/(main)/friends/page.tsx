@@ -1,63 +1,29 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { BackButton } from '@/components/BackButton'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useRouter } from 'next/navigation'
+import { AuthGate } from '@/components/AuthGate'
 
 export default function FriendsPage() {
   const router = useRouter()
-  const [playerId, setPlayerId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const mountedRef = useRef(true)
-  const { unreadBySender } = useBadgeCount(playerId)
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mountedRef.current) return
-      if (session?.user) setPlayerId(session.user.id)
-      setLoading(false)
-    }).catch(() => {
-      if (!mountedRef.current) setLoading(false)
-    })
-  }, [])
 
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
-        <p className="text-slate-400">Loading...</p>
-      </div>
-    )
-  }
+  return (
+    <AuthGate pageTitle="Friends" pageEmoji="👥" subtitle="Sign in to view your friends">
+      {(playerId) => <FriendsContent playerId={playerId} />}
+    </AuthGate>
+  )
+}
 
-  if (!playerId) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
-          <h1 className="text-2xl font-bold mb-4">Friends</h1>
-          <p className="text-slate-400 mb-4">Sign in to view your friends</p>
-          <button
-            onClick={() => router.push('/?signup=1')}
-            className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
-          >
-            Sign In
-          </button>
-          <BackButton label="Go Home" alwaysFallback />
-        </div>
-      </ErrorBoundary>
-    )
-  }
+function FriendsContent({ playerId }: { playerId: string }) {
+  const router = useRouter()
+  const { unreadBySender } = useBadgeCount(playerId)
 
   return (
     <ErrorBoundary>

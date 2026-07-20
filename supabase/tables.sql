@@ -396,7 +396,7 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON public.messages TO anon, authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.challenge_links TO anon, authenticated;
 
 -- Function to auto-create profile on signup
--- Client validates username uniqueness before signup, so this just inserts directly
+-- Handles both email/password (username in metadata) and OAuth (email prefix fallback)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 SECURITY DEFINER
@@ -404,16 +404,38 @@ SET search_path = public
 AS $$
  DECLARE
    base_username TEXT;
+   meta_display_name TEXT;
+   meta_avatar_url TEXT;
+   meta_username TEXT;
+   email_prefix TEXT;
  BEGIN
-  base_username := NEW.raw_user_meta_data->>'username';
-  IF base_username IS NOT NULL THEN
-    IF base_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
-      base_username := 'player_' || substr(md5(random()::text), 1, 6);
+  meta_username := NEW.raw_user_meta_data->>'username';
+
+  IF meta_username IS NOT NULL THEN
+    -- Email/password flow
+    IF meta_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
+      meta_username := 'player_' || substr(md5(random()::text), 1, 6);
     END IF;
     INSERT INTO public.profiles (id, username, username_lower)
-      VALUES (NEW.id, base_username, LOWER(base_username))
+      VALUES (NEW.id, meta_username, LOWER(meta_username))
+      ON CONFLICT (id) DO NOTHING;
+  ELSE
+    -- OAuth flow: derive username from email prefix
+    email_prefix := split_part(NEW.email, '@', 1);
+    base_username := regexp_replace(email_prefix, '[^a-zA-Z0-9_]', '_', 'g');
+    IF length(base_username) < 3 THEN
+      base_username := 'player_' || substr(md5(random()::text), 1, 6);
+    END IF;
+    base_username := left(base_username, 30);
+
+    meta_display_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name');
+    meta_avatar_url := NEW.raw_user_meta_data->>'avatar_url';
+
+    INSERT INTO public.profiles (id, username, username_lower, display_name, avatar_url)
+      VALUES (NEW.id, base_username, LOWER(base_username), meta_display_name, meta_avatar_url)
       ON CONFLICT (id) DO NOTHING;
   END IF;
+
    RETURN NEW;
  END;
  $$ LANGUAGE plpgsql;

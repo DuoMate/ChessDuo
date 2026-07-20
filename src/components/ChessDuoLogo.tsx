@@ -1,7 +1,5 @@
 'use client'
 
-import Image from 'next/image'
-
 interface ChessDuoLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showText?: boolean
@@ -26,12 +24,11 @@ export default function ChessDuoLogo({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Image
+      <img
         src="/logo.png"
         alt="ChessDuo"
         width={px}
         height={px}
-        unoptimized
         className={`shrink-0 ${animate ? 'animate-pulse' : ''}`}
       />
       {showText && (

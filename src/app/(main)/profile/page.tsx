@@ -1,24 +1,35 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { BackButton } from '@/components/BackButton'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
+import { Spinner } from '@/components/Spinner'
 import { SubscriptionService } from '@/features/billing'
 import { useSettings } from '@/lib/settings'
 import { getProfileLink } from '@/lib/friends'
 import { motion } from 'framer-motion'
 import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil } from 'lucide-react'
+import { AuthGate } from '@/components/AuthGate'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 export default function ProfilePage() {
   const router = useRouter()
+  useCapacitorBackButton(() => { router.push('/'); return true }, true)
+
+  return (
+    <AuthGate pageTitle="Profile" pageEmoji="👤" subtitle="Sign in to view your profile">
+      {(playerId) => <ProfileContent playerId={playerId} />}
+    </AuthGate>
+  )
+}
+
+function ProfileContent({ playerId }: { playerId: string }) {
+  const router = useRouter()
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [playerId, setPlayerId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -34,19 +45,6 @@ export default function ProfilePage() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then((result: { data: { session: any } }) => {
-      if (!mountedRef.current) return
-      const session = result.data.session
-      if (session?.user) setPlayerId(session.user.id)
-      setLoading(false)
-    }).catch(() => {
-      if (!mountedRef.current) setLoading(false)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!playerId) return
-
     Promise.all([
       SubscriptionService.isPremium(),
       supabase.from('profiles').select('username, avatar_url').eq('id', playerId).maybeSingle(),
@@ -86,7 +84,6 @@ export default function ProfilePage() {
   }, [])
 
   const copyProfileLink = () => {
-    if (!playerId) return
     navigator.clipboard.writeText(getProfileLink(playerId))
     setProfileCopied(true)
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -98,30 +95,6 @@ export default function ProfilePage() {
     try { localStorage.removeItem('chessduo_history') } catch { /* quota exceeded */ }
     try { localStorage.removeItem('chessduo_settings') } catch { /* quota exceeded */ }
     router.push('/')
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
-        <p className="text-slate-400">Loading...</p>
-      </div>
-    )
-  }
-
-  if (!playerId) {
-    return (
-      <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
-        <h1 className="text-2xl font-bold mb-4">Profile</h1>
-        <p className="text-slate-400 mb-4">Sign in to view your profile</p>
-        <button
-          onClick={() => router.push('/?signup=1')}
-          className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
-        >
-          Sign In
-        </button>
-        <BackButton label="Go Home" alwaysFallback />
-      </div>
-    )
   }
 
   return (
@@ -192,7 +165,11 @@ export default function ProfilePage() {
             </button>
 
             {/* Upgrade to Premium */}
-            {!checkingPremium && !isPremium && (
+            {checkingPremium ? (
+              <div className="w-full p-4 bg-slate-800/30 border border-white/5 rounded-2xl flex justify-center">
+                <Spinner size="sm" />
+              </div>
+            ) : !isPremium ? (
               <button
                 onClick={() => router.push('/premium')}
                 className="w-full p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl flex items-center gap-3 hover:from-purple-500/15 hover:to-indigo-500/15 transition-all"
@@ -206,7 +183,7 @@ export default function ProfilePage() {
                 </div>
                 <span className="text-slate-500">&rsaquo;</span>
               </button>
-            )}
+            ) : null}
 
             {/* View All Match History */}
             <button
@@ -239,8 +216,8 @@ export default function ProfilePage() {
             </button>
 
             {/* Manage Account */}
-            <Link
-              href="/delete-account"
+            <button
+              onClick={() => router.push('/delete-account')}
               className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -251,7 +228,7 @@ export default function ProfilePage() {
                 <p className="text-xs text-slate-400">Security, privacy &amp; delete</p>
               </div>
               <span className="text-slate-500">&rsaquo;</span>
-            </Link>
+            </button>
 
             {/* Sign Out */}
             <button
