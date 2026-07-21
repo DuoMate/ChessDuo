@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createChallenge } from '@/lib/challenges'
 import { sendMessage } from '@/lib/messages'
+import { notifyGameInvite } from '@/features/push-notifications'
 import { Sparkles, Timer, Zap } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
@@ -14,6 +15,7 @@ interface ChallengePickerProps {
   currentUserId: string
   friendId: string
   friendName: string
+  currentUserName: string
   onClose: () => void
 }
 
@@ -29,7 +31,7 @@ const TIME_OPTIONS: TimeOption[] = [
   { seconds: 1800, label: '30 min' },
 ]
 
-export function ChallengePicker({ currentUserId, friendId, friendName, onClose }: ChallengePickerProps) {
+export function ChallengePicker({ currentUserId, friendId, friendName, currentUserName, onClose }: ChallengePickerProps) {
   const router = useRouter()
   const isMobile = useIsMobile()
   const [selectedTime, setSelectedTime] = useState(600)
@@ -48,6 +50,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, onClose }
         JSON.stringify({ type: 'challenge', roomId, roomCode, time: selectedTime }),
         'challenge'
       )
+      notifyGameInvite(friendId, currentUserId, currentUserName, roomId, roomCode, currentUserId, 'WHITE')
       router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${currentUserId}&time=${selectedTime}`)
     }
     setCreating(false)

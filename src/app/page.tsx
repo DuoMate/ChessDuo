@@ -21,6 +21,7 @@ import { DEFAULT_TEAM_TIMER_SECONDS, PlayerColor, SELECTED_COLOR_KEY, DEFAULT_PL
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
 import { ColorPicker } from '@/components/ColorPicker'
@@ -128,6 +129,7 @@ export default function SetupPage() {
   const { total: unreadMessages, unreadBySender } = useBadgeCount(playerId)
   const skillLevels = getAvailableSkillLevels()
   const isMobile = useIsMobile()
+  useNotificationRedirect()
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null; displayName?: string | null } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)

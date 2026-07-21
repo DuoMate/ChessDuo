@@ -19,6 +19,7 @@ import {
 import { FriendWithProfile } from '@/lib/friends'
 import { FriendActionsMenu } from './FriendActionsMenu'
 import { notifyFriendRequest } from '@/features/push-notifications'
+import { notifyInviteAccepted } from '@/features/push-notifications'
 import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
@@ -50,6 +51,22 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   const [inviteCopied, setInviteCopied] = useState(false)
   const [pendingChallenges, setPendingChallenges] = useState<Map<string, { roomId: string; roomCode: string; time: number }>>(new Map())
   const [onlineFriends, setOnlineFriends] = useState<Set<string>>(new Set())
+  const [currentUserName, setCurrentUserName] = useState('')
+
+  const loadCurrentUser = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', playerId)
+        .maybeSingle()
+      if (data?.username) setCurrentUserName(data.username)
+    } catch { /* profile fetch best-effort */ }
+  }, [playerId])
+
+  useEffect(() => {
+    loadCurrentUser()
+  }, [loadCurrentUser])
 
   const loadChallenges = useCallback(async () => {
     const challenges = await getUnreadChallenges(playerId)
@@ -172,15 +189,14 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
       setSearchQuery('')
       setSearchResults([])
       loadData()
-      const user = searchResults.find((u) => u.id === receiverId)
-      const senderName = user?.username || 'Someone'
-      notifyFriendRequest(playerId, receiverId, senderName)
+      notifyFriendRequest(playerId, receiverId, currentUserName || 'Someone')
     }
   }
 
   const handleAccept = async (senderId: string) => {
     await acceptFriendRequest(senderId, playerId)
     loadData()
+    notifyInviteAccepted(playerId, senderId, currentUserName || 'Someone')
   }
 
   const handleReject = async (senderId: string) => {
@@ -395,6 +411,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
                 currentUserId={playerId}
                 friendId={chatFriend.id}
                 friendName={chatFriend.name}
+                currentUserName={currentUserName || 'You'}
                 onClose={() => setChatFriend(null)}
               />
             </div>
@@ -408,6 +425,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
           currentUserId={playerId}
           friendId={challengeFriend.id}
           friendName={challengeFriend.name}
+          currentUserName={currentUserName || 'Someone'}
           onClose={() => setChallengeFriend(null)}
         />
       )}

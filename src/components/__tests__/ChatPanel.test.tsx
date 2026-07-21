@@ -51,7 +51,7 @@ describe('ChatPanel', () => {
 
   it('renders chat panel with friend name', async () => {
     render(
-      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
 
     await waitFor(() => {
@@ -61,7 +61,7 @@ describe('ChatPanel', () => {
 
   it('shows empty state when no messages', async () => {
     render(
-      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
 
     await waitFor(() => {
@@ -71,7 +71,7 @@ describe('ChatPanel', () => {
 
   it('has a functional close button', () => {
     render(
-      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
 
     const closeButton = screen.getByText('✕')
@@ -81,7 +81,7 @@ describe('ChatPanel', () => {
 
   it('has message input and send button', () => {
     render(
-      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
 
     expect(screen.getByPlaceholderText('Type a message...')).toBeTruthy()
@@ -90,7 +90,7 @@ describe('ChatPanel', () => {
 
   it('disables send button when input is empty', () => {
     render(
-      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChatPanel currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
 
     const sendButton = screen.getByText('Send')

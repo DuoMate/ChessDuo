@@ -2311,6 +2311,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               currentUserId={playerId}
               friendId={null}
               friendName="Team"
+              currentUserName={userProfile.username || 'You'}
               onClose={() => setShowChat(false)}
             />
             <p className="mt-3 text-[11px] text-slate-500 text-center">

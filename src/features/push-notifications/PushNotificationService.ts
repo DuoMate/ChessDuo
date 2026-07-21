@@ -1,4 +1,5 @@
 import type { NotificationPayload, NotificationType } from './types'
+import { storeNotificationRedirect, consumeNotificationRedirect, getNotificationRedirectRoute } from '@/lib/notificationRedirect'
 
 const PUSH_IN_PROGRESS_KEY = 'chessduo_push_in_progress'
 const PUSH_WELCOME_SENT_KEY = 'chessduo_push_welcome_sent'
@@ -8,6 +9,18 @@ const CRASH_GUARD_TIMEOUT_MS = 30_000
 let fcmRegistered = false
 let pushInitInProgress = false
 let cachedAccessToken = ''
+
+function decodeJwtUserId(token: string): string | null {
+  try {
+    const payloadBase64 = token.split('.')[1]
+    if (!payloadBase64) return null
+    const json = atob(payloadBase64)
+    const payload = JSON.parse(json) as { sub?: string }
+    return payload.sub || null
+  } catch {
+    return null
+  }
+}
 
 function getApiBase(): string {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL) {
@@ -71,24 +84,27 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
   console.log('[Push] Registration response:', res.status, resText)
 
   if (res.ok) {
-    console.log('[Push] Token registered successfully')
+      console.log('[Push] Token registered successfully')
 
-    const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
-    if (!welcomeSent && accessToken) {
-      localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
-      setTimeout(async () => {
-        try {
-          await sendPushNotification('system', 'friend_request', {
-            senderId: 'system',
-            senderName: 'ChessDuo',
-            snippet: 'Welcome! Push notifications are now enabled.',
-          }, accessToken)
-          console.log('[Push] Welcome notification sent')
-        } catch (err) {
-          console.warn('[Push] Failed to send welcome notification:', err)
+      const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
+      if (!welcomeSent && accessToken) {
+        const userId = decodeJwtUserId(accessToken)
+        if (userId) {
+          localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
+          setTimeout(async () => {
+            try {
+              await sendPushNotification(userId, 'friend_request', {
+                senderId: 'system',
+                senderName: 'ChessDuo',
+                snippet: 'Welcome! Push notifications are now enabled.',
+              }, accessToken)
+              console.log('[Push] Welcome notification sent')
+            } catch (err) {
+              console.warn('[Push] Failed to send welcome notification:', err)
+            }
+          }, 1000)
         }
-      }, 1000)
-    }
+      }
   } else {
     const msg = `[Push] Server rejected token: ${res.status} — ${resText}`
     console.error(msg)
@@ -312,32 +328,24 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
           if (!data) return
           const type = data.type as NotificationType | undefined
           if (!type) return
-          switch (type) {
-            case 'friend_request':
-              window.location.href = '/friends'
-              break
-            case 'invite_accepted':
-              window.location.href = '/friends'
-              break
-            case 'chat_message':
-              window.location.href = '/friends'
-              break
-            case 'game_invite':
-              if (data.roomId) {
-                const params = new URLSearchParams()
-                params.set('room', data.roomId)
-                if (data.code) params.set('code', data.code)
-                if (data.joinPlayerId) params.set('playerId', data.joinPlayerId)
-                if (data.joinTeam) params.set('team', data.joinTeam)
-                window.location.href = `/duel?${params.toString()}`
-              }
-              break
-            default: {
-              const msg = `[Push Debug] Unknown type: ${JSON.stringify(data)}`
-              console.warn(msg)
-              try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-            }
-          }
+          storeNotificationRedirect({
+            type,
+            senderId: data.senderId,
+            roomId: data.roomId,
+            code: data.code,
+            joinPlayerId: data.joinPlayerId,
+            joinTeam: data.joinTeam,
+          })
+          const route = getNotificationRedirectRoute({
+            type,
+            senderId: data.senderId,
+            roomId: data.roomId,
+            code: data.code,
+            joinPlayerId: data.joinPlayerId,
+            joinTeam: data.joinTeam,
+            timestamp: Date.now(),
+          })
+          window.location.href = route
         } catch (err) {
           const msg = `[Push Crash] ${err instanceof Error ? err.message : String(err)} | data: ${JSON.stringify(notification)}`
           console.error(msg)
@@ -394,7 +402,16 @@ export async function sendPushNotification(
         userId: receiverId,
         title: titles[type],
         body: bodies[type](data),
-        data: { type, senderId: data.senderId, roomId: data.roomId || '' },
+        data: {
+          type,
+          senderId: data.senderId || '',
+          senderName: data.senderName || '',
+          snippet: data.snippet || '',
+          roomId: data.roomId || '',
+          code: data.code || '',
+          joinPlayerId: data.joinPlayerId || '',
+          joinTeam: data.joinTeam || '',
+        },
       }),
     })
 

@@ -36,6 +36,10 @@ jest.mock('../../lib/messages', () => ({
   sendMessage: jest.fn().mockResolvedValue({ data: { id: 'msg' }, error: null }),
 }))
 
+jest.mock('../../features/push-notifications', () => ({
+  notifyGameInvite: jest.fn().mockResolvedValue(undefined),
+}))
+
 jest.mock('../../lib/challenges', () => ({
   createChallenge: jest.fn().mockResolvedValue({
     data: { id: 'c1', code: 'ABC12345', game_mode: 'online', time_seconds: 600 },
@@ -59,7 +63,7 @@ describe('ChallengePicker', () => {
 
   it('renders time options', () => {
     render(
-      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
     expect(screen.getByText('Challenge TestFriend')).toBeTruthy()
     expect(screen.getByText('5 min')).toBeTruthy()
@@ -70,7 +74,7 @@ describe('ChallengePicker', () => {
 
   it('shows selected state for clicked time', () => {
     render(
-      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
     fireEvent.click(screen.getByText('15 min'))
     const buttons = screen.getAllByRole('button')
@@ -80,7 +84,7 @@ describe('ChallengePicker', () => {
 
   it('navigates to duel page after sending challenge', async () => {
     render(
-      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
     fireEvent.click(screen.getByText('Send Challenge'))
 
@@ -93,7 +97,7 @@ describe('ChallengePicker', () => {
 
   it('closes via cancel button', () => {
     render(
-      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" onClose={onClose} />
+      <ChallengePicker currentUserId="user1" friendId="user2" friendName="TestFriend" currentUserName="TestUser" onClose={onClose} />
     )
     fireEvent.click(screen.getByText('Cancel'))
     expect(onClose).toHaveBeenCalledTimes(1)

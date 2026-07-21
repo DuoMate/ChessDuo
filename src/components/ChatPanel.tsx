@@ -10,10 +10,11 @@ interface ChatPanelProps {
   currentUserId: string
   friendId: string
   friendName: string
+  currentUserName: string
   onClose: () => void
 }
 
-export function ChatPanel({ currentUserId, friendId, friendName, onClose }: ChatPanelProps) {
+export function ChatPanel({ currentUserId, friendId, friendName, currentUserName, onClose }: ChatPanelProps) {
   const isMobile = useIsMobile()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -64,7 +65,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, onClose }: Chat
       setInput('')
       clearTimeout(scrollTimerRef.current)
       scrollTimerRef.current = setTimeout(scrollToBottom, 100)
-      notifyChatMessage(friendId, currentUserId, 'You', input.trim().slice(0, 100))
+      notifyChatMessage(friendId, currentUserId, currentUserName, input.trim().slice(0, 100))
     }
     setSending(false)
   }

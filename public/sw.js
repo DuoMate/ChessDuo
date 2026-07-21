@@ -44,7 +44,7 @@ self.addEventListener('notificationclick', (event) => {
       const existing = clients.find((c) => c.url.includes(self.location.origin))
       if (existing && 'focus' in existing) {
         existing.focus()
-        existing.postMessage({ type: 'notification-click', url })
+        existing.postMessage({ type: 'notification-click', url, data })
       } else {
         self.clients.openWindow(url)
       }

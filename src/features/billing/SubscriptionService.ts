@@ -45,22 +45,32 @@ async function verifyPurchase(purchaseToken: string, productId: string, orderId:
   }
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10_000): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 async function fetchServerStatus(): Promise<SubscriptionInfo> {
   try {
     const headers = await getAuthHeaders()
-    const res = await fetch(`${getApiBase()}/api/subscription/status`, { headers })
+    const res = await fetchWithTimeout(`${getApiBase()}/api/subscription/status`, { headers })
     if (res.ok) {
       const data = await res.json() as SubscriptionInfo
       return data
     }
     if (res.status === 401) {
       const retryHeaders = await getAuthHeaders()
-      const retryRes = await fetch(`${getApiBase()}/api/subscription/status`, { headers: retryHeaders })
+      const retryRes = await fetchWithTimeout(`${getApiBase()}/api/subscription/status`, { headers: retryHeaders })
       if (retryRes.ok) {
         return retryRes.json() as Promise<SubscriptionInfo>
       }
     }
-  } catch { /* network error — use cached */ }
+  } catch { /* network error or timeout — use cached */ }
   return getDefaultStatus()
 }
 

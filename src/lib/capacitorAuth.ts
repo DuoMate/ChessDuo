@@ -33,9 +33,7 @@ export async function registerCapacitorAuthListener() {
 
   listenerRegistered = true
 
-  await App.addListener('appUrlOpen', async (data) => {
-    const url = data.url
-
+  function handleDeepLink(url: string) {
     if (url.includes('com.navron.chessduo://auth/callback')) {
       const params = new URLSearchParams(url.split('?')[1])
       const code = params.get('code')
@@ -46,16 +44,15 @@ export async function registerCapacitorAuthListener() {
       }
 
       try {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          console.error('[CapacitorAuth] Failed to exchange code:', error)
-        }
+        supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+          if (error) console.error('[CapacitorAuth] Failed to exchange code:', error)
+        })
       } catch (err) {
         console.error('[CapacitorAuth] Exception exchanging code:', err)
       }
 
       try {
-        await Browser.close()
+        Browser.close()
       } catch {
         // browser may already be closed
       }
@@ -76,5 +73,18 @@ export async function registerCapacitorAuthListener() {
     }
 
     window.location.href = path || '/'
+  }
+
+  try {
+    const result = await App.getLaunchUrl()
+    if (result?.url) {
+      handleDeepLink(result.url)
+    }
+  } catch {
+    // getLaunchUrl not supported or app was not launched via deep link
+  }
+
+  await App.addListener('appUrlOpen', async (data) => {
+    handleDeepLink(data.url)
   })
 }
