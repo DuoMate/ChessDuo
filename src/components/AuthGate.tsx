@@ -94,16 +94,12 @@ export function AuthGate({ pageTitle, pageEmoji, subtitle, children }: AuthGateP
   if (needsUsername) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center p-4 pb-20">
-          <div className="w-full max-w-md">
-            <ChooseUsername
-              userId={needsUsername.userId}
-              suggestedName={needsUsername.suggestedName}
-              avatarUrl={needsUsername.avatarUrl}
-              onAuthComplete={handleUsernameChosen}
-            />
-          </div>
-        </div>
+        <ChooseUsername
+          userId={needsUsername.userId}
+          suggestedName={needsUsername.suggestedName}
+          avatarUrl={needsUsername.avatarUrl}
+          onAuthComplete={handleUsernameChosen}
+        />
       </ErrorBoundary>
     )
   }
@@ -129,18 +125,11 @@ export function AuthGate({ pageTitle, pageEmoji, subtitle, children }: AuthGateP
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
-        {pageEmoji && <div className="text-5xl mb-3">{pageEmoji}</div>}
-        <h1 className="text-2xl font-bold mb-2">{pageTitle}</h1>
-        {subtitle && <p className="text-slate-400 mb-2">{subtitle}</p>}
-        <div className="w-full max-w-md mt-4">
-          <Auth
-            onAuthComplete={handleAuthComplete}
-            onNeedUsername={handleNeedUsername}
-            onClose={handleAuthClose}
-          />
-        </div>
-      </div>
+      <Auth
+        onAuthComplete={handleAuthComplete}
+        onNeedUsername={handleNeedUsername}
+        onClose={handleAuthClose}
+      />
     </ErrorBoundary>
   )
 }

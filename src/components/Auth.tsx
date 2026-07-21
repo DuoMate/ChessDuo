@@ -277,7 +277,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     : email.trim() && password.length >= 6 && usernameStatus === 'available'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_28%)] px-4 py-6 sm:px-6">
+    <div className="flex min-h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_28%)] px-4 py-6 sm:px-6">
       {googleLoading || loading || !initialSessionChecked ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
