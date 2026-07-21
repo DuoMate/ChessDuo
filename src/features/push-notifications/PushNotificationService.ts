@@ -1,14 +1,16 @@
 import type { NotificationPayload, NotificationType } from './types'
-import { storeNotificationRedirect, consumeNotificationRedirect, getNotificationRedirectRoute } from '@/lib/notificationRedirect'
+import { storeNotificationRedirect, getNotificationRedirectRoute } from '@/lib/notificationRedirect'
 
 const PUSH_IN_PROGRESS_KEY = 'chessduo_push_in_progress'
 const PUSH_WELCOME_SENT_KEY = 'chessduo_push_welcome_sent'
 const PUSH_FCM_TOKEN_KEY = 'chessduo_fcm_token'
 const CRASH_GUARD_TIMEOUT_MS = 30_000
+const SW_READY_TIMEOUT_MS = 15_000
 
 let fcmRegistered = false
 let pushInitInProgress = false
 let cachedAccessToken = ''
+let lastErrorStoreAttempts = 0
 
 function decodeJwtUserId(token: string): string | null {
   try {
@@ -27,9 +29,35 @@ function getApiBase(): string {
     return process.env.NEXT_PUBLIC_SITE_URL
   }
   if (typeof window !== 'undefined') {
-    return window.location.origin
+    const origin = window.location.origin
+    if (origin === 'http://localhost' || origin === 'https://localhost' || origin.startsWith('capacitor://')) {
+      console.warn('[Push] API base resolved to native localhost origin with no NEXT_PUBLIC_SITE_URL — push registration will fail')
+    }
+    return origin
   }
   return ''
+}
+
+function logPushError(msg: string): void {
+  console.warn(msg)
+  try {
+    if (Date.now() - lastErrorStoreAttempts > 5_000) {
+      lastErrorStoreAttempts = Date.now()
+      localStorage.setItem('chessduo_push_last_error', msg)
+    }
+  } catch { /* quota exceeded */ }
+}
+
+function waitForServiceWorkerReady(timeoutMs: number): Promise<ServiceWorkerRegistration> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return Promise.reject(new Error('Service Worker not supported'))
+  }
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<ServiceWorkerRegistration>((_, reject) =>
+      setTimeout(() => reject(new Error(`navigator.serviceWorker.ready timed out after ${timeoutMs}ms`)), timeoutMs),
+    ),
+  ])
 }
 
 async function isCapacitorAvailable(): Promise<boolean> {
@@ -61,8 +89,9 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 async function saveTokenToServer(token: string, platform: string, accessToken?: string): Promise<void> {
-  if (!accessToken) {
-    const msg = '[Push] No access token provided, cannot register token — are you signed in?'
+  const authToken = accessToken || cachedAccessToken
+  if (!authToken) {
+    const msg = '[Push] No access token available, cannot register token — are you signed in?'
     console.warn(msg)
     try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
     return
@@ -75,7 +104,7 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${authToken}`,
     },
     body: JSON.stringify({ token, platform }),
   })
@@ -87,8 +116,8 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
       console.log('[Push] Token registered successfully')
 
       const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
-      if (!welcomeSent && accessToken) {
-        const userId = decodeJwtUserId(accessToken)
+      if (!welcomeSent && authToken) {
+        const userId = decodeJwtUserId(authToken)
         if (userId) {
           localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
           setTimeout(async () => {
@@ -97,7 +126,7 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
                 senderId: 'system',
                 senderName: 'ChessDuo',
                 snippet: 'Welcome! Push notifications are now enabled.',
-              }, accessToken)
+              }, authToken)
               console.log('[Push] Welcome notification sent')
             } catch (err) {
               console.warn('[Push] Failed to send welcome notification:', err)
@@ -130,8 +159,27 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
   const storedVapidKey = typeof window !== 'undefined' ? localStorage.getItem(PUSH_VAPID_KEY) : null
   const vapidKeyChanged = storedVapidKey !== null && storedVapidKey !== vapidPublicKey
 
+  const pushInProgress = typeof window !== 'undefined' ? localStorage.getItem(PUSH_IN_PROGRESS_KEY) : null
+  if (pushInProgress) {
+    const startedAt = parseInt(pushInProgress, 10)
+    if (Date.now() - startedAt > CRASH_GUARD_TIMEOUT_MS) {
+      try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
+    } else {
+      console.warn('[Push] Browser push init already in progress, skipping')
+      return false
+    }
+  }
   try {
-    const registration = await navigator.serviceWorker.ready
+    if (typeof window !== 'undefined') localStorage.setItem(PUSH_IN_PROGRESS_KEY, String(Date.now()))
+
+    let registration: ServiceWorkerRegistration
+    try {
+      registration = await waitForServiceWorkerReady(SW_READY_TIMEOUT_MS)
+    } catch (err) {
+      logPushError(`[Push Web] Service worker not ready: ${err instanceof Error ? err.message : String(err)}`)
+      return false
+    }
+
     const existingSubscription = await registration.pushManager.getSubscription()
 
     if (existingSubscription) {
@@ -145,20 +193,22 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
         return true
       }
     }
-  } catch (err) {
-    console.warn('[Push] Failed to check existing browser subscription:', err)
-  }
 
-  try {
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
       console.log('[Push] Browser notification permission denied')
       return false
     }
 
-    const registration = await navigator.serviceWorker.ready
+    let registrationAfterPermission: ServiceWorkerRegistration
+    try {
+      registrationAfterPermission = await waitForServiceWorkerReady(SW_READY_TIMEOUT_MS)
+    } catch (err) {
+      logPushError(`[Push Web] Service worker not ready: ${err instanceof Error ? err.message : String(err)}`)
+      return false
+    }
     const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource
-    const subscription = await registration.pushManager.subscribe({
+    const subscription = await registrationAfterPermission.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey,
     })
@@ -167,11 +217,12 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
     await saveTokenToServer(JSON.stringify(subscription), 'web', accessToken)
     return true
   } catch (err) {
-    const msg = `[Push Web] ${err instanceof Error ? err.message : String(err)}`
-    console.warn(msg)
-    try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-    try { alert(`Push setup failed: ${msg}. Check Settings to retry.`) } catch { /* alert may be unavailable */ }
+    logPushError(`[Push Web] ${err instanceof Error ? err.message : String(err)}`)
     return false
+  } finally {
+    if (typeof window !== 'undefined') {
+      try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
+    }
   }
 }
 
@@ -185,7 +236,6 @@ export async function resetPushState(): Promise<void> {
   if (typeof window !== 'undefined') {
     try { localStorage.removeItem(PUSH_FCM_TOKEN_KEY) } catch { /* quota exceeded */ }
     try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
-    try { localStorage.removeItem('chessduo_push_disabled') } catch { /* quota exceeded */ }
   }
 }
 
@@ -213,9 +263,11 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
         console.warn('[Push] Previous registration attempt timed out — clearing and retrying')
         localStorage.removeItem(PUSH_IN_PROGRESS_KEY)
       } else {
-        console.warn('[Push] Detected crash during previous registration attempt — disabling push')
-        localStorage.setItem('chessduo_push_disabled', 'true')
-        localStorage.removeItem(PUSH_IN_PROGRESS_KEY)
+        const msg = '[Push] Detected crash during previous registration attempt — disabling push. Re-enable from Settings.'
+        console.warn(msg)
+        try { localStorage.setItem('chessduo_push_disabled', 'true') } catch { /* quota exceeded */ }
+        try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
+        try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
         return
       }
     }
@@ -253,9 +305,7 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
       ;({ PushNotifications } = await import('@capacitor/push-notifications'))
     } catch (err) {
       const msg = `[Push Setup] Capacitor Push plugin unavailable: ${err instanceof Error ? err.message : String(err)}`
-      console.warn(msg)
-      try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-      try { alert(`Push setup failed: ${msg}`) } catch { /* alert may be unavailable */ }
+      logPushError(msg)
       return
     }
 
@@ -289,14 +339,12 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
         if (typeof window !== 'undefined') {
           localStorage.setItem(PUSH_FCM_TOKEN_KEY, token.value)
         }
-        await saveTokenToServer(token.value, 'android', accessToken)
+        await saveTokenToServer(token.value, 'android', cachedAccessToken || undefined)
       })
 
       PushNotifications.addListener('registrationError', (err) => {
         const msg = `[Push] FCM registration error: ${JSON.stringify(err)}`
-        console.error(msg)
-        try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-        try { alert(`Push setup failed: ${msg}. Check Settings to retry.`) } catch { /* alert may be unavailable */ }
+        logPushError(msg)
       })
 
       await PushNotifications.register()
@@ -305,18 +353,29 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         try {
           const data = notification?.data as Record<string, string> | undefined
-          if (!data) return
-          const type = data.type as NotificationType | undefined
+          const type = data?.type as NotificationType | undefined
           const title = notification?.title || 'ChessDuo'
           const body = notification?.body || ''
 
-          if (type === 'chat_message') {
-            try { window.dispatchEvent(new CustomEvent('chessduo:new-message', { detail: { senderId: data.senderId, senderName: data.senderName || '', snippet: data.snippet || '' } })) } catch { /* custom event unavailable */ }
-          } else if (type === 'friend_request') {
-            try { window.dispatchEvent(new CustomEvent('chessduo:friend-request', { detail: { senderId: data.senderId } })) } catch { /* custom event unavailable */ }
+          console.log('[Push] Foreground notification received:', type, title)
+
+          if (type === 'chat_message' || type === 'friend_request' || type === 'invite_accepted' || type === 'game_invite') {
+            try { storeNotificationRedirect({
+              type,
+              senderId: data?.senderId,
+              roomId: data?.roomId,
+              code: data?.code,
+              joinPlayerId: data?.joinPlayerId,
+              joinTeam: data?.joinTeam,
+            }) } catch { /* redirect store is best-effort; badge updates via Realtime anyway */ }
           }
 
-          console.log('[Push] Foreground notification received:', type, title)
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            try {
+              const n = new Notification(title, { body, icon: '/favicon.ico', tag: `chessduo-${type || 'default'}` })
+              n.onclick = () => { try { window.focus(); n.close() } catch { /* window focus may be unavailable */ } }
+            } catch { /* Notification constructor may be unavailable in Capacitor WebView — system tray handles background case */ }
+          }
         } catch (err) {
           console.warn('[Push] Foreground notification handler error:', err)
         }
@@ -353,13 +412,11 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
         }
       })
     } finally {
-      localStorage.removeItem(PUSH_IN_PROGRESS_KEY)
+      try { localStorage.removeItem(PUSH_IN_PROGRESS_KEY) } catch { /* quota exceeded */ }
     }
   } catch (err) {
     const msg = `[Push Setup] ${err instanceof Error ? err.message : String(err)}`
-    console.warn(msg)
-    try { localStorage.setItem('chessduo_push_last_error', msg) } catch { /* quota exceeded */ }
-    try { alert(`Push setup failed: ${msg}`) } catch { /* alert may be unavailable */ }
+    logPushError(msg)
   } finally {
     pushInitInProgress = false
   }
