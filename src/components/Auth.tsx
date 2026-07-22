@@ -6,6 +6,7 @@ import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRoun
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { supabase } from '@/lib/supabase'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
+import { upsertProfile, fetchProfile } from '@/lib/profileService'
 import { Spinner } from '@/components/Spinner'
 
 const RESERVED_USERNAMES = new Set([
@@ -74,23 +75,19 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string, googleAvatarUrl?: string | null) => {
     if (authCompletedRef.current === userId) return
     authCompletedRef.current = userId
-    const { data } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', userId)
-      .maybeSingle()
-    if (data?.username) {
+    const profile = await fetchProfile(userId)
+    if (profile.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch (e) { console.warn('[Auth] Failed to upsert profile metadata on existing user:', e) }
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
       }
-      onAuthComplete(userId, data.username)
+      onAuthComplete(userId, profile.username)
       if (googleAuthInProgressRef.current) {
         setGoogleLoading(false)
         googleAuthInProgressRef.current = false
       }
     } else if (onNeedUsername) {
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch (e) { console.warn('[Auth] Failed to upsert profile metadata before username selection:', e) }
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
       }
       const suggested = googleDisplayName || email.split('@')[0]
       onNeedUsername(userId, suggested, googleAvatarUrl)
@@ -109,9 +106,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         }
         return
       }
-      try {
-        await supabase.from('profiles').upsert({ id: userId, username: displayName, display_name: googleDisplayName || undefined, avatar_url: googleAvatarUrl || undefined }, { onConflict: 'id' })
-      } catch { console.error('[Auth] Failed to upsert profile') }
+      upsertProfile({ id: userId, username: displayName, display_name: googleDisplayName, avatar_url: googleAvatarUrl })
       onAuthComplete(userId, displayName)
       if (googleAuthInProgressRef.current) {
         setGoogleLoading(false)

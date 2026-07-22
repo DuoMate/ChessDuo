@@ -39,14 +39,15 @@ import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInlin
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
-import { InsightsGate } from './InsightsGate'
 import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Lock, BarChart3 } from 'lucide-react'
 
 // ============================================================
 interface GameProps {
@@ -288,7 +289,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showInsights, setShowInsights] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [insightsState, setInsightsState] = useState<{ isPremium: boolean; revealsRemaining: number | null }>({ isPremium: false, revealsRemaining: null })
-  const [insightsUnlocked, setInsightsUnlocked] = useState(false)
+  const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
 
   const closeAllPanels = useCallback(() => {
     setShowRoundHistory(false)
@@ -306,6 +307,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const playerId = playerIdFromProps || sessionPlayerId
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
+
+  useEffect(() => {
+    if (!showInsights || !playerId) return
+    if (insightsState.revealsRemaining !== null) return
+    getUserInsightsState(playerId).then((state) => {
+      setInsightsState({ isPremium: state.isPremium, revealsRemaining: state.revealsRemaining })
+    }).catch(() => {
+      setInsightsState({ isPremium: false, revealsRemaining: 3 })
+    })
+  }, [showInsights, playerId])
+
+  const handleRevealMove = useCallback(async (index: number) => {
+    if (!playerId || insightsState.revealsRemaining === null || insightsState.revealsRemaining <= 0) return
+    const remaining = await incrementInsightsReveals(playerId)
+    setInsightsState(prev => ({ ...prev, revealsRemaining: remaining }))
+    setRevealedIndices(prev => {
+      const next = new Set(prev)
+      next.add(index)
+      return next
+    })
+  }, [playerId, insightsState.revealsRemaining])
 
   const handleHardwareBack = useCallback(() => {
     // First: close any open submenu
@@ -2229,50 +2251,62 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         </div>
         {accuracyHistory.length > 0 ? (
           <div className="text-slate-100 space-y-3">
-            {insightsUnlocked || insightsState.isPremium ? (
-              accuracyHistory.map((comp, i) => (
+            {!insightsState.isPremium && insightsState.revealsRemaining !== null && (
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400 mb-1 py-2 rounded-lg bg-slate-800/50 border border-slate-700/30">
+                <BarChart3 size={14} strokeWidth={2} />
+                <span>{insightsState.revealsRemaining}/3 free insights remaining</span>
+              </div>
+            )}
+            {accuracyHistory.map((comp, i) => {
+              const isVisible = insightsState.isPremium || revealedIndices.has(i)
+              const canReveal = !isVisible && insightsState.revealsRemaining !== null && insightsState.revealsRemaining > 0
+              const isExhausted = !isVisible && insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0
+
+              return (
                 <div key={i} className={i < accuracyHistory.length - 1 ? 'mb-3 pb-3 border-b border-slate-700/30' : ''}>
                   {accuracyHistory.length > 1 && (
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
                       Move {i + 1}
                     </p>
                   )}
-                  <MoveInsights
-                    player1Move={comp.player1Move || '?'}
-                    player2Move={comp.player2Move || '?'}
-                    player1Accuracy={comp.player1Accuracy || 0}
-                    player2Accuracy={comp.player2Accuracy || 0}
-                    player1Loss={comp.player1Loss || 0}
-                    player2Loss={comp.player2Loss || 0}
-                    isSync={comp.isSync}
-                    winnerId={comp.winnerId}
-                    bestEngineMove={comp.bestEngineMove}
-                    bestEngineScore={comp.bestEngineScore}
-                  />
+                  {isVisible ? (
+                    <MoveInsights
+                      player1Move={comp.player1Move || '?'}
+                      player2Move={comp.player2Move || '?'}
+                      player1Accuracy={comp.player1Accuracy || 0}
+                      player2Accuracy={comp.player2Accuracy || 0}
+                      player1Loss={comp.player1Loss || 0}
+                      player2Loss={comp.player2Loss || 0}
+                      isSync={comp.isSync}
+                      winnerId={comp.winnerId}
+                      bestEngineMove={comp.bestEngineMove}
+                      bestEngineScore={comp.bestEngineScore}
+                    />
+                  ) : canReveal ? (
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-800/50 p-4 text-center">
+                      <p className="text-xs text-slate-500 mb-3">Insight hidden — tap to reveal</p>
+                      <button
+                        onClick={() => handleRevealMove(i)}
+                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-slate-200 text-xs font-medium rounded-lg border border-slate-500 transition-colors min-h-[36px]"
+                      >
+                        Reveal Move Insight
+                      </button>
+                    </div>
+                  ) : isExhausted ? (
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-800/50 p-4 text-center">
+                      <Lock size={14} className="text-blue-400 mx-auto mb-2" />
+                      <p className="text-xs text-slate-400 mb-3">No free reveals remaining</p>
+                      <button
+                        onClick={handleUpgradeClick}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold rounded-lg shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 min-h-[36px] transition-all"
+                      >
+                        Upgrade to Premium
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              ))
-            ) : (
-              <InsightsGate
-                playerId={playerId || 'guest'}
-                player1Move={accuracyHistory[accuracyHistory.length - 1].player1Move || '?'}
-                player2Move={accuracyHistory[accuracyHistory.length - 1].player2Move || '?'}
-                player1Accuracy={accuracyHistory[accuracyHistory.length - 1].player1Accuracy || 0}
-                player2Accuracy={accuracyHistory[accuracyHistory.length - 1].player2Accuracy || 0}
-                player1Loss={accuracyHistory[accuracyHistory.length - 1].player1Loss || 0}
-                player2Loss={accuracyHistory[accuracyHistory.length - 1].player2Loss || 0}
-                isSync={accuracyHistory[accuracyHistory.length - 1].isSync}
-                winnerId={accuracyHistory[accuracyHistory.length - 1].winnerId}
-                bestEngineMove={accuracyHistory[accuracyHistory.length - 1].bestEngineMove}
-                bestEngineScore={accuracyHistory[accuracyHistory.length - 1].bestEngineScore}
-                onStateChange={(state) => {
-                  setInsightsState(state)
-                  if (state.isPremium || (state.revealsRemaining !== null && state.revealsRemaining < 3)) {
-                    setInsightsUnlocked(true)
-                  }
-                }}
-                onUpgradeClick={handleUpgradeClick}
-              />
-            )}
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-12 text-slate-400 text-sm">

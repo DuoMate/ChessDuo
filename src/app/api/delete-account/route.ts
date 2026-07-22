@@ -1,47 +1,20 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getAuthClient } from '@/lib/apiAuth'
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID()
   const route = 'delete-account'
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const authHeader = request.headers.get('authorization')
 
-    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
-
-    let user = null
-    let supabase: any
-
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1]
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      })
-      const { data } = await supabase.auth.getUser(token)
-      user = data.user
-      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
-    } else {
-      const cookieStore = await cookies()
-      const { createServerClient } = await import('@supabase/ssr')
-      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
-      })
-      const { data } = await supabase.auth.getUser()
-      user = data.user
-      console.log(`[${route}] ${requestId} - Auth via cookies`)
-    }
-
-    if (!user) {
+    const { user: authUser, supabase: authSupabase, error: authError } = await getAuthClient(request, route, requestId)
+    if (!authUser) {
       console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    console.log(`[${route}] ${requestId} - User: ${user.id}`)
+    const user = authUser
+    const supabase = authSupabase
 
     if (!supabaseServiceRoleKey) {
       console.error(`[${route}] ${requestId} - SUPABASE_SERVICE_ROLE_KEY is not configured`)
@@ -51,6 +24,7 @@ export async function POST(request: Request) {
       )
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     let adminSupabase: any
     const { createClient } = await import('@supabase/supabase-js')
     adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey)

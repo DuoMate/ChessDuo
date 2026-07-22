@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { applyRateLimit } from '@/lib/rateLimit'
-import { cookies } from 'next/headers'
+import { getAuthClient } from '@/lib/apiAuth'
 import { SignJWT, importPKCS8 } from 'jose'
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
@@ -131,41 +131,13 @@ export async function POST(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    const authHeader = request.headers.get('authorization')
-
-    console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
-
-    let user = null
-    let supabase: any
-
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1]
-      const { createClient } = await import('@supabase/supabase-js')
-      supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      })
-      const { data } = await supabase.auth.getUser(token)
-      user = data.user
-      console.log(`[${route}] ${requestId} - Auth via Bearer token`)
-    } else {
-      const cookieStore = await cookies()
-      const { createServerClient } = await import('@supabase/ssr')
-      supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-        cookies: { getAll() { return cookieStore.getAll() }, setAll() {} },
-      })
-      const { data } = await supabase.auth.getUser()
-      user = data.user
-      console.log(`[${route}] ${requestId} - Auth via cookies`)
-    }
-
-    if (!user) {
+    const { user: authUser, supabase: authSupabase } = await getAuthClient(request, route, requestId)
+    if (!authUser) {
       console.error(`[${route}] ${requestId} - Auth failed, no user`)
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    console.log(`[${route}] ${requestId} - User: ${user.id}`)
+    const user = authUser
+    const supabase = authSupabase
 
     const body = await request.json() as { purchaseToken?: string; productId?: string; orderId?: string }
     const { purchaseToken, productId, orderId } = body

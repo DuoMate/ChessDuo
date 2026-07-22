@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { upsertProfile, fetchProfile } from '@/lib/profileService'
 
 interface NeedUsername {
   userId: string
@@ -71,26 +72,22 @@ export function useAuthSession(): UseAuthSessionResult {
     if (authCompletedRef.current === userId) return
     authCompletedRef.current = userId
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', userId)
-      .maybeSingle()
+    const profile = await fetchProfile(userId)
 
     if (!mountedRef.current) return
 
-    if (data?.username) {
+    if (profile.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: googleDisplayName || undefined }, { onConflict: 'id' }) } catch { /* ignore */ }
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
       }
       setPlayerId(userId)
-      setUsername(data.username)
+      setUsername(profile.username)
       setNeedsUsername(null)
       setLoading(false)
     } else {
       const displayName = googleDisplayName || email.split('@')[0]
       if (googleAvatarUrl || googleDisplayName) {
-        try { await supabase.from('profiles').upsert({ id: userId, avatar_url: googleAvatarUrl || undefined, display_name: displayName || undefined }, { onConflict: 'id' }) } catch { /* ignore */ }
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: displayName })
       }
       setPlayerId(userId)
       setNeedsUsername({

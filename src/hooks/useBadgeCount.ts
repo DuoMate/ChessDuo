@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getPendingRequestCount } from '@/lib/friendService'
 
 interface BadgeData {
   unreadMessages: number
@@ -30,9 +31,9 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     }
 
     try {
-      const [msgResult, reqResult] = await Promise.all([
+      const [msgResult, pendingCount] = await Promise.all([
         supabase.from('messages').select('sender_id').eq('receiver_id', playerId).eq('read', false),
-        supabase.from('friendships').select('id', { count: 'exact', head: true }).eq('receiver_id', playerId).eq('status', 'pending'),
+        getPendingRequestCount(playerId),
       ])
 
       if (!mountedRef.current) return
@@ -44,7 +45,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
         }
       }
 
-      const pendingRequests = reqResult.count || 0
+      const pendingRequests = pendingCount
       const unreadMessages = msgResult.data ? msgResult.data.length : 0
 
       setBadge({

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { upsertProfile } from '@/lib/profileService'
 import { validateUsernameFormat } from '@/components/Auth'
 import { Spinner } from '@/components/Spinner'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
@@ -100,17 +101,15 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
     setError(null)
 
     try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          username: username.trim(),
-          avatar_url: avatarUrl || undefined,
-          display_name: displayName || undefined,
-        }, { onConflict: 'id' })
+      const { success, isUniqueConflict } = await upsertProfile({
+        id: userId,
+        username: username.trim(),
+        avatar_url: avatarUrl,
+        display_name: displayName,
+      })
 
-      if (profileError) {
-        if (profileError.message?.includes('unique') || profileError.code === '23505') {
+      if (!success) {
+        if (isUniqueConflict) {
           setUsernameStatus('taken')
           setUsernameMessage('Username is already taken')
           setError('Username is already taken. Please choose another.')
