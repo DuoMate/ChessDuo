@@ -53,9 +53,7 @@ export async function POST(request: Request) {
 
     let adminSupabase: any
     const { createClient } = await import('@supabase/supabase-js')
-    adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
+    adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     const { error: rpcError } = await supabase.rpc('delete_my_account')
     if (rpcError) {

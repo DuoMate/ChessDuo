@@ -50,8 +50,9 @@ function DeleteAccountContent() {
       }
       await supabase.auth.signOut()
       setStep('done')
-    } catch {
-      setErrorMsg('Network error — please try again')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Network error — please try again'
+      setErrorMsg(message)
       setStep('error')
     }
   }

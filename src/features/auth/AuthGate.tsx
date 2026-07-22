@@ -168,13 +168,11 @@ export function AuthGate({
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0e1a] text-white p-4 pb-20">
-        <div className="max-w-md mx-auto">
-          <div className="mb-6">
-            <BackButton label="Back" onClick={onBack} />
-          </div>
-          {authForm}
+      <div className="min-h-screen bg-[#0a0e1a] text-white pb-20">
+        <div className="px-4 pt-4">
+          <BackButton label="Back" onClick={onBack} />
         </div>
+        {authForm}
       </div>
     </ErrorBoundary>
   )
