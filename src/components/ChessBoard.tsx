@@ -107,6 +107,15 @@ export function ChessBoard({
       boardRef.current.setPosition(fen, false)
     }
   }, [fen])
+  useEffect(() => {
+    if (!boardRef.current || !lastMove) return
+    const { from, to } = lastMove
+    if (from[0] !== 'e' || Math.abs(to.charCodeAt(0) - from.charCodeAt(0)) !== 2 || from[1] !== to[1]) return
+    const rank = from[1]
+    const rookFrom = to.charCodeAt(0) > from.charCodeAt(0) ? `h${rank}` : `a${rank}`
+    const rookTo = to.charCodeAt(0) > from.charCodeAt(0) ? `f${rank}` : `d${rank}`
+    boardRef.current.movePiece(rookFrom, rookTo, true)
+  }, [fen])
 
   useEffect(() => {
     if (boardRef.current) {

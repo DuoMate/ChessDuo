@@ -43,6 +43,7 @@ declare module 'cm-chessboard' {
     addMarker(type: MarkerType, square: string): void
     removeMarkers(type?: MarkerType): void
     getMarkers(type?: MarkerType): Marker[]
+    movePiece(squareFrom: string, squareTo: string, animated?: boolean): Promise<void>
   }
 
   export interface MarkerType {

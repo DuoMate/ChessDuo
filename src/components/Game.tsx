@@ -860,6 +860,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     if (g.status === GameStatus.GAME_OVER) return
 
+    const turnState = (g as GameInterface).getTurnState()
+    if (turnState !== 'selecting') return
+    if (g.currentTurn !== myTeamRef.current) return
+
     const remaining = g.getMatchTimeRemaining()
     if (remaining <= 0) {
       if (matchTimerRef.current) {
@@ -2071,6 +2075,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               <BoardTopBar
                 whitePlayers={whitePlayers}
                 blackPlayers={blackPlayers}
+                capturedWhite={gameState.capturedByWhite}
+                capturedBlack={gameState.capturedByBlack}
                 matchTimeRemaining={gameState.matchTimeRemaining}
                 matchTimerActive={gameState.matchTimerActive}
                 totalMatchSeconds={timeLimitSeconds || 600}

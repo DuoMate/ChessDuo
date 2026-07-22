@@ -26,6 +26,26 @@ interface BoardTopBarProps {
   totalMatchSeconds: number
   roundLabel?: string
   currentTurn: Team
+  capturedWhite?: string[]
+  capturedBlack?: string[]
+}
+
+const PIECE_VALUES: Record<string, number> = {
+  q: 9, r: 5, b: 3, n: 3, p: 1
+}
+
+const PIECE_UNICODE: Record<string, string> = {
+  q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+  Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙'
+}
+
+function computeMaterial(pieces: string[]): number {
+  return pieces.reduce((sum, p) => sum + (PIECE_VALUES[p] || 0), 0)
+}
+
+function sortPieces(pieces: string[]): string[] {
+  const order = ['q', 'r', 'b', 'n', 'p']
+  return [...pieces].sort((a, b) => order.indexOf(a) - order.indexOf(b))
 }
 
 function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE' | 'BLACK' }) {
@@ -99,12 +119,21 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
 export function BoardTopBar({
   whitePlayers,
   blackPlayers,
+  capturedWhite = [],
+  capturedBlack = [],
   matchTimeRemaining,
   matchTimerActive,
   totalMatchSeconds,
   roundLabel,
   currentTurn,
 }: BoardTopBarProps) {
+  const whiteMaterial = computeMaterial(capturedWhite)
+  const blackMaterial = computeMaterial(capturedBlack)
+  const advantage = whiteMaterial - blackMaterial
+  const sortedWhite = sortPieces(capturedWhite)
+  const sortedBlack = sortPieces(capturedBlack)
+  const hasCaptures = sortedWhite.length > 0 || sortedBlack.length > 0
+
   return (
     <>
       <div className="flex items-center justify-between gap-1 max-w-3xl mx-auto">
@@ -153,6 +182,41 @@ export function BoardTopBar({
           </div>
         </div>
       </div>
+
+      {hasCaptures && (
+        <div className="flex items-center justify-between gap-1 max-w-3xl mx-auto mt-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1 justify-start">
+            <div className="flex items-center gap-0">
+              {sortedWhite.map((p, i) => (
+                <span key={i} className="text-[11px] leading-none text-slate-500 dark:text-slate-400">
+                  {PIECE_UNICODE[p] || p}
+                </span>
+              ))}
+            </div>
+            {advantage > 0 && (
+              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 ml-0.5">
+                +{advantage}
+              </span>
+            )}
+          </div>
+          <div className="shrink-0" />
+          <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
+            {advantage < 0 && (
+              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 mr-0.5">
+                +{Math.abs(advantage)}
+              </span>
+            )}
+            <div className="flex items-center gap-0">
+              {sortedBlack.map((p, i) => (
+                <span key={i} className="text-[11px] leading-none text-slate-500 dark:text-slate-400">
+                  {PIECE_UNICODE[p] || p}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {currentTurn && (
           <motion.div
