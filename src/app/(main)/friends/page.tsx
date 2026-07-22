@@ -15,7 +15,7 @@ export default function FriendsPage() {
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
-    <AuthGate pageTitle="Friends" pageEmoji="👥" subtitle="Sign in to view your friends">
+    <AuthGate variant="page" pageTitle="Friends" pageEmoji="👥" subtitle="Sign in to view your friends" onBack={() => router.push('/')}>
       {(playerId) => <FriendsContent playerId={playerId} />}
     </AuthGate>
   )

@@ -9,6 +9,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
 import { initPushNotifications } from '@/features/push-notifications'
+import { supabase } from '@/lib/supabase'
 
 interface SettingsPanelProps {
   open?: boolean
@@ -76,8 +77,14 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Queen</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Automatically promote pawns to queen</p>
                 </div>
-                <button onClick={() => setAutoQueen(!autoQueen)} className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${autoQueen ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-label="Toggle auto-queen">
-                  <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoQueen}
+                  onClick={() => setAutoQueen(!autoQueen)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoQueen ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
 
@@ -88,8 +95,14 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Low Time Warning</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Sound alert when time is running low</p>
                 </div>
-                <button onClick={() => setLowTimeWarning(!lowTimeWarning)} className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${lowTimeWarning ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-label="Toggle low time warning">
-                  <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={lowTimeWarning}
+                  onClick={() => setLowTimeWarning(!lowTimeWarning)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${lowTimeWarning ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
 
@@ -136,8 +149,26 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Push Notifications</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Receive game invites and chat alerts</p>
                 </div>
-                <button onClick={() => { const next = !notifsEnabled; setNotifsEnabled(next); localStorage.setItem('chessduo_push_disabled', next ? 'false' : 'true'); if (next) initPushNotifications().catch(() => {}) }} className={`relative h-7 w-12 min-h-[44px] min-w-[44px] rounded-full transition-colors ${notifsEnabled ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`} aria-label="Toggle push notifications">
-                  <div className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notifsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={notifsEnabled}
+                  onClick={async () => {
+                    const next = !notifsEnabled
+                    setNotifsEnabled(next)
+                    if (next) {
+                      localStorage.setItem('chessduo_push_disabled', 'false')
+                      const { data: { session } } = await supabase.auth.getSession()
+                      const token = session?.access_token
+                      initPushNotifications(token).catch(() => {})
+                    } else {
+                      localStorage.setItem('chessduo_push_disabled', 'true')
+                      try { localStorage.removeItem('chessduo_push_welcome_sent') } catch { /* ignore */ }
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
               </div>
             </div>

@@ -258,6 +258,11 @@ export default function SetupPage() {
 
   useCapacitorBackButton(
     () => {
+      if (showAuthOverlay) {
+        setShowAuthOverlay(false)
+        redirectUrlRef.current = null
+        return true
+      }
       if (gameMode !== null) {
         setGameMode(null)
         setJoinCode('')
@@ -269,7 +274,7 @@ export default function SetupPage() {
       }
       return false
     },
-    gameMode !== null || !!duelFriend
+    showAuthOverlay || gameMode !== null || !!duelFriend
   )
 
   useEffect(() => {
@@ -558,6 +563,7 @@ export default function SetupPage() {
   }
 
   const handleStartOffline = () => {
+    if (!playerId) { setShowAuthOverlay(true); return }
     if (!hasSeenOfflineDisclaimer) {
       const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
       localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: selectedLevel, time, color: selectedColor }))

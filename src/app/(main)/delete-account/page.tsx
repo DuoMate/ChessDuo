@@ -14,7 +14,7 @@ export default function DeleteAccountPage() {
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
-    <AuthGate pageTitle="Delete Account" pageEmoji="⚠️" subtitle="Sign in to manage your account">
+    <AuthGate variant="page" pageTitle="Delete Account" pageEmoji="⚠️" subtitle="Sign in to manage your account" onBack={() => router.push('/')}>
       {() => <DeleteAccountContent />}
     </AuthGate>
   )

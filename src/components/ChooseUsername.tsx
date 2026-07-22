@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { validateUsernameFormat } from '@/components/Auth'
 import { Spinner } from '@/components/Spinner'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
+import { initPushNotifications } from '@/features/push-notifications'
+import { Bell } from 'lucide-react'
 
 interface ChooseUsernameProps {
   userId: string
@@ -30,6 +32,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const [usernameMessage, setUsernameMessage] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [notifyEnabled, setNotifyEnabled] = useState(true)
 
   useEffect(() => {
     if (suggestedName) {
@@ -119,6 +122,20 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
       }
 
       onAuthComplete(userId, username.trim())
+
+      if (notifyEnabled) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const token = session?.access_token
+          if (token) {
+            localStorage.setItem('chessduo_push_disabled', 'false')
+            initPushNotifications(token).catch(() => {})
+          }
+        } catch { /* ignore */ }
+      } else {
+        localStorage.setItem('chessduo_push_disabled', 'true')
+        localStorage.removeItem('chessduo_push_welcome_sent')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create profile')
     } finally {
@@ -191,6 +208,22 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
           {error && (
             <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
           )}
+
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-3">
+            <div className="flex items-center gap-2.5">
+              <Bell size={18} className="text-blue-500 dark:text-blue-400" />
+              <span className="text-sm text-slate-700 dark:text-slate-200">Notify me about game invites</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={notifyEnabled}
+              onClick={() => setNotifyEnabled(!notifyEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
 
           <button
             type="submit"

@@ -9,12 +9,18 @@ interface BackButtonProps {
   fallbackHref?: string
   /** Always navigate to fallbackHref — skip router.back() even if history exists. */
   alwaysFallback?: boolean
+  /** Custom click handler — overrides default navigation. */
+  onClick?: () => void
 }
 
-export function BackButton({ label = 'Back', fallbackHref = '/', alwaysFallback = false }: BackButtonProps) {
+export function BackButton({ label = 'Back', fallbackHref = '/', alwaysFallback = false, onClick }: BackButtonProps) {
   const router = useRouter()
 
   const handleClick = () => {
+    if (onClick) {
+      onClick()
+      return
+    }
     if (!alwaysFallback && window.history.length > 2) {
       router.back()
     } else {

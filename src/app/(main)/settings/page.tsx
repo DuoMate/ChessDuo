@@ -12,7 +12,7 @@ export default function SettingsPage() {
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
-    <AuthGate pageTitle="Settings" pageEmoji="⚙️" subtitle="Sign in to access your settings">
+    <AuthGate variant="page" pageTitle="Settings" pageEmoji="⚙️" subtitle="Sign in to access your settings" onBack={() => router.push('/')}>
       {() => <SettingsContent />}
     </AuthGate>
   )

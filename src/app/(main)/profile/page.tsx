@@ -21,7 +21,7 @@ export default function ProfilePage() {
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
-    <AuthGate pageTitle="Profile" pageEmoji="👤" subtitle="Sign in to view your profile">
+    <AuthGate variant="page" pageTitle="Profile" pageEmoji="👤" subtitle="Sign in to view your profile" onBack={() => router.push('/')}>
       {(playerId) => <ProfileContent playerId={playerId} />}
     </AuthGate>
   )

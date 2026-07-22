@@ -23,7 +23,7 @@ export default function HistoryPage() {
   useCapacitorBackButton(() => { router.push('/'); return true }, true)
 
   return (
-    <AuthGate pageTitle="Match History" pageEmoji="📜" subtitle="Sign in to view your match history">
+    <AuthGate variant="page" pageTitle="Match History" pageEmoji="📜" subtitle="Sign in to view your match history" onBack={() => router.push('/')}>
       {(playerId) => <HistoryContent playerId={playerId} />}
     </AuthGate>
   )

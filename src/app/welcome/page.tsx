@@ -71,7 +71,12 @@ export default function WelcomePage() {
     },
   ]
 
-  useCapacitorBackButton(() => { router.push('/'); return true }, true)
+  useCapacitorBackButton(() => {
+    localStorage.removeItem('chessduo_pending_offline_game')
+    localStorage.removeItem('chessduo_pending_online_game')
+    router.push('/')
+    return true
+  }, true)
 
   const handleDismiss = async () => {
     if (navigating) return
@@ -113,7 +118,11 @@ export default function WelcomePage() {
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
       <div className="w-full max-w-md mb-4 flex justify-start">
-        <BackButton label="Skip" alwaysFallback />
+        <BackButton label="Skip" onClick={() => {
+          localStorage.removeItem('chessduo_pending_offline_game')
+          localStorage.removeItem('chessduo_pending_online_game')
+          router.push('/')
+        }} />
       </div>
 
       <motion.div
