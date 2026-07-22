@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -13,7 +14,7 @@ import { Spinner } from '@/components/Spinner'
 
 const FourPlayerLobbyComponent = dynamic(() => import('@/components/FourPlayerLobby').then(mod => ({ default: mod.FourPlayerLobby })), {
   loading: () => (
-    <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+    <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="md" />
         <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading lobby...</p>
@@ -45,7 +46,7 @@ function FourPlayerContent() {
       }
 
       if (joinCode) {
-        const { data: { session } } = await supabase.auth.getSession()
+        const session = await AuthService.getSession()
         if (!session?.user) {
           const redirect = encodeURIComponent(`/four-player?join=${joinCode}`)
           router.replace(`/?signup=1&redirect=${redirect}`)
@@ -71,7 +72,7 @@ function FourPlayerContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-center space-y-4">
           <div className="text-5xl">⚠️</div>
           <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Error</h1>
@@ -84,7 +85,7 @@ function FourPlayerContent() {
 
   if (!roomId || !roomCode || !urlPlayerId) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
         <Spinner size="md" />
       </div>
     )
@@ -105,7 +106,7 @@ function FourPlayerContent() {
 export default function FourPlayerPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
         <div className="flex flex-col items-center gap-3">
           <Spinner size="md" />
           <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading...</p>

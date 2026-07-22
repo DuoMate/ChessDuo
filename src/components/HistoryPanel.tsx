@@ -6,6 +6,7 @@ import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHisto
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { RealtimeService } from '@/lib/realtimeService'
 
 interface HistoryPanelProps {
   playerId: string
@@ -38,31 +39,19 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
       setLoading(false)
     }).catch(() => setLoading(false))
 
-    const channel = supabase
-      .channel('completed-games-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'completed_games',
-          filter: `player_id=eq.${playerId}`,
-        },
-        () => {
-          getMatchHistory(50, playerId).then(setGames).catch(() => {})
-          getPlayerStats(playerId).then(setPlayerStats).catch(() => {})
-        }
-      )
-      .subscribe()
+    const channel = RealtimeService.subscribeToTable('completed_games', 'INSERT', `player_id=eq.${playerId}`, () => {
+      getMatchHistory(50, playerId).then(setGames).catch(() => {})
+      getPlayerStats(playerId).then(setPlayerStats).catch(() => {})
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      RealtimeService.cleanupChannel(channel)
     }
   }, [playerId])
 
   if (loading) {
     return (
-    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -84,7 +73,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">

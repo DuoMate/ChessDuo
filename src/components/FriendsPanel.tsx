@@ -246,7 +246,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   const totalRequests = pending.incoming.length
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full bg-[var(--color-page-bg)] text-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">

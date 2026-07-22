@@ -32,7 +32,7 @@ export function ConfigurationPanel({
     <div className="flex flex-col gap-6 p-5">
       {/* Bot Difficulty */}
       <section>
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1.5">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1.5">
           Bot Difficulty
         </h3>
         <div className="grid grid-cols-5 gap-2" role="radiogroup" aria-label="Bot difficulty">
@@ -62,7 +62,7 @@ export function ConfigurationPanel({
                     : 'text-slate-700 dark:text-slate-300'}
                   aria-hidden="true"
                 />
-                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                   {label}
                 </span>
               </button>
@@ -78,7 +78,7 @@ export function ConfigurationPanel({
 
       {/* Choose Your Color */}
       <section>
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1.5">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1.5">
           Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
         </h3>
         <ColorPicker value={selectedColor} onChange={onSelectColor} />
@@ -86,12 +86,12 @@ export function ConfigurationPanel({
 
       {/* Game Settings */}
       <section>
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3">
+        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3">
           Game Settings
         </h3>
         <div className="flex flex-col gap-3">
           {/* Confirm Moves */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4">
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
             <div className="flex items-center gap-3">
               {confirmMove ? (
                 <ShieldCheck size={20} className="text-blue-500 dark:text-blue-400" />
@@ -123,7 +123,7 @@ export function ConfigurationPanel({
           </div>
 
           {/* Sound Effects */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4">
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
             <div className="flex items-center gap-3">
               {soundEnabled ? (
                 <Volume2 size={20} className="text-blue-500 dark:text-blue-400" />

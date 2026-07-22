@@ -21,7 +21,7 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
       className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
     >
-      <div className="flex items-center justify-around h-14 w-[95%] max-w-md px-1 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      <div className="flex items-center justify-around h-14 w-[95%] max-w-md px-1 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         {/* Moves */}
         <button
           type="button"
@@ -32,7 +32,7 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           aria-label="Moves"
         >
           <History size={18} strokeWidth={activeTab === 'moves' ? 2.5 : 2} />
-          <span className="text-[10px] font-bold leading-none">Moves</span>
+          <span className="text-xs font-bold leading-none">Moves</span>
         </button>
 
         {/* Chat */}
@@ -45,9 +45,9 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           aria-label="Chat"
         >
           <MessageCircle size={18} strokeWidth={activeTab === 'chat' ? 2.5 : 2} />
-          <span className="text-[10px] font-bold leading-none">Chat</span>
+          <span className="text-xs font-bold leading-none">Chat</span>
           {unreadChat && unreadChat > 0 && (
-            <span className="absolute top-1 right-1 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute top-1 right-1 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
               {unreadChat > 9 ? '9+' : unreadChat}
             </span>
           )}
@@ -72,7 +72,7 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
               </span>
             )}
           </div>
-          <span className="text-[10px] font-bold leading-none">Insights</span>
+          <span className="text-xs font-bold leading-none">Insights</span>
         </button>
 
         {/* Back */}
@@ -83,7 +83,7 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           aria-label="Previous move"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
-          <span className="text-[10px] font-bold leading-none">Back</span>
+          <span className="text-xs font-bold leading-none">Back</span>
         </button>
 
         {/* Forward */}
@@ -94,7 +94,7 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           aria-label="Next move"
         >
           <ChevronRight size={18} strokeWidth={2.5} />
-          <span className="text-[10px] font-bold leading-none">Fwd</span>
+          <span className="text-xs font-bold leading-none">Fwd</span>
         </button>
       </div>
     </nav>

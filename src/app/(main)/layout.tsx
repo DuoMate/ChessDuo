@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { HomeBottomNav } from '@/components/HomeBottomNav'
 import { DesktopSidebar } from '@/components/DesktopSidebar'
@@ -19,7 +20,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     mountedRef.current = true
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    AuthService.getSession().then(session => {
       if (!mountedRef.current) return
       if (session?.user) setPlayerId(session.user.id)
     }).catch(() => {})

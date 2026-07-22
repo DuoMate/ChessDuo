@@ -12,6 +12,7 @@ import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { initPushNotifications, clearCachedAccessToken, setCachedAccessToken, resetPushState } from '@/features/push-notifications'
 import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
@@ -45,7 +46,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       })
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const unsubscribe = AuthService.onAuthChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         const token = session?.access_token || ''
         if (token) {
@@ -66,7 +67,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => unsubscribe()
   }, [])
 
   useScrollToTop()

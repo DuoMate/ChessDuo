@@ -12,6 +12,7 @@ import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MoveComparisonPanel } from './MoveComparison'
@@ -349,17 +350,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   useEffect(() => {
     let active = true
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    AuthService.getSession().then(session => {
       if (active) setSessionPlayerId(session?.user?.id ?? null)
     }).catch(() => {
       // session unavailable — fall back to URL-provided playerId
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const unsubscribe = AuthService.onAuthChange((_event, session) => {
       if (active) setSessionPlayerId(session?.user?.id ?? null)
     })
     return () => {
       active = false
-      subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
@@ -2050,7 +2051,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
       {commonModals}
 
       {showGameOn && (
@@ -2059,7 +2060,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
         {/* Compact top bar — header + team avatars + timer + controls */}
-        <div className="w-full bg-white dark:bg-[#0a0e1a] border-b border-slate-200 dark:border-white/5 px-3 py-2">
+        <div className="w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
@@ -2265,7 +2266,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               return (
                 <div key={i} className={i < accuracyHistory.length - 1 ? 'mb-3 pb-3 border-b border-slate-700/30' : ''}>
                   {accuracyHistory.length > 1 && (
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
                       Move {i + 1}
                     </p>
                   )}
@@ -2287,7 +2288,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                       <p className="text-xs text-slate-500 mb-3">Insight hidden — tap to reveal</p>
                       <button
                         onClick={() => handleRevealMove(i)}
-                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-slate-200 text-xs font-medium rounded-lg border border-slate-500 transition-colors min-h-[36px]"
+                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-slate-200 text-xs font-medium rounded-lg border border-slate-500 transition-colors min-h-[44px]"
                       >
                         Reveal Move Insight
                       </button>
@@ -2298,7 +2299,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                       <p className="text-xs text-slate-400 mb-3">No free reveals remaining</p>
                       <button
                         onClick={handleUpgradeClick}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold rounded-lg shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 min-h-[36px] transition-all"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold rounded-lg shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 min-h-[44px] transition-all"
                       >
                         Upgrade to Premium
                       </button>

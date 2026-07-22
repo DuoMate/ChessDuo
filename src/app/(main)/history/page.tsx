@@ -61,7 +61,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
   if (loading) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex items-center justify-center pb-20">
           <p className="text-slate-400">Loading...</p>
         </div>
       </ErrorBoundary>
@@ -70,7 +70,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0e1a] text-white p-4 pb-20">
+      <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Match History</h1>

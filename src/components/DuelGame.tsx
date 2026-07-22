@@ -407,7 +407,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   if (waiting) {
     return (
-      <div className={`min-h-screen bg-white dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
+      <div className={`min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
         <div className="text-center space-y-4">
           <div className="animate-pulse text-5xl flex justify-center">
             <Swords size={48} className="text-amber-600 dark:text-amber-400" />
@@ -435,9 +435,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const remainingSeconds = team === 'WHITE' ? whiteTime : blackTime
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
-        <div className="w-full bg-[#0a0e1a] border-b border-white/5 px-3 py-2">
+        <div className="w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar

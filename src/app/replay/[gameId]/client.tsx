@@ -10,7 +10,7 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
       <Spinner size="md" label="Loading replay..." />
     </div>
   ),
@@ -45,7 +45,7 @@ export default function ReplayPageClient() {
 
   if (game === undefined) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
         <Spinner size="md" label="Loading replay..." />
       </div>
     )
@@ -53,7 +53,7 @@ export default function ReplayPageClient() {
 
   if (!game || error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <h1 className="text-xl font-bold mb-2">Game Not Found</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">This replay is no longer available.</p>
         <BackButton label="Back to History" fallbackHref="/history" />

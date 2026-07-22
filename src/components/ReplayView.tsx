@@ -53,7 +53,7 @@ export function ReplayView({ game }: ReplayViewProps) {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0e1a] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
         <div className="relative">
           <BoardTopBar
@@ -67,7 +67,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           <div className="absolute right-3 top-2 flex items-center gap-2">
             <button
               onClick={() => router.push('/history')}
-              className="min-h-[36px] px-3 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center gap-1 text-slate-300 text-xs"
+              className="min-h-[44px] px-3 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center gap-1 text-slate-300 text-xs"
               aria-label="Back to history"
             >
               <ArrowLeft size={14} /> Back

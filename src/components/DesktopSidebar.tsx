@@ -40,7 +40,7 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
   return (
     <nav
       aria-label="Primary navigation"
-      className="hidden md:flex fixed left-0 top-0 bottom-0 z-30 w-[220px] lg:w-[240px] flex-col border-r border-slate-200/60 bg-white/85 backdrop-blur-xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90"
+      className="hidden md:flex fixed left-0 top-0 bottom-0 z-30 w-[220px] lg:w-[240px] flex-col border-r border-slate-200/60 bg-white/85 backdrop-blur-xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]/90"
     >
       {/* Logo */}
       <div className="px-5 pt-6 pb-4">
@@ -72,7 +72,7 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
                   <Icon size={20} strokeWidth={active(path) ? 2.5 : 2} />
                 )}
                 {badge > 0 && !loading && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full px-1">
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-xs font-bold rounded-full px-1">
                     {badge > 99 ? '99+' : badge}
                   </span>
                 )}

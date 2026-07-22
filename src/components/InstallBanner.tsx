@@ -60,13 +60,13 @@ export default function InstallBanner() {
                 href={PLAY_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-h-[36px] min-w-[80px] rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo-600 transition-colors hover:bg-white/90"
+                className="min-h-[44px] min-w-[80px] rounded-lg bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo-600 transition-colors hover:bg-white/90"
               >
                 Install
               </a>
               <button
                 onClick={() => setDismissed(true)}
-                className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex min-h-[44px] min-w-[36px] items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Skip"
               >
                 <X size={16} />

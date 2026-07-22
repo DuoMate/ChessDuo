@@ -8,7 +8,7 @@ export default function Error({
   reset: () => void
 }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#0a0e1a] text-slate-100 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[var(--color-page-bg)] text-slate-100 px-4">
       <div className="flex flex-col items-center gap-2 max-w-md text-center">
         <h2 className="text-lg font-bold">Something went wrong</h2>
         <p className="text-sm text-slate-400">

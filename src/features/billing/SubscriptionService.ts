@@ -18,8 +18,8 @@ function getApiBase(): string {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   try {
-    const { supabase } = await import('@/lib/supabase')
-    const { data: { session } } = await supabase.auth.getSession()
+    const { AuthService } = await import('@/lib/authService')
+    const session = await AuthService.getSession()
     if (session?.access_token) {
       headers['Authorization'] = `Bearer ${session.access_token}`
     }

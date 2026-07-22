@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { upsertProfile } from '@/lib/profileService'
 import { validateUsernameFormat } from '@/components/Auth'
 import { Spinner } from '@/components/Spinner'
@@ -124,7 +125,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
 
       if (notifyEnabled) {
         try {
-          const { data: { session } } = await supabase.auth.getSession()
+          const session = await AuthService.getSession()
           const token = session?.access_token
           if (token) {
             localStorage.setItem('chessduo_push_disabled', 'false')
@@ -143,7 +144,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[#0a0e1a] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[var(--color-page-bg)] p-4">
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/70 dark:border-slate-700/70 p-6 sm:p-8 rounded-[30px] shadow-[0_24px_90px_rgba(2,6,23,0.25)] w-full max-w-md">
         <div className="flex flex-col items-center mb-2">
           <ChessDuoLogo size="lg" />
@@ -208,7 +209,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
             <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
           )}
 
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-3">
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-3 min-h-[44px]">
             <div className="flex items-center gap-2.5">
               <Bell size={18} className="text-blue-500 dark:text-blue-400" />
               <span className="text-sm text-slate-700 dark:text-slate-200">Notify me about game invites</span>

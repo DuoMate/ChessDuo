@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 dark:bg-[#0a0e1a] rounded-xl">
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-gray-50 dark:bg-[var(--color-page-bg)] rounded-xl">
           <div className="text-red-400 text-4xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 text-center max-w-md">

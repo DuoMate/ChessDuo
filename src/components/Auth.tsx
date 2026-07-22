@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Loader2, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, X } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 import { upsertProfile, fetchProfile } from '@/lib/profileService'
 import { Spinner } from '@/components/Spinner'
@@ -54,13 +55,13 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
   useEffect(() => {
     let authStateReceived = false
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    AuthService.getSession().then(session => {
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+    const unsubscribe = AuthService.onAuthChange((_event: string, session: any) => {
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
       }
@@ -69,7 +70,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         setInitialSessionChecked(true)
       }
     })
-    return () => subscription.unsubscribe()
+    return () => unsubscribe()
   }, [onAuthComplete])
 
   const fetchAndCompleteAuth = async (userId: string, email: string, googleDisplayName?: string, googleAvatarUrl?: string | null) => {

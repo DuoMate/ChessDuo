@@ -78,7 +78,7 @@ export function AuthGate({
   if (loading) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex items-center justify-center pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex items-center justify-center pb-20">
           <Spinner size="md" />
         </div>
       </ErrorBoundary>
@@ -88,7 +88,7 @@ export function AuthGate({
   if (needsUsername) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white p-4 pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
           <div className="max-w-md mx-auto">
             <div className="mb-6">
               <BackButton label="Back" onClick={onBack} />
@@ -112,7 +112,7 @@ export function AuthGate({
   if (authDismissed) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
           {pageEmoji && <div className="text-5xl mb-3">{pageEmoji}</div>}
           <h1 className="text-2xl font-bold mb-4">{pageTitle || ''}</h1>
           <p className="text-slate-400 mb-6">{subtitle || 'Sign in to access this page'}</p>
@@ -168,7 +168,7 @@ export function AuthGate({
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0e1a] text-white pb-20">
+      <div className="min-h-screen bg-[var(--color-page-bg)] text-white pb-20">
         <div className="px-4 pt-4">
           <BackButton label="Back" onClick={onBack} />
         </div>

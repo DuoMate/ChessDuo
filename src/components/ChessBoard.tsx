@@ -5,6 +5,7 @@ import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess, Square } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
+import { DEBUG } from '@/lib/debug'
 
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
 
@@ -199,7 +200,7 @@ export function ChessBoard({
               return true
             }
           } catch {
-            console.warn('Error validating move')
+            DEBUG && console.warn('Error validating move')
           }
           return false
         }
@@ -227,7 +228,7 @@ export function ChessBoard({
                 return true
               }
             } catch {
-              console.warn('Error processing move')
+              DEBUG && console.warn('Error processing move')
             }
           }
           return true

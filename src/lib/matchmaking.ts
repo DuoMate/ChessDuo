@@ -1,4 +1,5 @@
 import { supabase, Room } from './supabase'
+import { RoomService } from './roomService'
 
 const ROOM_EXPIRY_MS = 60_000 // 60 seconds — stale rooms auto-cleanup
 
@@ -141,6 +142,6 @@ export async function createQuickMatchRoom(playerId: string, timeSeconds: number
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {
-  await supabase.from('room_players').delete().eq('room_id', roomId)
-  await supabase.from('rooms').delete().eq('id', roomId)
+  await RoomService.deleteAllRoomPlayers(roomId)
+  await RoomService.deleteRoom(roomId)
 }

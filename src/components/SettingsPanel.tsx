@@ -10,6 +10,7 @@ import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
 import { initPushNotifications } from '@/features/push-notifications'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 
 interface SettingsPanelProps {
   open?: boolean
@@ -60,7 +61,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
             </div>
 
             <div className="space-y-4 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Theme</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
@@ -72,7 +73,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Queen</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Automatically promote pawns to queen</p>
@@ -90,7 +91,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Low Time Warning</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Sound alert when time is running low</p>
@@ -108,7 +109,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Confirm Moves</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Add confirmation before final move</p>
@@ -126,7 +127,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Sound Effects</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Play sounds for moves and events</p>
@@ -144,7 +145,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[44px]">
                 <div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Push Notifications</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Receive game invites and chat alerts</p>
@@ -158,7 +159,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                     setNotifsEnabled(next)
                     if (next) {
                       localStorage.setItem('chessduo_push_disabled', 'false')
-                      const { data: { session } } = await supabase.auth.getSession()
+                      const session = await AuthService.getSession()
                       const token = session?.access_token
                       initPushNotifications(token).catch(() => {})
                     } else {

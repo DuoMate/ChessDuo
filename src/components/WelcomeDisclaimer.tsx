@@ -114,7 +114,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.92, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-            className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[#0a0e1a] p-6 shadow-2xl max-h-[calc(100vh-2rem)] dark:border-slate-700/50 dark:bg-[#0a0e1a]"
+            className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[var(--color-page-bg)] p-6 shadow-2xl max-h-[calc(100vh-2rem)] dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]"
           >
             <button
               type="button"
@@ -159,7 +159,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   className="pointer-events-none absolute z-10"
                   style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
-                  <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">
+                  <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">
                     You
                   </span>
                 </div>
@@ -167,7 +167,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   className="pointer-events-none absolute z-10"
                   style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
-                  <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">
+                  <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">
                     {partnerLabel}
                   </span>
                 </div>
@@ -197,7 +197,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
                     {step.icon}
                     <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
-                    <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-400">{step.desc}</span>
+                    <span className="mt-0.5 text-center text-xs leading-tight text-slate-400">{step.desc}</span>
                   </div>
                   {index < steps.length - 1 && <Chevron />}
                 </div>

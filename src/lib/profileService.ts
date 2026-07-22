@@ -27,11 +27,11 @@ export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ succ
   }
 }
 
-export async function fetchProfile(userId: string): Promise<{ username: string | null }> {
+export async function fetchProfile(userId: string): Promise<{ username: string | null; avatar_url: string | null }> {
   const { data } = await supabase
     .from('profiles')
-    .select('username')
+    .select('username, avatar_url')
     .eq('id', userId)
     .maybeSingle()
-  return { username: data?.username || null }
+  return { username: data?.username || null, avatar_url: data?.avatar_url || null }
 }

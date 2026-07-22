@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 import { Spinner } from '@/components/Spinner'
@@ -28,7 +29,7 @@ function DeleteAccountContent() {
   async function handleDelete() {
     setStep('loading')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session = await AuthService.getSession()
       if (!session?.user) {
         setErrorMsg('You must be signed in to delete your account')
         setStep('error')
@@ -59,7 +60,7 @@ function DeleteAccountContent() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
         <div className="max-w-lg mx-auto px-4 py-12 pb-20">
           <div className="mb-6">
             <BackButton label="Back to ChessDuo" />

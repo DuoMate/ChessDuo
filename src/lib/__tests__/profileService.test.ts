@@ -107,20 +107,20 @@ describe('ProfileService', () => {
   })
 
   describe('fetchProfile', () => {
-    it('returns username when found', async () => {
-      mockMaybeSingle.mockResolvedValue({ data: { username: 'testuser' }, error: null })
+    it('returns username and avatar_url when found', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'testuser', avatar_url: 'https://example.com/av.jpg' }, error: null })
 
       const result = await fetchProfile('user-1')
 
-      expect(result).toEqual({ username: 'testuser' })
+      expect(result).toEqual({ username: 'testuser', avatar_url: 'https://example.com/av.jpg' })
     })
 
-    it('returns null when no profile exists', async () => {
+    it('returns nulls when no profile exists', async () => {
       mockMaybeSingle.mockResolvedValue({ data: null, error: null })
 
       const result = await fetchProfile('unknown')
 
-      expect(result).toEqual({ username: null })
+      expect(result).toEqual({ username: null, avatar_url: null })
     })
 
     it('uses the correct query chain', async () => {
@@ -128,7 +128,7 @@ describe('ProfileService', () => {
 
       await fetchProfile('user-1')
 
-      expect(mockSelect).toHaveBeenCalledWith('username')
+      expect(mockSelect).toHaveBeenCalledWith('username, avatar_url')
       expect(mockEq).toHaveBeenCalledWith('id', 'user-1')
       expect(mockMaybeSingle).toHaveBeenCalled()
     })

@@ -65,7 +65,7 @@ describe('Chess Rules', () => {
       
       const moves = ['e4', 'e5', 'Qh5', 'Nc6', 'Bc4', 'Nf6', 'Qxf7']
       for (const move of moves) {
-        try { chess.move(move) } catch {}
+        try { chess.move(move) } catch { /* ignore invalid FEN — the sequence is for board setup, not testing move validity */ }
       }
       
       expect(chess.isGameOver()).toBe(true)

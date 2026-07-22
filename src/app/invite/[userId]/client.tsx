@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { sendFriendRequest, isFriend } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
@@ -43,9 +44,8 @@ export default function InvitePageClient() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+    AuthService.getSession().then(session => {
       if (!mountedRef.current) return
-      const session = result.data.session
       setPlayerId(session?.user?.id || null)
       setLoading(false)
     }).catch(() => {
@@ -127,7 +127,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-4">
               <div className="text-5xl mb-2">⚠️</div>
               <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
@@ -145,7 +145,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex items-center justify-center pb-20">
+          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
             <p className="text-gray-500 dark:text-gray-400">Loading...</p>
           </div>
         </ErrorBoundary>
@@ -158,7 +158,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-6">
               <div className="text-5xl mb-2">👥</div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
@@ -179,7 +179,7 @@ export default function InvitePageClient() {
     <>
       <InstallBanner />
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1119] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'loading' && (
             <p className="text-gray-500 dark:text-gray-400">Sending friend request...</p>

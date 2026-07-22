@@ -125,7 +125,7 @@ export default function PremiumPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center pb-20 bg-[#0a0e1a] px-4 py-6">
+      <div className="flex min-h-screen items-center justify-center pb-20 bg-[var(--color-page-bg)] px-4 py-6">
         <ChessLoader />
       </div>
     )
@@ -133,7 +133,7 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen flex-col pb-20 bg-[#0a0e1a] text-white">
+      <div className="flex min-h-screen flex-col pb-20 bg-[var(--color-page-bg)] text-white">
         <div className="flex-1 p-4">
           <div className="max-w-md mx-auto">
             {/* Header */}

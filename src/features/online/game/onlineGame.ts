@@ -1,5 +1,7 @@
 import { Chess } from 'chess.js'
 import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
+import { AuthService } from '@/lib/authService'
+import { RoomService } from '@/lib/roomService'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { GameStatus, MoveComparison } from '../../offline/game/localGame'
 import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
@@ -318,7 +320,7 @@ export class OnlineGame {
 
     // Re-register in room_players on reconnect (ensures auth.uid() matches for RLS)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session = await AuthService.getSession()
       DEBUG && console.log('[ONLINE][DIAG] joinRoom upsert:', {
         playerId,
         team,
@@ -329,19 +331,20 @@ export class OnlineGame {
         sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none',
       })
 
-      const { error } = await supabase.from('room_players').upsert({
-        room_id: room.id,
-        player_id: playerId,
-        team,
-        slot: 0,
-        status: 'ready'
-      }, { onConflict: 'room_id,player_id' })
-      if (error) {
-        console.warn('[ONLINE] Failed to register in room_players:', error.message, error.code)
+      try {
+        await RoomService.upsertRoomPlayer({
+          room_id: room.id,
+          player_id: playerId,
+          team,
+          slot: 0,
+        })
+        DEBUG && console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
+      } catch (upsertError) {
+        console.warn('[ONLINE] Failed to register in room_players:', upsertError)
 
         // Raw fetch fallback — isolates whether @supabase/ssr client is the culprit
         try {
-          const { data: { session: rawSession } } = await supabase.auth.getSession()
+          const rawSession = await AuthService.getSession()
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
           const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
           const token = rawSession?.access_token || ''
@@ -411,8 +414,6 @@ export class OnlineGame {
         } catch (e2) {
           console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
         }
-      } else {
-        DEBUG && console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
       }
     } catch (e) {
       console.warn('[ONLINE] Could not register in room_players:', e)

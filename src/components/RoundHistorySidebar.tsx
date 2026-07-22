@@ -89,7 +89,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
                     }`}
                   >
                     <div className="flex flex-col items-center min-w-[44px]">
-                      <span className="text-[10px] font-bold uppercase text-slate-400">Round</span>
+                      <span className="text-xs font-bold uppercase text-slate-400">Round</span>
                       <span className="text-base font-extrabold text-slate-100">{e.round}</span>
                     </div>
                     <div className="w-9 h-9 rounded-lg bg-slate-800/80 flex items-center justify-center text-lg">
@@ -103,7 +103,7 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
                       {e.evalDelta > 0 ? '+' : ''}{e.evalDelta.toFixed(2)}
                     </div>
                     {e.isCurrent && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
                         Current
                       </span>
                     )}

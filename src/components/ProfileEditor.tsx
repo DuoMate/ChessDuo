@@ -29,8 +29,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
           setUsername(data.username)
           setOriginalUsername(data.username)
         }
-      } catch {
-      } finally {
+      } catch { /* supabase query may fail — fallback to empty profile */ } finally {
         setLoading(false)
       }
     }
@@ -132,7 +131,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between min-h-[44px]">
         <label className="text-sm text-gray-400">Username</label>
         {!editing && (
           <button

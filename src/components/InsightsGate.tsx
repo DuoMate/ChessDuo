@@ -111,7 +111,7 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
           </div>
           <button
             onClick={onUpgradeClick}
-            className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-[11px] font-bold hover:bg-blue-500/10 transition-colors min-h-[32px] flex items-center"
+            className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-[11px] font-bold hover:bg-blue-500/10 transition-colors min-h-[44px] flex items-center"
           >
             VIEW PLANS
           </button>
@@ -133,7 +133,7 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
       </div>
       <button
         onClick={handleReveal}
-        className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition-colors min-h-[36px]"
+        className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition-colors min-h-[44px]"
       >
         Reveal Move Insights
       </button>

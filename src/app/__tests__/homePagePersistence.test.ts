@@ -28,7 +28,7 @@ describe('home page persistence', () => {
         const val = parseInt(saved, 10)
         if (TIME_OPTIONS.some(o => o.seconds === val)) return val
       }
-    } catch {}
+    } catch { /* SSR guard */ }
     return DEFAULT_TIME
   }
 
@@ -39,7 +39,7 @@ describe('home page persistence', () => {
         const val = parseInt(saved, 10)
         if (DIFFICULTY_LEVELS.some(d => d.level === val)) return val
       }
-    } catch {}
+    } catch { /* SSR guard */ }
     return DEFAULT_LEVEL
   }
 

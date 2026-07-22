@@ -205,7 +205,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0a0e1a]">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[var(--color-page-bg)]">
       <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-500 dark:text-blue-400">
           ♟️ ChessDuo

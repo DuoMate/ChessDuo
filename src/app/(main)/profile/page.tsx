@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { RoomService } from '@/lib/roomService'
+import { fetchProfile } from '@/lib/profileService'
+import { RealtimeService } from '@/lib/realtimeService'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { BackButton } from '@/components/BackButton'
@@ -47,36 +50,30 @@ function ProfileContent({ playerId }: { playerId: string }) {
   useEffect(() => {
     Promise.all([
       SubscriptionService.isPremium(),
-      supabase.from('profiles').select('username, avatar_url').eq('id', playerId).maybeSingle(),
+            fetchProfile(playerId),
     ]).then(([premium, profileResult]) => {
       if (!mountedRef.current) return
       setIsPremium(premium)
-      if (profileResult.data?.username) setUsername(profileResult.data.username)
-      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+      if (profileResult?.username) setUsername(profileResult.username)
+      if (profileResult?.avatar_url) setAvatarUrl(profileResult.avatar_url)
       setCheckingPremium(false)
     }).catch(() => {
       if (mountedRef.current) setCheckingPremium(false)
     })
 
-    const channel = supabase
-      .channel('profile-changes')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${playerId}` },
-        async () => {
-          const [premium, profileResult] = await Promise.all([
-            SubscriptionService.isPremium(),
-            supabase.from('profiles').select('username, avatar_url').eq('id', playerId).maybeSingle(),
-          ])
-          if (mountedRef.current) {
-            setIsPremium(premium)
-            if (profileResult.data?.username) setUsername(profileResult.data.username)
-            if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
-          }
-        }
-      )
-      .subscribe()
+    const channel = RealtimeService.subscribeToTable('profiles', 'UPDATE', `id=eq.${playerId}`, async () => {
+      const [premium, profileResult] = await Promise.all([
+        SubscriptionService.isPremium(),
+        fetchProfile(playerId),
+      ])
+      if (mountedRef.current) {
+        setIsPremium(premium)
+        if (profileResult?.username) setUsername(profileResult.username)
+        if (profileResult?.avatar_url) setAvatarUrl(profileResult.avatar_url)
+      }
+    })
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { RealtimeService.cleanupChannel(channel) }
   }, [playerId])
 
   useEffect(() => {
@@ -99,7 +96,7 @@ function ProfileContent({ playerId }: { playerId: string }) {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0a0e1a] text-white p-4 pb-20">
+      <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>

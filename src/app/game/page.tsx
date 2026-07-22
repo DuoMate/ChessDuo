@@ -6,10 +6,11 @@ import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
 import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 
 const GameComponent = dynamic(() => import('@/components/Game').then(mod => ({ default: mod.Game })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
       <Spinner size="md" label="Loading game..." />
     </div>
   ),
@@ -57,7 +58,7 @@ function GameContent() {
       return
     }
     validatedRef.current = true
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    AuthService.getSession().then(session => {
       if (!session?.user || session.user.id !== playerId) {
         router.replace(buildGameRedirect())
         return
@@ -67,17 +68,17 @@ function GameContent() {
       router.replace(buildGameRedirect())
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const unsubscribe = AuthService.onAuthChange((_event, session) => {
       if (!session) {
         window.location.href = '/'
       }
     })
-    return () => { subscription?.unsubscribe() }
+    return () => { unsubscribe() }
   }, [mode, playerId, roomId, roomCode, team, timeLimit, challengeId, fourplayer, router])
 
   if (!validated) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
         <Spinner size="md" label="Verifying session..." />
       </div>
     )
@@ -104,7 +105,7 @@ function GameContent() {
 export default function GamePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
         <Spinner size="md" label="Loading..." />
       </div>
     }>

@@ -116,7 +116,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white flex flex-col items-center justify-center p-4 pb-20">
+    <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
       <div className="w-full max-w-md mb-4 flex justify-start">
         <BackButton label="Back" onClick={() => {
           localStorage.removeItem('chessduo_pending_offline_game')
@@ -129,7 +129,7 @@ export default function WelcomePage() {
         initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-        className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[#0a0e1a] p-6 shadow-2xl"
+        className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[var(--color-page-bg)] p-6 shadow-2xl"
       >
         {/* Header */}
         <div className="mb-5 text-center">
@@ -152,10 +152,10 @@ export default function WelcomePage() {
           <div className="relative mx-auto aspect-square w-full max-w-[260px] onboarding-board">
             <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
             <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-              <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">You</span>
+              <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">You</span>
             </div>
             <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-              <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
+              <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-center gap-6">
@@ -182,7 +182,7 @@ export default function WelcomePage() {
               <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
                 {step.icon}
                 <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
-                <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-400">{step.desc}</span>
+                <span className="mt-0.5 text-center text-xs leading-tight text-slate-400">{step.desc}</span>
               </div>
               {index < steps.length - 1 && <Chevron />}
             </div>

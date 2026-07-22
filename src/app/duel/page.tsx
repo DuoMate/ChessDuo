@@ -7,10 +7,11 @@ import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 
 const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {
   loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
       <Spinner size="md" label="Loading duel..." />
     </div>
   ),
@@ -29,8 +30,7 @@ function DuelContent() {
   const time = searchParams.get('time') ? parseInt(searchParams.get('time')!, 10) : DEFAULT_TEAM_TIMER_SECONDS
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const session = data.session
+    AuthService.getSession().then(session => {
       if (session?.user && playerId && session.user.id === playerId) {
         setIsValidSession(true)
       }
@@ -42,7 +42,7 @@ function DuelContent() {
 
   if (!sessionChecked) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
         <Spinner size="md" label="Verifying session..." />
       </div>
     )
@@ -51,7 +51,7 @@ function DuelContent() {
   if (!roomId || !roomCode || !playerId || !team) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">⚠️</div>
             <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
@@ -68,7 +68,7 @@ function DuelContent() {
   if (!isValidSession) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">🔒</div>
             <h1 className="text-xl font-bold text-red-400">Session Expired</h1>
@@ -100,7 +100,7 @@ export default function DuelPage() {
   return (
     <ErrorBoundary>
       <Suspense fallback={
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0e1a] text-gray-900 dark:text-white flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
           <Spinner size="md" label="Loading..." />
         </div>
       }>

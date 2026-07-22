@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
+import { RoomService } from '@/lib/roomService'
 import { getFriendsList, FriendWithProfile } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
@@ -78,7 +80,7 @@ function getInitialTime(): number {
       const val = parseInt(saved, 10)
       if (TIME_OPTIONS.some(o => o.seconds === val)) return val
     }
-  } catch {}
+  } catch { /* localStorage may throw in SSR */ }
   return DEFAULT_TEAM_TIMER_SECONDS
 }
 
@@ -87,9 +89,9 @@ function getInitialLevel(): number {
     const saved = localStorage.getItem(SELECTED_LEVEL_KEY)
     if (saved) {
       const val = parseInt(saved, 10)
-      if (DIFFICULTY_LEVELS.some(d => d.level === val)) return val
+      if (DIFFICULTY_LEVELS.some(o => o.seconds === val)) return val
     }
-  } catch {}
+  } catch { /* localStorage may throw in SSR */ }
   return 3
 }
 
@@ -99,7 +101,7 @@ function getInitialColor(): PlayerColor {
     if (saved === 'white' || saved === 'black' || saved === 'random') {
       return saved
     }
-  } catch {}
+  } catch { /* localStorage may throw in SSR */ }
   return DEFAULT_PLAYER_COLOR
 }
 
@@ -144,9 +146,8 @@ export default function SetupPage() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then((result: { data: { session: any } }) => {
+    AuthService.getSession().then(session => {
       if (!mountedRef.current) return
-      const session = result.data.session
       if (session?.user) {
         setPlayerId(session.user.id)
         fetchUsername(session.user.id).then(name => {
@@ -163,11 +164,12 @@ export default function SetupPage() {
       }
       setSessionChecked(true)
     }).catch(() => {
+      /* session fetch may fail during initial load — checked state allows UI to render */
       if (!mountedRef.current) return
       setSessionChecked(true)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+    const unsubscribe = AuthService.onAuthChange((_event: string, session: any) => {
       if (!mountedRef.current) return
       if (session?.user) {
         setPlayerId(session.user.id)
@@ -203,19 +205,19 @@ export default function SetupPage() {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => unsubscribe()
   }, [])
 
   useEffect(() => {
-    try { localStorage.setItem(SELECTED_TIME_KEY, String(selectedTime)) } catch {}
+    try { localStorage.setItem(SELECTED_TIME_KEY, String(selectedTime)) } catch { /* localStorage may throw if quota exceeded */ }
   }, [selectedTime])
 
   useEffect(() => {
-    try { localStorage.setItem(SELECTED_LEVEL_KEY, String(selectedLevel)) } catch {}
+    try { localStorage.setItem(SELECTED_LEVEL_KEY, String(selectedLevel)) } catch { /* localStorage may throw if quota exceeded */ }
   }, [selectedLevel])
 
   useEffect(() => {
-    try { localStorage.setItem(SELECTED_COLOR_KEY, selectedColor) } catch {}
+    try { localStorage.setItem(SELECTED_COLOR_KEY, selectedColor) } catch { /* localStorage may throw if quota exceeded */ }
   }, [selectedColor])
 
   // Auto-start offline game after returning from Welcome page
@@ -526,13 +528,12 @@ export default function SetupPage() {
         return
       }
 
-      await supabase.from('room_players').upsert({
+      await RoomService.upsertRoomPlayer({
         room_id: room.id,
         player_id: pid,
         team,
         slot: 0,
-        status: 'ready'
-      }, { onConflict: 'room_id,player_id' })
+      })
 
       setJoinLoading(false)
       handleRoomJoined(room, team, pid)
@@ -673,7 +674,7 @@ export default function SetupPage() {
 
   if (!sessionChecked) return (
     <ErrorBoundary>
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-page-bg)]">
         <div className="flex flex-col items-center gap-3">
           <Spinner size="md" />
           <p className="text-sm text-slate-400">Loading...</p>
@@ -726,7 +727,7 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -791,7 +792,7 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white flex flex-col">
+        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -853,7 +854,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex min-h-screen flex-col bg-white text-slate-900 dark:bg-[#0a0e1a] dark:text-white md:pl-[220px] lg:pl-[240px]">
+      <div className="relative flex min-h-screen flex-col bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
         {isMobile ? (
@@ -938,10 +939,10 @@ if (!gameMode) {
                   className="overflow-hidden mb-2"
                 >
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
-                  <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[#0a0e1a] p-5 shadow-2xl">
+                  <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[var(--color-page-bg)] p-5 shadow-2xl">
                     {/* Bot Difficulty */}
                     <section className="mb-4">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
                       <BotDifficultySelector
                         selectedLevel={selectedLevel}
                         onSelect={setSelectedLevel}
@@ -959,7 +960,7 @@ if (!gameMode) {
 
                     {/* Choose Your Color */}
                     <section className="mb-0">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">
                         Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
                       </p>
                       <ColorPicker value={selectedColor} onChange={setSelectedColor} />
@@ -1126,7 +1127,7 @@ if (!gameMode) {
 }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-page-bg)]">
       <Spinner size="lg" />
     </div>
   )
@@ -1137,7 +1138,7 @@ if (!gameMode) {
 // ============================================
 function HeaderBar() {
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[#0a0e1a]/90 dark:border-0 backdrop-blur-xl">
+    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[var(--color-page-bg)]/90 dark:border-0 backdrop-blur-xl">
       <ChessDuoLogo size="md" />
     </div>
   )
@@ -1290,7 +1291,7 @@ function BotDifficultySelector({
                 : 'text-slate-700 dark:text-slate-300'}
               aria-hidden="true"
             />
-            <span className="text-[9px] font-semibold text-slate-700 dark:text-slate-200">
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
               {label}
             </span>
           </button>

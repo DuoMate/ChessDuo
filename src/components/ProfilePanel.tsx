@@ -7,6 +7,7 @@ import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
 import { supabase } from '@/lib/supabase'
+import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
 import { SubscriptionService } from '@/features/billing'
@@ -52,34 +53,22 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
       setCheckingPremium(false)
     })
 
-    const channel = supabase
-      .channel('profile-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${playerId}`,
-        },
-        async () => {
-          const [premium, profileResult] = await Promise.all([
-            SubscriptionService.isPremium(),
-            supabase
-              .from('profiles')
-              .select('username, avatar_url')
-              .eq('id', playerId)
-              .maybeSingle(),
-          ])
-          setIsPremium(premium)
-          if (profileResult.data?.username) setUsername(profileResult.data.username)
-          if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
-        }
-      )
-      .subscribe()
+    const channel = RealtimeService.subscribeToTable('profiles', 'UPDATE', `id=eq.${playerId}`, async () => {
+      const [premium, profileResult] = await Promise.all([
+        SubscriptionService.isPremium(),
+        supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', playerId)
+          .maybeSingle(),
+      ])
+      setIsPremium(premium)
+      if (profileResult.data?.username) setUsername(profileResult.data.username)
+      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      RealtimeService.cleanupChannel(channel)
     }
   }, [playerId])
 
@@ -95,7 +84,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0e1a] text-white">
+    <div className="flex flex-col h-full bg-[var(--color-page-bg)] text-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">

@@ -19,6 +19,8 @@
   --color-primary-strong: #d97706;
   --color-secondary: #6366f1;
   --color-success: #10b981;
+  --color-page-bg-alt: #eef2ff;
+  --color-surface-alt: #f4f6fb;
   --color-shadow: rgba(15, 23, 42, 0.12);
 }
 
@@ -38,6 +40,8 @@
   --color-primary: #fbbf24;
   --color-primary-strong: #f59e0b;
   --color-secondary: #3b82f6;
+  --color-page-bg-alt: #0f1119;
+  --color-surface-alt: #0f1525;
   --color-success: #22c55e;
   --color-shadow: rgba(2, 6, 23, 0.45);
 }

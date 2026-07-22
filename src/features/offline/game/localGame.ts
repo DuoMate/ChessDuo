@@ -319,7 +319,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player1' as const, winningMove: player1Move }
         }
-      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (1):', e) }
+      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (1):', e) }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -339,7 +339,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return { winnerId: 'player2' as const, winningMove: player2Move }
         }
-      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
+      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })
@@ -505,7 +505,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (3):', e) }
+      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (3):', e) }
       chess.load(turnStartFen)
       try {
         chess.move(player2Move)
@@ -525,7 +525,7 @@ export class LocalGame {
           if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
           return
         }
-      } catch (e) { console.error('[LocalGame] Checkmate evaluation failed (4):', e) }
+      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (4):', e) }
       chess.load(turnStartFen)
 
       const verboseMoves = chess.moves({ verbose: true })

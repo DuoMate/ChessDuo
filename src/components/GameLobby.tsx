@@ -83,12 +83,12 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
   const phase = isLoading ? 'joining' : 'waiting'
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0e1a] p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-page-bg)] p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/[0.06] bg-[#0f1525] p-6 shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
+        className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/[0.06] bg-[var(--color-surface-alt)] p-6 shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
       >
         <div className="flex flex-col items-center">
 
@@ -166,7 +166,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
               </p>
 
               <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-[#151c2e] p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between min-h-[44px]">
                   <p className="select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
                     {roomCode}
                   </p>

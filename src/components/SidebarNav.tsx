@@ -38,7 +38,7 @@ export function SidebarNav({ unreadMessages }: SidebarNavProps) {
   return (
     <nav
       aria-label="Primary navigation"
-      className="hidden md:flex fixed left-0 top-0 bottom-0 z-30 w-20 lg:w-22 flex-col items-center justify-center border-r border-slate-200/60 bg-white/85 backdrop-blur-xl dark:border-slate-700/50 dark:bg-[#0a0e1a]/90"
+      className="hidden md:flex fixed left-0 top-0 bottom-0 z-30 w-20 lg:w-22 flex-col items-center justify-center border-r border-slate-200/60 bg-white/85 backdrop-blur-xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]/90"
     >
       <div className="flex flex-col items-center gap-1.5 w-full px-2">
         {tabs.map(({ label, icon: Icon, path }) => {
@@ -64,7 +64,7 @@ export function SidebarNav({ unreadMessages }: SidebarNavProps) {
                   <Icon size={22} strokeWidth={active(path) ? 2.5 : 2} />
                 )}
                 {badge > 0 && !loading && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full px-1">
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center bg-blue-500 text-white text-xs font-bold rounded-full px-1">
                     {badge > 99 ? '99+' : badge}
                   </span>
                 )}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { AuthService } from '@/lib/authService'
 import { upsertProfile, fetchProfile } from '@/lib/profileService'
 
 interface NeedUsername {
@@ -38,7 +39,7 @@ export function useAuthSession(): UseAuthSessionResult {
   useEffect(() => {
     let authStateReceived = false
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    AuthService.getSession().then(session => {
       if (!mountedRef.current) return
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
@@ -49,7 +50,7 @@ export function useAuthSession(): UseAuthSessionResult {
       if (mountedRef.current) setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+    const unsubscribe = AuthService.onAuthChange((_event: string, session: any) => {
       if (!mountedRef.current) return
       if (session?.user) {
         fetchAndCompleteAuth(session.user.id, session.user.email || '', session.user.user_metadata?.full_name || session.user.user_metadata?.name, session.user.user_metadata?.avatar_url || null)
@@ -65,7 +66,7 @@ export function useAuthSession(): UseAuthSessionResult {
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => unsubscribe()
   }, [])
 
   const fetchAndCompleteAuth = useCallback(async (userId: string, email: string, googleDisplayName?: string, googleAvatarUrl?: string | null) => {
