@@ -1065,6 +1065,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (comp) {
         DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) human→opponent detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
         setAccuracyComparison(comp)
+        setAccuracyHistory(prev => {
+          const last = prev[prev.length - 1]
+          if (last && last.turnStartFen === comp.turnStartFen) return prev
+          return [...prev, comp]
+        })
       }
     }
     prevTurnRef.current = currentTurn
