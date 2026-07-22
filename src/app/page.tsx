@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { RoomService } from '@/lib/roomService'
 import { getFriendsList, FriendWithProfile } from '@/lib/friends'
+import { storePendingAction, consumePendingAction, clearPendingAction, type PendingAction } from '@/lib/pendingAction'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { HomeBottomNav } from '@/components/HomeBottomNav'
@@ -15,6 +16,7 @@ import { sendMessage } from '@/lib/messages'
 import { createOnlineRoom } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
+import { BackButton } from '@/components/BackButton'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Swords, ChevronRight, Play, ChessPawn, ChessKnight, ChessBishop, ChessRook, Crown } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
@@ -89,7 +91,7 @@ function getInitialLevel(): number {
     const saved = localStorage.getItem(SELECTED_LEVEL_KEY)
     if (saved) {
       const val = parseInt(saved, 10)
-      if (DIFFICULTY_LEVELS.some(o => o.seconds === val)) return val
+      if (DIFFICULTY_LEVELS.some(o => o.level === val)) return val
     }
   } catch { /* localStorage may throw in SSR */ }
   return 3
@@ -243,12 +245,40 @@ export default function SetupPage() {
   // This useEffect is intentionally removed to eliminate the 3-step
   // Home → Welcome → Home → Game navigation flash (Bug 10).
 
+  // Recover pending action after mount — handles browser refresh during auth,
+  // multi-tab sign-in, and deep-link → auth → return-to-home flows.
+  const pendingActionRecoveredRef = useRef(false)
   useEffect(() => {
-    if (gameMode !== null) {
-      window.history.pushState({ gameMode }, '', window.location.href)
+    if (!sessionChecked || !playerId) return
+    if (showAuthOverlay || needsUsername) return
+    if (pendingActionRecoveredRef.current) return
+    pendingActionRecoveredRef.current = true
+    const pending = consumePendingAction()
+    if (pending && mountedRef.current) {
+      executePendingAction(pending, playerId)
+    }
+  }, [sessionChecked, playerId, !!needsUsername, showAuthOverlay])
+
+  useEffect(() => {
+    if (gameMode !== null || showAuthOverlay) {
+      window.history.pushState({ gameMode, showAuthOverlay }, '', window.location.href)
     }
 
     const handlePopState = () => {
+      if (showAuthOverlay) {
+        setShowAuthOverlay(false)
+        redirectUrlRef.current = null
+        clearPendingAction()
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href)
+          if (url.searchParams.has('redirect') || url.searchParams.has('signup')) {
+            url.searchParams.delete('redirect')
+            url.searchParams.delete('signup')
+            window.history.replaceState(null, '', url.pathname)
+          }
+        }
+        return
+      }
       if (gameMode !== null) {
         setGameMode(null)
         setJoinCode('')
@@ -256,13 +286,14 @@ export default function SetupPage() {
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [gameMode])
+  }, [gameMode, showAuthOverlay])
 
   useCapacitorBackButton(
     () => {
       if (showAuthOverlay) {
         setShowAuthOverlay(false)
         redirectUrlRef.current = null
+        clearPendingAction()
         return true
       }
       if (gameMode !== null) {
@@ -393,10 +424,163 @@ export default function SetupPage() {
     return ''
   }
 
+  const executePendingAction = async (action: PendingAction, userId: string) => {
+    const pid = userId
+    switch (action.type) {
+      case 'start_offline': {
+        const { level, time, color } = action
+        if (!hasSeenOfflineDisclaimer) {
+          localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level, time, color }))
+          router.push('/welcome?mode=offline')
+        } else {
+          router.push(`/game?level=${level}&time=${time}&color=${color}`)
+        }
+        return
+      }
+      case 'start_online': {
+        const { time, color } = action
+        if (showOnlineDisclaimer) {
+          localStorage.setItem('chessduo_pending_online_game', JSON.stringify({ time, playerId: pid, color }))
+          router.push('/welcome?mode=online')
+          return
+        }
+        setCreatingTime(time)
+        setJoinError(null)
+        try {
+          const result = await createOnlineRoom({ playerId: pid, timeSeconds: time, hostColor: color })
+          router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color}`)
+        } catch (err) {
+          setCreatingTime(null)
+          setJoinError(err instanceof Error ? err.message : 'Failed to create room')
+        }
+        return
+      }
+      case 'start_four_player': {
+        const { time } = action
+        setCreatingTime(time)
+        setJoinError(null)
+        try {
+          const result = await createFourPlayerRoom({ playerId: pid, timeSeconds: time })
+          router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`)
+        } catch (err) {
+          setCreatingTime(null)
+          setJoinError(err instanceof Error ? err.message : 'Failed to create room')
+        }
+        return
+      }
+      case 'start_duel': {
+        const { friendId, friendName, time } = action
+        setDuelFriend({ id: friendId, name: friendName })
+        setCreatingTime(time)
+        setJoinError(null)
+        try {
+          const { roomId, roomCode, error } = await createChallenge(pid, 'online', time, friendId)
+          if (error) throw new Error(error)
+          if (roomId && roomCode) {
+            await sendMessage(pid, friendId, JSON.stringify({ type: 'challenge', roomId, roomCode, time }), 'challenge')
+            router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${time}`)
+          } else {
+            throw new Error('Failed to create challenge')
+          }
+        } catch (err) {
+          setCreatingTime(null)
+          setJoinError(err instanceof Error ? err.message : 'Failed to create room')
+        }
+        return
+      }
+      case 'join_by_code': {
+        const code = action.code.trim().toUpperCase()
+        if (!code) return
+        setJoinCode(code)
+        setJoinLoading(true)
+        setJoinError(null)
+        try {
+          let room: Room | null = null
+          const { data: byCode } = await supabase
+            .from('rooms')
+            .select('*')
+            .eq('code', code)
+            .maybeSingle()
+          if (byCode) {
+            room = byCode
+          } else {
+            const { data: byId } = await supabase
+              .from('rooms')
+              .select('*')
+              .eq('id', code)
+              .maybeSingle()
+            if (byId) room = byId
+          }
+
+          if (!room) { setJoinError('Room not found — check the code'); setJoinLoading(false); return }
+          if (room.status !== 'waiting') { setJoinError('Room is no longer available'); setJoinLoading(false); return }
+
+          if (room.mode === 'fourplayer') {
+            setJoinLoading(false)
+            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
+            return
+          }
+
+          const { data: existingPlayers } = await supabase
+            .from('room_players')
+            .select('*')
+            .eq('room_id', room.id)
+
+          if (existingPlayers?.some(p => p.player_id === pid)) {
+            setJoinError('You are already in this room from another session')
+            setJoinLoading(false)
+            return
+          }
+
+          const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
+          const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
+          const hostTeam = (existingPlayers || [])[0]?.team as 'WHITE' | 'BLACK' | undefined
+          const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+
+          let team: 'WHITE' | 'BLACK' = preferredTeam
+          if (whiteSlots.length < 2 && blackSlots.length < 2) {
+            team = preferredTeam
+          } else if (whiteSlots.length < 2) {
+            team = 'WHITE'
+          } else if (blackSlots.length < 2) {
+            team = 'BLACK'
+          } else {
+            setJoinError('Room is full')
+            setJoinLoading(false)
+            return
+          }
+
+          await RoomService.upsertRoomPlayer({ room_id: room.id, player_id: pid, team, slot: 0 })
+          setJoinLoading(false)
+          setJoinCode('')
+          const roomTime = room.time_seconds || DEFAULT_TEAM_TIMER_SECONDS
+          router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${pid}&time=${roomTime}`)
+        } catch {
+          setJoinError('Something went wrong — try again')
+          setJoinLoading(false)
+        }
+        return
+      }
+      case 'navigate': {
+        if (action.route.startsWith('/')) {
+          router.replace(action.route)
+        } else {
+          router.push('/')
+        }
+        return
+      }
+    }
+  }
+
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
     setShowAuthOverlay(false)
+    const pending = consumePendingAction()
+    if (pending) {
+      executePendingAction(pending, userId)
+      return
+    }
     if (redirectUrlRef.current) {
       const url = redirectUrlRef.current
       redirectUrlRef.current = null
@@ -417,6 +601,11 @@ export default function SetupPage() {
     setNeedsUsername(null)
     setPlayerId(userId)
     setUsername(name)
+    const pending = consumePendingAction()
+    if (pending) {
+      executePendingAction(pending, userId)
+      return
+    }
     if (redirectUrlRef.current) {
       const url = redirectUrlRef.current
       redirectUrlRef.current = null
@@ -450,7 +639,7 @@ export default function SetupPage() {
   }
 
   const handleJoinByCode = async () => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) { storePendingAction({ type: 'join_by_code', code: joinCode.trim().toUpperCase() }); setShowAuthOverlay(true); return }
     const code = joinCode.trim().toUpperCase()
     if (!code) return
     setJoinLoading(true)
@@ -564,7 +753,7 @@ export default function SetupPage() {
   }
 
   const handleStartOffline = () => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) { storePendingAction({ type: 'start_offline', level: selectedLevel, time: selectedTime || DEFAULT_TEAM_TIMER_SECONDS, color: selectedColor }); setShowAuthOverlay(true); return }
     if (!hasSeenOfflineDisclaimer) {
       const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
       localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level: selectedLevel, time, color: selectedColor }))
@@ -577,6 +766,7 @@ export default function SetupPage() {
 
   const handleTwoPlayerClick = () => {
     if (!playerId) {
+      storePendingAction({ type: 'start_online', time: selectedTime || DEFAULT_TEAM_TIMER_SECONDS, color: selectedColor })
       setShowAuthOverlay(true)
       return
     }
@@ -590,7 +780,7 @@ export default function SetupPage() {
   }
 
   const handleStartFourPlayer = async (timeSeconds: number) => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) { storePendingAction({ type: 'start_four_player', time: timeSeconds }); setShowAuthOverlay(true); return }
     setCreatingTime(timeSeconds)
     setJoinError(null)
     try {
@@ -604,7 +794,7 @@ export default function SetupPage() {
   }
 
   const handleJoinFourPlayerByCode = async () => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) { storePendingAction({ type: 'join_by_code', code: joinCode.trim().toUpperCase() }); setShowAuthOverlay(true); return }
     const code = joinCode.trim().toUpperCase()
     if (!code) return
     setJoinLoading(true)
@@ -625,7 +815,13 @@ export default function SetupPage() {
   }
 
   const handleStartDuel = async (timeSeconds: number) => {
-    if (!playerId) { setShowAuthOverlay(true); return }
+    if (!playerId) {
+      if (duelFriend) {
+        storePendingAction({ type: 'start_duel', friendId: duelFriend.id, friendName: duelFriend.name, time: timeSeconds })
+      }
+      setShowAuthOverlay(true)
+      return
+    }
     if (!duelFriend) { setJoinError('Please select a friend to challenge'); return }
     setCreatingTime(timeSeconds)
     setJoinError(null)
@@ -695,6 +891,7 @@ export default function SetupPage() {
         onClose={() => {
           setShowAuthOverlay(false)
           redirectUrlRef.current = null
+          clearPendingAction()
           if (typeof window !== 'undefined') {
             const url = new URL(window.location.href)
             const changed = url.searchParams.has('redirect') || url.searchParams.has('signup')
@@ -710,13 +907,20 @@ export default function SetupPage() {
   )
 
   const chooseUsernameScreen = needsUsername && (
-    <ChooseUsername
-      userId={needsUsername.userId}
-      suggestedName={needsUsername.suggestedName}
-      avatarUrl={needsUsername.avatarUrl}
-      displayName={needsUsername.displayName}
-      onAuthComplete={handleUsernameChosen}
-    />
+    <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+      <div className="max-w-md mx-auto">
+        <div className="mb-6">
+          <BackButton label="Back" onClick={() => { setNeedsUsername(null); clearPendingAction(); router.push('/') }} />
+        </div>
+      <ChooseUsername
+        userId={needsUsername.userId}
+        suggestedName={needsUsername.suggestedName}
+        avatarUrl={needsUsername.avatarUrl}
+        displayName={needsUsername.displayName}
+        onAuthComplete={handleUsernameChosen}
+      />
+      </div>
+    </div>
   )
 
   if (chooseUsernameScreen) return <ErrorBoundary>{chooseUsernameScreen}</ErrorBoundary>
