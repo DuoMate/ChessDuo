@@ -586,8 +586,6 @@ BEGIN
     WHERE room_id IN (SELECT id FROM rooms WHERE created_by = my_id);
 
   DELETE FROM rooms WHERE created_by = my_id;
-
-  DELETE FROM auth.users WHERE id = my_id::uuid;
 END;
 $$;
 

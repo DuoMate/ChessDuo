@@ -34,9 +34,17 @@ function DeleteAccountContent() {
         setStep('error')
         return
       }
-      const { error: rpcError } = await supabase.rpc('delete_my_account')
-      if (rpcError) {
-        setErrorMsg(rpcError.message || 'Something went wrong')
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({}),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        setErrorMsg(result.error || 'Something went wrong')
         setStep('error')
         return
       }

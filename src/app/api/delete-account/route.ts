@@ -8,6 +8,7 @@ export async function POST(request: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const authHeader = request.headers.get('authorization')
 
     console.log(`[${route}] ${requestId} - Starting, auth header: ${authHeader ? 'present' : 'missing'}`)
@@ -42,13 +43,38 @@ export async function POST(request: Request) {
 
     console.log(`[${route}] ${requestId} - User: ${user.id}`)
 
+    if (!supabaseServiceRoleKey) {
+      console.error(`[${route}] ${requestId} - SUPABASE_SERVICE_ROLE_KEY is not configured`)
+      return NextResponse.json(
+        { error: 'Service role key is not configured' },
+        { status: 500 },
+      )
+    }
+
+    let adminSupabase: any
+    const { createClient } = await import('@supabase/supabase-js')
+    adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
     const { error: rpcError } = await supabase.rpc('delete_my_account')
     if (rpcError) {
       console.error(`[${route}] ${requestId} - RPC error: ${rpcError.message}`)
       return NextResponse.json({ error: 'Failed to delete: ' + rpcError.message }, { status: 500 })
     }
 
-    console.log(`[${route}] ${requestId} - Account deleted via RPC`)
+    console.log(`[${route}] ${requestId} - Public data deleted via RPC`)
+
+    const { error: deleteUserError } = await adminSupabase.auth.admin.deleteUser(user.id)
+    if (deleteUserError) {
+      console.error(`[${route}] ${requestId} - Admin deleteUser error: ${deleteUserError.message}`)
+      return NextResponse.json(
+        { error: 'Failed to delete auth user: ' + deleteUserError.message },
+        { status: 500 },
+      )
+    }
+
+    console.log(`[${route}] ${requestId} - Auth user deleted via Admin API`)
 
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) {
