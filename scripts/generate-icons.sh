@@ -77,7 +77,6 @@ for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     # Foreground: center the icon at 72% of canvas size with transparency around it.
     # This gives Android's launcher room to mask the icon to squircle/circle shape
     # without clipping the chess piece.
-    local foreground_size
     foreground_size=$(awk "BEGIN { printf \"%.0f\", $size * 0.72 }")
     "$CONVERTER" "$SOURCE" \
         -resize "${foreground_size}x${foreground_size}" \
