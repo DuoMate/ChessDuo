@@ -36,13 +36,19 @@ fi
 
 echo "[assetlinks] Extracting SHA256 fingerprint from $KEYSTORE..."
 
+if ! command -v keytool &>/dev/null; then
+  echo "[WARN] keytool not found — skipping assetlinks.json generation"
+  exit 0
+fi
+
 SHA256=$(keytool -list -v -keystore "$KEYSTORE" \
   -storepass "$PASS" \
-  -alias "$ALIAS" 2>/dev/null \
-  | awk -F': ' '/SHA256:/ {gsub(/ /,""); print tolower($2)}')
+  -alias "$ALIAS" 2>&1 \
+  | awk '/SHA256:/ {gsub(/^[[:space:]]*SHA256:[[:space:]]*/,""); gsub(/[[:space:]]/,""); print $0}')
 
 if [ -z "$SHA256" ]; then
   echo "[ERR] Could not extract SHA256 fingerprint from keystore"
+  echo "[ERR] Verify keystore path, password, and alias are correct"
   exit 1
 fi
 
