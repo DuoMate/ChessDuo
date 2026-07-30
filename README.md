@@ -19,7 +19,6 @@ https://chessduo.chessdoubles27.workers.dev/
 |----------|-------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://kyojsrllyczlpjvqnlpa.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `NEXT_PUBLIC_STOCKFISH_SERVER_URL` | `https://chessduo-bllo.onrender.com` |
 | `PORT` | `3000` |
 
 #### BE (Backend) - Add in Render Dashboard

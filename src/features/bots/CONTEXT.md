@@ -10,7 +10,6 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 | `botConfig.ts` | Skill level config (1-6), ELO mapping, env-var overrides |
 | `difficulty.ts` | Per-level params: depth, topMoves, noise, weights, blunder/weird chance |
 | `openings.ts` | Opening book for early-game variety |
-| `serverMoveEvaluator.ts` | HTTP client to remote Stockfish evaluation server (legacy) |
 
 ## Sub-modules
 | Module | Context |

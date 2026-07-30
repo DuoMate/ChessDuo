@@ -45,7 +45,6 @@ Uses Docker to build Stockfish from `/server` directory via Render Blueprint.
 **Frontend (Cloudflare secrets):**
 - `NEXT_PUBLIC_SUPABASE_URL` → Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Supabase anon key
-- `NEXT_PUBLIC_STOCKFISH_SERVER_URL` → `https://chessduo-bllo.onrender.com`
 
 **Backend (Render):**
 - `PORT` → `3001`

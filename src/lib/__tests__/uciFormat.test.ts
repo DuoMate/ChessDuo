@@ -154,7 +154,7 @@ describe('ChessBot UCI Format Tests', () => {
   })
 })
 
-describe('ServerMoveEvaluator UCI Format', () => {
+describe('UCI Format (no dashes)', () => {
   test('UCI format without dash is correct for Stockfish', () => {
     expect('e2e4'.replace(/-/g, '')).toBe('e2e4')
     expect('e2-e4'.replace(/-/g, '')).toBe('e2e4')

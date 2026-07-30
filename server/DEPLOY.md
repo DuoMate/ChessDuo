@@ -115,12 +115,7 @@ git push origin main
 
 ## Update Frontend
 
-Add to your frontend `.env.local`:
-```bash
-NEXT_PUBLIC_STOCKFISH_SERVER_URL=https://chessduo-stockfish.onrender.com
-```
-
-Or in Vercel/Netlify environment variables.
+Evaluation now runs locally via Stockfish WASM (no remote server needed).
 
 ---
 
