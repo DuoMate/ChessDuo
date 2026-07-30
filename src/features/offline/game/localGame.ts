@@ -5,8 +5,6 @@ import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE, PlayerColor, ResolvedColor, resolvePlayerColor } from '../../shared/gameConstants'
 import { DEBUG } from '../../../lib/debug'
 
-const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
-
 export enum GameStatus {
   WAITING = 'WAITING',
   READY = 'READY',
@@ -68,12 +66,8 @@ export class LocalGame {
     this._playerColor = resolvePlayerColor(playerColor)
     this.gameState = new GameState(timeLimitSeconds)
 
-    this.evaluator = createEvaluator(SERVER_URL)
-    if (this.evaluator.isUsingStockfish()) {
-      DEBUG && console.log(`[LocalGame] Using Stockfish evaluator`)
-    } else {
-      console.warn('[LocalGame] No evaluator configured - evaluations will fail')
-    }
+    this.evaluator = createEvaluator()
+    DEBUG && console.log(`[LocalGame] Using browser Stockfish evaluator`)
 
     this._status = GameStatus.WAITING
     this.stats = {
@@ -342,12 +336,7 @@ export class LocalGame {
       } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
       chess.load(turnStartFen)
 
-      const verboseMoves = chess.moves({ verbose: true })
-
-      const allLegalUci = verboseMoves.map(m => m.from + m.to + (m.promotion || ''))
-      const topMovesUci = allLegalUci
-
-      const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+      const evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
      
      const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
      
@@ -528,12 +517,7 @@ export class LocalGame {
       } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (4):', e) }
       chess.load(turnStartFen)
 
-      const verboseMoves = chess.moves({ verbose: true })
-
-      const allLegalUci = verboseMoves.map(m => m.from + m.to + (m.promotion || ''))
-      const topMovesUci = allLegalUci
-
-      const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+      const evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
      
      const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
      

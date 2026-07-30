@@ -23,7 +23,7 @@ function workerReady(worker: Worker): Promise<void> {
     }
 
     worker.postMessage('uci')
-    worker.postMessage('setoption name MultiPV value 6')
+    worker.postMessage('setoption name MultiPV value 2')
     worker.postMessage('isready')
   })
 }
@@ -32,22 +32,36 @@ export class BrowserMoveEvaluator {
   private worker: Worker | null = null
   private _initError: string | null = null
   private _ready = false
-  constructor() {
-    try {
-      this.worker = new Worker(WORKER_PATH)
-      this.worker.onmessage = () => {}
+  private _initPromise: Promise<void> | null = null
 
-      workerReady(this.worker).then(() => {
+  constructor() {}
+
+  private ensureWorker(): void {
+    if (this.worker) return
+    if (this._initError) return
+
+    this._initPromise = (async () => {
+      try {
+        this.worker = new Worker(WORKER_PATH)
+        this.worker.onmessage = () => {}
+
+        await workerReady(this.worker)
         this._ready = true
         DEBUG && console.log('[BROWSER-EVAL] Stockfish worker initialized')
-      }).catch((err) => {
-        this._initError = String(err?.message || err)
+      } catch (err) {
+        this._initError = String((err as { message?: string })?.message || err)
         DEBUG && console.error('[BROWSER-EVAL] Init failed:', this._initError)
-      })
-    } catch (err) {
-      this._initError = `Failed to create Stockfish worker: ${err instanceof Error ? err.message : String(err)}`
-      DEBUG && console.error('[BROWSER-EVAL]', this._initError)
+      }
+    })()
+  }
+
+  terminate(): void {
+    if (this.worker) {
+      this.worker.terminate()
+      this.worker = null
     }
+    this._ready = false
+    this._initPromise = null
   }
 
   getInitError(): string | null {
@@ -59,19 +73,21 @@ export class BrowserMoveEvaluator {
   }
 
   async waitForReady(timeoutMs = 15000): Promise<void> {
+    this.ensureWorker()
     if (this._ready && !this._initError) return
     if (this._initError) throw new Error(`Stockfish failed: ${this._initError}`)
-    
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Stockfish wait timed out')), timeoutMs)
-      const check = setInterval(() => {
-        if (this._ready) {
-          clearTimeout(timeout)
-          clearInterval(check)
-          resolve()
-        }
-      }, 100)
-    })
+
+    if (this._initPromise) {
+      const race = Promise.race([
+        this._initPromise,
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Stockfish wait timed out')), timeoutMs)),
+      ])
+      await race
+      if (this._initError) throw new Error(`Stockfish failed: ${this._initError}`)
+      return
+    }
+
+    throw new Error('Stockfish engine is not ready yet')
   }
 
   isUsingStockfish(): boolean {
@@ -99,7 +115,7 @@ export class BrowserMoveEvaluator {
     _uciElo: number = 2600,
     _retries: number = 3,
   ): Promise<{ move: string; score: number }[]> {
-    this.ensureReady()
+    await this.ensureReady()
     if (!this.worker) throw new Error('Stockfish worker not available')
 
     const cachedResults: { move: string; score: number }[] = []
@@ -131,7 +147,7 @@ export class BrowserMoveEvaluator {
     _uciElo: number = 2600,
     _retries: number = 3,
   ): Promise<number> {
-    this.ensureReady()
+    await this.ensureReady()
     if (!this.worker) throw new Error('Stockfish worker not available')
 
     const Chess = (await import('chess.js')).Chess
@@ -146,34 +162,56 @@ export class BrowserMoveEvaluator {
 
   async getBestScore(
     fen: string,
-    _depth: number = 15,
-    _uciElo: number = 2600,
+    movetime: number = 3000,
   ): Promise<{ move: string; score: number }> {
-    this.ensureReady()
+    await this.ensureReady()
     if (!this.worker) throw new Error('Stockfish worker not available')
 
-    const Chess = (await import('chess.js')).Chess
-    const chess = new Chess(fen)
-    const moves = chess.moves({ verbose: true })
+    return new Promise((resolve, reject) => {
+      let bestScore = 0
+      let bestMove = ''
 
-    if (moves.length === 0) return { move: '', score: 0 }
-    if (moves.length === 1) {
-      const m = moves[0]
-      return { move: m.from + m.to + (m.promotion || ''), score: 0 }
-    }
+      const timeout = setTimeout(() => {
+        if (bestMove) {
+          resolve({ move: bestMove, score: bestScore })
+        } else {
+          reject(new Error('getBestScore timed out'))
+        }
+      }, EVAL_TIMEOUT_MS)
 
-    const allUci = moves.map(m => m.from + m.to + (m.promotion || ''))
-    const results = await this.uciEvaluate(fen, allUci)
-    if (results.length === 0) {
-      const randomMove = moves[Math.floor(Math.random() * moves.length)]
-      return { move: randomMove.from + randomMove.to + (randomMove.promotion || ''), score: 0 }
-    }
+      const handler = (e: MessageEvent<string>) => {
+        const line = (e.data || '').trim()
+        if (!line) return
 
-    return results.reduce((a, b) => a.score > b.score ? a : b, results[0])
+        if (line.includes('score cp')) {
+          const cpMatch = line.match(/score cp (-?\d+)/)
+          const pvMatch = line.match(/\bpv\s+([a-h][1-8][a-h][1-8][qrbn]?)/)
+          if (cpMatch) bestScore = parseInt(cpMatch[1], 10)
+          if (pvMatch) bestMove = pvMatch[1]
+        }
+
+        if (line.startsWith('bestmove')) {
+          clearTimeout(timeout)
+          this.worker!.removeEventListener('message', handler)
+          const parts = line.split(' ')
+          const engineBest = parts[1]
+          if (engineBest && engineBest !== '(none)') {
+            if (!bestMove) bestMove = engineBest
+            resolve({ move: engineBest, score: bestScore })
+          } else {
+            resolve({ move: '', score: 0 })
+          }
+        }
+      }
+
+      this.worker!.addEventListener('message', handler)
+      this.worker!.postMessage(`position fen ${fen}`)
+      this.worker!.postMessage(`go movetime ${movetime}`)
+    })
   }
 
   async playMove(fen: string, _uciElo: number = 2600, movetime: number = 3000): Promise<string> {
-    this.ensureReady()
+    await this.ensureReady()
     if (!this.worker) throw new Error('Stockfish worker not available')
 
     return new Promise((resolve, reject) => {
@@ -201,7 +239,14 @@ export class BrowserMoveEvaluator {
     })
   }
 
-  private ensureReady(): void {
+  private async ensureReady(): Promise<void> {
+    this.ensureWorker()
+    if (this._initError) {
+      throw new Error(`Stockfish engine failed to load: ${this._initError}`)
+    }
+    if (!this._ready && this._initPromise) {
+      await this._initPromise
+    }
     if (this._initError) {
       throw new Error(`Stockfish engine failed to load: ${this._initError}`)
     }
@@ -217,7 +262,7 @@ export class BrowserMoveEvaluator {
     return new Promise((resolve, reject) => {
       const scores: Record<string, number> = {}
       const timeout = setTimeout(() => {
-        const results = moves.map(m => ({ move: m, score: scores[m] ?? 0 }))
+        const results = Object.entries(scores).map(([move, score]) => ({ move, score }))
         this.worker!.removeEventListener('message', handler)
         resolve(results)
       }, EVAL_TIMEOUT_MS)
@@ -249,7 +294,7 @@ export class BrowserMoveEvaluator {
         if (line.startsWith('bestmove')) {
           clearTimeout(timeout)
           this.worker!.removeEventListener('message', handler)
-          const results = moves.map(m => ({ move: m, score: scores[m] ?? 0 }))
+          const results = Object.entries(scores).map(([move, score]) => ({ move, score }))
           resolve(results)
         }
       }

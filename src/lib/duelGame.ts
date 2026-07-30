@@ -6,8 +6,6 @@ import { createEvaluator, GameEvaluator } from '@/features/mobile-engine/evaluat
 import { calculateAccuracy } from '@/features/shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
-
 export interface DuelPlayerState {
   id: string
   team: 'WHITE' | 'BLACK'
@@ -65,7 +63,7 @@ export class DuelGame {
     this._timeLimit = timeLimit
     this._whiteTimeRemaining = timeLimit
     this._blackTimeRemaining = timeLimit
-    this.evaluator = createEvaluator(SERVER_URL)
+    this.evaluator = createEvaluator()
   }
 
   get status() { return this._status }

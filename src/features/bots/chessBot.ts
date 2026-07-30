@@ -4,8 +4,6 @@ import { createEvaluator, GameEvaluator } from '../mobile-engine/evaluatorFactor
 import { DIFFICULTY, DESCRIPTIONS, DifficultyConfig } from './difficulty'
 import { DEBUG } from '../../lib/debug'
 
-const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
-
 export interface BotConfig {
   skillLevel: number
   mockMoveEvaluator?: any
@@ -23,10 +21,7 @@ export class ChessBot {
       return
     }
     
-    this.moveEvaluator = createEvaluator(SERVER_URL)
-    if (!this.moveEvaluator.isUsingStockfish()) {
-      console.warn('[ChessBot] No evaluator configured, bot will use fallback evaluation')
-    }
+    this.moveEvaluator = createEvaluator()
   }
 
   isStockfishReady(): boolean {

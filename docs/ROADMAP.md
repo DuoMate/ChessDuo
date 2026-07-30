@@ -161,7 +161,7 @@ Uses Docker to build Stockfish from `/server` directory via Render Blueprint.
 - [x] 6.2 Create mobile-compatible chess board component — MobileChessBoard integrated in Game.tsx + DuelGame.tsx with touch-manipulation
 - [x] 6.3 Build mobile UI (responsive design) — DuelGame mobile pass, MobileStatusBar safe-area, viewport meta, MobileChessBoard integration
 - [x] 6.7 App store submission prep — Google Play Console ready, store descriptions + screenshots guide + content rating complete
-- [ ] 6.4 Server-side Stockfish API hardening (mobile performance) — not yet started
+- [x] 6.4 Server-side Stockfish API hardening (mobile performance) — lazy init, MultiPV=2, bestmove-based getBestScore, local-only WASM
 - [ ] 6.5 Compile Android APK (sideload + Play Store) — build scripts exist, pending compilation
 - [ ] 6.6 Compile iOS IPA (TestFlight + App Store) — not yet started
 

@@ -4,7 +4,7 @@ export type GameEvaluator = BrowserMoveEvaluator
 
 let sharedEvaluator: BrowserMoveEvaluator | null = null
 
-export function createEvaluator(_serverUrl?: string): GameEvaluator {
+export function createEvaluator(): BrowserMoveEvaluator {
   if (!sharedEvaluator) {
     sharedEvaluator = new BrowserMoveEvaluator()
   }

@@ -679,10 +679,42 @@ describe('OnlineGame', () => {
       ;(game as any)._gameOverResult = 'White wins by checkmate'
       ;(game as any)._gameOverReason = 'checkmate'
 
-      ;(game as any).handleMatchAbandoned({ playerId: 'test' })
+      ;(game as any).handleMatchAbandoned({ playerId: 'test', team: 'BLACK' })
 
       expect((game as any)._gameOverResult).toBe('White wins by checkmate')
       expect((game as any)._gameOverReason).toBe('checkmate')
+    })
+
+    it('handleMatchAbandoned sets correct winner when WHITE resigns', () => {
+      const game = new OnlineGame(600)
+      ;(game as any)._team = 'BLACK'
+
+      ;(game as any).handleMatchAbandoned({ playerId: 'white_player', team: 'WHITE' })
+
+      expect((game as any)._status).toBe(GameStatus.GAME_OVER)
+      expect((game as any)._gameOverResult).toBe('Resigned - Black wins')
+      expect((game as any)._gameOverReason).toBe('resignation')
+    })
+
+    it('handleMatchAbandoned sets correct winner when BLACK resigns', () => {
+      const game = new OnlineGame(600)
+      ;(game as any)._team = 'WHITE'
+
+      ;(game as any).handleMatchAbandoned({ playerId: 'black_player', team: 'BLACK' })
+
+      expect((game as any)._status).toBe(GameStatus.GAME_OVER)
+      expect((game as any)._gameOverResult).toBe('Resigned - White wins')
+      expect((game as any)._gameOverReason).toBe('resignation')
+    })
+
+    it('handleMatchAbandoned falls back to Opponent wins when team is missing', () => {
+      const game = new OnlineGame(600)
+
+      ;(game as any).handleMatchAbandoned({ playerId: 'unknown' })
+
+      expect((game as any)._status).toBe(GameStatus.GAME_OVER)
+      expect((game as any)._gameOverResult).toBe('Resigned - Opponent wins')
+      expect((game as any)._gameOverReason).toBe('resignation')
     })
 
     it('handleMatchTimeoutBroadcast does not overwrite result when game already over', () => {

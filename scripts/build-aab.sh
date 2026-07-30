@@ -140,6 +140,10 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
 
+# ─── Add deep link intent filters (App Links + custom schemes) ──
+bash scripts/add-deep-link.sh
+ok "Deep link intent filters added"
+
 # ─── Disable unused social login providers (only Google/Gmail) ──
 echo "" >> android/gradle.properties
 echo "# Disable social login providers not in use (only Google/Gmail is used)" >> android/gradle.properties

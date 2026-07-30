@@ -10,7 +10,7 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 | `botConfig.ts` | Skill level config (1-6), ELO mapping, env-var overrides |
 | `difficulty.ts` | Per-level params: depth, topMoves, noise, weights, blunder/weird chance |
 | `openings.ts` | Opening book for early-game variety |
-| `serverMoveEvaluator.ts` | HTTP client to remote Stockfish evaluation server |
+| `serverMoveEvaluator.ts` | HTTP client to remote Stockfish evaluation server (legacy) |
 
 ## Sub-modules
 | Module | Context |
@@ -22,8 +22,11 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 - Bot skill controlled by: engine depth, top-move selection, noise injection, blunder probability.
 - `difficulty.ts` uses weighted random selection from top N engine moves.
 - Opening book provides varied early-game play across 5+ common openings.
-- Server evaluation via HTTP POST to Stockfish Express API (Docker-deployed on Render).
+- **Evaluator**: All moves evaluated locally via `BrowserMoveEvaluator` (Stockfish WASM, MultiPV=2). Moves not caught by engine PV lines fall back to `fallbackEvaluate()` — material-count heuristic.
 - Two separate skill levels configurable: opponent bot and teammate bot.
 
 ## Dependencies
-- Stockfish server (`server/` directory), `shared/gameConstants.ts`
+- `BrowserMoveEvaluator` (mobile-engine), `shared/gameConstants.ts`
+
+## Recent Changes
+- **2026-07-30**: Removed `SERVER_URL` env var dependency. Evaluator always uses browser WASM (no remote server). `isUsingStockfish()` check removed from constructor — always true. Evaluator reuses shared instance from `evaluatorFactory`.

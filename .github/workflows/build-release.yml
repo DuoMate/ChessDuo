@@ -58,7 +58,6 @@ jobs:
           cat > .env.production <<- EOF
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_STOCKFISH_SERVER_URL=${{ secrets.NEXT_PUBLIC_STOCKFISH_SERVER_URL }}
           NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
           NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
@@ -90,11 +89,8 @@ jobs:
       - name: Install ImageMagick (icon generation)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
 
-      - name: Generate app icons from SVG
+      - name: Generate app icons
         run: bash scripts/generate-icons.sh
-
-      - name: Copy custom splash screens
-        run: bash scripts/copy-app-icons.sh
 
       - name: Reconstruct keystore from secret
         run: echo "$KEYSTORE" | base64 -d > chessduo.keystore
@@ -109,6 +105,12 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
+
+      - name: Generate assetlinks.json from keystore
+        run: bash scripts/generate-assetlinks.sh chessduo.keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       # ── Push the bump commit after all setup but before build ──
       # This ensures the git repo is updated before the lengthy build,

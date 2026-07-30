@@ -1737,11 +1737,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       if (isOnline && onlineGameRef.current) {
         await onlineGameRef.current.abandonMatch()
       } else if (!isOnline && gameRef.current) {
-        // Save offline game before navigating away
         const g = gameRef.current as LocalGame
-        const result = g.getResult() || 'Resigned'
+        g.setGameOverResult('Resigned')
+        g.setGameOverReason('resignation')
+        const humanTeam = g.getTeam()
+        const result = g.getResult()
         saveCompletedGame({
-          winner: 'DRAW',
+          winner: humanTeam === 'WHITE' ? 'BLACK' : 'WHITE',
           gameResult: result,
           gameOverReason: 'resignation',
           stats: {

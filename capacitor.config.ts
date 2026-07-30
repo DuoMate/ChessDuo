@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'ChessDuo',
   webDir: 'out',
   server: {
-    androidScheme: 'http',
+    androidScheme: 'https',
   },
   android: {
     allowMixedContent: false,

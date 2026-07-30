@@ -11,8 +11,6 @@ import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
 
-const SERVER_URL = process.env.NEXT_PUBLIC_STOCKFISH_SERVER_URL || ''
-
 interface MovePayload {
   playerId: string
   move: string
@@ -482,7 +480,7 @@ export class OnlineGame {
           this.handleTimerSync(payload as { matchTimeRemaining: number })
         })
         .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
-          this.handleMatchAbandoned(payload as { playerId: string })
+          this.handleMatchAbandoned(payload as { playerId: string; team?: 'WHITE' | 'BLACK' })
         })
         .on('broadcast', { event: 'match_timeout' }, ({ payload }) => {
           this.handleMatchTimeoutBroadcast(payload as { result: string; reason: string })
@@ -1174,8 +1172,8 @@ export class OnlineGame {
     this.gameState = new GameState(timeLimitSeconds)
     this._timeLimitSeconds = timeLimitSeconds
     this._status = GameStatus.WAITING
-    DEBUG && console.log(`[OnlineGame] Using server evaluator: ${SERVER_URL}`)
-    this.evaluator = createEvaluator(SERVER_URL)
+    DEBUG && console.log(`[OnlineGame] Using browser evaluator`)
+    this.evaluator = createEvaluator()
   }
 
   getPlayers(team: Team): Player[] {
@@ -1381,17 +1379,7 @@ export class OnlineGame {
       }
     } catch (e) { DEBUG && console.error('[OnlineGame] Failed to check isCheckmate (2):', e) }
     
-    const chess = new Chess(turnStartFen)
-    const verboseMoves = chess.moves({ verbose: true })
-
-    const playerMoves = [player1Uci, player2Uci].filter(Boolean)
-    const supplementalMoves = verboseMoves
-      .map(m => m.from + m.to + (m.promotion || ''))
-      .filter(uci => !playerMoves.includes(uci))
-      .slice(0, 6 - playerMoves.length)
-    const topMovesUci = [...playerMoves, ...supplementalMoves]
-
-    const evalResults = await this.evaluator.evaluateMoves(topMovesUci, turnStartFen)
+    const evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
     
     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
     
@@ -1512,7 +1500,7 @@ export class OnlineGame {
       await this._channel.send({
         type: 'broadcast',
         event: 'match_abandoned',
-        payload: { playerId: this._playerId }
+        payload: { playerId: this._playerId, team: this._team }
       })
     }
     if (this._room) {
@@ -1523,6 +1511,8 @@ export class OnlineGame {
     }
     await this.leaveRoom()
     this._status = GameStatus.GAME_OVER
+    this._gameOverResult = `Resigned - ${this._team === 'WHITE' ? 'Black' : 'White'} wins`
+    this._gameOverReason = 'resignation'
     this.onAbandonCallback?.()
   }
 
@@ -1541,11 +1531,12 @@ export class OnlineGame {
     this.onAbandonCallback = callback
   }
 
-  private handleMatchAbandoned(_payload: { playerId: string }): void {
+  private handleMatchAbandoned(payload: { playerId: string; team?: 'WHITE' | 'BLACK' }): void {
     if (this._status === GameStatus.GAME_OVER) return
     this._status = GameStatus.GAME_OVER
-    this._gameOverResult = 'Match abandoned by teammate'
-    this._gameOverReason = 'abandoned'
+    const winnerTeam = payload.team === 'WHITE' ? 'Black' : payload.team === 'BLACK' ? 'White' : 'Opponent'
+    this._gameOverResult = `Resigned - ${winnerTeam} wins`
+    this._gameOverReason = 'resignation'
     if (this._timerSyncInterval) {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null

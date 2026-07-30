@@ -23,11 +23,6 @@ describe('evaluatorFactory', () => {
     expect(evaluator.isUsingStockfish()).toBe(true)
   })
 
-  test('ignores serverUrl parameter', () => {
-    const evaluator = createEvaluator('http://test-server:3001')
-    expect(evaluator).toBeInstanceOf(BrowserMoveEvaluator)
-  })
-
   test('BrowserMoveEvaluator reports getInitError when not yet ready', () => {
     const evaluator = createEvaluator()
     if (evaluator instanceof BrowserMoveEvaluator) {
