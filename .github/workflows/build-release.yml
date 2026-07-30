@@ -112,6 +112,11 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
+      - name: Stage assetlinks.json for push
+        run: |
+          git add public/.well-known/assetlinks.json
+          git commit --amend --no-edit || true
+
       # ── Push the bump commit after all setup but before build ──
       # This ensures the git repo is updated before the lengthy build,
       # and [skip ci] prevents recursive triggering.
