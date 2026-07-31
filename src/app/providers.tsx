@@ -14,6 +14,7 @@ import { SubscriptionService, CreemBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
+import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -71,6 +72,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   }, [])
 
   useScrollToTop()
+  useNotificationRedirect()
 
   return (
     <NetworkAwareToastProvider>

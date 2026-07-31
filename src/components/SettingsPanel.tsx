@@ -164,7 +164,6 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                       initPushNotifications(token).catch(() => {})
                     } else {
                       localStorage.setItem('chessduo_push_disabled', 'true')
-                      try { localStorage.removeItem('chessduo_push_welcome_sent') } catch { /* ignore */ }
                     }
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}

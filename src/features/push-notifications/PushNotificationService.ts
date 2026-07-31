@@ -2,7 +2,6 @@ import type { NotificationPayload, NotificationType } from './types'
 import { storeNotificationRedirect, getNotificationRedirectRoute } from '@/lib/notificationRedirect'
 
 const PUSH_IN_PROGRESS_KEY = 'chessduo_push_in_progress'
-const PUSH_WELCOME_SENT_KEY = 'chessduo_push_welcome_sent'
 const PUSH_FCM_TOKEN_KEY = 'chessduo_fcm_token'
 const CRASH_GUARD_TIMEOUT_MS = 30_000
 const SW_READY_TIMEOUT_MS = 15_000
@@ -11,18 +10,6 @@ let fcmRegistered = false
 let pushInitInProgress = false
 let cachedAccessToken = ''
 let lastErrorStoreAttempts = 0
-
-function decodeJwtUserId(token: string): string | null {
-  try {
-    const payloadBase64 = token.split('.')[1]
-    if (!payloadBase64) return null
-    const json = atob(payloadBase64)
-    const payload = JSON.parse(json) as { sub?: string }
-    return payload.sub || null
-  } catch {
-    return null
-  }
-}
 
 function getApiBase(): string {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL) {
@@ -114,26 +101,6 @@ async function saveTokenToServer(token: string, platform: string, accessToken?: 
 
   if (res.ok) {
       console.log('[Push] Token registered successfully')
-
-      const welcomeSent = typeof window !== 'undefined' && localStorage.getItem(PUSH_WELCOME_SENT_KEY) === 'true'
-      if (!welcomeSent && authToken) {
-        const userId = decodeJwtUserId(authToken)
-        if (userId) {
-          localStorage.setItem(PUSH_WELCOME_SENT_KEY, 'true')
-          setTimeout(async () => {
-            try {
-              await sendPushNotification(userId, 'friend_request', {
-                senderId: 'system',
-                senderName: 'ChessDuo',
-                snippet: 'Welcome! Push notifications are now enabled.',
-              }, authToken)
-              console.log('[Push] Welcome notification sent')
-            } catch (err) {
-              console.warn('[Push] Failed to send welcome notification:', err)
-            }
-          }, 1000)
-        }
-      }
   } else {
     const msg = `[Push] Server rejected token: ${res.status} — ${resText}`
     console.error(msg)
@@ -372,8 +339,22 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
 
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             try {
+              const route = getNotificationRedirectRoute({
+                type: type!,
+                senderId: data?.senderId,
+                roomId: data?.roomId,
+                code: data?.code,
+                joinPlayerId: data?.joinPlayerId,
+                joinTeam: data?.joinTeam,
+                timestamp: Date.now(),
+              })
               const n = new Notification(title, { body, icon: '/favicon.ico', tag: `chessduo-${type || 'default'}` })
-              n.onclick = () => { try { window.focus(); n.close() } catch { /* window focus may be unavailable */ } }
+              n.onclick = () => {
+                n.close()
+                if (route && route !== '/') {
+                  window.location.href = route
+                }
+              }
             } catch { /* Notification constructor may be unavailable in Capacitor WebView — system tray handles background case */ }
           }
         } catch (err) {
@@ -387,14 +368,9 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
           if (!data) return
           const type = data.type as NotificationType | undefined
           if (!type) return
-          storeNotificationRedirect({
-            type,
-            senderId: data.senderId,
-            roomId: data.roomId,
-            code: data.code,
-            joinPlayerId: data.joinPlayerId,
-            joinTeam: data.joinTeam,
-          })
+          // Do NOT store a redirect here — the hard navigation below happens
+          // immediately. Storing would leave a stale redirect in localStorage
+          // that gets consumed on next home page visit, causing a boomerang nav.
           const route = getNotificationRedirectRoute({
             type,
             senderId: data.senderId,
@@ -427,7 +403,7 @@ export async function sendPushNotification(
   type: NotificationType,
   data: Omit<NotificationPayload, 'type'>,
   accessToken?: string,
-): Promise<void> {
+): Promise<{ success: boolean; sent: number; failed: number }> {
   const titles: Record<NotificationType, string> = {
     friend_request: 'Friend Request',
     invite_accepted: 'Invite Accepted',
@@ -442,11 +418,10 @@ export async function sendPushNotification(
     game_invite: (d) => `${d.senderName || 'Someone'} invited you to a game`,
   }
 
-  const authHeader = (accessToken || cachedAccessToken)
-    ? { Authorization: `Bearer ${accessToken || cachedAccessToken}` }
-    : {}
-  if (!accessToken && !cachedAccessToken) {
-    console.warn('[Push] No access token, sending notification without auth header')
+  const authToken = accessToken || cachedAccessToken
+  if (!authToken) {
+    console.warn('[Push] No access token, cannot send notification')
+    return { success: false, sent: 0, failed: 1 }
   }
 
   try {
@@ -454,7 +429,7 @@ export async function sendPushNotification(
 
     const res = await fetch(`${getApiBase()}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({
         userId: receiverId,
         title: titles[type],
@@ -477,8 +452,17 @@ export async function sendPushNotification(
 
     if (!res.ok) {
       console.error('[Push] Send failed:', res.status, resText)
+      return { success: false, sent: 0, failed: 1 }
+    }
+
+    try {
+      const body = JSON.parse(resText) as { sent?: number; failed?: number }
+      return { success: true, sent: body.sent ?? 1, failed: body.failed ?? 0 }
+    } catch {
+      return { success: true, sent: 1, failed: 0 }
     }
   } catch (err) {
     console.error('[Push] Send error:', err instanceof Error ? err.message : String(err))
+    return { success: false, sent: 0, failed: 1 }
   }
 }

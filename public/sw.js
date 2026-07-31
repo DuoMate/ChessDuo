@@ -51,3 +51,27 @@ self.addEventListener('notificationclick', (event) => {
     }),
   )
 })
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const newSub = await self.registration.pushManager.getSubscription()
+        const oldSub = event.oldSubscription
+        // Post data to the server so it can clean up the old token and
+        // store the new one. The main page's useNotificationRedirect hook
+        // will handle re-registration on next visit.
+        const clients = await self.clients.matchAll({ type: 'window' })
+        for (const client of clients) {
+          client.postMessage({
+            type: 'push-subscription-change',
+            oldEndpoint: oldSub?.endpoint,
+            newEndpoint: newSub?.endpoint,
+          })
+        }
+      } catch {
+        // Silent — the server-side cleanup path on next send handles this
+      }
+    })(),
+  )
+})

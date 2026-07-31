@@ -40,8 +40,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Platform must be android, ios, or web' }, { status: 400 })
     }
 
-    console.log(`[${route}] ${requestId} - Clearing old ${platform} tokens for user ${user.id}`)
-    await supabase.from('push_tokens').delete().eq('user_id', user.id).eq('platform', platform)
+    // Only delete the EXACT token being replaced, not all same-platform tokens.
+    // Deleting all same-platform tokens would break multi-device push (e.g. two
+    // different browsers). The upsert handles duplicates via onConflict.
+    if (token) {
+      const { error: delErr } = await supabase.from('push_tokens').delete().eq('token', token)
+      if (delErr) console.warn(`[${route}] ${requestId} - Failed to delete old token: ${delErr.message}`)
+    }
 
     const { error } = await supabase.from('push_tokens').upsert(
       { user_id: user.id, token, platform },

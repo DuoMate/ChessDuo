@@ -152,6 +152,9 @@ export async function POST(request: Request) {
     if (supabaseServiceRoleKey) {
       const { createClient } = await import('@supabase/supabase-js')
       serviceSupabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+    } else {
+      console.error(`[${route}] ${requestId} - SUPABASE_SERVICE_ROLE_KEY not configured — push send unavailable`)
+      return NextResponse.json({ error: 'Service role key not configured — push send unavailable' }, { status: 500 })
     }
 
     console.log(`[${route}] ${requestId} - User: ${user.id}`)
@@ -210,10 +213,9 @@ export async function POST(request: Request) {
               return { platform: t.platform, tokenPreview: tokenPreview(t.token) }
             } catch (e) {
               const msg = e instanceof Error ? e.message : String(e)
-              if (msg.includes('UNREGISTERED') || msg.includes('NOT_FOUND')) {
-                console.warn(`[${route}] ${requestId} - Cleaning up unregistered token for user ${userId}`)
-                const cleanupClient = serviceSupabase || supabase
-                try { await cleanupClient.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
+              if (msg.includes('UNREGISTERED') || msg.includes('NOT_FOUND') || msg.includes('InvalidRegistration') || msg.includes('PERMISSION_DENIED') || msg.includes('SENDER_ID_MISMATCH')) {
+                console.warn(`[${route}] ${requestId} - Cleaning up invalid token for user ${userId}: ${msg}`)
+                try { await serviceSupabase.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
               }
               return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: msg }
             }
@@ -235,8 +237,7 @@ export async function POST(request: Request) {
             const msg = e instanceof Error ? e.message : String(e)
             if (msg.includes('410') || msg.includes('404')) {
               console.warn(`[${route}] ${requestId} - Cleaning up expired web subscription for user ${userId}`)
-              const cleanupClient = serviceSupabase || supabase
-              try { await cleanupClient.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
+              try { await serviceSupabase.from('push_tokens').delete().eq('token', t.token) } catch { /* best effort */ }
             }
             return { platform: t.platform, tokenPreview: tokenPreview(t.token), error: msg }
           }

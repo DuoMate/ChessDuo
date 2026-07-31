@@ -21,17 +21,25 @@ export function consumeNotificationRedirect(): NotificationRedirect | null {
   try {
     const stored = localStorage.getItem(REDIRECT_KEY)
     if (!stored) return null
-    const parsed = JSON.parse(stored) as NotificationRedirect
+    const parsed = JSON.parse(stored) as NotificationRedirect & { consumed?: boolean }
+    // Don't delete on read — keep the redirect so it survives a failed/unmounted
+    // navigation. A `consumed` flag prevents re-consumption within the 30s window.
     if (Date.now() - parsed.timestamp > 30_000) {
       localStorage.removeItem(REDIRECT_KEY)
       return null
     }
-    localStorage.removeItem(REDIRECT_KEY)
+    if (parsed.consumed) return null
+    parsed.consumed = true
+    localStorage.setItem(REDIRECT_KEY, JSON.stringify(parsed))
     return parsed
   } catch {
     localStorage.removeItem(REDIRECT_KEY)
     return null
   }
+}
+
+export function clearNotificationRedirect(): void {
+  try { localStorage.removeItem(REDIRECT_KEY) } catch { /* quota exceeded */ }
 }
 
 export function getNotificationRedirectRoute(data: NotificationRedirect): string {
@@ -41,13 +49,17 @@ export function getNotificationRedirectRoute(data: NotificationRedirect): string
     case 'chat_message':
       return '/friends'
     case 'game_invite': {
-      if (data.roomId) {
+      // Require all essential params — partial URLs trigger "Invalid Duel Link"
+      if (data.roomId && data.joinPlayerId && data.joinTeam) {
         const params = new URLSearchParams()
         params.set('room', data.roomId)
         if (data.code) params.set('code', data.code)
-        if (data.joinPlayerId) params.set('playerId', data.joinPlayerId)
-        if (data.joinTeam) params.set('team', data.joinTeam)
+        params.set('playerId', data.joinPlayerId)
+        params.set('team', data.joinTeam)
         return `/duel?${params.toString()}`
+      }
+      if (data.roomId) {
+        return `/duel?room=${data.roomId}`
       }
       return '/duel'
     }

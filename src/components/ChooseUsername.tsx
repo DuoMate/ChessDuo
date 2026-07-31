@@ -134,7 +134,6 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
         } catch { /* ignore */ }
       } else {
         localStorage.setItem('chessduo_push_disabled', 'true')
-        localStorage.removeItem('chessduo_push_welcome_sent')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create profile')
