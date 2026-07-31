@@ -160,7 +160,7 @@ export function BoardTopBar({
                 <circle cx="12" cy="12" r="9" />
                 <polyline points="12 7 12 12 15 14" />
               </svg>
-              <span className="font-mono text-sm font-bold">
+              <span className="font-game text-sm font-bold">
                 {Math.floor(matchTimeRemaining / 60)}:{(matchTimeRemaining % 60).toString().padStart(2, '0')}
               </span>
             </div>

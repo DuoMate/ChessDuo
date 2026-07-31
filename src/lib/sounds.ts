@@ -9,14 +9,36 @@ type SoundType = 'move' | 'capture' | 'check' | 'checkmate' | 'illegal' | 'lock'
 
 class SoundEngine {
   private audioContext: AudioContext | null = null
+  private masterGain: GainNode | null = null
+  private compressor: DynamicsCompressorNode | null = null
   private enabled: boolean = true
   private initialized: boolean = false
 
   private getContext(): AudioContext {
     if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      this.audioContext = ctx
+      this.masterGain = ctx.createGain()
+      this.masterGain.gain.value = 1.0
+      this.compressor = ctx.createDynamicsCompressor()
+      this.compressor.threshold.value = -18
+      this.compressor.knee.value = 12
+      this.compressor.ratio.value = 6
+      this.compressor.attack.value = 0.002
+      this.compressor.release.value = 0.1
+      this.masterGain.connect(this.compressor)
+      this.compressor.connect(ctx.destination)
     }
     return this.audioContext
+  }
+
+  /** Route a node through the master gain + compressor chain. */
+  private route(node: AudioNode): void {
+    if (this.masterGain) {
+      node.connect(this.masterGain)
+    } else {
+      node.connect(this.audioContext?.destination as AudioNode)
+    }
   }
 
   private ensureInitialized() {
@@ -97,12 +119,12 @@ class SoundEngine {
     bandpass.Q.setValueAtTime(0.8, now)
 
     const noiseGain = ctx.createGain()
-    noiseGain.gain.setValueAtTime(0.35, now)
+    noiseGain.gain.setValueAtTime(0.7, now)
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04)
 
     noise.connect(bandpass)
     bandpass.connect(noiseGain)
-    noiseGain.connect(ctx.destination)
+    this.route(noiseGain)
     noise.start(now)
     noise.stop(now + 0.04)
 
@@ -112,11 +134,11 @@ class SoundEngine {
     osc.frequency.setValueAtTime(120, now)
 
     const thudGain = ctx.createGain()
-    thudGain.gain.setValueAtTime(0.6, now)
+    thudGain.gain.setValueAtTime(0.9, now)
     thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
 
     osc.connect(thudGain)
-    thudGain.connect(ctx.destination)
+    this.route(thudGain)
     osc.start(now)
     osc.stop(now + 0.06)
   }
@@ -145,12 +167,12 @@ class SoundEngine {
       bandpass.Q.setValueAtTime(0.5, t)
 
       const noiseGain = ctx.createGain()
-      noiseGain.gain.setValueAtTime(0.18, t)
+      noiseGain.gain.setValueAtTime(0.45, t)
       noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
 
       noise.connect(bandpass)
       bandpass.connect(noiseGain)
-      noiseGain.connect(ctx.destination)
+      this.route(noiseGain)
       noise.start(t)
       noise.stop(t + 0.04)
 
@@ -159,11 +181,11 @@ class SoundEngine {
       osc.frequency.setValueAtTime(80 - tap * 20, t)
 
       const thudGain = ctx.createGain()
-      thudGain.gain.setValueAtTime(0.35, t)
+      thudGain.gain.setValueAtTime(0.6, t)
       thudGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
 
       osc.connect(thudGain)
-      thudGain.connect(ctx.destination)
+      this.route(thudGain)
       osc.start(t)
       osc.stop(t + 0.08)
     }
@@ -183,11 +205,11 @@ class SoundEngine {
 
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.08, t + 0.02)
+      gain.gain.linearRampToValueAtTime(0.16, t + 0.02)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12)
 
       osc.connect(gain)
-      gain.connect(ctx.destination)
+      this.route(gain)
       osc.start(t)
       osc.stop(t + 0.12)
     })
@@ -207,12 +229,12 @@ class SoundEngine {
 
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.15, t + 0.03)
-      gain.gain.setValueAtTime(0.15, t + 0.1)
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.03)
+      gain.gain.setValueAtTime(0.3, t + 0.1)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
 
       osc.connect(gain)
-      gain.connect(ctx.destination)
+      this.route(gain)
       osc.start(t)
       osc.stop(t + 0.35)
     })
@@ -224,11 +246,11 @@ class SoundEngine {
 
     const bellGain = ctx.createGain()
     bellGain.gain.setValueAtTime(0, now + 0.6)
-    bellGain.gain.linearRampToValueAtTime(0.2, now + 0.62)
+    bellGain.gain.linearRampToValueAtTime(0.4, now + 0.62)
     bellGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2)
 
     bell.connect(bellGain)
-    bellGain.connect(ctx.destination)
+    this.route(bellGain)
     bell.start(now + 0.6)
     bell.stop(now + 1.2)
   }
@@ -243,11 +265,11 @@ class SoundEngine {
     osc.frequency.linearRampToValueAtTime(80, now + 0.15)
 
     const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.1, now)
+    gain.gain.setValueAtTime(0.22, now)
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18)
 
     osc.connect(gain)
-    gain.connect(ctx.destination)
+    this.route(gain)
     osc.start(now)
     osc.stop(now + 0.18)
   }
@@ -261,11 +283,11 @@ class SoundEngine {
     osc.frequency.setValueAtTime(880, now)
 
     const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.08, now)
+    gain.gain.setValueAtTime(0.2, now)
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
 
     osc.connect(gain)
-    gain.connect(ctx.destination)
+    this.route(gain)
     osc.start(now)
     osc.stop(now + 0.06)
   }
@@ -283,11 +305,11 @@ class SoundEngine {
 
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.1, t + 0.02)
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.02)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
 
       osc.connect(gain)
-      gain.connect(ctx.destination)
+      this.route(gain)
       osc.start(t)
       osc.stop(t + 0.2)
     })

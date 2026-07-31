@@ -63,7 +63,7 @@ function TimerDisplay({ seconds, isActive, totalSeconds }: { seconds: number; is
   const isCritical = isActive && seconds <= 10
   return (
     <motion.span
-      className={`text-xs font-bold font-mono ${
+      className={`text-xs font-bold font-game ${
         !isActive ? 'text-slate-400 dark:text-slate-500' :
         isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-400 dark:text-slate-300'
       }`}
