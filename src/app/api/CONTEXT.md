@@ -15,6 +15,7 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 | `creem/checkout/route.ts` | Create Creem checkout session → returns `checkoutUrl` |
 | `creem/products/route.ts` | Fetch product details (pricing) from Creem |
 | `creem/subscriptions/route.ts` | List active subscriptions from Supabase (restore) |
+| `creem/verify-checkout/route.ts` | Verify completed checkout after redirect → grants premium via service-role upsert |
 | `creem/webhook/route.ts` | Creem webhook handler (`@creem_io/nextjs` Webhook) → updates Supabase |
 | `subscription/status/route.ts` | Get subscription status from Supabase |
 
@@ -25,6 +26,7 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 - `/api/push/send` uses FCM HTTP v1 API with JWT assertion via `jose` library (no Firebase Admin SDK needed).
 - Creem routes use the `creem` TypeScript SDK; test mode is auto-detected when `CREEM_API_KEY` starts with `creem_test_` (server `test` vs `prod`).
 - Subscription lifecycle is **webhook-driven**: `creem/webhook` grants/revokes access and updates `profiles` via the Supabase service-role key. `subscription/status` reads Supabase only — no re-verification call.
+- `creem/verify-checkout` provides **immediate grant** on checkout redirect: server-side `checkouts.retrieve()` confirms `status === 'completed'`, then the checkout `metadata.referenceId`/`userId` must equal the authenticated user's ID (else 403 — prevents one user's paid session from granting another). Grants premium via service-role upsert so the user doesn't wait for the async webhook.
 - Checkout metadata carries `userId`, `referenceId`, and `plan` so webhooks can attribute events to a ChessDuo profile.
 - Creem pricing is returned in cents; the client formats `$X.XX`.
 
@@ -34,6 +36,7 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 - `@supabase/supabase-js` (service-role admin client in webhook)
 
 ## Recent Changes
+- **2026-07-30**: Added `creem/verify-checkout` — verifies a completed Creem checkout on redirect and immediately grants premium (ownership check via `referenceId`/`userId`, service-role upsert). Webhook hardened: sets `subscription_expiry_date` from `current_period_end_date` and `purchase_token` from checkout `id`. Rate limits added for all `/api/creem/*` routes.
 - **2026-07-30**: Creem billing migration — added `/api/creem/*` routes (checkout, products, subscriptions, webhook). Removed `subscription/verify` (Google Play token verification) and `subscription/rtdn` (RTDN placeholder). `subscription/status` simplified to read from Supabase only. Webhook-driven lifecycle replaces Google Play Developer API verification.
 - **2026-07-17**: Fixed RLS bypass in Bearer token auth path — all API routes now pass the user's JWT to `createClient` via `global.headers.Authorization`, ensuring `auth.uid()` works correctly in RLS policies. Affected routes: `push/register`, `push/send`, `subscription/status`, `subscription/verify`, `delete-account`.
 - **2026-07-17**: `/api/push/register` now accepts `platform: 'web'` in addition to `android`/`ios`. `/api/push/send` splits tokens by platform: native tokens use FCM HTTP v1, web tokens use `web-push` with VAPID keys. FCM config is only required when native tokens exist (web-only users work without FCM).

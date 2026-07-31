@@ -259,10 +259,12 @@ SubscriptionService
         ├─► /checkout    — creates Creem checkout session
         ├─► /products    — fetches product pricing from Creem
         ├─► /subscriptions — lists active subscriptions (restore)
+        ├─► /verify-checkout — server-side verify of completed checkout on redirect (immediate grant)
         └─► /webhook     — handles Creem webhook events (@creem_io/nextjs)
 ```
 
-- Purchase is **redirect-based**: `purchase()` → `POST /api/creem/checkout` → redirect to Creem-hosted checkout → webhook updates Supabase → UI refreshes.
+- Purchase is **redirect-based**: `purchase()` → `POST /api/creem/checkout` → redirect to Creem-hosted checkout → back to `/premium?session_id=…` → `GET /api/creem/verify-checkout` grants immediately → webhook is the durable backup.
+- **Immediate grant**: `verify-checkout` runs `checkouts.retrieve(session_id)`, requires `status === 'completed'`, and enforces ownership (checkout `referenceId`/`userId` must match the authenticated user, else 403) before upserting `profiles` via the service-role key.
 - Subscription lifecycle is **webhook-driven** (`onGrantAccess` / `onRevokeAccess` / `onCheckoutCompleted` / `onSubscriptionCanceled` / `onSubscriptionPastDue`). No server-side re-verification on `status` reads.
 - Checkout metadata carries `userId`, `referenceId`, and `plan`; webhook attributes events to the ChessDuo profile.
 - Pricing comes from Creem products (cents → `$X.XX`); plans are mapped to internal IDs `premium_monthly` / `premium_yearly`.
@@ -437,4 +439,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-07-30 — Creem billing migration (webhook-driven subscription lifecycle) + Stockfish server evaluator removal*
+*Last Updated: 2026-07-31 — verify-on-return (`/api/creem/verify-checkout`) for immediate premium grant after checkout redirect*

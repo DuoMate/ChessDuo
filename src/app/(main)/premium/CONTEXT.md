@@ -13,6 +13,7 @@ Marketing page for ChessDuo premium subscription. Uses Creem (Merchant of Record
 - Prices fetched dynamically from Creem via `SubscriptionService.getPlans()` — never hardcoded (fallback $1.99/$14.99 only if the API is unreachable).
 - Skeleton loading state while prices load.
 - Purchase flow: `SubscriptionService.purchaseMonthly()` / `purchaseYearly()` → redirect to Creem-hosted checkout (in-app browser on Android, new tab on web).
+- **Verify-on-return**: Creem redirects to `/premium?session_id={CHECKOUT_SESSION_ID}`. The page reads `session_id` from the URL and, if not already premium, calls `verifyCheckoutSession()` → `GET /api/creem/verify-checkout` with a Bearer token. This grants premium immediately after payment without waiting for the async webhook. Falls back to `SubscriptionService.getStatus()` if verification is unavailable.
 - "Restore Purchases" button for users switching devices.
 - "Secured by Creem" badge for trust.
 - All premium checks delegated to `SubscriptionService.isPremium()`.
@@ -22,4 +23,5 @@ Marketing page for ChessDuo premium subscription. Uses Creem (Merchant of Record
 - `@/components/ErrorBoundary`, `@/components/ErrorDetailModal`, `@/components/BackButton`
 
 ## Recent Changes
+- **2026-07-30**: Verify-on-return — page now reads `session_id` from the URL after checkout redirect and calls `/api/creem/verify-checkout` to grant premium immediately (no more waiting for the async webhook).
 - **2026-07-30**: Migration from Google Play Billing to Creem (MoR). Dynamic pricing now comes from Creem products ($1.99/mo, $14.99/yr). Purchase flow redirects to Creem-hosted checkout instead of the native Google Play dialog. "Managed by Google Play" badge replaced with "Secured by Creem".

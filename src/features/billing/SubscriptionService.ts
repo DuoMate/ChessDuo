@@ -27,24 +27,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers
 }
 
-async function verifyPurchase(purchaseToken: string, productId: string, orderId: string): Promise<{ success: boolean; state?: string; plan?: string; expiryDate?: string }> {
-  try {
-    const headers = await getAuthHeaders()
-    const res = await fetch(`${getApiBase()}/api/subscription/verify`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ purchaseToken, productId, orderId }),
-    })
-    const data = await res.json()
-    if (res.ok && data.success) {
-      return { success: true, state: data.state, plan: data.plan, expiryDate: data.expiryDate }
-    }
-    return { success: false }
-  } catch {
-    return { success: false }
-  }
-}
-
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10_000): Promise<Response> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -108,15 +90,11 @@ export const SubscriptionService = {
 
     if (!cachedStatus.isPremium) {
       const restored = await provider.restorePurchases()
-      for (const r of restored) {
-        if (r.success && r.purchaseToken && r.productId) {
-          if (r.purchaseToken !== 'creem_restored') {
-            await verifyPurchase(r.purchaseToken, r.productId, r.orderId || '')
-          }
-        }
+      const anyRestored = restored.some(r => r.success && r.purchaseToken && r.productId)
+      if (anyRestored) {
+        cachedStatus = await fetchServerStatus()
+        statusCheckedAt = Date.now()
       }
-      cachedStatus = await fetchServerStatus()
-      statusCheckedAt = Date.now()
     }
   },
 
@@ -140,37 +118,21 @@ export const SubscriptionService = {
       return { success: true, checkoutUrl: result.checkoutUrl, productId }
     }
 
-    if (!result.purchaseToken) return result
-
-    const verifyResult = await verifyPurchase(result.purchaseToken, result.productId || productId, result.orderId || '')
-    if (!verifyResult.success) {
-      return { success: false, error: 'Purchase verified but server confirmation failed. Your subscription will be restored on next launch.', errorDetail: 'verification' }
-    }
-
-    cachedStatus = null
-    return { success: true, productId: result.productId, orderId: result.orderId }
+    return result
   },
 
   async restore(): Promise<boolean> {
     if (!provider) return false
     const restored = await provider.restorePurchases()
-    if (restored.length === 0) return false
 
-    let anyVerified = false
-    for (const r of restored) {
-      if (r.success && r.purchaseToken && r.productId) {
-        const verified = await verifyPurchase(r.purchaseToken, r.productId, r.orderId || '')
-        if (verified.success) anyVerified = true
-      }
-    }
-
-    if (anyVerified) {
+    const anyRestored = restored.some(r => r.success && r.purchaseToken && r.productId)
+    if (anyRestored) {
       cachedStatus = null
       statusCheckedAt = 0
       await this.isPremium()
     }
 
-    return anyVerified
+    return anyRestored
   },
 
   async isPremium(): Promise<boolean> {

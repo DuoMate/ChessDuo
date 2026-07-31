@@ -116,14 +116,30 @@ describe('SubscriptionService', () => {
       expect(result).toBe(false)
     })
 
-    it('verifies restored purchases', async () => {
+    it('returns true when restored purchases found (DB-backed, no verify call)', async () => {
       (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
-        { success: true, purchaseToken: 'restored-token', productId: 'premium_yearly', orderId: 'order-2' },
+        { success: true, purchaseToken: 'creem_restored', productId: 'premium_yearly', orderId: '' },
       ])
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true, state: 'purchased' }) })
 
       const result = await SubscriptionService.restore()
       expect(result).toBe(true)
+
+      const verifyCalls = mockFetch.mock.calls.filter(([url]) => String(url).includes('/api/subscription/verify'))
+      expect(verifyCalls).toHaveLength(0)
+    })
+
+    it('refreshes status after successful restore', async () => {
+      (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
+        { success: true, purchaseToken: 'creem_restored', productId: 'premium_monthly', orderId: '' },
+      ])
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
+
+      const result = await SubscriptionService.restore()
+      expect(result).toBe(true)
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/subscription/status'),
+        expect.anything(),
+      )
     })
 
     it('returns false when provider is null', async () => {

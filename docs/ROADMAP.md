@@ -526,11 +526,11 @@ Key files:
 | Test suites | 88 | 83 pass, 3 fail (pre-existing), 2 skip |
 | Individual tests | 1007 | 882 pass, 8 fail (pre-existing), 117 skip |
 
-**Status**: ✅ All billing tests green. Pre-existing failures in `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, and `server/__tests__/engine.test.ts` (LRUCache dependency) — unrelated to the Creem migration.
+**Status**: ✅ All billing tests green (verify-checkout route + restore flow tests added). Pre-existing failures in `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, and `server/__tests__/engine.test.ts` (LRUCache dependency) — unrelated to the Creem migration.
 
 ---
 
-*Last Updated: 2026-07-30 — Creem billing migration (replaced Google Play Billing)*
+*Last Updated: 2026-07-31 — verify-on-return grants premium immediately after checkout redirect (no webhook race)*
 
 ---
 

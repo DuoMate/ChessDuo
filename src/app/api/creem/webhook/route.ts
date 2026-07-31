@@ -26,7 +26,7 @@ async function updateSupabase(userId: string, updates: Record<string, unknown>) 
 
 export const POST = Webhook({
   webhookSecret: process.env.CREEM_WEBHOOK_SECRET || '',
-  onGrantAccess: async ({ metadata }) => {
+  onGrantAccess: async ({ metadata, current_period_end_date: currentPeriodEndDate }) => {
     const userId = String(metadata?.referenceId ?? metadata?.userId ?? '')
     if (!userId) {
       console.warn('[creem/webhook] onGrantAccess: no userId in metadata')
@@ -37,6 +37,9 @@ export const POST = Webhook({
       is_premium: true,
       subscription_status: 'active',
       subscription_provider: 'CREEM',
+      ...(currentPeriodEndDate
+        ? { subscription_expiry_date: new Date(currentPeriodEndDate).toISOString() }
+        : {}),
       last_verified_date: new Date().toISOString(),
     })
   },
@@ -53,18 +56,24 @@ export const POST = Webhook({
       last_verified_date: new Date().toISOString(),
     })
   },
-  onCheckoutCompleted: async ({ customer, product, metadata }) => {
+  onCheckoutCompleted: async ({ customer, product, metadata, id, subscription }) => {
     console.log(`[creem/webhook] Checkout completed: ${customer.email} purchased ${product.name}`)
     const userId = String(metadata?.referenceId ?? metadata?.userId ?? '')
     if (!userId) return
 
     const plan = String(metadata?.plan ?? 'monthly')
+    const currentPeriodEndDate =
+      typeof subscription === 'object' && subscription?.current_period_end_date
+        ? new Date(subscription.current_period_end_date).toISOString()
+        : null
+
     await updateSupabase(userId, {
       is_premium: true,
       subscription_status: 'active',
       subscription_provider: 'CREEM',
       subscription_plan: plan,
-      purchase_token: '',
+      purchase_token: id || '',
+      ...(currentPeriodEndDate ? { subscription_expiry_date: currentPeriodEndDate } : {}),
       last_verified_date: new Date().toISOString(),
     })
   },

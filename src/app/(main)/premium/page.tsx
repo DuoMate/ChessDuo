@@ -37,23 +37,54 @@ export default function PremiumPage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([
-      SubscriptionService.getStatus(),
-      SubscriptionService.getPlans(),
-    ]).then(([subStatus, subPlans]) => {
-      if (!mountedRef.current) return
-      setStatus(subStatus)
-      setIsPremium(subStatus.isPremium)
-      setSubscriptionStatus(subStatus.subscriptionStatus)
-      setPlans(subPlans)
-      setPlansLoading(false)
-      setLoading(false)
-    }).catch(() => {
-      if (!mountedRef.current) return
-      setPlansLoading(false)
-      setLoading(false)
-    })
+    const sessionId = new URLSearchParams(window.location.search).get('session_id')
+    let cancelled = false
+
+    async function load() {
+      try {
+        let subStatus = await SubscriptionService.getStatus()
+
+        if (sessionId && !subStatus.isPremium) {
+          subStatus = await verifyCheckoutSession(sessionId)
+        }
+
+        const subPlans = await SubscriptionService.getPlans()
+        if (cancelled || !mountedRef.current) return
+        setStatus(subStatus)
+        setIsPremium(subStatus.isPremium)
+        setSubscriptionStatus(subStatus.subscriptionStatus)
+        setPlans(subPlans)
+      } catch {
+        if (cancelled || !mountedRef.current) return
+      } finally {
+        if (!cancelled && mountedRef.current) {
+          setPlansLoading(false)
+          setLoading(false)
+        }
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [])
+
+  async function verifyCheckoutSession(sessionId: string): Promise<SubscriptionInfo> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    try {
+      const { AuthService } = await import('@/lib/authService')
+      const session = await AuthService.getSession()
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+    } catch { /* falls back to cookie auth */ }
+
+    const res = await fetch(`/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
+    const data = await res.json()
+    if (res.ok && data.verified && data.status) {
+      return data.status as SubscriptionInfo
+    }
+    return SubscriptionService.getStatus()
+  }
 
   const handleSubscribe = useCallback(async (productId: string) => {
     setSubscribing(true)
