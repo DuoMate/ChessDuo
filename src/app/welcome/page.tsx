@@ -74,7 +74,7 @@ export default function WelcomePage() {
   useCapacitorBackButton(() => {
     localStorage.removeItem('chessduo_pending_offline_game')
     localStorage.removeItem('chessduo_pending_online_game')
-    router.push('/')
+    router.replace('/')
     return true
   }, true)
 
@@ -93,7 +93,7 @@ export default function WelcomePage() {
         try {
           const { level, time, color } = JSON.parse(pending)
           const colorParam = color ? `&color=${color}` : ''
-          router.push(`/game?level=${level}&time=${time}${colorParam}`)
+          router.replace(`/game?level=${level}&time=${time}${colorParam}`)
           return
         } catch { /* fall through */ }
       }
@@ -106,13 +106,13 @@ export default function WelcomePage() {
         try {
           const { time, playerId, color } = JSON.parse(pending)
           const result = await createOnlineRoom({ playerId, timeSeconds: time, hostColor: color })
-          router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color || 'white'}`)
+          router.replace(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color || 'white'}`)
           return
         } catch { /* fall through */ }
       }
     }
 
-    router.push('/')
+    router.replace('/')
   }
 
   return (
@@ -121,7 +121,7 @@ export default function WelcomePage() {
         <BackButton label="Back" onClick={() => {
           localStorage.removeItem('chessduo_pending_offline_game')
           localStorage.removeItem('chessduo_pending_online_game')
-          router.push('/')
+          router.replace('/')
         }} />
       </div>
 

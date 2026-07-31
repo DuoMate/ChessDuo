@@ -70,7 +70,7 @@ function GameContent() {
 
     const unsubscribe = AuthService.onAuthChange((_event, session) => {
       if (!session) {
-        window.location.href = '/'
+        router.replace('/')
       }
     })
     return () => { unsubscribe() }

@@ -124,7 +124,7 @@ export function FourPlayerLobby({
         clearInterval(interval)
         const me = currentPlayers.find(p => p.playerId === playerId)
         if (me?.team) {
-    router.push(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}&fourplayer=1`)
+    router.replace(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}&fourplayer=1`)
         }
         return
       }
@@ -192,13 +192,13 @@ export function FourPlayerLobby({
       .update({ status: 'playing' })
       .eq('id', roomId)
 
-    router.push(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}`)
+    router.replace(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}`)
   }
 
   const handleLeave = async () => {
     sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true')
     await leaveFourPlayerRoom({ roomId, playerId })
-    window.location.href = '/'
+    router.replace('/')
   }
 
   const handleCopyCode = () => {
@@ -336,7 +336,7 @@ export function FourPlayerLobby({
           <div className="mb-4 w-full rounded-[22px] border border-rose-200 bg-rose-50/80 px-5 py-4 text-center dark:border-rose-500/20 dark:bg-rose-500/10">
             <p className="mb-3 text-sm font-medium text-rose-700 dark:text-rose-400">{error || 'Failed to load lobby'}</p>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.replace('/')}
               className="min-h-[44px] rounded-2xl bg-rose-100 px-6 py-2 font-medium text-rose-700 transition-colors hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/30"
             >
               Back to Home

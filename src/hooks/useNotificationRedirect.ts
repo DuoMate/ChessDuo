@@ -12,7 +12,7 @@ export function useNotificationRedirect(): void {
     if (redirect) {
       const route = getNotificationRedirectRoute(redirect)
       if (route !== '/') {
-        router.push(route)
+        router.replace(route)
       }
     }
   }, [router])
@@ -35,7 +35,7 @@ export function useNotificationRedirect(): void {
         } catch { /* redirect store is best-effort; route below still works */ }
       }
       if (payload.url.startsWith('/')) {
-        router.push(payload.url)
+        router.replace(payload.url)
       }
     }
     navigator.serviceWorker.addEventListener('message', handler)

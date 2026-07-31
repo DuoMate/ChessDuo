@@ -1764,7 +1764,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     // Let the state update process before navigating so the save effect fires
     await new Promise(r => setTimeout(r, 100))
     setShowGameOverDismissed(false)
-    router.push('/')
+    router.replace('/')
   }, [isOnline, playerId])
 
   const handleLeaveConfirm = useCallback(async () => {
@@ -1775,7 +1775,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       onlineGameRef.current.abandonMatch().catch(() => {})
     }
     setShowLeaveModal(false)
-    router.push('/')
+    router.replace('/')
   }, [isOnline, roomCode, router])
 
   const handleResolutionComplete = useCallback(async () => {
@@ -2010,7 +2010,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       <GameOverModal
         open={gameState.status === GameStatus.GAME_OVER && !showGameOverDismissed}
         winner={gameState.winner || 'DRAW'}
-        onPlayAgain={() => router.push('/')}
+        onPlayAgain={() => router.replace('/')}
         onClose={() => setShowGameOverDismissed(true)}
         gameResult={isOnline ? onlineGameRef.current?.getResult() : game?.getResult()}
         gameOverReason={isOnline ? onlineGameRef.current?.getGameOverReason() || null : game?.getGameOverReason() || null}

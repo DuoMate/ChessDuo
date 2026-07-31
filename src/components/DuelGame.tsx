@@ -596,7 +596,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       <GameOverModal
         open={status === 'game_over' && winner && gameResult && !showGameOverDismissed}
         winner={winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'}
-        onPlayAgain={() => router.push('/')}
+        onPlayAgain={() => router.replace('/')}
         onClose={() => setShowGameOverDismissed(true)}
         gameResult={gameResult}
       />

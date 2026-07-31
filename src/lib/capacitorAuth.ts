@@ -79,21 +79,21 @@ export async function registerCapacitorAuthListener() {
     // Handle /?code=X (home page with room code) — need to go through home page
     // where the auto-join effect can consume the code param
     if (targetPath.startsWith('/') && targetPath.includes('?code=')) {
-      window.location.href = targetPath
+      window.location.replace(targetPath)
       return
     }
 
     if (targetPath.startsWith('/invite/') || targetPath.startsWith('/challenge/') || targetPath.startsWith('/replay/')) {
-      window.location.href = targetPath
+      window.location.replace(targetPath)
       return
     }
 
     if (targetPath.startsWith('/duel') || targetPath.startsWith('/game') || targetPath.startsWith('/friends') || targetPath.startsWith('/profile') || targetPath.startsWith('/history') || targetPath.startsWith('/premium')) {
-      window.location.href = targetPath
+      window.location.replace(targetPath)
       return
     }
 
-    window.location.href = targetPath || '/'
+    window.location.replace(targetPath || '/')
   }
 
   try {

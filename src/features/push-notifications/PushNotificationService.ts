@@ -404,7 +404,7 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
             joinTeam: data.joinTeam,
             timestamp: Date.now(),
           })
-          window.location.href = route
+          window.location.replace(route)
         } catch (err) {
           const msg = `[Push Crash] ${err instanceof Error ? err.message : String(err)} | data: ${JSON.stringify(notification)}`
           console.error(msg)
