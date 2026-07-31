@@ -204,7 +204,7 @@ export default function PremiumPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <BackButton />
+                <BackButton fallbackHref="/profile" alwaysFallback={isPremium} />
                 <div className="flex items-center gap-2">
                   <ChessDuoLogo size="md" />
                   <span className="text-2xl font-black text-amber-400">Premium</span>
