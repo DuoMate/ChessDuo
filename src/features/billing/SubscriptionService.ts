@@ -1,5 +1,6 @@
 import type { BillingProvider, PurchaseResult, SubscriptionPlan, SubscriptionInfo } from './types'
 import { transition } from './SubscriptionStateMachine'
+import { getAppBaseUrl } from '@/lib/appUrl'
 
 const MONTHLY_PRODUCT_ID = 'premium_monthly'
 const YEARLY_PRODUCT_ID = 'premium_yearly'
@@ -11,8 +12,7 @@ let statusCheckedAt = 0
 const STATUS_CACHE_MS = 30_000
 
 function getApiBase(): string {
-  if (typeof window === 'undefined') return ''
-  return window.location.origin
+  return getAppBaseUrl()
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {

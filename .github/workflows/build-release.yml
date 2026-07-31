@@ -106,16 +106,16 @@ jobs:
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
 
-      - name: Generate assetlinks.json from keystore
-        run: bash scripts/generate-assetlinks.sh chessduo.keystore
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-
-      - name: Stage assetlinks.json for push
+      - name: Validate assetlinks.json fingerprint
         run: |
-          git add public/.well-known/assetlinks.json
-          git commit --amend --no-edit || true
+          ACTUAL=$(python3 -c "import json;print(json.load(open('public/.well-known/assetlinks.json'))[0]['target']['sha256_cert_fingerprints'][0])")
+          EXPECTED="${{ secrets.ASSETLINKS_SHA256 }}"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Fingerprint mismatch: expected $EXPECTED, got $ACTUAL"
+            echo "Update public/.well-known/assetlinks.json to the Play App Signing key SHA256 (Play Console → Release → Setup → App signing)."
+            exit 1
+          fi
+          echo "assetlinks.json fingerprint verified: $ACTUAL"
 
       # ── Push the bump commit after all setup but before build ──
       # This ensures the git repo is updated before the lengthy build,

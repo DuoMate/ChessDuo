@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { getAppBaseUrl } from '@/lib/appUrl'
 
 export function SplashHandler() {
   useEffect(() => {
@@ -27,7 +28,7 @@ export function SplashHandler() {
           url: window.location.href,
           time: new Date().toISOString(),
         }
-        fetch('/api/log-crash', {
+        fetch(`${getAppBaseUrl()}/api/log-crash`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(errorData),
@@ -44,7 +45,7 @@ export function SplashHandler() {
     window.addEventListener('unhandledrejection', (e) => {
       console.error('[Global Unhandled]', e.reason)
       try {
-        fetch('/api/log-crash', {
+        fetch(`${getAppBaseUrl()}/api/log-crash`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

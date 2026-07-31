@@ -86,6 +86,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-31**: Bug 35 fix — Share buttons now open the native Android share sheet via `@capacitor/share` (`src/lib/share.ts` helper). Wired into `GameLobby`, `GameLoading`, `FourPlayerLobby` (game invites, native `chessduo://` links), plus `profile/page.tsx`, `ProfilePanel`, and `FriendsPanel` (profile/invite links). Web falls back to `navigator.share`, then clipboard copy.
 - **2026-07-31**: Game timers now use `font-game` (Chakra Petch) per design system — `MatchTimer`, `BoardTopBar` center timer, and `TurnStatusArea` `TimerDisplay` switched from `font-mono` to `font-game`.
 - **2026-07-19**: ConfirmMoveBar redesigned — restored two-button Cancel/Confirm layout with play-button green gradient texture, positioned above BoardBottomNav. Board resets to original position on cancel via `boardKey` remount.
 - **2026-07-20**: Premium insights gate redesign — `InsightsGate.tsx` exhausted state updated to match dark premium UI (lock icon, "UNLOCK PREMIUM INSIGHTS" banner, "UPGRADE NOW" button with crown, bottom "VIEW PLANS" teaser). Added `onStateChange` callback for parent lock-state awareness. `BoardBottomNav` gains `insightsLocked` prop with lock badge on Insights tab. `Game.tsx` Insights `SlideOver` now wraps `MoveInsights` with `InsightsGate` so the 3-free-reveal limit is enforced in-game. Guests tracked via `'guest'` fallback ID.

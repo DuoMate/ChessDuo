@@ -8,6 +8,7 @@ import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
+import { shareLink } from '@/lib/share'
 import {
   getLobbyPlayers,
   joinLobby,
@@ -57,6 +58,8 @@ export function FourPlayerLobby({
   const inviteUrl = typeof window !== 'undefined'
     ? `${getAppBaseUrl()}/?code=${roomCode}`
     : null
+
+  const nativeInviteUrl = `chessduo://?code=${roomCode}`
 
   const fetchPlayers = useCallback(async () => {
     try {
@@ -217,15 +220,12 @@ export function FourPlayerLobby({
 
   const handleShare = () => {
     if (!inviteUrl || !roomCode) return
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({
-        title: 'ChessDuo — Join our 2v2 game!',
-        text: `Join our 4-player ChessDuo game! Room code: ${roomCode}`,
-        url: inviteUrl,
-      }).catch(() => {})
-    } else {
-      handleCopyLink()
-    }
+    shareLink({
+      title: 'ChessDuo — Join our 2v2 game!',
+      text: `Join our 4-player ChessDuo game! Room code: ${roomCode}`,
+      url: inviteUrl,
+      nativeUrl: nativeInviteUrl,
+    })
   }
 
   const handleClickCard = async (targetPlayer: LobbyPlayer) => {

@@ -6,6 +6,7 @@ import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } 
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
+import { shareLink, toNativeLink } from '@/lib/share'
 import { supabase } from '@/lib/supabase'
 import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
@@ -76,11 +77,19 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
     return () => clearTimeout(timerRef.current)
   }, [])
 
-  const copyProfileLink = () => {
-    navigator.clipboard.writeText(getProfileLink(playerId))
-    setProfileCopied(true)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
+  const copyProfileLink = async () => {
+    const url = getProfileLink(playerId)
+    const result = await shareLink({
+      title: 'ChessDuo Profile',
+      text: 'Check out my ChessDuo profile!',
+      url,
+      nativeUrl: toNativeLink(`/profile/${playerId}`),
+    })
+    if (result === 'copied') {
+      setProfileCopied(true)
+      clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
+    }
   }
 
   return (

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
+import { getAppBaseUrl } from '@/lib/appUrl'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 import { Spinner } from '@/components/Spinner'
@@ -35,7 +36,7 @@ function DeleteAccountContent() {
         setStep('error')
         return
       }
-      const response = await fetch('/api/delete-account', {
+      const response = await fetch(`${getAppBaseUrl()}/api/delete-account`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

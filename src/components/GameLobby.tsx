@@ -7,6 +7,7 @@ import { Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Spinner } from '@/components/Spinner'
+import { shareLink } from '@/lib/share'
 
 interface GameLobbyProps {
   roomCode?: string
@@ -67,16 +68,18 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
     linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
   }
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!inviteUrl || !roomCode) return
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({
-        title: 'ChessDuo \u2014 Join my game!',
-        text: `Join my ChessDuo game! Room code: ${roomCode}`,
-        url: inviteUrl,
-      }).catch(() => {})
-    } else {
-      handleCopyLink()
+    const result = await shareLink({
+      title: 'ChessDuo \u2014 Join my game!',
+      text: `Join my ChessDuo game! Room code: ${roomCode}`,
+      url: inviteUrl,
+      nativeUrl: `chessduo://?code=${roomCode}`,
+    })
+    if (result === 'copied') {
+      setLinkCopied(true)
+      clearTimeout(linkCopiedTimerRef.current)
+      linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000)
     }
   }
 

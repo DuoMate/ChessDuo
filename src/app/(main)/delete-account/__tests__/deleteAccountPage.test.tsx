@@ -101,7 +101,7 @@ describe('DeleteAccountPage', () => {
     await user.click(screen.getByText('Yes, Permanently Delete Everything'))
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/delete-account', expect.objectContaining({
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/delete-account'), expect.objectContaining({
         method: 'POST',
       }))
     })

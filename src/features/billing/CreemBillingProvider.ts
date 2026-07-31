@@ -1,6 +1,7 @@
 import type { BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
+import { getAppBaseUrl } from '@/lib/appUrl'
 
-const API_BASE = typeof window !== 'undefined' ? window.location.origin : ''
+const API_BASE = getAppBaseUrl()
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }

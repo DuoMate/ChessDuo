@@ -8,6 +8,7 @@ import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRigh
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
+import { getAppBaseUrl } from '@/lib/appUrl'
 
 interface ErrorDetail {
   title: string
@@ -78,7 +79,7 @@ export default function PremiumPage() {
       }
     } catch { /* falls back to cookie auth */ }
 
-    const res = await fetch(`/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
+    const res = await fetch(`${getAppBaseUrl()}/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
     const data = await res.json()
     if (res.ok && data.verified && data.status) {
       return data.status as SubscriptionInfo

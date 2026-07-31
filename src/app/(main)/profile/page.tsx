@@ -14,6 +14,7 @@ import { Spinner } from '@/components/Spinner'
 import { SubscriptionService } from '@/features/billing'
 import { useSettings } from '@/lib/settings'
 import { getProfileLink } from '@/lib/friends'
+import { shareLink, toNativeLink } from '@/lib/share'
 import { motion } from 'framer-motion'
 import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil } from 'lucide-react'
 import { AuthGate } from '@/components/AuthGate'
@@ -80,11 +81,19 @@ function ProfileContent({ playerId }: { playerId: string }) {
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
-  const copyProfileLink = () => {
-    navigator.clipboard.writeText(getProfileLink(playerId))
-    setProfileCopied(true)
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
+  const copyProfileLink = async () => {
+    const url = getProfileLink(playerId)
+    const result = await shareLink({
+      title: 'ChessDuo Profile',
+      text: 'Check out my ChessDuo profile!',
+      url,
+      nativeUrl: toNativeLink(`/profile/${playerId}`),
+    })
+    if (result === 'copied') {
+      setProfileCopied(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setProfileCopied(false), 2000)
+    }
   }
 
   const handleSignOut = async () => {
