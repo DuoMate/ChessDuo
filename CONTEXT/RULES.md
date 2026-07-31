@@ -43,6 +43,7 @@
 - Rooms have a unique `code`, status (`waiting`, `playing`, `finished`), mode (`online`, `fourplayer`)
 - Room auto-cleanup after `ROOM_EXPIRY_MS = 86400000` (24h)
 - Room players have a `team` (WHITE/BLACK), `slot` (0/1), and `status` (waiting/joined/ready/locked)
+- The host's team is stored on the room row (`host_team`); a joiner derives their team as the opposite of `host_team` and checks fullness via the public `get_room_join_state` RPC — joiners must NEVER read `room_players` before joining (RLS blocks non-members; Bug 39)
 - Matchmaking polling interval: `DEFAULT_POLLING_INTERVAL_MS = 2000`
 
 ## Real-time Infrastructure
@@ -52,12 +53,12 @@
 
 ## Premium (Freemium)
 - 3 free insights (`INSIGHTS_FREE_LIMIT`)
-- Creem (MoR) subscriptions for unlimited insights — redirect-based checkout + webhook lifecycle
+- Creem (MoR) subscriptions for unlimited insights — redirect-based checkout + webhook lifecycle. Webhook events with empty metadata fall back to `creem.checkouts.retrieve(id)` to resolve the user; `verify-checkout` grants when the checkout OR its subscription is completed (Bug 40)
 - Subscription status tracked on `profiles` table (`subscription_provider`, `subscription_plan`, `purchase_state`, `subscription_expiry_date`) via `SubscriptionService`
 
 ## Database Entities
 - **profiles**: id, username, avatar_url, is_premium, insights count, subscription fields
-- **rooms**: id, code, status, mode, created_by, created_at
+- **rooms**: id, code, status, mode, created_by, host_team, created_at
 - **room_players**: room_id, player_id, team, slot, status, joined_at
 - **games**: id, room_id, fen, current_turn, move_history, status, timers
 

@@ -50,7 +50,10 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
         JSON.stringify({ type: 'challenge', roomId, roomCode, time: selectedTime }),
         'challenge'
       )
-      notifyGameInvite(friendId, currentUserId, currentUserName, roomId, roomCode, currentUserId, 'WHITE')
+      // The invite deep link must carry the RECEIVER's identity (friendId) and the
+      // BLACK team so the friend's /duel page session check passes — the challenger
+      // is already WHITE in the pre-created room.
+      notifyGameInvite(friendId, currentUserId, currentUserName, roomId, roomCode, friendId, 'BLACK')
       router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${currentUserId}&time=${selectedTime}`)
     }
     setCreating(false)

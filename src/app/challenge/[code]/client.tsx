@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { RoomService } from '@/lib/roomService'
 import { getChallengeByCode, deactivateChallenge } from '@/lib/challenges'
+import { generateRoomCode } from '@/lib/roomActions'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -26,6 +27,7 @@ export default function ChallengePageClient() {
     game_mode: string
     time_seconds: number
     creator_id: string
+    room_id: string | null
   } | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
@@ -64,6 +66,7 @@ export default function ChallengePageClient() {
         game_mode: challenge.game_mode,
         time_seconds: challenge.time_seconds,
         creator_id: challenge.creator_id,
+        room_id: challenge.room_id ?? null,
       })
     }).catch(() => {
       if (!mountedRef.current) return
@@ -77,14 +80,27 @@ export default function ChallengePageClient() {
     setStatus('joining')
 
     try {
-      const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .insert({ code: roomCode, status: 'waiting', created_by: challengeInfo.creator_id })
-        .select('*')
-        .single()
+      let room: { id: string; code: string } | null = null
 
-      if (roomError) throw new Error('Failed to create room')
+      // Duel challenges pre-create a room + duel_games row; the acceptor must
+      // join THAT room so both players end up in the same match. Fall back to
+      // creating a fresh room if the pre-created one is gone or non-existent.
+      if (challengeInfo.room_id) {
+        const { data } = await supabase.from('rooms').select('id, code').eq('id', challengeInfo.room_id).maybeSingle()
+        if (data) room = data
+      }
+
+      if (!room) {
+        const roomCode = generateRoomCode()
+        const { data: created, error: roomError } = await supabase
+          .from('rooms')
+          .insert({ code: roomCode, status: 'waiting', created_by: challengeInfo.creator_id, host_team: 'WHITE' })
+          .select('*')
+          .single()
+
+        if (roomError || !created) throw new Error('Failed to create room')
+        room = created
+      }
 
       await Promise.all([
         RoomService.insertRoomPlayer({
@@ -103,9 +119,17 @@ export default function ChallengePageClient() {
 
       await deactivateChallenge(challengeCode)
 
-      router.replace(
-        `/game?mode=online&room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}&challengeId=${challengeInfo.id}`
-      )
+      // A pre-created room means this was a duel challenge → join the 1v1 duel.
+      // Otherwise it is a 2v2 online challenge.
+      if (challengeInfo.room_id) {
+        router.replace(
+          `/duel?room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}`
+        )
+      } else {
+        router.replace(
+          `/game?mode=online&room=${room.id}&code=${room.code}&team=BLACK&playerId=${playerId}&time=${challengeInfo.time_seconds}&challengeId=${challengeInfo.id}`
+        )
+      }
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Failed to join challenge')

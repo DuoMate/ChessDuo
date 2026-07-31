@@ -58,6 +58,25 @@ describe('InvitePageClient', () => {
     expect(screen.getByText('You and test-target are already friends')).toBeInTheDocument()
   })
 
+  it('shows a consent button instead of auto-sending when not friends (Bug: invite auto-send)', async () => {
+    require('@/lib/friends').isFriend.mockResolvedValueOnce(false)
+    const sendFriendRequest = require('@/lib/friends').sendFriendRequest
+
+    render(<InvitePageClient />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Send Friend Request')).toBeInTheDocument()
+    })
+    expect(sendFriendRequest).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText('Send Friend Request'))
+
+    await waitFor(() => {
+      expect(sendFriendRequest).toHaveBeenCalledWith('current-user-id', 'test-user-id')
+    })
+    expect(screen.getByText('Friend Request Sent!')).toBeInTheDocument()
+  })
+
   it('Go Home button navigates to /', async () => {
     render(<InvitePageClient />)
 

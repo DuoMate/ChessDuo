@@ -264,11 +264,21 @@ SubscriptionService
 ```
 
 - Purchase is **redirect-based**: `purchase()` → `POST /api/creem/checkout` → redirect to Creem-hosted checkout → back to `/premium?session_id=…` → `GET /api/creem/verify-checkout` grants immediately → webhook is the durable backup.
-- **Immediate grant**: `verify-checkout` runs `checkouts.retrieve(session_id)`, requires `status === 'completed'`, and enforces ownership (checkout `referenceId`/`userId` must match the authenticated user, else 403) before upserting `profiles` via the service-role key.
-- Subscription lifecycle is **webhook-driven** (`onGrantAccess` / `onRevokeAccess` / `onCheckoutCompleted` / `onSubscriptionCanceled` / `onSubscriptionPastDue`). No server-side re-verification on `status` reads.
+- **Immediate grant**: `verify-checkout` runs `checkouts.retrieve(session_id)`, grants when the checkout **or** its subscription is completed (`active|completed|paid|trialing` — lenient on transient checkout statuses), and enforces ownership (checkout `referenceId`/`userId` must match the authenticated user, else 403) before upserting `profiles` via the service-role key. `/premium` polls `getStatus()` up to 5× after an unverified return to catch the async webhook grant.
+- Subscription lifecycle is **webhook-driven** (`onGrantAccess` / `onRevokeAccess` / `onCheckoutCompleted` / `onSubscriptionCanceled` / `onSubscriptionPastDue`). No server-side re-verification on `status` reads. Webhook events sometimes arrive with **empty metadata**; handlers safe-deref `customer`/`product` and fall back to `creem.checkouts.retrieve(id)` to resolve the userId (the checkout object always carries `metadata.referenceId`). Unresolvable events are logged loudly and still resolve 200 so Creem does not retry-spam.
 - Checkout metadata carries `userId`, `referenceId`, and `plan`; webhook attributes events to the ChessDuo profile.
 - Pricing comes from Creem products (cents → `$X.XX`); plans are mapped to internal IDs `premium_monthly` / `premium_yearly`.
 - Environment: `CREEM_API_KEY` (test mode auto-detected when prefixed `creem_test_`), `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`.
+
+### 8. Room Join Model (RLS-safe)
+
+**RULE**: A player joining a room must NEVER read `room_players` before they are a member — the RLS policies allow room members only, so a joiner gets an empty result set and the wrong team (this was Bug 39: `/?code=` invite links always placed the joiner on the host's team).
+
+**Why it works**:
+- The host's team is stored on the `rooms` row as `host_team` (`WHITE`/`BLACK`) at creation time (see `createOnlineRoom`, matchmaking queue, challenge pre-created rooms). The joiner derives their team as the **opposite** of `host_team` — no pre-join DB read required.
+- Team/fullness decisions (`white_count`/`black_count`, "room is full") come from the public SECURITY DEFINER RPC `get_room_join_state(p_room_id)` in `supabase/tables.sql`, not from a `room_players` select.
+- Join inserts use `room_players.upsert(..., { onConflict: 'room_id,player_id' })` — safe for rejoin and idempotent.
+- Challenge links: duel challenges pre-create a room + `duel_games` row and store `room_id` on the challenge; the acceptor joins THAT room (creator WHITE, acceptor BLACK) so both players meet in the same match. A `generateRoomCode()` fallback creates a fresh room if the pre-created one is gone.
 
 ---
 
@@ -439,4 +449,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-07-31 — verify-on-return (`/api/creem/verify-checkout`) for immediate premium grant after checkout redirect*
+*Last Updated: 2026-07-31 — Bug 39/40 fixes: RLS-safe room join model (host_team + get_room_join_state RPC) and webhook metadata fallback via checkouts.retrieve*

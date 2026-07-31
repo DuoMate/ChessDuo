@@ -75,6 +75,26 @@ describe('createOnlineRoom', () => {
     })
   })
 
+  it('should store host_team on the room row so joiners can derive the opposite team (Bug 39)', async () => {
+    const roomData = { id: 'room-uuid', code: 'ABC123', status: 'waiting', created_by: 'player1' }
+    mockSelect.mockReturnValue({ single: mockSingle })
+    mockSingle.mockResolvedValue({ data: roomData, error: null })
+
+    const playersInsert = jest.fn().mockResolvedValue({ error: null })
+    ;(supabase.from as jest.Mock)
+      .mockReturnValueOnce({ insert: mockInsert })
+      .mockReturnValueOnce({ insert: playersInsert })
+
+    mockInsert.mockReturnValue({ select: mockSelect })
+
+    const result = await createOnlineRoom({ playerId: 'player1', timeSeconds: 600, hostColor: 'black' })
+
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ host_team: 'BLACK' }),
+    )
+    expect(result.team).toBe('BLACK')
+  })
+
   it('should throw if room creation fails', async () => {
     mockSelect.mockReturnValue({ single: mockSingle })
     mockSingle.mockResolvedValue({ data: null, error: { message: 'DB error' } })

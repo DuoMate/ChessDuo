@@ -202,6 +202,9 @@ BEGIN
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS time_seconds INTEGER DEFAULT 600;
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'online';
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS host_team TEXT;
+    ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_host_team_check;
+    ALTER TABLE rooms ADD CONSTRAINT rooms_host_team_check CHECK (host_team IS NULL OR host_team IN ('WHITE', 'BLACK'));
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'room_players') THEN
@@ -326,11 +329,11 @@ AS $$
                                                                                                           )
                                                                                                            $$;
 
-                                                                                                           -- RPC: query room_players without RLS (SECURITY DEFINER = owner privileges)
-                                                                                                           CREATE OR REPLACE FUNCTION public.get_room_players(p_room_id UUID)
-                                                                                                           RETURNS TABLE(player_id TEXT, team TEXT)
-                                                                                                           LANGUAGE plpgsql
-                                                                                                           SECURITY DEFINER
+                                                                                                            -- RPC: query room_players without RLS (SECURITY DEFINER = owner privileges)
+                                                                                                            CREATE OR REPLACE FUNCTION public.get_room_players(p_room_id UUID)
+                                                                                                            RETURNS TABLE(player_id TEXT, team TEXT)
+                                                                                                            LANGUAGE plpgsql
+                                                                                                            SECURITY DEFINER
 SET search_path = 'public'
 AS $$
 BEGIN
@@ -342,6 +345,22 @@ BEGIN
     FROM room_players rp
     WHERE rp.room_id = p_room_id;
 END;
+$$;
+
+                                                                                                            -- RPC: public join-state for a room code (no membership gate — rooms are public
+                                                                                                            -- by design; lets an invitee pick the opposite team and detect a full/duplicate
+                                                                                                            -- room before inserting themselves).
+                                                                                                            CREATE OR REPLACE FUNCTION public.get_room_join_state(p_room_id UUID)
+                                                                                                            RETURNS TABLE(player_count BIGINT, white_count BIGINT, black_count BIGINT)
+                                                                                                            LANGUAGE sql
+                                                                                                            SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+  SELECT COUNT(*)::BIGINT,
+         COUNT(*) FILTER (WHERE team = 'WHITE')::BIGINT,
+         COUNT(*) FILTER (WHERE team = 'BLACK')::BIGINT
+  FROM room_players
+  WHERE room_id = p_room_id;
 $$;
 
                                                                                                            -- room_players: must be room member to view players list

@@ -488,9 +488,10 @@ Key files:
 **Flow**:
 1. User taps "Upgrade to Premium" on `/premium`
 2. `SubscriptionService.purchaseMonthly()` → `POST /api/creem/checkout` → Creem-hosted checkout page
-3. User pays on Creem's page → redirected back to `/premium?session_id=...`
-4. Creem webhook fires → server sets `is_premium = true` on the user's profile
-5. Premium unlocked on next status refresh — no app restart required
+3. User pays on Creem's page → redirected back to `/premium?session_id=...` (web) or through `/api/creem/return` → `chessduo://premium` (native)
+4. `GET /api/creem/verify-checkout` grants immediately when the checkout **or** its subscription is completed (Bug 40: lenient status). If not yet verified, `/premium` polls `getStatus()` up to 5× to catch the async webhook.
+5. Creem webhook fires → `is_premium = true` on the user's profile. Events with empty metadata fall back to `creem.checkouts.retrieve(id)` to resolve the userId — an unresolvable event logs loudly and still resolves 200.
+6. Premium unlocked on next status refresh — no app restart required
 
 **GitHub Secrets required**:
 `CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`
@@ -519,14 +520,33 @@ Key files:
 
 ---
 
+## Deep-Link & Premium Activation Fixes (July 2026)
+
+Shipped to prod alongside the social/premium features after a QA audit found that several share/invite flows produced dead ends:
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 39 | `/?code=` invite links never reach the lobby (stuck "Preparing board") | RLS policy "Room members can view players" blocks the pre-join `room_players` read → joiner always gets the host's team | `rooms.host_team` column (joiner = opposite) + public `get_room_join_state` RPC for counts/fullness; `?code=` stripped only after a successful `router.push` |
+| 40 | Successful Creem payment never activates premium | Webhook showed `checkout.completed`/`subscription.paid` as Successful but returned 200 while skipping the grant — event metadata was empty → no userId | Webhook resolves userId via metadata then `creem.checkouts.retrieve(id)` fallback; safe-derefs `customer`/`product`; always logs + 200. `verify-checkout` grants when checkout OR subscription is completed. `/premium` polls status after unverified return |
+| — | Push game-invite shows "Session Expired" | `ChallengePicker` passed the challenger's id + `'WHITE'` to the friend → `/duel` session check (`session.user.id === playerId`) failed | Pass `friendId` + `'BLACK'` in the push payload |
+| — | Profile share was a dead link | `/profile/[userId]` route doesn't exist | `getProfileLink()` → `/invite/[userId]`; share copy updated |
+| — | Challenge link created a second room | `/challenge/[code]` ignored the pre-created room and generated `Math.random()` codes (can be <6 chars / collide) | Accept into the challenge's `room_id` (creator WHITE, acceptor BLACK), `generateRoomCode()` fallback, route by `game_mode` |
+| — | `chessduo:///path` deep links failed on native | Triple slash parsed as protocol-relative `//path` | Strip leading slashes in `capacitorAuth.getPathFromUrl`; `lastHandledUrl` dedupe |
+| — | Logged-out `/replay` showed "Game Not Found" | No session, game query returned null | Sign-in prompt via `Auth` before loading the replay |
+| — | `/invite/[userId]` auto-sent friend requests | Shared links triggered requests on page load | Explicit "Send Friend Request" confirmation step |
+
+**DB changes** (in `supabase/tables.sql`, idempotent): `rooms.host_team` column + `rooms_host_team_check` constraint, and `get_room_join_state(p_room_id)` SECURITY DEFINER RPC returning `(player_count, white_count, black_count)`.
+
+---
+
 ## Test Health
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 88 | 83 pass, 3 fail (pre-existing), 2 skip |
-| Individual tests | 1007 | 882 pass, 8 fail (pre-existing), 117 skip |
+| Test suites | 95 | 90 pass, 3 fail (pre-existing), 2 skip |
+| Individual tests | 1052 | 927 pass, 8 fail (pre-existing), 117 skip |
 
-**Status**: ✅ All billing tests green (verify-checkout route + restore flow tests added). Pre-existing failures in `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, and `server/__tests__/engine.test.ts` (LRUCache dependency) — unrelated to the Creem migration.
+**Status**: ✅ All billing + deep-link tests green (webhook metadata-fallback + verify-checkout leniency + invite consent + host_team + `getPathFromUrl` tests added with Bug 39/40). Pre-existing failures in `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, and `server/__tests__/engine.test.ts` (LRUCache dependency) — unrelated to the Bug 39/40 fixes.
 
 ---
 
@@ -651,8 +671,8 @@ Add `console.error` to critical empty catch blocks in:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 88 (86 run) | 83 pass, 2 skip, 3 pre-existing failures (ConfirmMoveBar, SidebarNav, server/engine) |
-| Individual tests | 1007 | 882 pass, 117 skip, 8 pre-existing failures |
+| Test suites | 95 (93 run) | 90 pass, 2 skip, 3 pre-existing failures (ConfirmMoveBar, SidebarNav, server/engine) |
+| Individual tests | 1052 | 927 pass, 117 skip, 8 pre-existing failures |
 
 ---
 

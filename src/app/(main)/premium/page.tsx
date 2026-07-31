@@ -85,6 +85,18 @@ export default function PremiumPage() {
       SubscriptionService.invalidate()
       return data.status as SubscriptionInfo
     }
+
+    // Not verified yet — the async webhook grant may still be in flight.
+    // Invalidate the 30s status cache and poll briefly so a just-delivered
+    // webhook grant is picked up without forcing the user to reload.
+    SubscriptionService.invalidate()
+    const attempts = 5
+    for (let i = 0; i < attempts; i++) {
+      const fresh = await SubscriptionService.getStatus()
+      if (fresh.isPremium) return fresh
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      SubscriptionService.invalidate()
+    }
     return SubscriptionService.getStatus()
   }
 

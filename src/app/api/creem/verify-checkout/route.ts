@@ -13,7 +13,6 @@ function getPlanFromBillingPeriod(billingPeriod?: string): 'monthly' | 'yearly' 
 }
 
 type CreemProductLike = { billingPeriod?: string }
-type CreemSubscriptionLike = { current_period_end_date?: Date | string }
 
 export async function GET(request: Request) {
   const requestId = crypto.randomUUID()
@@ -41,10 +40,23 @@ export async function GET(request: Request) {
 
     const checkout = await creem.checkouts.retrieve(sessionId)
 
-    if (checkout.status !== 'completed') {
+    const rawSubscription = typeof checkout.subscription === 'object' && checkout.subscription
+      ? checkout.subscription as { status?: string; current_period_end_date?: Date | string }
+      : undefined
+    const subscriptionStatus = String(rawSubscription?.status ?? '').toLowerCase()
+
+    // Be lenient: the webhook may already have completed the subscription
+    // (e.g. `subscription.paid`) while the checkout object still reports a
+    // transient status. Grant when either is completed.
+    const isCompleted =
+      checkout.status === 'completed' ||
+      ['active', 'completed', 'paid', 'trialing'].includes(subscriptionStatus)
+
+    if (!isCompleted) {
       return NextResponse.json({
         verified: false,
         status: checkout.status,
+        subscriptionStatus: subscriptionStatus || null,
       })
     }
 
@@ -69,11 +81,8 @@ export async function GET(request: Request) {
         ? 'yearly'
         : getPlanFromBillingPeriod(product?.billingPeriod)
 
-    const subscription = typeof checkout.subscription === 'object'
-      ? (checkout.subscription as unknown as CreemSubscriptionLike)
-      : undefined
-    const expiryDate = subscription?.current_period_end_date
-      ? new Date(subscription.current_period_end_date).toISOString()
+    const expiryDate = rawSubscription?.current_period_end_date
+      ? new Date(rawSubscription.current_period_end_date).toISOString()
       : null
 
     const { createClient } = await import('@supabase/supabase-js')

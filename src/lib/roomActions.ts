@@ -32,6 +32,7 @@ export async function createOnlineRoom(options: {
       created_by: playerId,
       time_seconds: timeSeconds,
       expires_at: expiresAt,
+      host_team: hostTeam,
     })
     .select()
     .single()

@@ -127,6 +127,26 @@ describe('GET /api/creem/verify-checkout', () => {
     expect(mockFrom().upsert).not.toHaveBeenCalled()
   })
 
+  it('grants when the subscription is completed even if checkout status is transient (Bug 40)', async () => {
+    mockCheckoutsRetrieve.mockResolvedValue({
+      status: 'pending',
+      metadata: { referenceId: 'user-1' },
+      subscription: { status: 'paid', current_period_end_date: '2026-09-01T00:00:00.000Z' },
+    })
+
+    const request = new Request('https://chessduo.app/api/creem/verify-checkout?session_id=sess-3b', {
+      headers: { Authorization: 'Bearer test-token' },
+    })
+
+    const res = await route.GET(request)
+    const data = await res.json()
+    expect(data.verified).toBe(true)
+    expect(mockFrom().upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user-1', is_premium: true, purchase_token: 'sess-3b' }),
+      { onConflict: 'id' },
+    )
+  })
+
   it('rejects checkout belonging to another user', async () => {
     mockCheckoutsRetrieve.mockResolvedValue({
       status: 'completed',
@@ -176,3 +196,5 @@ describe('GET /api/creem/verify-checkout', () => {
     expect(res.status).toBe(401)
   })
 })
+
+export {}

@@ -180,8 +180,8 @@ describe('getInviteLink', () => {
 })
 
 describe('getProfileLink', () => {
-  it('returns correct profile URL', () => {
+  it('returns the invite URL (no public /profile/[userId] route exists — Bug: dead profile share)', () => {
     const link = getProfileLink('abc123')
-    expect(link).toContain('/profile/abc123')
+    expect(link).toContain('/invite/abc123')
   })
 })

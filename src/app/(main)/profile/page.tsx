@@ -84,8 +84,8 @@ function ProfileContent({ playerId }: { playerId: string }) {
   const copyProfileLink = async () => {
     const url = getProfileLink(playerId)
     const result = await shareLink({
-      title: 'ChessDuo Profile',
-      text: 'Check out my ChessDuo profile!',
+      title: 'ChessDuo Invite',
+      text: 'Play ChessDuo with me!',
       url,
     })
     if (result === 'copied') {

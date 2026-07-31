@@ -30,6 +30,7 @@ https://chessduo.chessdoubles27.workers.dev/
 ## Current Status (July 2026)
 
 **✅ Web MVP Complete** — All core features live:
+- **Deep links & invites (July 2026)**: share/invite/challenge links open the game reliably (RLS-safe join via `rooms.host_team` + `get_room_join_state` RPC); premium activates immediately on payment via a lenient `verify-checkout` + webhook fallback that resolves empty event metadata through `creem.checkouts.retrieve(id)`.
 - **2v2 Chess**: Simultaneous team moves with parallel blind evaluation
 - **Online Multiplayer**: Supabase real-time sync with Coordinator pattern
 - **Move Playback**: Click-to-replay move history with shadow moves

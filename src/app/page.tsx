@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
-import { RoomService } from '@/lib/roomService'
 import { getFriendsList, FriendWithProfile } from '@/lib/friends'
 import { storePendingAction, consumePendingAction, clearPendingAction, type PendingAction } from '@/lib/pendingAction'
 import { Auth } from '@/components/Auth'
@@ -344,22 +343,25 @@ export default function SetupPage() {
       setJoinCode(codeParam)
       const doAutoJoin = async () => {
         setJoinLoading(true)
+        const now = new Date().toISOString()
 
         let room = null
-        const { data: byCode } = await supabase
+        const { data: byCode, error: byCodeError } = await supabase
           .from('rooms')
           .select('*')
           .eq('code', codeParam)
           .eq('status', 'waiting')
+          .or(`expires_at.is.null,expires_at.gt.${now}`)
           .maybeSingle()
         if (byCode) {
           room = byCode
-        } else {
+        } else if (!byCodeError) {
           const { data: byId } = await supabase
             .from('rooms')
             .select('*')
             .eq('id', codeParam)
             .eq('status', 'waiting')
+            .or(`expires_at.is.null,expires_at.gt.${now}`)
             .maybeSingle()
           if (byId) {
             room = byId
@@ -368,28 +370,18 @@ export default function SetupPage() {
 
         if (room) {
           const roomTime = room.time_seconds || 600
-          const url = new URL(window.location.href)
-          url.searchParams.delete('code')
-          window.history.replaceState(null, '', url.toString())
           if (room.mode === 'fourplayer') {
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
           } else {
-            // Determine the joiner's team: opposite of host's team so the
-            // joiner auto-receives the opposite color. Fall back to WHITE
-            // if the host's team cannot be determined.
-            let joinerTeam: 'WHITE' | 'BLACK' = 'WHITE'
-            try {
-              const { data: existingPlayers } = await supabase
-                .from('room_players')
-                .select('team')
-                .eq('room_id', room.id)
-              const hostTeam = existingPlayers?.[0]?.team
-              joinerTeam = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
-            } catch {
-              /* keep WHITE default */
-            }
+            // Host color is stored on the room row so the joiner can pick the
+            // opposite team BEFORE joining (room_players is RLS-locked to members).
+            const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
+            const joinerTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
             router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${joinerTeam}&playerId=${playerId}&time=${roomTime}`)
           }
+          const url = new URL(window.location.href)
+          url.searchParams.delete('code')
+          window.history.replaceState(null, '', url.toString())
         } else {
           setJoinError('Room not found or already started')
           setJoinCode('')
@@ -521,28 +513,22 @@ export default function SetupPage() {
             return
           }
 
-          const { data: existingPlayers } = await supabase
-            .from('room_players')
-            .select('*')
-            .eq('room_id', room.id)
+          // room_players is RLS-locked to members, so a joiner cannot read it
+          // before joining. The host color is stored on the room row and the
+          // public join-state RPC reports counts for team/fullness decisions.
+          const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
+          const whiteCount = Number(joinState?.white_count ?? 0)
+          const blackCount = Number(joinState?.black_count ?? 0)
 
-          if (existingPlayers?.some(p => p.player_id === pid)) {
-            setJoinError('You are already in this room from another session')
-            setJoinLoading(false)
-            return
-          }
-
-          const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
-          const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
-          const hostTeam = (existingPlayers || [])[0]?.team as 'WHITE' | 'BLACK' | undefined
+          const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
           const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
 
-          let team: 'WHITE' | 'BLACK' = preferredTeam
-          if (whiteSlots.length < 2 && blackSlots.length < 2) {
+          let team: 'WHITE' | 'BLACK'
+          if (whiteCount < 2 && blackCount < 2) {
             team = preferredTeam
-          } else if (whiteSlots.length < 2) {
+          } else if (whiteCount < 2) {
             team = 'WHITE'
-          } else if (blackSlots.length < 2) {
+          } else if (blackCount < 2) {
             team = 'BLACK'
           } else {
             setJoinError('Room is full')
@@ -550,7 +536,15 @@ export default function SetupPage() {
             return
           }
 
-          await RoomService.upsertRoomPlayer({ room_id: room.id, player_id: pid, team, slot: 0 })
+          const { error: joinError } = await supabase
+            .from('room_players')
+            .upsert({ room_id: room.id, player_id: pid, team, slot: 0 }, { onConflict: 'room_id,player_id' })
+          if (joinError) {
+            setJoinError('Could not join room')
+            setJoinLoading(false)
+            return
+          }
+
           setJoinLoading(false)
           setJoinCode('')
           const roomTime = room.time_seconds || DEFAULT_TEAM_TIMER_SECONDS
@@ -685,31 +679,22 @@ export default function SetupPage() {
         return
       }
 
-      const { data: existingPlayers } = await supabase
-        .from('room_players')
-        .select('*')
-        .eq('room_id', room.id)
+      // room_players is RLS-locked to members, so a joiner cannot read it
+      // before joining. The host color is stored on the room row and the
+      // public join-state RPC reports counts for team/fullness decisions.
+      const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
+      const whiteCount = Number(joinState?.white_count ?? 0)
+      const blackCount = Number(joinState?.black_count ?? 0)
 
-      if (existingPlayers?.some(p => p.player_id === pid)) {
-        setJoinError('You are already in this room from another session')
-        setJoinLoading(false)
-        return
-      }
-
-      const whiteSlots = (existingPlayers || []).filter(p => p.team === 'WHITE')
-      const blackSlots = (existingPlayers || []).filter(p => p.team === 'BLACK')
-
-      // Prefer the team with open slots. If both have space, prefer the
-      // opposite of the host's team (the host already occupies a slot).
-      const hostTeam = (existingPlayers || [])[0]?.team as 'WHITE' | 'BLACK' | undefined
+      const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
       const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
 
-      let team: 'WHITE' | 'BLACK' = preferredTeam
-      if (whiteSlots.length < 2 && blackSlots.length < 2) {
+      let team: 'WHITE' | 'BLACK'
+      if (whiteCount < 2 && blackCount < 2) {
         team = preferredTeam
-      } else if (whiteSlots.length < 2) {
+      } else if (whiteCount < 2) {
         team = 'WHITE'
-      } else if (blackSlots.length < 2) {
+      } else if (blackCount < 2) {
         team = 'BLACK'
       } else {
         setJoinError('Room is full')
@@ -717,12 +702,14 @@ export default function SetupPage() {
         return
       }
 
-      await RoomService.upsertRoomPlayer({
-        room_id: room.id,
-        player_id: pid,
-        team,
-        slot: 0,
-      })
+      const { error: joinError } = await supabase
+        .from('room_players')
+        .upsert({ room_id: room.id, player_id: pid, team, slot: 0 }, { onConflict: 'room_id,player_id' })
+      if (joinError) {
+        setJoinError('Could not join room')
+        setJoinLoading(false)
+        return
+      }
 
       setJoinLoading(false)
       handleRoomJoined(room, team, pid)

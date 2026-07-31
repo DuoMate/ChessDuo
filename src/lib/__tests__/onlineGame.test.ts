@@ -92,7 +92,8 @@ describe('OnlineGame', () => {
         created_at: new Date().toISOString(),
         time_seconds: 600,
         expires_at: null,
-        mode: null
+        mode: null,
+        host_team: 'WHITE' as const
       }
 
       await game.joinRoom(room, 'player1', 'WHITE')

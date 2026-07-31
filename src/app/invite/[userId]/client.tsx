@@ -31,10 +31,10 @@ export default function InvitePageClient() {
 
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState<'loading' | 'need_auth' | 'already_friends' | 'sent' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'confirm' | 'already_friends' | 'sent' | 'error'>('loading')
+  const [sending, setSending] = useState(false)
   const [targetUsername, setTargetUsername] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
-  const requestSent = useRef(false)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
 
@@ -66,34 +66,45 @@ export default function InvitePageClient() {
   }, [targetUserId])
 
   useEffect(() => {
-    if (!playerId || !targetUserId || requestSent.current) return
+    if (!playerId || !targetUserId) return
+    if (playerId === targetUserId) return
 
-    requestSent.current = true
+    // No auto-send on page load — the recipient confirms before a request
+    // is sent to avoid accidental friend requests from shared links.
     isFriend(playerId, targetUserId).then((already) => {
-      if (already) {
-        setStatus('already_friends')
-        return
-      }
-
-      sendFriendRequest(playerId, targetUserId).then(({ error }) => {
-        if (error) {
-          setStatus('error')
-          setErrorMsg(error)
-        } else {
-          setStatus('sent')
-        }
-      }).catch(() => {
-        setStatus('error')
-        setErrorMsg('Could not send friend request')
-      })
-    }).catch(() => {})
+      if (!mountedRef.current) return
+      setStatus(already ? 'already_friends' : 'confirm')
+    }).catch(() => {
+      if (!mountedRef.current) return
+      setStatus('confirm')
+    })
   }, [playerId, targetUserId])
+
+  const handleSendRequest = async () => {
+    if (!playerId || !targetUserId || sending) return
+    setSending(true)
+    try {
+      const { error } = await sendFriendRequest(playerId, targetUserId)
+      if (!mountedRef.current) return
+      if (error) {
+        setStatus('error')
+        setErrorMsg(error)
+      } else {
+        setStatus('sent')
+      }
+    } catch {
+      if (!mountedRef.current) return
+      setStatus('error')
+      setErrorMsg('Could not send friend request')
+    } finally {
+      setSending(false)
+    }
+  }
 
   const isSelf = playerId && targetUserId && playerId === targetUserId
 
   const handleAuthComplete = (userId: string) => {
     setPlayerId(userId)
-    requestSent.current = false
   }
 
   const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
@@ -103,7 +114,6 @@ export default function InvitePageClient() {
   const handleUsernameChosen = (userId: string) => {
     setNeedsUsername(null)
     setPlayerId(userId)
-    requestSent.current = false
   }
 
   if (needsUsername) {
@@ -182,7 +192,25 @@ export default function InvitePageClient() {
         <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'loading' && (
-            <p className="text-gray-500 dark:text-gray-400">Sending friend request...</p>
+            <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+          )}
+
+          {status === 'confirm' && (
+            <>
+              <div className="text-5xl mb-2">👥</div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                {targetUsername ? `${targetUsername} invited you to be friends` : 'You have been invited to be friends'}
+              </p>
+              <button
+                onClick={handleSendRequest}
+                disabled={sending}
+                className="min-h-[44px] w-full rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sending ? 'Sending...' : 'Send Friend Request'}
+              </button>
+              <GoHomeButton />
+            </>
           )}
 
           {status === 'already_friends' && (

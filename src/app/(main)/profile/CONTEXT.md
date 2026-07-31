@@ -16,3 +16,6 @@ Profile editor and stats display. Users can change username, avatar, view their 
 ## Dependencies
 - `@/components/ProfilePanel` — profile + stats UI
 - `@/lib/supabase` — data access
+
+## Recent Changes
+- **2026-07-31**: Share button copy updated to "ChessDuo Invite" / "Play ChessDuo with me!" and shares `getProfileLink()` — which now points at `/invite/[userId]` (the friend-request flow). The public `/profile/[userId]` route does not exist, so the old profile share produced a dead link.

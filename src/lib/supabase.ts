@@ -81,6 +81,7 @@ export type Database = {
           time_seconds: number
           expires_at: string | null
           mode: string | null
+          host_team: 'WHITE' | 'BLACK' | null
         }
         Insert: {
           id?: string
@@ -90,6 +91,7 @@ export type Database = {
           time_seconds?: number
           expires_at?: string | null
           mode?: string
+          host_team?: 'WHITE' | 'BLACK' | null
         }
         Update: {
           id?: string
@@ -97,6 +99,7 @@ export type Database = {
           status?: 'waiting' | 'playing' | 'finished'
           time_seconds?: number
           expires_at?: string | null
+          host_team?: 'WHITE' | 'BLACK' | null
         }
       }
       room_players: {
@@ -203,6 +206,7 @@ export type Database = {
           created_at: string
           expires_at: string
           is_active: boolean
+          room_id: string | null
         }
         Insert: {
           id?: string
@@ -212,6 +216,7 @@ export type Database = {
           code: string
           expires_at: string
           is_active?: boolean
+          room_id?: string | null
         }
         Update: {
           is_active?: boolean

@@ -251,8 +251,10 @@ export function getInviteLink(userId: string): string {
   return `${getAppBaseUrl()}/invite/${userId}`
 }
 
+// A public /profile/[userId] route does not exist yet — sharing a profile points
+// the recipient at the friend-request flow instead of a dead link.
 export function getProfileLink(userId: string): string {
-  return `${getAppBaseUrl()}/profile/${userId}`
+  return `${getAppBaseUrl()}/invite/${userId}`
 }
 
 export async function getFriendStats(friendId: string): Promise<{

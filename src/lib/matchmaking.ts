@@ -105,7 +105,7 @@ export async function createQuickMatchRoom(playerId: string, timeSeconds: number
 
     const { data: room, error } = await supabase
       .from('rooms')
-      .insert({ code, status: 'waiting', created_by: playerId, time_seconds: timeSeconds, expires_at: expiresAt })
+      .insert({ code, status: 'waiting', created_by: playerId, time_seconds: timeSeconds, expires_at: expiresAt, host_team: 'WHITE' })
       .select()
       .single()
 

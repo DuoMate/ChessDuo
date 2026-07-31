@@ -4,10 +4,11 @@ import { supabase } from './supabase'
 
 let listenerRegistered = false
 
-function getPathFromUrl(url: string): string | null {
+export function getPathFromUrl(url: string): string | null {
   try {
     if (url.startsWith('chessduo://')) {
-      const rest = url.slice('chessduo://'.length)
+      let rest = url.slice('chessduo://'.length)
+      rest = rest.replace(/^\/+/, '')
       const q = rest.includes('?') ? '?' + rest.split('?')[1] : ''
       return '/' + rest.split('?')[0] + q
     }
@@ -16,7 +17,8 @@ function getPathFromUrl(url: string): string | null {
       return parsed.pathname + parsed.search
     }
     if (url.startsWith('com.navron.chessduo://')) {
-      const rest = url.slice('com.navron.chessduo://'.length)
+      let rest = url.slice('com.navron.chessduo://'.length)
+      rest = rest.replace(/^\/+/, '')
       const q = rest.includes('?') ? '?' + rest.split('?')[1] : ''
       return '/' + rest.split('?')[0] + q
     }
@@ -26,6 +28,8 @@ function getPathFromUrl(url: string): string | null {
   }
 }
 
+let lastHandledUrl = ''
+
 export async function registerCapacitorAuthListener() {
   const isNative = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 
@@ -34,6 +38,9 @@ export async function registerCapacitorAuthListener() {
   listenerRegistered = true
 
   function handleDeepLink(url: string) {
+    if (!url || url === lastHandledUrl) return
+    lastHandledUrl = url
+
     if (url.includes('com.navron.chessduo://auth/callback')) {
       const params = new URLSearchParams(url.split('?')[1])
       const code = params.get('code')
