@@ -3,7 +3,9 @@
  */
 
 const mockCheckoutsRetrieve = jest.fn()
-const mockFrom = jest.fn()
+const mockUpdateEq = jest.fn()
+const mockUpdate = jest.fn()
+const mockSelectMaybeSingle = jest.fn()
 let capturedHandlers: Record<string, (...args: any[]) => any> = {}
 
 jest.mock('@creem_io/nextjs', () => ({
@@ -23,7 +25,16 @@ jest.mock('creem', () => ({
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn().mockImplementation(() => ({
-    from: mockFrom,
+    from: jest.fn().mockImplementation(() => ({
+      select: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          maybeSingle: mockSelectMaybeSingle,
+        }),
+      }),
+      update: mockUpdate.mockReturnValue({
+        eq: mockUpdateEq,
+      }),
+    })),
   })),
 }))
 
@@ -43,9 +54,9 @@ describe('POST /api/creem/webhook (handlers)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockFrom.mockReturnValue({
-      upsert: jest.fn().mockResolvedValue({ error: null }),
-    })
+    mockUpdateEq.mockResolvedValue({ error: null })
+    // Profile exists — update succeeds and select finds the row
+    mockSelectMaybeSingle.mockResolvedValue({ data: { id: 'user-1' }, error: null })
   })
 
   afterAll(() => {
@@ -53,14 +64,11 @@ describe('POST /api/creem/webhook (handlers)', () => {
   })
 
   function expectGranted(userId: string) {
-    const upsert = mockFrom().upsert
-    expect(upsert).toHaveBeenCalledWith(
+    expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: userId,
         is_premium: true,
         subscription_provider: 'CREEM',
       }),
-      { onConflict: 'id' },
     )
   }
 
@@ -109,7 +117,7 @@ describe('POST /api/creem/webhook (handlers)', () => {
       }),
     ).resolves.toBeUndefined()
 
-    expect(mockFrom().upsert).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('onCheckoutCompleted does not throw when checkouts.retrieve fails', async () => {
@@ -125,7 +133,7 @@ describe('POST /api/creem/webhook (handlers)', () => {
       }),
     ).resolves.toBeUndefined()
 
-    expect(mockFrom().upsert).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('onGrantAccess grants from metadata.referenceId', async () => {
@@ -136,10 +144,8 @@ describe('POST /api/creem/webhook (handlers)', () => {
     })
 
     expectGranted('user-5')
-    const upsert = mockFrom().upsert
-    expect(upsert).toHaveBeenCalledWith(
+    expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ subscription_expiry_date: '2026-08-30T00:00:00.000Z' }),
-      { onConflict: 'id' },
     )
   })
 
@@ -152,7 +158,7 @@ describe('POST /api/creem/webhook (handlers)', () => {
       }),
     ).resolves.toBeUndefined()
 
-    expect(mockFrom().upsert).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 })
 

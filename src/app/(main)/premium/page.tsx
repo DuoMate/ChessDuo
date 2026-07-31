@@ -40,7 +40,6 @@ export default function PremiumPage() {
   }, [])
 
   useEffect(() => {
-    const sessionId = new URLSearchParams(window.location.search).get('session_id')
     let cancelled = false
 
     async function load() {
@@ -48,9 +47,12 @@ export default function PremiumPage() {
         let subStatus = await SubscriptionService.getStatus()
         console.log('[PREMIUM] Initial getStatus:', JSON.stringify(subStatus))
 
-        if (sessionId && !subStatus.isPremium) {
-          console.log('[PREMIUM] session_id found, not premium — running verifyCheckoutSession:', sessionId)
-          subStatus = await verifyCheckoutSession(sessionId)
+        // If not premium, always attempt verification. The API route now
+        // auto-resolves the checkout ID from pending_checkout_id in the DB
+        // (Creem doesn't template-replace {CHECKOUT_SESSION_ID} in success URLs).
+        if (!subStatus.isPremium) {
+          console.log('[PREMIUM] Not premium — running verifyCheckoutSession')
+          subStatus = await verifyCheckoutSession()
           console.log('[PREMIUM] After verifyCheckoutSession:', JSON.stringify(subStatus))
           if (subStatus.isPremium) {
             router.replace('/premium')
@@ -77,8 +79,10 @@ export default function PremiumPage() {
     return () => { cancelled = true }
   }, [])
 
-  async function verifyCheckoutSession(sessionId: string): Promise<SubscriptionInfo> {
-    console.log('[PREMIUM] verify-checkout API call starting for session:', sessionId)
+  // The API route auto-resolves the checkout ID from pending_checkout_id in the DB.
+  // No session_id param is needed — Creem doesn't template-replace success URLs.
+  async function verifyCheckoutSession(): Promise<SubscriptionInfo> {
+    console.log('[PREMIUM] verify-checkout API call starting')
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     try {
       const { AuthService } = await import('@/lib/authService')
@@ -88,7 +92,7 @@ export default function PremiumPage() {
       }
     } catch { /* falls back to cookie auth */ }
 
-    const res = await fetch(`${getAppBaseUrl()}/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
+    const res = await fetch(`${getAppBaseUrl()}/api/creem/verify-checkout`, { headers })
     const data = await res.json()
     console.log('[PREMIUM] verify-checkout response:', res.status, JSON.stringify(data))
     if (res.ok && data.verified && data.status) {

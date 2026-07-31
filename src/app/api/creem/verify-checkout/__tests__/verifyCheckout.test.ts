@@ -3,8 +3,24 @@
  */
 
 const mockCheckoutsRetrieve = jest.fn()
-const mockFrom = jest.fn()
+const mockProfileUpdateEq = jest.fn()
+const mockProfileUpdate = jest.fn()
+const mockProfileSelectMaybeSingle = jest.fn()
 const mockGetAuthClient = jest.fn()
+
+function makeProfileFrom() {
+  mockProfileUpdate.mockReturnValue({
+    eq: mockProfileUpdateEq,
+  })
+  return {
+    update: mockProfileUpdate,
+    select: jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        maybeSingle: mockProfileSelectMaybeSingle,
+      }),
+    }),
+  }
+}
 
 jest.mock('creem', () => ({
   Creem: jest.fn().mockImplementation(() => ({
@@ -21,6 +37,8 @@ jest.mock('@/lib/apiAuth', () => ({
 jest.mock('@/lib/rateLimit', () => ({
   applyRateLimit: jest.fn().mockReturnValue(null),
 }))
+
+const mockFrom = jest.fn()
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn().mockImplementation(() => ({
@@ -51,9 +69,10 @@ describe('GET /api/creem/verify-checkout', () => {
       error: null,
     })
 
-    mockFrom.mockReturnValue({
-      upsert: jest.fn().mockResolvedValue({ error: null }),
-    })
+    // Default: profile exists, update succeeds
+    mockProfileUpdateEq.mockResolvedValue({ error: null })
+    mockProfileSelectMaybeSingle.mockResolvedValue({ data: { id: 'user-1' }, error: null })
+    mockFrom.mockImplementation(makeProfileFrom)
   })
 
   afterAll(() => {
@@ -81,16 +100,13 @@ describe('GET /api/creem/verify-checkout', () => {
     expect(data.status.subscriptionPlan).toBe('monthly')
     expect(data.status.subscriptionExpiryDate).toBe('2026-08-30T00:00:00.000Z')
 
-    const upsert = mockFrom().upsert
-    expect(upsert).toHaveBeenCalledWith(
+    expect(mockProfileUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 'user-1',
         is_premium: true,
         subscription_provider: 'CREEM',
         subscription_plan: 'monthly',
         purchase_token: 'sess-1',
       }),
-      { onConflict: 'id' },
     )
   })
 
@@ -124,7 +140,7 @@ describe('GET /api/creem/verify-checkout', () => {
     const data = await res.json()
     expect(data.verified).toBe(false)
     expect(data.status).toBe('processing')
-    expect(mockFrom().upsert).not.toHaveBeenCalled()
+    expect(mockProfileUpdate).not.toHaveBeenCalled()
   })
 
   it('grants when the subscription is completed even if checkout status is transient (Bug 40)', async () => {
@@ -141,9 +157,8 @@ describe('GET /api/creem/verify-checkout', () => {
     const res = await route.GET(request)
     const data = await res.json()
     expect(data.verified).toBe(true)
-    expect(mockFrom().upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'user-1', is_premium: true, purchase_token: 'sess-3b' }),
-      { onConflict: 'id' },
+    expect(mockProfileUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ is_premium: true, purchase_token: 'sess-3b' }),
     )
   })
 
@@ -159,10 +174,13 @@ describe('GET /api/creem/verify-checkout', () => {
 
     const res = await route.GET(request)
     expect(res.status).toBe(403)
-    expect(mockFrom().upsert).not.toHaveBeenCalled()
+    expect(mockProfileUpdate).not.toHaveBeenCalled()
   })
 
-  it('rejects missing session_id', async () => {
+  it('returns 400 when no session_id present and no pending_checkout_id in DB', async () => {
+    // No session_id param, and pending_checkout_id is null
+    mockProfileSelectMaybeSingle.mockResolvedValue({ data: null, error: null })
+
     const request = new Request('https://chessduo.app/api/creem/verify-checkout', {
       headers: { Authorization: 'Bearer test-token' },
     })
@@ -176,9 +194,10 @@ describe('GET /api/creem/verify-checkout', () => {
       status: 'completed',
       metadata: { referenceId: 'user-1' },
     })
-    mockFrom.mockReturnValue({
-      upsert: jest.fn().mockResolvedValue({ error: new Error('db down') }),
-    })
+
+    mockProfileUpdateEq.mockResolvedValue({ error: new Error('db down') })
+    // Profile doesn't exist either — update fails and insert also fails (triggered by the check)
+    mockProfileSelectMaybeSingle.mockResolvedValue({ data: null, error: null })
 
     const request = new Request('https://chessduo.app/api/creem/verify-checkout?session_id=sess-5', {
       headers: { Authorization: 'Bearer test-token' },

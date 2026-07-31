@@ -14,6 +14,50 @@ function getPlanFromBillingPeriod(billingPeriod?: string): 'monthly' | 'yearly' 
 
 type CreemProductLike = { billingPeriod?: string }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getAdminClient(): Promise<any> {
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  if (!supabaseUrl || !supabaseServiceRole) return null
+  return createClient(supabaseUrl, supabaseServiceRole, { auth: { persistSession: false } })
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function grantPremiumToProfile(admin: any, userId: string, updates: Record<string, unknown>) {
+  // Use update+insert instead of upsert to avoid the NOT NULL username constraint
+  // error when the profile row doesn't exist (e.g. handle_new_user trigger race).
+  const { error: updateErr } = await admin
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+
+  if (!updateErr) {
+    // Check if a row was affected (update returns no error on 0 rows affected)
+    const { data: existing } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!existing) {
+      // Profile doesn't exist — create it with a fallback username
+      const fallbackUsername = `user_${userId.slice(0, 8)}`
+      const { error: insertErr } = await admin
+        .from('profiles')
+        .insert({ id: userId, username: fallbackUsername, ...updates })
+      if (insertErr) {
+        console.error(`[creem/verify-checkout] Failed to insert profile for ${userId}: ${insertErr.message}`)
+        return insertErr
+      }
+    }
+  } else {
+    console.error(`[creem/verify-checkout] Failed to update profile for ${userId}: ${updateErr.message}`)
+    return updateErr
+  }
+  return null
+}
+
 export async function GET(request: Request) {
   const requestId = crypto.randomUUID()
   const route = 'creem/verify-checkout'
@@ -28,9 +72,28 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url)
-    const sessionId = url.searchParams.get('session_id')
+    let sessionId = url.searchParams.get('session_id') || ''
+
+    // Creem does NOT template-replace {CHECKOUT_SESSION_ID} in success_url,
+    // so the query param may be a literal template or absent entirely.
+    // Fall back to the pending_checkout_id stored at checkout creation time.
+    if (!sessionId || sessionId.startsWith('{')) {
+      const admin = await getAdminClient()
+      if (admin) {
+        const { data: profile } = await admin
+          .from('profiles')
+          .select('pending_checkout_id')
+          .eq('id', authUser.id)
+          .maybeSingle()
+        if (profile?.pending_checkout_id) {
+          sessionId = profile.pending_checkout_id
+          console.log(`[${route}] ${requestId} - Resolved session_id from pending_checkout_id: ${sessionId}`)
+        }
+      }
+    }
+
     if (!sessionId) {
-      return NextResponse.json({ error: 'Missing session_id' }, { status: 400 })
+      return NextResponse.json({ error: 'No checkout session found' }, { status: 400 })
     }
 
     const creem = new Creem({
@@ -45,9 +108,6 @@ export async function GET(request: Request) {
       : undefined
     const subscriptionStatus = String(rawSubscription?.status ?? '').toLowerCase()
 
-    // Be lenient: the webhook may already have completed the subscription
-    // (e.g. `subscription.paid`) while the checkout object still reports a
-    // transient status. Grant when either is completed.
     const isCompleted =
       checkout.status === 'completed' ||
       ['active', 'completed', 'paid', 'trialing'].includes(subscriptionStatus)
@@ -85,38 +145,31 @@ export async function GET(request: Request) {
       ? new Date(rawSubscription.current_period_end_date).toISOString()
       : null
 
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-
-    if (supabaseUrl && supabaseServiceRole) {
-      const admin = createClient(supabaseUrl, supabaseServiceRole, {
-        auth: { persistSession: false },
-      })
-      const { error } = await admin
-        .from('profiles')
-        .upsert(
-          {
-            id: authUser.id,
-            is_premium: true,
-            subscription_status: 'active',
-            subscription_provider: 'CREEM',
-            subscription_plan: plan,
-            purchase_token: sessionId,
-            ...(expiryDate ? { subscription_expiry_date: expiryDate } : {}),
-            last_verified_date: new Date().toISOString(),
-          },
-          { onConflict: 'id' },
-        )
-
-      if (error) {
-        console.error(`[${route}] ${requestId} - Supabase update failed: ${error.message}`)
-        return NextResponse.json({ error: 'Failed to activate subscription' }, { status: 500 })
-      }
-    } else {
+    const admin = await getAdminClient()
+    if (!admin) {
       console.error(`[${route}] ${requestId} - Supabase not configured for admin client`)
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
+
+    const grantErr = await grantPremiumToProfile(admin, authUser.id, {
+      is_premium: true,
+      subscription_status: 'active',
+      subscription_provider: 'CREEM',
+      subscription_plan: plan,
+      purchase_token: sessionId,
+      ...(expiryDate ? { subscription_expiry_date: expiryDate } : {}),
+      last_verified_date: new Date().toISOString(),
+    })
+
+    if (grantErr) {
+      return NextResponse.json({ error: 'Failed to activate subscription' }, { status: 500 })
+    }
+
+    // Clear the pending checkout ID after successful grant
+    await admin
+      .from('profiles')
+      .update({ pending_checkout_id: null })
+      .eq('id', authUser.id)
 
     const status: SubscriptionInfo = {
       isPremium: true,

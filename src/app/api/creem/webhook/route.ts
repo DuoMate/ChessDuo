@@ -19,12 +19,32 @@ async function updateSupabase(userId: string, updates: Record<string, unknown>) 
     auth: { persistSession: false },
   })
 
-  const { error } = await supabase
+  // Use update+insert instead of upsert to avoid the NOT NULL username
+  // constraint error when the profile row doesn't exist (handle_new_user trigger
+  // should create it on signup, but guard against race conditions).
+  const { error: updateErr } = await supabase
     .from('profiles')
-    .upsert({ id: userId, ...updates }, { onConflict: 'id' })
+    .update(updates)
+    .eq('id', userId)
 
-  if (error) {
-    console.error(`[creem/webhook] Failed to update profile for ${userId}:`, error.message)
+  if (!updateErr) {
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (!existing) {
+      const fallbackUsername = `user_${userId.slice(0, 8)}`
+      const { error: insertErr } = await supabase
+        .from('profiles')
+        .insert({ id: userId, username: fallbackUsername, ...updates })
+      if (insertErr) {
+        console.error(`[creem/webhook] Failed to insert profile for ${userId}:`, insertErr.message)
+      }
+    }
+  } else {
+    console.error(`[creem/webhook] Failed to update profile for ${userId}:`, updateErr.message)
   }
 }
 

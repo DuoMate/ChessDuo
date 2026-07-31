@@ -4,7 +4,7 @@ import PremiumPage from '../(main)/premium/page'
 import { SubscriptionService } from '@/features/billing'
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }))
 
 jest.mock('@/features/billing', () => ({
@@ -86,8 +86,10 @@ describe('PremiumPage Component', () => {
     expect(restore).toBeDefined()
   })
 
-  test('verifies a checkout session_id and shows premium after upgrade', async () => {
-    window.history.replaceState({}, '', '/premium?session_id=chk_123')
+  test('verifies a checkout and shows premium after upgrade', async () => {
+    // session_id is no longer in the URL — the API resolves it from
+    // pending_checkout_id stored at checkout creation time.
+    window.history.replaceState({}, '', '/premium')
 
     const premiumStatus = {
       isPremium: true,
@@ -111,7 +113,7 @@ describe('PremiumPage Component', () => {
     expect(premium).toBeDefined()
     expect(SubscriptionService.invalidate).toHaveBeenCalled()
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/creem/verify-checkout?session_id=chk_123'),
+      expect.stringContaining('/api/creem/verify-checkout'),
       expect.anything(),
     )
   })

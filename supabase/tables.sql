@@ -26,6 +26,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS auto_renew_status BOOLEAN DEFAULT 
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS purchase_state TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_verified_date TIMESTAMPTZ;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS pending_checkout_id TEXT;
 
 -- Drop old Razorpay columns (idempotent, safe to re-run)
 ALTER TABLE profiles DROP COLUMN IF EXISTS rzp_customer_id;

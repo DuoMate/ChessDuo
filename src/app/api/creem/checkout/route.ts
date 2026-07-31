@@ -41,12 +41,12 @@ export async function POST(request: Request) {
 
     const plan = productId.includes('yearly') ? 'yearly' : 'monthly'
 
-    // Creem requires an https successUrl — a custom scheme is rejected. Native
-    // clients bounce through /api/creem/return which redirects to the
-    // chessduo:// deep link so the app receives the session_id and verifies.
+    // Creem does NOT support template variables like {CHECKOUT_SESSION_ID} in
+    // the success URL — it passes the literal string. Store the checkout ID in
+    // the DB so the return page can look it up.
     const successUrl = isNative
-      ? `${SITE_URL}/api/creem/return?session_id={CHECKOUT_SESSION_ID}`
-      : `${SITE_URL}/premium?session_id={CHECKOUT_SESSION_ID}`
+      ? `${SITE_URL}/api/creem/return`
+      : `${SITE_URL}/premium`
 
     const checkout = await creem.checkouts.create({
       productId: creemProductId,
@@ -62,7 +62,27 @@ export async function POST(request: Request) {
       throw new Error('Creem did not return a checkout URL')
     }
 
-    console.log(`[${route}] ${requestId} - Checkout created: ${checkout.checkoutUrl}`)
+    console.log(`[${route}] ${requestId} - Checkout created: ${checkout.id}`)
+
+    // Store the checkout ID so /premium can look it up on return (no reliable
+    // query param because Creem doesn't template-replace success URLs).
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    if (supabaseUrl && supabaseServiceRole) {
+      try {
+        const { createClient } = await import('@supabase/supabase-js')
+        const admin = createClient(supabaseUrl, supabaseServiceRole, { auth: { persistSession: false } })
+        const { error: storeErr } = await admin
+          .from('profiles')
+          .update({ pending_checkout_id: checkout.id })
+          .eq('id', authUser.id)
+        if (storeErr) {
+          console.warn(`[${route}] ${requestId} - Failed to store pending_checkout_id for ${authUser.id}: ${storeErr.message}`)
+        }
+      } catch (storeE) {
+        console.warn(`[${route}] ${requestId} - Exception storing pending_checkout_id: ${storeE instanceof Error ? storeE.message : String(storeE)}`)
+      }
+    }
 
     return NextResponse.json({ checkoutUrl: checkout.checkoutUrl })
   } catch (err) {

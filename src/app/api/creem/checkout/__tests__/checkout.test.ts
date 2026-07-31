@@ -21,6 +21,16 @@ jest.mock('@/lib/rateLimit', () => ({
   applyRateLimit: jest.fn().mockReturnValue(null),
 }))
 
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn().mockImplementation(() => ({
+    from: jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    }),
+  })),
+}))
+
 const ORIGINAL_CHECKOUT_ENV = process.env
 
 describe('POST /api/creem/checkout', () => {
@@ -32,6 +42,8 @@ describe('POST /api/creem/checkout', () => {
     process.env.CREEM_PRODUCT_ID_MONTHLY = 'prod-monthly'
     process.env.CREEM_PRODUCT_ID_YEARLY = 'prod-yearly'
     process.env.NEXT_PUBLIC_SITE_URL = 'https://chessduo.workers.dev'
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key'
     jest.resetModules()
     route = await import('../route')
   })
@@ -43,6 +55,8 @@ describe('POST /api/creem/checkout', () => {
     process.env.CREEM_PRODUCT_ID_MONTHLY = 'prod-monthly'
     process.env.CREEM_PRODUCT_ID_YEARLY = 'prod-yearly'
     process.env.NEXT_PUBLIC_SITE_URL = 'https://chessduo.workers.dev'
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key'
 
     mockGetAuthClientCheckout.mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com' },
@@ -50,7 +64,7 @@ describe('POST /api/creem/checkout', () => {
       error: null,
     })
 
-    mockCheckoutsCreate.mockResolvedValue({ checkoutUrl: 'https://checkout.creem.io/sess-1' })
+    mockCheckoutsCreate.mockResolvedValue({ id: 'checkout-id-1', checkoutUrl: 'https://checkout.creem.io/sess-1' })
   })
 
   afterAll(() => {
@@ -72,7 +86,7 @@ describe('POST /api/creem/checkout', () => {
     expect(mockCheckoutsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         productId: 'prod-monthly',
-        successUrl: 'https://chessduo.workers.dev/premium?session_id={CHECKOUT_SESSION_ID}',
+        successUrl: 'https://chessduo.workers.dev/premium',
       }),
     )
   })
@@ -90,7 +104,7 @@ describe('POST /api/creem/checkout', () => {
     expect(mockCheckoutsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         productId: 'prod-yearly',
-        successUrl: 'https://chessduo.workers.dev/api/creem/return?session_id={CHECKOUT_SESSION_ID}',
+        successUrl: 'https://chessduo.workers.dev/api/creem/return',
       }),
     )
   })
