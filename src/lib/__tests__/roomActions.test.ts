@@ -75,7 +75,7 @@ describe('createOnlineRoom', () => {
     })
   })
 
-  it('should store host_team on the room row so joiners can derive the opposite team (Bug 39)', async () => {
+  it('should store host_team on the room row so joiners can derive the host team (Bug 39)', async () => {
     const roomData = { id: 'room-uuid', code: 'ABC123', status: 'waiting', created_by: 'player1' }
     mockSelect.mockReturnValue({ single: mockSingle })
     mockSingle.mockResolvedValue({ data: roomData, error: null })

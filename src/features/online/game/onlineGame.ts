@@ -658,6 +658,19 @@ export class OnlineGame {
         return
       }
 
+      // Guard: every human must be present in the Supabase realtime channel.
+      // DB row existence is not enough — the player must actually be connected.
+      const presenceState = this._channel?.presenceState() || {}
+      const presentIds = Object.keys(presenceState)
+      DEBUG && console.log('[ONLINE] presenceState keys:', presentIds)
+      for (const h of allHumans) {
+        if (!presentIds.includes(h.player_id)) {
+          DEBUG && console.log(`[ONLINE] Human ${h.player_id} not present in channel — deferring start (present: ${presentIds.join(', ')})`)
+          this.starting = false
+          return
+        }
+      }
+
       for (const p of whiteHumans) {
         try {
           this.gameState.addPlayer(p.player_id as Player, Team.WHITE)

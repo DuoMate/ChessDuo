@@ -20,7 +20,8 @@ export async function createOnlineRoom(options: {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
   // Resolve the host's color once at room creation. The host always sits on
-  // this color; the joiner auto-receives the opposite when they enter.
+  // this color; the joiner inherits the same team so both humans play together
+  // against bots (Duo mode: "You + Friend vs Bots").
   const hostTeam: 'WHITE' | 'BLACK' = resolvePlayerColor(hostColor) === 'white' ? 'WHITE' : 'BLACK'
 
   const { data: room, error: roomError } = await supabase

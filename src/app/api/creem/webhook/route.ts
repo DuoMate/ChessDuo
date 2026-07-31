@@ -30,27 +30,44 @@ async function updateSupabase(userId: string, updates: Record<string, unknown>) 
 
 // Events sometimes carry empty metadata (observed on `checkout.completed` +
 // `subscription.paid`). Resolve the ChessDuo userId from event metadata first,
-// then fall back to retrieving the checkout from Creem — the checkout object
-// always carries `metadata.referenceId`/`userId` (see verify-checkout).
-async function resolveUserId(metadata: unknown, checkoutId?: string): Promise<string> {
+// then fall back to retrieving the checkout or subscription from Creem — the
+// checkout/subscription object always carries `metadata.referenceId`/`userId`
+// (see verify-checkout).
+async function resolveUserId(metadata: unknown, checkoutOrSubId?: string): Promise<string> {
   const meta = (metadata ?? {}) as Record<string, unknown>
   const fromMeta = String(meta?.referenceId ?? meta?.userId ?? '')
   if (fromMeta) return fromMeta
 
-  if (checkoutId && CREEM_API_KEY) {
+  if (checkoutOrSubId && CREEM_API_KEY) {
+    const creem = new Creem({
+      apiKey: CREEM_API_KEY,
+      server: CREEM_TEST_MODE ? 'test' : 'prod',
+    })
+
+    // Try checkout retrieve first (for checkout.completed events)
     try {
-      const creem = new Creem({
-        apiKey: CREEM_API_KEY,
-        server: CREEM_TEST_MODE ? 'test' : 'prod',
-      })
-      const checkout = await creem.checkouts.retrieve(checkoutId)
-      const meta2 = (checkout.metadata ?? {}) as Record<string, unknown>
-      const fromCheckout = String(meta2?.referenceId ?? meta2?.userId ?? '')
+      const checkout = await creem.checkouts.retrieve(checkoutOrSubId)
+      const checkoutMeta = (checkout.metadata ?? {}) as Record<string, unknown>
+      const fromCheckout = String(checkoutMeta?.referenceId ?? checkoutMeta?.userId ?? '')
       if (fromCheckout) return fromCheckout
-      console.warn(`[creem/webhook] Checkout ${checkoutId} carries no referenceId/userId in its metadata`)
+      console.warn(`[creem/webhook] Checkout ${checkoutOrSubId} carries no referenceId/userId in its metadata`)
     } catch (err) {
       console.warn(
-        `[creem/webhook] Failed to retrieve checkout ${checkoutId}: ${err instanceof Error ? err.message : String(err)}`
+        `[creem/webhook] Failed to retrieve checkout ${checkoutOrSubId}: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+
+    // Fallback: try subscription retrieve (for subscription.active/paid/etc events
+    // where the id is a subscription ID, not a checkout ID)
+    try {
+      const sub = await creem.subscriptions.get(checkoutOrSubId)
+      const subMeta = (sub.metadata ?? {}) as Record<string, unknown>
+      const fromSubMeta = String(subMeta?.referenceId ?? subMeta?.userId ?? '')
+      if (fromSubMeta) return fromSubMeta
+      console.warn(`[creem/webhook] Subscription ${checkoutOrSubId} carries no referenceId/userId in its metadata`)
+    } catch (err) {
+      console.warn(
+        `[creem/webhook] Failed to retrieve subscription ${checkoutOrSubId}: ${err instanceof Error ? err.message : String(err)}`
       )
     }
   }
@@ -73,7 +90,9 @@ async function resolveUserIdFromEvent(metadata: unknown, checkoutId?: string): P
 export const POST = Webhook({
   webhookSecret: process.env.CREEM_WEBHOOK_SECRET || '',
   onGrantAccess: async ({ metadata, current_period_end_date: currentPeriodEndDate, id }) => {
+    console.log(`[creem/webhook] onGrantAccess — id: "${id}", metadata:`, JSON.stringify(metadata))
     const userId = await resolveUserIdFromEvent(metadata, id)
+    console.log(`[creem/webhook] onGrantAccess resolved userId: "${userId}"`)
     if (!userId) return
     console.log(`[creem/webhook] Granting access to user ${userId}`)
     await updateSupabase(userId, {

@@ -328,6 +328,7 @@ export default function SetupPage() {
     }
 
     if (codeParam && sessionChecked && !playerId) {
+      storePendingAction({ type: 'join_by_code', code: codeParam })
       setShowAuthOverlay(true)
       return
     }
@@ -373,10 +374,11 @@ export default function SetupPage() {
           if (room.mode === 'fourplayer') {
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
           } else {
-            // Host color is stored on the room row so the joiner can pick the
-            // opposite team BEFORE joining (room_players is RLS-locked to members).
+            // Host color is stored on the room row so the joiner can join the
+            // SAME team BEFORE joining (room_players is RLS-locked to members).
+            // Duo mode is "You + Friend vs Bots" — both humans on the same team.
             const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-            const joinerTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+            const joinerTeam: 'WHITE' | 'BLACK' = hostTeam
             router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${joinerTeam}&playerId=${playerId}&time=${roomTime}`)
           }
           const url = new URL(window.location.href)
@@ -516,12 +518,13 @@ export default function SetupPage() {
           // room_players is RLS-locked to members, so a joiner cannot read it
           // before joining. The host color is stored on the room row and the
           // public join-state RPC reports counts for team/fullness decisions.
+          // Duo mode: both humans join the HOST'S team ("You + Friend vs Bots").
           const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
           const whiteCount = Number(joinState?.white_count ?? 0)
           const blackCount = Number(joinState?.black_count ?? 0)
 
           const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-          const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+          const preferredTeam: 'WHITE' | 'BLACK' = hostTeam
 
           let team: 'WHITE' | 'BLACK'
           if (whiteCount < 2 && blackCount < 2) {
@@ -687,7 +690,7 @@ export default function SetupPage() {
       const blackCount = Number(joinState?.black_count ?? 0)
 
       const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-      const preferredTeam: 'WHITE' | 'BLACK' = hostTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+      const preferredTeam: 'WHITE' | 'BLACK' = hostTeam
 
       let team: 'WHITE' | 'BLACK'
       if (whiteCount < 2 && blackCount < 2) {

@@ -54,7 +54,7 @@ export const CreemBillingProvider: BillingProvider = {
         const { Browser } = await import('@capacitor/browser')
         await Browser.open({ url: data.checkoutUrl, windowName: '_system' })
       } else {
-        window.location.href = data.checkoutUrl
+        window.location.replace(data.checkoutUrl)
       }
 
       return { success: true, checkoutUrl: data.checkoutUrl, productId }

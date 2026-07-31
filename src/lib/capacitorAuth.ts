@@ -69,17 +69,31 @@ export async function registerCapacitorAuthListener() {
     const path = getPathFromUrl(url)
     if (!path) return
 
-    if (path.startsWith('/invite/') || path.startsWith('/challenge/') || path.startsWith('/replay/')) {
-      window.location.href = path
+    // Map /join?code=X to /?code=X (invite deep-links — no dedicated /join route)
+    let targetPath = path
+    if (path.startsWith('/join')) {
+      const joinParams = path.includes('?') ? path.substring(path.indexOf('?')) : ''
+      targetPath = `/${joinParams}`
+    }
+
+    // Handle /?code=X (home page with room code) — need to go through home page
+    // where the auto-join effect can consume the code param
+    if (targetPath.startsWith('/') && targetPath.includes('?code=')) {
+      window.location.href = targetPath
       return
     }
 
-    if (path.startsWith('/duel') || path.startsWith('/game') || path.startsWith('/friends') || path.startsWith('/profile') || path.startsWith('/history') || path.startsWith('/premium')) {
-      window.location.href = path
+    if (targetPath.startsWith('/invite/') || targetPath.startsWith('/challenge/') || targetPath.startsWith('/replay/')) {
+      window.location.href = targetPath
       return
     }
 
-    window.location.href = path || '/'
+    if (targetPath.startsWith('/duel') || targetPath.startsWith('/game') || targetPath.startsWith('/friends') || targetPath.startsWith('/profile') || targetPath.startsWith('/history') || targetPath.startsWith('/premium')) {
+      window.location.href = targetPath
+      return
+    }
+
+    window.location.href = targetPath || '/'
   }
 
   try {

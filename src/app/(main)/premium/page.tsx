@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
@@ -28,6 +29,7 @@ export default function PremiumPage() {
   const [plansLoading, setPlansLoading] = useState(true)
   const [status, setStatus] = useState<SubscriptionInfo | null>(null)
   const mountedRef = useRef(true)
+  const router = useRouter()
 
   const monthlyPlan = plans.find(p => p.billingPeriod === 'monthly')
   const yearlyPlan = plans.find(p => p.billingPeriod === 'yearly')
@@ -44,9 +46,15 @@ export default function PremiumPage() {
     async function load() {
       try {
         let subStatus = await SubscriptionService.getStatus()
+        console.log('[PREMIUM] Initial getStatus:', JSON.stringify(subStatus))
 
         if (sessionId && !subStatus.isPremium) {
+          console.log('[PREMIUM] session_id found, not premium — running verifyCheckoutSession:', sessionId)
           subStatus = await verifyCheckoutSession(sessionId)
+          console.log('[PREMIUM] After verifyCheckoutSession:', JSON.stringify(subStatus))
+          if (subStatus.isPremium) {
+            router.replace('/premium')
+          }
         }
 
         const subPlans = await SubscriptionService.getPlans()
@@ -70,6 +78,7 @@ export default function PremiumPage() {
   }, [])
 
   async function verifyCheckoutSession(sessionId: string): Promise<SubscriptionInfo> {
+    console.log('[PREMIUM] verify-checkout API call starting for session:', sessionId)
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     try {
       const { AuthService } = await import('@/lib/authService')
@@ -81,7 +90,9 @@ export default function PremiumPage() {
 
     const res = await fetch(`${getAppBaseUrl()}/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
     const data = await res.json()
+    console.log('[PREMIUM] verify-checkout response:', res.status, JSON.stringify(data))
     if (res.ok && data.verified && data.status) {
+      console.log('[PREMIUM] verify-checkout SUCCESS — premium granted')
       SubscriptionService.invalidate()
       return data.status as SubscriptionInfo
     }
@@ -89,14 +100,18 @@ export default function PremiumPage() {
     // Not verified yet — the async webhook grant may still be in flight.
     // Invalidate the 30s status cache and poll briefly so a just-delivered
     // webhook grant is picked up without forcing the user to reload.
+    console.log('[PREMIUM] Not verified via API, starting webhook poll (up to 5×1.5s)...')
     SubscriptionService.invalidate()
     const attempts = 5
     for (let i = 0; i < attempts; i++) {
+      console.log(`[PREMIUM] Poll attempt ${i + 1}/${attempts}`)
       const fresh = await SubscriptionService.getStatus()
+      console.log(`[PREMIUM] Poll result:`, JSON.stringify(fresh))
       if (fresh.isPremium) return fresh
       await new Promise(resolve => setTimeout(resolve, 1500))
       SubscriptionService.invalidate()
     }
+    console.log('[PREMIUM] Poll exhausted — returning latest status')
     return SubscriptionService.getStatus()
   }
 
