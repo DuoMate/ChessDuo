@@ -10,7 +10,7 @@ import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
 import { initPushNotifications, clearCachedAccessToken, setCachedAccessToken, resetPushState } from '@/features/push-notifications'
-import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
+import { SubscriptionService, CreemBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
@@ -30,7 +30,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     registerCapacitorAuthListener().catch(() => {})
     registerBackButtonListener()
-    SubscriptionService.setProvider(GooglePlayBillingProvider)
+    SubscriptionService.setProvider(CreemBillingProvider)
     
     // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
     // (especially critical when human plays as Black - White bots move first)

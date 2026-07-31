@@ -31,7 +31,7 @@ Answer these questions when filling out the content rating questionnaire in Goog
 ## Digital Purchases
 - Does your app offer in-app purchases? **Yes**
   - Premium subscription for unlimited Move Insights
-  - Purchases are handled via Stripe (web-based, not Google Play billing)
+  - Purchases are handled via Creem (Merchant of Record, web-based checkout)
 
 ## Expected Rating Result: **Everyone (E)**
 

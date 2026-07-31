@@ -110,7 +110,9 @@ export const SubscriptionService = {
       const restored = await provider.restorePurchases()
       for (const r of restored) {
         if (r.success && r.purchaseToken && r.productId) {
-          await verifyPurchase(r.purchaseToken, r.productId, r.orderId || '')
+          if (r.purchaseToken !== 'creem_restored') {
+            await verifyPurchase(r.purchaseToken, r.productId, r.orderId || '')
+          }
         }
       }
       cachedStatus = await fetchServerStatus()
@@ -132,7 +134,13 @@ export const SubscriptionService = {
     if (!provider) return { success: false, error: 'Billing not available', errorDetail: 'unknown' }
 
     const result = await provider.purchase(productId)
-    if (!result.success || !result.purchaseToken) return result
+    if (!result.success) return result
+
+    if (result.checkoutUrl) {
+      return { success: true, checkoutUrl: result.checkoutUrl, productId }
+    }
+
+    if (!result.purchaseToken) return result
 
     const verifyResult = await verifyPurchase(result.purchaseToken, result.productId || productId, result.orderId || '')
     if (!verifyResult.success) {

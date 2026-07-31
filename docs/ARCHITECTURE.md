@@ -95,12 +95,23 @@ src/
 │   ├── bots/                     # Bot players
 │   │   ├── chessBot.ts           # Bot move generation
 │   │   ├── botConfig.ts          # ELO-based difficulty config
-│   │   └── serverMoveEvaluator.ts# Stockfish HTTP client
-│   └── push-notifications/       # Push notification module
-│       ├── types.ts              # NotificationType, PushPayload types
-│       ├── PushNotificationService.ts  # FCM token registration + sending
-│       ├── NotificationHandler.tsx      # Deep-link on notification tap
-│       ├── index.ts              # Public API (initPushNotifications, notify*)
+│   │   ├── difficulty.ts         # Difficulty presets
+│   │   └── openings.ts           # Opening book
+│   ├── mobile-engine/            # Stockfish evaluator factory
+│   │   ├── BrowserMoveEvaluator.ts  # Local WASM Stockfish wrapper
+│   │   └── evaluatorFactory.ts      # Picks evaluator per platform
+│   ├── push-notifications/       # Push notification module
+│   │   ├── types.ts              # NotificationType, PushPayload types
+│   │   ├── PushNotificationService.ts  # FCM token registration + sending
+│   │   ├── NotificationHandler.tsx      # Deep-link on notification tap
+│   │   ├── index.ts              # Public API (initPushNotifications, notify*)
+│   │   └── CONTEXT.md            # Module documentation
+│   └── billing/                  # Subscription billing (provider-agnostic)
+│       ├── types.ts              # BillingProvider interface, SubscriptionPlan, PurchaseResult
+│       ├── SubscriptionService.ts # High-level API: purchase/restore/isPremium/getPlans
+│       ├── SubscriptionStateMachine.ts # Pure lifecycle transitions
+│       ├── CreemBillingProvider.ts    # Creem checkout integration (web + Android)
+│       ├── index.ts              # Public API re-exports
 │       └── CONTEXT.md            # Module documentation
 │
 ├── hooks/                        # React hooks
@@ -232,6 +243,30 @@ const { confirmLeave } = useNavigationGuard({
 | `DEFAULT_POLLING_INTERVAL_MS` | 2000 | Matchmaking poll |
 
 **Do NOT** hardcode `600`, `10000`, or `2000` in game logic. Import the constant.
+
+### 7. Billing Provider Abstraction
+
+**RULE**: UI and `SubscriptionService` MUST NOT depend on the payment processor directly. All payment logic goes through the `BillingProvider` interface (`src/features/billing/types.ts`). Currently backed by Creem (Merchant of Record) for both web and Android.
+
+```
+UI (React Components)
+  │  talks ONLY to SubscriptionService
+  ▼
+SubscriptionService
+  ├─► BillingProvider (interface)
+  │     └─► CreemBillingProvider   ← web (window.location) + Android (Browser.open)
+  └─► /api/creem/*  (Next.js API routes)
+        ├─► /checkout    — creates Creem checkout session
+        ├─► /products    — fetches product pricing from Creem
+        ├─► /subscriptions — lists active subscriptions (restore)
+        └─► /webhook     — handles Creem webhook events (@creem_io/nextjs)
+```
+
+- Purchase is **redirect-based**: `purchase()` → `POST /api/creem/checkout` → redirect to Creem-hosted checkout → webhook updates Supabase → UI refreshes.
+- Subscription lifecycle is **webhook-driven** (`onGrantAccess` / `onRevokeAccess` / `onCheckoutCompleted` / `onSubscriptionCanceled` / `onSubscriptionPastDue`). No server-side re-verification on `status` reads.
+- Checkout metadata carries `userId`, `referenceId`, and `plan`; webhook attributes events to the ChessDuo profile.
+- Pricing comes from Creem products (cents → `$X.XX`); plans are mapped to internal IDs `premium_monthly` / `premium_yearly`.
+- Environment: `CREEM_API_KEY` (test mode auto-detected when prefixed `creem_test_`), `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`.
 
 ---
 
@@ -402,4 +437,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-07-19 — DesktopSidebar unified across all browser pages (Home, History, Friends, Profile)*
+*Last Updated: 2026-07-30 — Creem billing migration (webhook-driven subscription lifecycle) + Stockfish server evaluator removal*

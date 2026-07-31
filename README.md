@@ -34,7 +34,7 @@ https://chessduo.chessdoubles27.workers.dev/
 - **Online Multiplayer**: Supabase real-time sync with Coordinator pattern
 - **Move Playback**: Click-to-replay move history with shadow moves
 - **Move Insights**: Heuristic analysis — move classification, engine comparison (3 free/account)
-- **Premium**: Freemium model — 3 free insights, then upgrade for unlimited (Google Play Billing)
+- **Premium**: Freemium model — 3 free insights, then upgrade for unlimited (Creem billing, $1.99/mo or $14.99/yr)
 - **Match History**: Per-player stats, sync rate, accuracy trends (`/history`)
 - **User Profiles**: Username editing, match stats overview (`/profile`)
 - **Friends & Chat**: Real-time messaging, challenges, friend requests (`/friends`)

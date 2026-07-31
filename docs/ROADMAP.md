@@ -451,48 +451,49 @@ Key files:
 
 ## Premium Features
 
-### Google Play Billing (July 2026)
+### Creem Billing (July 2026)
 
-**Payment processor**: Google Play Billing via `@capgo/native-purchases` (Capacitor plugin)
+**Payment processor**: Creem (Merchant of Record) via `@creem_io/nextjs` (webhook handler) + `creem` (TypeScript SDK). Works on both web and Android (in-app browser via `@capacitor/browser`).
 
 **Architecture**:
-- `src/features/billing/BillingProvider.ts` — Abstract interface for all billing providers
-- `src/features/billing/GooglePlayBillingProvider.ts` — Capacitor wrapper for Google Play Billing
+- `src/features/billing/types.ts` — `BillingProvider` abstract interface for all billing providers
+- `src/features/billing/CreemBillingProvider.ts` — Creem checkout integration (redirect-based)
 - `src/features/billing/SubscriptionService.ts` — High-level API: purchase, restore, isPremium, getPlans
 - `src/features/billing/SubscriptionStateMachine.ts` — Pure function for subscription lifecycle transitions
-- `POST /api/subscription/verify` — Verifies purchase token with Google Play Developer API → updates Supabase
-- `GET /api/subscription/status` — Fetches subscription status, re-verifies when needed
-- `POST /api/subscription/rtdn` — RTDN webhook endpoint (placeholder for future push-based updates)
+- `POST /api/creem/checkout` — Creates Creem checkout session, returns `checkoutUrl`
+- `GET /api/creem/products` — Fetches product pricing from Creem
+- `GET /api/creem/subscriptions` — Lists active subscriptions (restore)
+- `POST /api/creem/webhook` — Handles Creem webhook events, updates Supabase (service-role key)
 
-**Pricing plans** (configured in Google Play Console):
-- Monthly — ₹99/mo (`premium_monthly`)
-- Annual — ₹999/yr (`premium_yearly`)
-- Prices fetched dynamically from Google Play — never hardcoded
+**Pricing plans** (configured in Creem dashboard):
+- Monthly — $1.99/mo (`premium_monthly`)
+- Annual — $14.99/yr (`premium_yearly`)
+- Prices fetched dynamically from Creem — never hardcoded
 
 **Database columns** (on `profiles`):
-- `subscription_provider` — `GOOGLE_PLAY`, `APPLE`, or `WEB`
+- `subscription_provider` — `CREEM`, `APPLE`, or `WEB`
 - `subscription_plan` — `monthly` or `yearly`
-- `purchase_token` — Google Play purchase token
+- `purchase_token` — Creem checkout/session ID
 - `subscription_expiry_date` — When the subscription expires
 - `auto_renew_status` — Whether auto-renew is enabled
 - `purchase_state` — `purchased`, `pending`, `cancelled`, or `expired`
-- `last_verified_date` — Last time the server verified with Google Play
+- `last_verified_date` — Last time the subscription state was confirmed
 
 **Security**:
-- Purchase verification via Google Play Developer API (OAuth2 JWT via `jose`, same pattern as FCM)
-- Auth check before verifying (validates Supabase session)
-- Purchase acknowledged server-side within 3-day window
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` never exposed to client
+- Webhook payloads verified with `CREEM_WEBHOOK_SECRET` (HMAC signature via `@creem_io/nextjs`)
+- Access granted/revoked server-side only — the client can never set `is_premium` directly
+- `CREEM_API_KEY` never exposed to client (test mode auto-detected when prefixed `creem_test_`)
+- Supabase writes use the service-role key inside the webhook handler
 
 **Flow**:
 1. User taps "Upgrade to Premium" on `/premium`
-2. `SubscriptionService.purchaseMonthly()` → launches native Google Play dialog
-3. Google Play returns purchase token → sent to `/api/subscription/verify`
-4. Server verifies with Google Play Developer API → acknowledges → sets `is_premium = true`
-5. Premium unlocked immediately, no app restart required
+2. `SubscriptionService.purchaseMonthly()` → `POST /api/creem/checkout` → Creem-hosted checkout page
+3. User pays on Creem's page → redirected back to `/premium?session_id=...`
+4. Creem webhook fires → server sets `is_premium = true` on the user's profile
+5. Premium unlocked on next status refresh — no app restart required
 
 **GitHub Secrets required**:
-`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `GOOGLE_PLAY_PACKAGE_NAME`
+`CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`
 
 ### Move Insights (Freemium)
 
@@ -522,14 +523,14 @@ Key files:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 48 | 44 pass, 2 fail (pre-existing), 2 skip |
-| Individual tests | 633 | 511 pass, 5 fail (pre-existing), 117 skip |
+| Test suites | 88 | 83 pass, 3 fail (pre-existing), 2 skip |
+| Individual tests | 1007 | 882 pass, 8 fail (pre-existing), 117 skip |
 
-**Status**: ✅ All passing tests green; 2 pre-existing suite failures in `messages.test.ts` and `ChallengePicker.test.tsx` (2026-05-31)
+**Status**: ✅ All billing tests green. Pre-existing failures in `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, and `server/__tests__/engine.test.ts` (LRUCache dependency) — unrelated to the Creem migration.
 
 ---
 
-*Last Updated: 2026-07-19 — Browser UI unification complete (Phase 8: DesktopSidebar across all pages)*
+*Last Updated: 2026-07-30 — Creem billing migration (replaced Google Play Billing)*
 
 ---
 
@@ -650,8 +651,8 @@ Add `console.error` to critical empty catch blocks in:
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Test suites | 78 (76 run) | 74 pass, 2 skip, 2 pre-existing server failure |
-| Individual tests | 931 | 810 pass, 117 skip, 4 pre-existing server failure |
+| Test suites | 88 (86 run) | 83 pass, 2 skip, 3 pre-existing failures (ConfirmMoveBar, SidebarNav, server/engine) |
+| Individual tests | 1007 | 882 pass, 117 skip, 8 pre-existing failures |
 
 ---
 
@@ -664,7 +665,7 @@ Add `console.error` to critical empty catch blocks in:
 Completed as part of go-live preparation:
 
 ### P0 — Payment Security
-- **Google Play Billing verification** — All purchases verified server-side via Google Play Developer API before granting premium. Client can never directly set `is_premium`. 
+- **Creem subscription lifecycle** — All premium state changes are webhook-driven (HMAC-verified via `CREEM_WEBHOOK_SECRET`); the client can never set `is_premium` directly. Previously Google Play Developer API verification.
 - **RLS policy documented** — `Allow all` policies on `games` and `room_players` flagged with detailed comment explaining the security gap and staging test requirements before removal.
 
 ### P1 — Infrastructure Hardening

@@ -52,7 +52,7 @@
 
 ## Premium (Freemium)
 - 3 free insights (`INSIGHTS_FREE_LIMIT`)
-- Google Play Billing subscriptions for unlimited insights
+- Creem (MoR) subscriptions for unlimited insights — redirect-based checkout + webhook lifecycle
 - Subscription status tracked on `profiles` table (`subscription_provider`, `subscription_plan`, `purchase_state`, `subscription_expiry_date`) via `SubscriptionService`
 
 ## Database Entities

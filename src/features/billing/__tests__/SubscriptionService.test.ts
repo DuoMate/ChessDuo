@@ -89,18 +89,16 @@ describe('SubscriptionService', () => {
       expect(result.errorDetail).toBe('cancelled')
     })
 
-    it('returns verification error when server verification fails', async () => {
+    it('returns success with checkoutUrl for redirect-based providers', async () => {
       (mockProvider.purchase as jest.Mock).mockResolvedValueOnce({
         success: true,
-        purchaseToken: 'bad-token',
+        checkoutUrl: 'https://checkout.creem.io/test',
         productId: 'premium_monthly',
-        orderId: 'order-1',
       })
-      mockFetch.mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({ error: 'invalid' }) })
 
       const result = await SubscriptionService.purchaseMonthly()
-      expect(result.success).toBe(false)
-      expect(result.errorDetail).toBe('verification')
+      expect(result.success).toBe(true)
+      expect(result.checkoutUrl).toBe('https://checkout.creem.io/test')
     })
 
     it('handles null provider gracefully', async () => {
@@ -142,7 +140,7 @@ describe('SubscriptionService', () => {
     })
 
     it('returns true when server says premium', async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
       const premium = await SubscriptionService.isPremium()
       expect(premium).toBe(true)
     })
@@ -176,10 +174,10 @@ describe('SubscriptionService', () => {
 
   describe('getStatus', () => {
     it('fetches server status', async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY', subscriptionPlan: 'monthly' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM', subscriptionPlan: 'monthly' }) })
       const status = await SubscriptionService.getStatus()
       expect(status.isPremium).toBe(true)
-      expect(status.subscriptionProvider).toBe('GOOGLE_PLAY')
+      expect(status.subscriptionProvider).toBe('CREEM')
     })
 
     it('handles server error', async () => {

@@ -30,7 +30,7 @@ jest.mock('@/features/billing', () => ({
     initialize: jest.fn().mockResolvedValue(undefined),
     setProvider: jest.fn(),
   },
-  GooglePlayBillingProvider: {},
+  CreemBillingProvider: {},
 }))
 
 jest.mock('@/components/ErrorBoundary', () => ({
@@ -76,12 +76,6 @@ describe('PremiumPage Component', () => {
     render(<PremiumPage />)
     const note = await screen.findByText(/3 free insights/i)
     expect(note).toBeDefined()
-  })
-
-  test('shows Managed by Google Play', async () => {
-    render(<PremiumPage />)
-    const managed = await screen.findByText('Managed by Google Play')
-    expect(managed).toBeDefined()
   })
 
   test('shows Restore Purchases button', async () => {

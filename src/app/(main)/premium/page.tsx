@@ -166,10 +166,10 @@ export default function PremiumPage() {
                       Your subscription will end at the current billing period.
                     </p>
                   )}
-                  {status?.subscriptionProvider === 'GOOGLE_PLAY' && (
+                  {status?.subscriptionProvider === 'CREEM' && (
                     <p className="text-slate-500 text-xs mt-3 flex items-center justify-center gap-1">
                       <Lock size={10} />
-                      Managed by Google Play
+                      Secured by Creem
                     </p>
                   )}
                 </div>
@@ -213,7 +213,7 @@ export default function PremiumPage() {
                           ) : (
                             <>
                               <span className="text-3xl font-black text-blue-400">
-                                {monthlyPlan?.price || '\u20B999'}
+                                {monthlyPlan?.price || '$1.99'}
                               </span>
                               <span className="text-slate-400 text-sm ml-2">per month</span>
                             </>
@@ -261,7 +261,7 @@ export default function PremiumPage() {
                           ) : (
                             <>
                               <span className="text-3xl font-black text-emerald-400">
-                                {yearlyPlan?.price || '\u20B9999'}
+                                {yearlyPlan?.price || '$14.99'}
                               </span>
                               <span className="text-slate-400 text-sm ml-2">per year</span>
                             </>
@@ -300,7 +300,7 @@ export default function PremiumPage() {
                       <BenefitRow icon={<Ban size={18} />} title="Best Move Suggestions" desc="Engine-recommended alternatives" />
                     </div>
 
-                    {/* Restore + Managed by Google */}
+                    {/* Restore */}
                     <div className="text-center text-xs text-slate-400 space-y-2">
                       <p>3 free insights per account. No payment required to play.</p>
                       <button
@@ -311,10 +311,6 @@ export default function PremiumPage() {
                         <RefreshCw size={12} className={restoring ? 'animate-spin' : ''} />
                         {restoring ? 'Restoring...' : 'Restore Purchases'}
                       </button>
-                      <div className="flex items-center justify-center gap-1">
-                        <Lock size={12} />
-                        Managed by Google Play
-                      </div>
                     </div>
                   </>
                 )}
