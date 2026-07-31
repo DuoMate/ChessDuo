@@ -82,6 +82,7 @@ export default function PremiumPage() {
     const res = await fetch(`${getAppBaseUrl()}/api/creem/verify-checkout?session_id=${encodeURIComponent(sessionId)}`, { headers })
     const data = await res.json()
     if (res.ok && data.verified && data.status) {
+      SubscriptionService.invalidate()
       return data.status as SubscriptionInfo
     }
     return SubscriptionService.getStatus()
@@ -115,6 +116,7 @@ export default function PremiumPage() {
         return
       }
 
+      SubscriptionService.invalidate()
       const newStatus = await SubscriptionService.getStatus()
       if (newStatus.isPremium) {
         setIsPremium(true)

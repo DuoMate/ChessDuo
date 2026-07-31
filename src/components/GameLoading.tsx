@@ -79,7 +79,6 @@ export function GameLoading({
                   title: 'ChessDuo — Join my game!',
                   text: `Join my ChessDuo game! Room code: ${roomCode}`,
                   url: inviteUrl,
-                  nativeUrl: `chessduo://?code=${roomCode}`,
                 })
               }}
               className="flex-1 min-h-[44px] rounded-2xl bg-amber-500/10 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"

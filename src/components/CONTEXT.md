@@ -86,6 +86,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-07-31**: **Bug 37** fix — all share buttons (`GameLobby`, `GameLoading`, `FourPlayerLobby`, `ProfilePanel`, `FriendsPanel`, `profile/page.tsx`) now share the clickable HTTPS App Link only — `nativeUrl`/`chessduo://` removed from every `shareLink()` call. Native sheet via `@capacitor/share` → Web Share API → clipboard (copies the HTTPS link).
 - **2026-07-31**: Bug 35 fix — Share buttons now open the native Android share sheet via `@capacitor/share` (`src/lib/share.ts` helper). Wired into `GameLobby`, `GameLoading`, `FourPlayerLobby` (game invites, native `chessduo://` links), plus `profile/page.tsx`, `ProfilePanel`, and `FriendsPanel` (profile/invite links). Web falls back to `navigator.share`, then clipboard copy.
 - **2026-07-31**: Game timers now use `font-game` (Chakra Petch) per design system — `MatchTimer`, `BoardTopBar` center timer, and `TurnStatusArea` `TimerDisplay` switched from `font-mono` to `font-game`.
 - **2026-07-19**: ConfirmMoveBar redesigned — restored two-button Cancel/Confirm layout with play-button green gradient texture, positioned above BoardBottomNav. Board resets to original position on cancel via `boardKey` remount.

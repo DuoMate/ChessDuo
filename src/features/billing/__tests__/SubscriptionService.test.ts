@@ -202,4 +202,21 @@ describe('SubscriptionService', () => {
       expect(status.isPremium).toBe(false)
     })
   })
+
+  describe('invalidate', () => {
+    it('forces a refetch of server status after a purchase', async () => {
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: false, subscriptionProvider: null }) })
+      await SubscriptionService.getStatus()
+      const callsBefore = mockFetch.mock.calls.length
+
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
+      const cached = await SubscriptionService.getStatus()
+      expect(cached.isPremium).toBe(false)
+
+      SubscriptionService.invalidate()
+      const fresh = await SubscriptionService.getStatus()
+      expect(fresh.isPremium).toBe(true)
+      expect(mockFetch.mock.calls.length).toBeGreaterThan(callsBefore)
+    })
+  })
 })

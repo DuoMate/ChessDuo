@@ -26,8 +26,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const body = await request.json() as { productId?: string; userId?: string }
-    const { productId, userId } = body
+    const body = await request.json() as { productId?: string; userId?: string; isNative?: boolean }
+    const { productId, userId, isNative } = body
     if (!productId) {
       return NextResponse.json({ error: 'Missing productId' }, { status: 400 })
     }
@@ -41,9 +41,16 @@ export async function POST(request: Request) {
 
     const plan = productId.includes('yearly') ? 'yearly' : 'monthly'
 
+    // Creem requires an https successUrl — a custom scheme is rejected. Native
+    // clients bounce through /api/creem/return which redirects to the
+    // chessduo:// deep link so the app receives the session_id and verifies.
+    const successUrl = isNative
+      ? `${SITE_URL}/api/creem/return?session_id={CHECKOUT_SESSION_ID}`
+      : `${SITE_URL}/premium?session_id={CHECKOUT_SESSION_ID}`
+
     const checkout = await creem.checkouts.create({
       productId: creemProductId,
-      successUrl: `${SITE_URL}/premium?session_id={CHECKOUT_SESSION_ID}`,
+      successUrl,
       metadata: {
         userId: userId || authUser.id,
         plan,

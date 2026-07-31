@@ -6,7 +6,7 @@ import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } 
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
-import { shareLink, toNativeLink } from '@/lib/share'
+import { shareLink } from '@/lib/share'
 import { supabase } from '@/lib/supabase'
 import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
@@ -83,7 +83,6 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
       title: 'ChessDuo Profile',
       text: 'Check out my ChessDuo profile!',
       url,
-      nativeUrl: toNativeLink(`/profile/${playerId}`),
     })
     if (result === 'copied') {
       setProfileCopied(true)

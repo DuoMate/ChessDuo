@@ -17,7 +17,7 @@ import {
   getInviteLink,
 } from '@/lib/friends'
 import { FriendWithProfile } from '@/lib/friends'
-import { shareLink, toNativeLink } from '@/lib/share'
+import { shareLink } from '@/lib/share'
 import { FriendActionsMenu } from './FriendActionsMenu'
 import { notifyFriendRequest } from '@/features/push-notifications'
 import { notifyInviteAccepted } from '@/features/push-notifications'
@@ -243,7 +243,6 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
       title: 'ChessDuo Invite',
       text: 'Play ChessDuo with me!',
       url,
-      nativeUrl: toNativeLink(`/invite/${playerId}`),
     })
     if (result === 'copied') {
       setInviteCopied(true)

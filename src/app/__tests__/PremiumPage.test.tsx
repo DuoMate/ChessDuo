@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import PremiumPage from '../(main)/premium/page'
+import { SubscriptionService } from '@/features/billing'
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -29,6 +30,7 @@ jest.mock('@/features/billing', () => ({
     isPremium: jest.fn().mockResolvedValue(false),
     initialize: jest.fn().mockResolvedValue(undefined),
     setProvider: jest.fn(),
+    invalidate: jest.fn(),
   },
   CreemBillingProvider: {},
 }))
@@ -82,5 +84,35 @@ describe('PremiumPage Component', () => {
     render(<PremiumPage />)
     const restore = await screen.findByText('Restore Purchases')
     expect(restore).toBeDefined()
+  })
+
+  test('verifies a checkout session_id and shows premium after upgrade', async () => {
+    window.history.replaceState({}, '', '/premium?session_id=chk_123')
+
+    const premiumStatus = {
+      isPremium: true,
+      subscriptionProvider: 'CREEM',
+      subscriptionPlan: 'monthly',
+      purchaseToken: 'chk_123',
+      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
+      autoRenewStatus: true,
+      purchaseState: 'purchased',
+      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
+      subscriptionStatus: 'active',
+    }
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ verified: true, status: premiumStatus }),
+    })
+
+    render(<PremiumPage />)
+    const premium = await screen.findByText(/You're Premium/)
+    expect(premium).toBeDefined()
+    expect(SubscriptionService.invalidate).toHaveBeenCalled()
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/creem/verify-checkout?session_id=chk_123'),
+      expect.anything(),
+    )
   })
 })

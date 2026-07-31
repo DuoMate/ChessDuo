@@ -53,6 +53,39 @@ describe('CreemBillingProvider', () => {
       expect(result.productId).toBe('premium_monthly')
     })
 
+    it('passes isNative true and opens the system browser on Capacitor', async () => {
+      mockFetchOnce({ checkoutUrl: 'https://checkout.creem.io/test-session' })
+
+      jest.mock('@/lib/authService', () => ({
+        AuthService: { getSession: jest.fn().mockResolvedValue({ user: { id: 'user-1' } }) },
+      }))
+      jest.mock('@capacitor/browser', () => ({
+        Browser: { open: jest.fn() },
+      }))
+
+      const nativeWindow = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }
+      nativeWindow.Capacitor = { isNativePlatform: () => true }
+
+      try {
+        const { Browser } = await import('@capacitor/browser')
+        const result = await CreemBillingProvider.purchase('premium_monthly')
+
+        expect(result.success).toBe(true)
+        expect(fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/creem/checkout'),
+          expect.objectContaining({
+            body: JSON.stringify({ productId: 'premium_monthly', userId: 'user-1', isNative: true }),
+          }),
+        )
+        expect(Browser.open).toHaveBeenCalledWith({
+          url: 'https://checkout.creem.io/test-session',
+          windowName: '_system',
+        })
+      } finally {
+        delete nativeWindow.Capacitor
+      }
+    })
+
     it('returns failure when checkout creation fails', async () => {
       mockFetchOnce({ error: 'server error' }, false)
 

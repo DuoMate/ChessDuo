@@ -29,11 +29,15 @@ export const CreemBillingProvider: BillingProvider = {
       const session = await AuthService.getSession()
       const userId = session?.user?.id || ''
 
+      const isNative = typeof window !== 'undefined' &&
+        (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+          .Capacitor?.isNativePlatform?.()
+
       const headers = await getAuthHeaders()
       const res = await fetch(`${API_BASE}/api/creem/checkout`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ productId, userId }),
+        body: JSON.stringify({ productId, userId, isNative }),
       })
 
       if (!res.ok) {
@@ -45,10 +49,6 @@ export const CreemBillingProvider: BillingProvider = {
       if (!data.checkoutUrl) {
         return { success: false, error: 'No checkout URL returned', errorDetail: 'failed' }
       }
-
-      const isNative = typeof window !== 'undefined' &&
-        (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-          .Capacitor?.isNativePlatform?.()
 
       if (isNative) {
         const { Browser } = await import('@capacitor/browser')

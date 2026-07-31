@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Share } from '@capacitor/share'
-import { shareLink, getRoomInviteLink, isNativePlatform, toNativeLink } from '../share'
+import { shareLink, getRoomInviteLink, isNativePlatform } from '../share'
 
 jest.mock('@capacitor/share', () => ({
   Share: { share: jest.fn() },
@@ -30,17 +30,11 @@ describe('share helpers', () => {
     })
   })
 
-  describe('toNativeLink', () => {
-    it('prepends the chessduo:// scheme', () => {
-      expect(toNativeLink('/invite/abc')).toBe('chessduo://invite/abc')
-      expect(toNativeLink('/profile/abc')).toBe('chessduo://profile/abc')
-    })
-  })
-
   describe('getRoomInviteLink', () => {
-    it('uses the custom scheme on native', () => {
+    it('uses a clickable https App Link on native', () => {
       jest.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
-      expect(getRoomInviteLink('HZW8M9')).toBe('chessduo://?code=HZW8M9')
+      const origin = window.location.origin
+      expect(getRoomInviteLink('HZW8M9')).toBe(`${origin}/?code=HZW8M9`)
     })
 
     it('uses the https URL on web', () => {
@@ -57,29 +51,41 @@ describe('share helpers', () => {
       url: 'https://chessduo.example/?code=HZW8M9',
     }
 
-    it('opens the native share sheet with the chessduo:// URL', async () => {
+    it('opens the native share sheet with the clickable https URL', async () => {
       jest.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
       mockShare.mockResolvedValue({ value: true })
 
-      const result = await shareLink({ ...opts, nativeUrl: 'chessduo://?code=HZW8M9' })
+      const result = await shareLink(opts)
 
       expect(result).toBe('shared')
       expect(mockShare).toHaveBeenCalledWith({
         title: opts.title,
         text: opts.text,
-        url: 'chessduo://?code=HZW8M9',
+        url: opts.url,
         dialogTitle: undefined,
       })
     })
 
-    it('falls back to clipboard when the native sheet fails', async () => {
+    it('falls back to the Web Share API when the native sheet is unavailable', async () => {
       jest.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
-      mockShare.mockRejectedValue(new Error('cancelled'))
+      mockShare.mockRejectedValue(new Error('not implemented'))
+      const shareMock = jest.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true })
 
-      const result = await shareLink({ ...opts, nativeUrl: 'chessduo://?code=HZW8M9' })
+      const result = await shareLink(opts)
+
+      expect(result).toBe('shared')
+      expect(shareMock).toHaveBeenCalledWith(opts)
+    })
+
+    it('copies the clickable https URL when the native sheet and Web Share API are both unavailable', async () => {
+      jest.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+      mockShare.mockRejectedValue(new Error('not implemented'))
+
+      const result = await shareLink(opts)
 
       expect(result).toBe('copied')
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('chessduo://?code=HZW8M9')
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(opts.url)
     })
 
     it('uses the Web Share API on the web when available', async () => {

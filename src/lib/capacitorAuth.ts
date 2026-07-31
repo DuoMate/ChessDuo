@@ -67,7 +67,7 @@ export async function registerCapacitorAuthListener() {
       return
     }
 
-    if (path.startsWith('/duel') || path.startsWith('/game') || path.startsWith('/friends') || path.startsWith('/profile') || path.startsWith('/history')) {
+    if (path.startsWith('/duel') || path.startsWith('/game') || path.startsWith('/friends') || path.startsWith('/profile') || path.startsWith('/history') || path.startsWith('/premium')) {
       window.location.href = path
       return
     }

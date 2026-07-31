@@ -75,6 +75,11 @@ export const SubscriptionService = {
     provider = p
   },
 
+  invalidate(): void {
+    cachedStatus = null
+    statusCheckedAt = 0
+  },
+
   async initialize(): Promise<void> {
     if (initialized) return
     initialized = true

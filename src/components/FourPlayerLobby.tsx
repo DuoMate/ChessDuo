@@ -59,8 +59,6 @@ export function FourPlayerLobby({
     ? `${getAppBaseUrl()}/?code=${roomCode}`
     : null
 
-  const nativeInviteUrl = `chessduo://?code=${roomCode}`
-
   const fetchPlayers = useCallback(async () => {
     try {
       const result = await getLobbyPlayers(roomId)
@@ -224,7 +222,6 @@ export function FourPlayerLobby({
       title: 'ChessDuo — Join our 2v2 game!',
       text: `Join our 4-player ChessDuo game! Room code: ${roomCode}`,
       url: inviteUrl,
-      nativeUrl: nativeInviteUrl,
     })
   }
 

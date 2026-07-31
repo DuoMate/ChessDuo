@@ -74,7 +74,6 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
       title: 'ChessDuo \u2014 Join my game!',
       text: `Join my ChessDuo game! Room code: ${roomCode}`,
       url: inviteUrl,
-      nativeUrl: `chessduo://?code=${roomCode}`,
     })
     if (result === 'copied') {
       setLinkCopied(true)

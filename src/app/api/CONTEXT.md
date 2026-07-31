@@ -12,7 +12,8 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 | `test-supabase/route.ts` | Supabase connectivity test |
 | `push/register/route.ts` | Register device token for push (accepts `android`, `ios`, `web` platforms) |
 | `push/send/route.ts` | Send push notification — FCM for native, web-push for browser |
-| `creem/checkout/route.ts` | Create Creem checkout session → returns `checkoutUrl` |
+| `creem/checkout/route.ts` | Create Creem checkout session → returns `checkoutUrl` (native uses `/api/creem/return` success URL) |
+| `creem/return/route.ts` | GET redirect-bridge for native checkout returns — bounces `session_id` to `chessduo://premium` |
 | `creem/products/route.ts` | Fetch product details (pricing) from Creem |
 | `creem/subscriptions/route.ts` | List active subscriptions from Supabase (restore) |
 | `creem/verify-checkout/route.ts` | Verify completed checkout after redirect → grants premium via service-role upsert |
@@ -36,6 +37,7 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 - `@supabase/supabase-js` (service-role admin client in webhook)
 
 ## Recent Changes
+- **2026-07-31**: **Bug 38** fix — `creem/checkout` now accepts `isNative` and sets the native success URL to `/api/creem/return` (a redirect-bridge that bounces to the `chessduo://` deep link, since Creem rejects custom-scheme success URLs). Added `creem/return` route (GET, public) — serves an HTML meta-refresh page redirecting `session_id` into the app.
 - **2026-07-30**: Added `creem/verify-checkout` — verifies a completed Creem checkout on redirect and immediately grants premium (ownership check via `referenceId`/`userId`, service-role upsert). Webhook hardened: sets `subscription_expiry_date` from `current_period_end_date` and `purchase_token` from checkout `id`. Rate limits added for all `/api/creem/*` routes.
 - **2026-07-30**: Creem billing migration — added `/api/creem/*` routes (checkout, products, subscriptions, webhook). Removed `subscription/verify` (Google Play token verification) and `subscription/rtdn` (RTDN placeholder). `subscription/status` simplified to read from Supabase only. Webhook-driven lifecycle replaces Google Play Developer API verification.
 - **2026-07-17**: Fixed RLS bypass in Bearer token auth path — all API routes now pass the user's JWT to `createClient` via `global.headers.Authorization`, ensuring `auth.uid()` works correctly in RLS policies. Affected routes: `push/register`, `push/send`, `subscription/status`, `subscription/verify`, `delete-account`.
