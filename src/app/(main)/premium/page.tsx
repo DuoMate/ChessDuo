@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
-import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRight, RefreshCw } from 'lucide-react'
+import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
@@ -200,7 +200,7 @@ export default function PremiumPage() {
     <ErrorBoundary>
       <div className="flex min-h-screen flex-col pb-20 bg-[var(--color-page-bg)] text-white">
         <div className="flex-1 p-4">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -212,33 +212,8 @@ export default function PremiumPage() {
               </div>
             </div>
 
-            <p className="text-slate-400 text-sm mb-6 text-center">
-              Unlock the best tools.<br />
-              Play smarter. Win more.
-            </p>
-
             {isPremium ? (
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-6 text-center">
-                  <div className="text-4xl mb-3">✅</div>
-                  <h2 className="text-xl font-black text-amber-400 mb-2">You&apos;re Premium!</h2>
-                  <p className="text-slate-300 text-sm mb-1">
-                    {status?.subscriptionPlan === 'yearly' ? 'Annual plan — ' : 'Monthly plan — '}
-                    Unlimited move insights, AI analysis, and all premium features.
-                  </p>
-                  {subscriptionStatus === 'cancelling' && (
-                    <p className="text-amber-400 text-xs mt-2">
-                      Your subscription will end at the current billing period.
-                    </p>
-                  )}
-                  {status?.subscriptionProvider === 'CREEM' && (
-                    <p className="text-slate-500 text-xs mt-3 flex items-center justify-center gap-1">
-                      <Lock size={10} />
-                      Secured by Creem
-                    </p>
-                  )}
-                </div>
-              </div>
+              <PremiumSuccess status={status} subscriptionStatus={subscriptionStatus} onGoToProfile={() => router.replace('/profile')} />
             ) : (
               <>
                 {error && (
@@ -395,6 +370,115 @@ export default function PremiumPage() {
         />
       )}
     </ErrorBoundary>
+  )
+}
+
+function PremiumSuccess({
+  status,
+  subscriptionStatus,
+  onGoToProfile,
+}: {
+  status: SubscriptionInfo | null
+  subscriptionStatus: string | null
+  onGoToProfile: () => void
+}) {
+  const isYearly = status?.subscriptionPlan === 'yearly'
+
+  return (
+    <div className="flex flex-col flex-1">
+      {/* Hero text */}
+      <div className="text-center mb-6">
+        <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">Welcome to Premium!</h1>
+        <p className="text-slate-400 text-sm">
+          Unlock the best tools.<br />
+          Play smarter. Win more.
+        </p>
+      </div>
+
+      {/* Success card */}
+      <div className="flex-1 flex flex-col justify-center">
+        <div className="rounded-[28px] border border-slate-700/70 bg-slate-800/50 p-6 sm:p-8 text-center">
+          {/* Checkmark */}
+          <div className="relative inline-flex mb-5">
+            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.35)]">
+              <Check size={40} className="text-white" strokeWidth={3} />
+            </div>
+            <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl scale-125" />
+          </div>
+
+          {/* Title with laurel leaves */}
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <span className="text-blue-400 text-xl">&#127793;</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-blue-400">You&apos;re Premium!</h2>
+            <span className="text-blue-400 text-xl">&#127793;</span>
+          </div>
+
+          {/* Plan pill */}
+          <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-400 text-sm font-semibold mb-4">
+            {isYearly ? 'Annual Plan' : 'Monthly Plan'}
+          </div>
+
+          {/* Description */}
+          <p className="text-slate-300 text-sm mb-6 max-w-xs mx-auto">
+            Unlimited move insights, AI analysis,<br className="hidden sm:block" />
+            and all premium features.
+          </p>
+
+          {subscriptionStatus === 'cancelling' && (
+            <p className="text-amber-400 text-xs mb-4">
+              Your subscription will end at the current billing period.
+            </p>
+          )}
+
+          {/* Feature grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <FeatureIcon icon={<Infinity size={24} />} title="Unlimited" subtitle="Move Insights" />
+            <FeatureIcon icon={<Brain size={24} />} title="AI" subtitle="Analysis" />
+            <FeatureIcon icon={<Crown size={24} />} title="All Premium" subtitle="Features" />
+            <FeatureIcon icon={<ShieldCheck size={24} />} title="Secure &" subtitle="Protected" />
+          </div>
+
+          {/* Secured by Creem */}
+          {status?.subscriptionProvider === 'CREEM' && (
+            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-2">
+              <Lock size={12} />
+              <span>Secured by Creem</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom CTA bar */}
+      <div className="mt-6 -mx-4 -mb-4 p-4 bg-gradient-to-r from-blue-600 to-blue-500">
+        <div className="max-w-md mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-white text-sm text-center sm:text-left">
+            Thank you for choosing ChessDuo Premium.<br />
+            Let&apos;s play smarter and win more, together!
+          </p>
+          <button
+            onClick={onGoToProfile}
+            className="flex-shrink-0 px-5 py-3 bg-white text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2 min-h-[44px] hover:bg-blue-50 transition-colors"
+          >
+            Go to Dashboard
+            <ArrowRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FeatureIcon({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-900/40 border border-white/5">
+      <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
+        {icon}
+      </div>
+      <div className="text-center">
+        <p className="text-white text-xs font-semibold leading-tight">{title}</p>
+        <p className="text-slate-400 text-[10px] leading-tight">{subtitle}</p>
+      </div>
+    </div>
   )
 }
 

@@ -117,4 +117,44 @@ describe('PremiumPage Component', () => {
       expect.anything(),
     )
   })
+
+  test('success layout renders all premium success elements', async () => {
+    window.history.replaceState({}, '', '/premium')
+
+    const premiumStatus = {
+      isPremium: true,
+      subscriptionProvider: 'CREEM',
+      subscriptionPlan: 'yearly',
+      purchaseToken: 'chk_123',
+      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
+      autoRenewStatus: true,
+      purchaseState: 'purchased',
+      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
+      subscriptionStatus: 'active',
+    }
+
+    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce(premiumStatus)
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ verified: true, status: premiumStatus }),
+    })
+
+    render(<PremiumPage />)
+
+    expect(await screen.findByText('Welcome to Premium!')).toBeDefined()
+    expect(screen.getByText(/Unlock the best tools/)).toBeDefined()
+    expect(screen.getByText('Annual Plan')).toBeDefined()
+    expect(screen.getByText(/Unlimited move insights/)).toBeDefined()
+    expect(screen.getByText('Unlimited')).toBeDefined()
+    expect(screen.getByText('Move Insights')).toBeDefined()
+    expect(screen.getByText('AI')).toBeDefined()
+    expect(screen.getByText('Analysis')).toBeDefined()
+    expect(screen.getByText('All Premium')).toBeDefined()
+    expect(screen.getByText('Features')).toBeDefined()
+    expect(screen.getByText('Secure &')).toBeDefined()
+    expect(screen.getByText('Protected')).toBeDefined()
+    expect(screen.getByText('Secured by Creem')).toBeDefined()
+    expect(screen.getByText(/Thank you for choosing ChessDuo Premium/)).toBeDefined()
+    expect(screen.getByText('Go to Dashboard')).toBeDefined()
+  })
 })

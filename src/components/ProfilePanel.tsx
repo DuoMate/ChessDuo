@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil, Lock } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
@@ -12,6 +12,7 @@ import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
 import { SubscriptionService } from '@/features/billing'
+import type { SubscriptionInfo } from '@/features/billing'
 import { useSettings } from '@/lib/settings'
 
 interface ProfilePanelProps {
@@ -28,6 +29,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   const [profileCopied, setProfileCopied] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionInfo | null>(null)
   const [username, setUsername] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -39,14 +41,15 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
 
   useEffect(() => {
     Promise.all([
-      SubscriptionService.isPremium(),
+      SubscriptionService.getStatus(),
       supabase
         .from('profiles')
         .select('username, avatar_url')
         .eq('id', playerId)
         .maybeSingle(),
-    ]).then(([premium, profileResult]) => {
-      setIsPremium(premium)
+    ]).then(([statusResult, profileResult]) => {
+      setIsPremium(statusResult.isPremium)
+      setSubscriptionStatus(statusResult)
       if (profileResult.data?.username) setUsername(profileResult.data.username)
       if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
       setCheckingPremium(false)
@@ -55,15 +58,16 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
     })
 
     const channel = RealtimeService.subscribeToTable('profiles', 'UPDATE', `id=eq.${playerId}`, async () => {
-      const [premium, profileResult] = await Promise.all([
-        SubscriptionService.isPremium(),
+      const [statusResult, profileResult] = await Promise.all([
+        SubscriptionService.getStatus(),
         supabase
           .from('profiles')
           .select('username, avatar_url')
           .eq('id', playerId)
           .maybeSingle(),
       ])
-      setIsPremium(premium)
+      setIsPremium(statusResult.isPremium)
+      setSubscriptionStatus(statusResult)
       if (profileResult.data?.username) setUsername(profileResult.data.username)
       if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
     })
@@ -181,7 +185,25 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             </div>
             <span className="text-slate-500">&rsaquo;</span>
           </button>
-        ) : null}
+        ) : (
+          <div className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <Crown size={20} className="text-amber-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold text-amber-400">Premium Active</p>
+              <p className="text-xs text-slate-400">
+                {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'}
+              </p>
+            </div>
+            {subscriptionStatus?.subscriptionProvider === 'CREEM' && (
+              <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                <Lock size={10} />
+                Creem
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onClick={onViewHistory}

@@ -16,7 +16,8 @@ import { useSettings } from '@/lib/settings'
 import { getProfileLink } from '@/lib/friends'
 import { shareLink } from '@/lib/share'
 import { motion } from 'framer-motion'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil, Lock } from 'lucide-react'
+import type { SubscriptionInfo } from '@/features/billing'
 import { AuthGate } from '@/components/AuthGate'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
@@ -40,6 +41,7 @@ function ProfileContent({ playerId }: { playerId: string }) {
   const [profileCopied, setProfileCopied] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionInfo | null>(null)
   const { theme, setTheme } = useSettings()
   const mountedRef = useRef(true)
 
@@ -50,11 +52,12 @@ function ProfileContent({ playerId }: { playerId: string }) {
 
   useEffect(() => {
     Promise.all([
-      SubscriptionService.isPremium(),
-            fetchProfile(playerId),
-    ]).then(([premium, profileResult]) => {
+      SubscriptionService.getStatus(),
+      fetchProfile(playerId),
+    ]).then(([statusResult, profileResult]) => {
       if (!mountedRef.current) return
-      setIsPremium(premium)
+      setIsPremium(statusResult.isPremium)
+      setSubscriptionStatus(statusResult)
       if (profileResult?.username) setUsername(profileResult.username)
       if (profileResult?.avatar_url) setAvatarUrl(profileResult.avatar_url)
       setCheckingPremium(false)
@@ -63,12 +66,13 @@ function ProfileContent({ playerId }: { playerId: string }) {
     })
 
     const channel = RealtimeService.subscribeToTable('profiles', 'UPDATE', `id=eq.${playerId}`, async () => {
-      const [premium, profileResult] = await Promise.all([
-        SubscriptionService.isPremium(),
+      const [statusResult, profileResult] = await Promise.all([
+        SubscriptionService.getStatus(),
         fetchProfile(playerId),
       ])
       if (mountedRef.current) {
-        setIsPremium(premium)
+        setIsPremium(statusResult.isPremium)
+        setSubscriptionStatus(statusResult)
         if (profileResult?.username) setUsername(profileResult.username)
         if (profileResult?.avatar_url) setAvatarUrl(profileResult.avatar_url)
       }
@@ -188,7 +192,28 @@ function ProfileContent({ playerId }: { playerId: string }) {
                 </div>
                 <span className="text-slate-500">&rsaquo;</span>
               </button>
-            ) : null}
+            ) : (
+              <div className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Crown size={20} className="text-amber-400" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-semibold text-amber-400">Premium Active</p>
+                  <p className="text-xs text-slate-400">
+                    {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'}
+                    {subscriptionStatus?.subscriptionExpiryDate && (
+                      <> · Renews {new Date(subscriptionStatus.subscriptionExpiryDate).toLocaleDateString()}</>
+                    )}
+                  </p>
+                </div>
+                {subscriptionStatus?.subscriptionProvider === 'CREEM' && (
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <Lock size={10} />
+                    Creem
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* View All Match History */}
             <button
