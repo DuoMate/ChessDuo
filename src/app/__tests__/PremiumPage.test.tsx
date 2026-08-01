@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import PremiumPage from '../(main)/premium/page'
 import { SubscriptionService } from '@/features/billing'
 
@@ -156,5 +157,63 @@ describe('PremiumPage Component', () => {
     expect(screen.getByText('Secured by Creem')).toBeDefined()
     expect(screen.getByText(/Thank you for choosing ChessDuo Premium/)).toBeDefined()
     expect(screen.getByText('Go to Dashboard')).toBeDefined()
+  })
+
+  test('re-verifies premium when the app returns to the foreground after a mobile checkout', async () => {
+    window.history.replaceState({}, '', '/premium')
+    ;(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor = { isNativePlatform: () => true }
+
+    let resumeCb: ((d: { isActive: boolean }) => void) | undefined
+    const { App } = jest.requireMock('@capacitor/app')
+    ;(App.addListener as jest.Mock).mockImplementation((event: string, cb: (d: unknown) => void) => {
+      if (event === 'appStateChange') resumeCb = cb as (d: { isActive: boolean }) => void
+      return Promise.resolve({ remove: jest.fn() })
+    })
+
+    // verify-checkout is unreachable on mount → the page settles on the pricing
+    // view quickly instead of running the slow webhook poll.
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'))
+
+    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValue({
+      isPremium: false,
+      subscriptionProvider: null,
+      subscriptionPlan: null,
+      purchaseToken: null,
+      subscriptionExpiryDate: null,
+      autoRenewStatus: false,
+      purchaseState: null,
+      lastVerifiedDate: null,
+      subscriptionStatus: null,
+    })
+    ;(SubscriptionService.purchaseMonthly as jest.Mock).mockResolvedValue({
+      success: true,
+      checkoutUrl: 'https://checkout.creem.io/test',
+      productId: 'premium_monthly',
+    })
+
+    render(<PremiumPage />)
+    await screen.findByText('Monthly')
+
+    // User taps Upgrade → external browser opens, checkout flagged as pending.
+    await userEvent.click(screen.getAllByText('Upgrade to Premium')[0])
+
+    // While the user is away paying, the webhook grants premium.
+    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValue({
+      isPremium: true,
+      subscriptionProvider: 'CREEM',
+      subscriptionPlan: 'monthly',
+      purchaseToken: 'chk_123',
+      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
+      autoRenewStatus: true,
+      purchaseState: 'purchased',
+      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
+      subscriptionStatus: 'active',
+    })
+
+    // User returns to the app → appStateChange(resume) → re-verify → success screen.
+    await waitFor(() => expect(resumeCb).toBeDefined())
+    await act(async () => { resumeCb!({ isActive: true }) })
+
+    expect(await screen.findByText(/You're Premium/)).toBeDefined()
   })
 })

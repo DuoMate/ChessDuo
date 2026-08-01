@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil, Lock } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { getProfileLink } from '@/lib/friends'
@@ -186,23 +186,21 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             <span className="text-slate-500">&rsaquo;</span>
           </button>
         ) : (
-          <div className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+          <button
+            onClick={() => router.push('/premium')}
+            className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+          >
             <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
               <Crown size={20} className="text-amber-400" />
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-semibold text-amber-400">Premium Active</p>
               <p className="text-xs text-slate-400">
-                {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'}
+                {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'} · View premium features
               </p>
             </div>
-            {subscriptionStatus?.subscriptionProvider === 'CREEM' && (
-              <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                <Lock size={10} />
-                Creem
-              </div>
-            )}
-          </div>
+            <span className="text-slate-500">&rsaquo;</span>
+          </button>
         )}
 
         <button

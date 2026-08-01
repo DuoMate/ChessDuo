@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { App } from '@capacitor/app'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
@@ -29,6 +30,7 @@ export default function PremiumPage() {
   const [plansLoading, setPlansLoading] = useState(true)
   const [status, setStatus] = useState<SubscriptionInfo | null>(null)
   const mountedRef = useRef(true)
+  const checkoutPendingRef = useRef(false)
   const router = useRouter()
 
   const monthlyPlan = plans.find(p => p.billingPeriod === 'monthly')
@@ -39,45 +41,64 @@ export default function PremiumPage() {
     return () => { mountedRef.current = false }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
+  const runLoad = useCallback(async () => {
+    try {
+      let subStatus = await SubscriptionService.getStatus()
+      console.log('[PREMIUM] getStatus:', JSON.stringify(subStatus))
 
-    async function load() {
-      try {
-        let subStatus = await SubscriptionService.getStatus()
-        console.log('[PREMIUM] Initial getStatus:', JSON.stringify(subStatus))
-
-        // If not premium, always attempt verification. The API route now
-        // auto-resolves the checkout ID from pending_checkout_id in the DB
-        // (Creem doesn't template-replace {CHECKOUT_SESSION_ID} in success URLs).
-        if (!subStatus.isPremium) {
-          console.log('[PREMIUM] Not premium — running verifyCheckoutSession')
-          subStatus = await verifyCheckoutSession()
-          console.log('[PREMIUM] After verifyCheckoutSession:', JSON.stringify(subStatus))
-          if (subStatus.isPremium) {
-            router.replace('/premium')
-          }
-        }
-
-        const subPlans = await SubscriptionService.getPlans()
-        if (cancelled || !mountedRef.current) return
-        setStatus(subStatus)
-        setIsPremium(subStatus.isPremium)
-        setSubscriptionStatus(subStatus.subscriptionStatus)
-        setPlans(subPlans)
-      } catch {
-        if (cancelled || !mountedRef.current) return
-      } finally {
-        if (!cancelled && mountedRef.current) {
-          setPlansLoading(false)
-          setLoading(false)
+      // If not premium, always attempt verification. The API route now
+      // auto-resolves the checkout ID from pending_checkout_id in the DB
+      // (Creem doesn't template-replace {CHECKOUT_SESSION_ID} in success URLs).
+      if (!subStatus.isPremium) {
+        console.log('[PREMIUM] Not premium — running verifyCheckoutSession')
+        subStatus = await verifyCheckoutSession()
+        console.log('[PREMIUM] After verifyCheckoutSession:', JSON.stringify(subStatus))
+        if (subStatus.isPremium) {
+          checkoutPendingRef.current = false
+          router.replace('/premium')
         }
       }
-    }
 
-    load()
-    return () => { cancelled = true }
-  }, [])
+      const subPlans = await SubscriptionService.getPlans()
+      if (!mountedRef.current) return
+      setStatus(subStatus)
+      setIsPremium(subStatus.isPremium)
+      setSubscriptionStatus(subStatus.subscriptionStatus)
+      setPlans(subPlans)
+    } catch {
+      if (!mountedRef.current) return
+    } finally {
+      if (mountedRef.current) {
+        setPlansLoading(false)
+        setLoading(false)
+      }
+    }
+  }, [router])
+
+  useEffect(() => {
+    runLoad()
+  }, [runLoad])
+
+  // Mobile: the checkout opens in the external system browser and the deep-link
+  // hand-off back to the app (custom scheme / App Link) is not guaranteed. When the
+  // user returns to the app after paying, re-run the verification so the
+  // "You're Premium!" success screen appears instead of the stale pricing page.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    if (!cap?.isNativePlatform?.()) return
+
+    let removeListener: (() => void) | undefined
+    App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+      if (!isActive || !checkoutPendingRef.current) return
+      setLoading(true)
+      runLoad()
+    }).then((handle) => {
+      removeListener = handle.remove
+    })
+
+    return () => { removeListener?.() }
+  }, [runLoad])
 
   // The API route auto-resolves the checkout ID from pending_checkout_id in the DB.
   // No session_id param is needed — Creem doesn't template-replace success URLs.
@@ -147,9 +168,13 @@ export default function PremiumPage() {
         return
       }
 
+      // Checkout opened (new tab on web, external browser on mobile). Flag the
+      // pending checkout so a mobile foreground-resume re-runs verification.
+      checkoutPendingRef.current = true
       SubscriptionService.invalidate()
       const newStatus = await SubscriptionService.getStatus()
       if (newStatus.isPremium) {
+        checkoutPendingRef.current = false
         setIsPremium(true)
         setSubscriptionStatus('active')
         setStatus(newStatus)

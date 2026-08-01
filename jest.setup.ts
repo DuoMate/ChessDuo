@@ -11,7 +11,7 @@ jest.mock('@capacitor/browser', () => ({
 
 jest.mock('@capacitor/app', () => ({
   App: {
-    addListener: jest.fn(),
+    addListener: jest.fn(() => Promise.resolve({ remove: jest.fn() })),
     removeAllListeners: jest.fn(),
   },
 }))

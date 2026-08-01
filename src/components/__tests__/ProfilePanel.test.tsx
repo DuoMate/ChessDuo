@@ -4,8 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { ProfilePanel } from '@/components/ProfilePanel'
 import { SubscriptionService } from '@/features/billing'
 
+const mockPush = jest.fn()
+const mockReplace = jest.fn()
+const mockBack = jest.fn()
+
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
 }))
 
 jest.mock('@/lib/settings', () => ({
@@ -110,9 +114,29 @@ describe('ProfilePanel', () => {
     renderPanel()
 
     expect(await screen.findByText('Premium Active')).toBeDefined()
-    expect(screen.getByText('Monthly plan')).toBeDefined()
-    expect(screen.getByText('Creem')).toBeDefined()
+    expect(screen.getByText(/Monthly plan/)).toBeDefined()
+    expect(screen.queryByText('Creem')).toBeNull()
     expect(screen.queryByText('Upgrade to Premium')).toBeNull()
+  })
+
+  it('opens the premium page when the premium active card is tapped', async () => {
+    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce({
+      isPremium: true,
+      subscriptionProvider: 'CREEM',
+      subscriptionPlan: 'monthly',
+      purchaseToken: 'chk_123',
+      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
+      autoRenewStatus: true,
+      purchaseState: 'purchased',
+      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
+      subscriptionStatus: 'active',
+    })
+
+    renderPanel()
+
+    await screen.findByText('Premium Active')
+    await userEvent.click(screen.getByRole('button', { name: /Premium Active/ }))
+    expect(mockPush).toHaveBeenCalledWith('/premium')
   })
 
   it('shows annual plan when premium yearly', async () => {
@@ -131,7 +155,7 @@ describe('ProfilePanel', () => {
     renderPanel()
 
     expect(await screen.findByText('Premium Active')).toBeDefined()
-    expect(screen.getByText('Annual plan')).toBeDefined()
+    expect(screen.getByText(/Annual plan/)).toBeDefined()
   })
 
   it('shows spinner while checking premium status', async () => {

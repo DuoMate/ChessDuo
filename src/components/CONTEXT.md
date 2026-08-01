@@ -86,6 +86,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-08-01**: `ProfilePanel` "Premium Active" card is now a clickable button that routes to `/premium` (view premium features) — it was a plain `div` with a `Lock`/Creem badge. Lock badge removed from the card; plan name kept in the subtitle.
 - **2026-07-31**: `ProfilePanel` now shows a "Premium Active" card when the user is premium (plan name + "Secured by Creem" badge) instead of rendering nothing.
 - **2026-07-31**: **Game-invite push deep link fix** — `ChallengePicker` now passes the RECEIVER's identity (`friendId`) and `'BLACK'` to `notifyGameInvite(...)`. It previously passed the challenger's own id + `'WHITE'`, so the friend's `/duel` page session check (`session.user.id === playerId`) failed with "Session Expired". Share copy in `ProfilePanel`/`FriendsPanel`/`profile/page.tsx` updated to "ChessDuo Invite" / "Play ChessDuo with me!" (points at `/invite/[userId]`, not the dead `/profile/[userId]`).
 - **2026-07-31**: **Bug 37** fix — all share buttons (`GameLobby`, `GameLoading`, `FourPlayerLobby`, `ProfilePanel`, `FriendsPanel`, `profile/page.tsx`) now share the clickable HTTPS App Link only — `nativeUrl`/`chessduo://` removed from every `shareLink()` call. Native sheet via `@capacitor/share` → Web Share API → clipboard (copies the HTTPS link).

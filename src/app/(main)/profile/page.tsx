@@ -16,7 +16,7 @@ import { useSettings } from '@/lib/settings'
 import { getProfileLink } from '@/lib/friends'
 import { shareLink } from '@/lib/share'
 import { motion } from 'framer-motion'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil, Lock } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, Pencil } from 'lucide-react'
 import type { SubscriptionInfo } from '@/features/billing'
 import { AuthGate } from '@/components/AuthGate'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -193,7 +193,10 @@ function ProfileContent({ playerId }: { playerId: string }) {
                 <span className="text-slate-500">&rsaquo;</span>
               </button>
             ) : (
-              <div className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3">
+              <button
+                onClick={() => router.push('/premium')}
+                className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+              >
                 <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                   <Crown size={20} className="text-amber-400" />
                 </div>
@@ -204,15 +207,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
                     {subscriptionStatus?.subscriptionExpiryDate && (
                       <> · Renews {new Date(subscriptionStatus.subscriptionExpiryDate).toLocaleDateString()}</>
                     )}
+                    · View premium features
                   </p>
                 </div>
-                {subscriptionStatus?.subscriptionProvider === 'CREEM' && (
-                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                    <Lock size={10} />
-                    Creem
-                  </div>
-                )}
-              </div>
+                <span className="text-slate-500">&rsaquo;</span>
+              </button>
             )}
 
             {/* View All Match History */}
