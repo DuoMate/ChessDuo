@@ -14,6 +14,10 @@ export default function PrivacyPage() {
 
         <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
         <p className="text-yellow-600/60 dark:text-yellow-400/60 text-sm mb-8">ChessDuo is a product of Navron</p>
+        <p className="text-sm mb-8">
+          Read our{' '}
+          <a href="/terms" className="text-yellow-600 dark:text-yellow-400 hover:underline">Terms of Service</a>.
+        </p>
 
         <section className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">
           <div>
@@ -60,7 +64,9 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">5. Third-Party Services</h2>
             <ul className="list-disc pl-6 space-y-1">
               <li><strong>Supabase</strong> — for authentication, real-time messaging, and database storage. See <a href="https://supabase.com/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Supabase Privacy Policy</a>.</li>
-              <li><strong>Render</strong> — for hosting the web application and Stockfish backend. See <a href="https://render.com/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Render Privacy Policy</a>.</li>
+              <li><strong>Cloudflare</strong> — for hosting the web application on the edge. See <a href="https://www.cloudflare.com/privacypolicy/" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Cloudflare Privacy Policy</a>.</li>
+              <li><strong>Render</strong> — for hosting the Stockfish evaluation backend. See <a href="https://render.com/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Render Privacy Policy</a>.</li>
+              <li><strong>Creem</strong> — as Merchant of Record for premium subscription payments and tax compliance. When you make a purchase, Creem processes your name, email address, and payment details (we never see your card details). See <a href="https://www.creem.io/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">Creem Privacy Policy</a>.</li>
             </ul>
           </div>
 

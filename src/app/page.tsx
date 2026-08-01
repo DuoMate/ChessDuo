@@ -1315,6 +1315,19 @@ if (!gameMode) {
         ) : (
           <DesktopSidebar unreadMessages={unreadMessages} />
         )}
+
+        {/* Legal footer */}
+        <footer className="pb-2 md:pb-4 pt-1 md:pt-2 px-4">
+          <div className="max-w-lg mx-auto md:max-w-none text-center md:text-left">
+            <nav className="flex items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
+              <a href="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</a>
+              <span aria-hidden="true">·</span>
+              <a href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</a>
+              <span aria-hidden="true">·</span>
+              <span>ChessDuo by Navron</span>
+            </nav>
+          </div>
+        </footer>
       </div>
     </ErrorBoundary>
   )
