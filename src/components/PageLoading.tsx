@@ -112,6 +112,29 @@ const GridNode = memo(function GridNode({ highlighted, pulsing }: GridNodeProps)
   )
 })
 
+// ─── KnightShadow ─────────────────────────────────────────────────────────────
+
+const KnightShadow = memo(function KnightShadow({ active }: { active: boolean }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <motion.div
+        className="rounded-full bg-slate-300/30 dark:bg-white/10"
+        style={{ width: 40, height: 12 }}
+        animate={
+          active
+            ? { scale: [1, 0.7, 1], opacity: [0.25, 0.12, 0.25] }
+            : { scale: 1, opacity: 0.25 }
+        }
+        transition={
+          active
+            ? { duration: 0.18, ease: 'easeInOut' }
+            : { duration: 0.15 }
+        }
+      />
+    </div>
+  )
+})
+
 // ─── pb-20 detection ──────────────────────────────────────────────────────────
 
 const NO_BOTTOM_PAD_PATHNAMES = ['/game', '/duel', '/']
@@ -209,6 +232,7 @@ export function PageLoading({ label, className = '' }: PageLoadingProps) {
 
   useEffect(() => {
     if (phase === 'jump') {
+      controls.stop()
       controls.start({
         x: px,
         y: [0, ARC_HEIGHT, 0],
@@ -266,6 +290,8 @@ export function PageLoading({ label, className = '' }: PageLoadingProps) {
               />
             ))}
           </div>
+
+          <KnightShadow active={isJumping} />
 
           <motion.div
             animate={controls}

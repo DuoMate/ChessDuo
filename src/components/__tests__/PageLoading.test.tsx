@@ -23,6 +23,7 @@ jest.mock('framer-motion', () => {
     useAnimationControls: () => ({
       start: jest.fn().mockResolvedValue(undefined),
       set: jest.fn(),
+      stop: jest.fn(),
     }),
   }
 })
