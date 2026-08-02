@@ -269,7 +269,7 @@ export function PageLoading({ label, className = '' }: PageLoadingProps) {
 
           <motion.div
             animate={controls}
-            className="absolute flex items-center justify-center pointer-events-none"
+            className="absolute flex items-center justify-center pointer-events-none select-none"
             style={{
               width: knightSize,
               height: knightSize,
@@ -278,17 +278,13 @@ export function PageLoading({ label, className = '' }: PageLoadingProps) {
               marginLeft: -knightSize / 2,
               marginTop: -knightSize / 2,
               zIndex: 10,
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))',
+              fontSize: knightSize,
+              lineHeight: 1,
             }}
             initial={{ x: 0, y: 0, scale: 1, rotate: 0 }}
           >
-            <img
-              src="/logo.png"
-              alt="Knight"
-              width={knightSize}
-              height={knightSize}
-              className="shrink-0"
-              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
-            />
+            ♞
           </motion.div>
         </div>
 

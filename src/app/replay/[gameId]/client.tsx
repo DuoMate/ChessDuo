@@ -25,12 +25,15 @@ export default function ReplayPageClient() {
   const [error, setError] = useState(false)
   const [authState, setAuthState] = useState<'checking' | 'signed_out' | 'signed_in'>('checking')
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useCapacitorBackButton(() => { router.push('/history'); return true }, true)
 
   useEffect(() => {
     AuthService.getSession().then(session => {
-      setAuthState(session?.user ? 'signed_in' : 'signed_out')
+      const uid = session?.user?.id || null
+      setUserId(uid)
+      setAuthState(uid ? 'signed_in' : 'signed_out')
     }).catch(() => {
       setAuthState('signed_out')
     })
@@ -41,7 +44,7 @@ export default function ReplayPageClient() {
     let cancelled = false
     async function load() {
       try {
-        const result = await getCompletedGame(gameId)
+        const result = await getCompletedGame(gameId, userId || undefined)
         if (cancelled) return
         if (result) {
           setGame(result)
@@ -56,18 +59,20 @@ export default function ReplayPageClient() {
     }
     load()
     return () => { cancelled = true }
-  }, [gameId, authState])
+  }, [gameId, authState, userId])
 
-  const handleAuthComplete = (userId: string) => {
+  const handleAuthComplete = (uid: string) => {
+    setUserId(uid)
     setAuthState('signed_in')
   }
 
-  const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null) => {
-    setNeedsUsername({ userId, suggestedName, avatarUrl })
+  const handleNeedUsername = (uid: string, suggestedName: string, avatarUrl?: string | null) => {
+    setNeedsUsername({ userId: uid, suggestedName, avatarUrl })
   }
 
-  const handleUsernameChosen = (userId: string) => {
+  const handleUsernameChosen = (uid: string) => {
     setNeedsUsername(null)
+    setUserId(uid)
     setAuthState('signed_in')
   }
 

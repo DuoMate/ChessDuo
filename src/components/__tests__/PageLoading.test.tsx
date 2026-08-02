@@ -45,9 +45,9 @@ describe('PageLoading', () => {
     expect(logos[0].tagName).toBe('IMG')
   })
 
-  it('renders the knight piece element', () => {
+  it('renders the knight piece emoji', () => {
     render(<PageLoading />)
-    const knight = screen.getByAltText('Knight')
+    const knight = screen.getByText('♞')
     expect(knight).toBeDefined()
   })
 
@@ -109,7 +109,7 @@ describe('PageLoading', () => {
     act(() => { jest.advanceTimersByTime(120) })    // pause
     act(() => { jest.advanceTimersByTime(150) })    // next idle
 
-    expect(screen.getByAltText('Knight')).toBeDefined()
+    expect(screen.getByText('♞')).toBeDefined()
   })
 
   it('handles 3 complete cycles without crashing', () => {
@@ -117,7 +117,7 @@ describe('PageLoading', () => {
     for (let i = 0; i < 3 * 9; i++) {
       act(() => { jest.advanceTimersByTime(600) })
     }
-    expect(screen.getByAltText('Knight')).toBeDefined()
+    expect(screen.getByText('♞')).toBeDefined()
   })
 
   // ─── pb-20 detection ───────────────────────────────────────────────────
