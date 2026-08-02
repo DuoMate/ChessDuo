@@ -144,40 +144,19 @@ describe('ReplayView Component', () => {
     expect(screen.getByText(/P2: 92%/)).toBeDefined()
   })
 
-  test('renders moves in MovePlayback', () => {
-    render(<ReplayView game={mockGame} />)
-    expect(screen.getByText('e4')).toBeDefined()
-    expect(screen.getByText('Nf3')).toBeDefined()
-  })
-
-  test('shows sync checkmark for synced moves', () => {
-    const { container } = render(<ReplayView game={mockGame} />)
-    expect(container.innerHTML).toContain('✓')
-  })
-
-  test('shows shadow move for conflicting moves', () => {
-    render(<ReplayView game={mockGame} />)
-    expect(screen.getByText('Nc3')).toBeDefined()
-  })
-
-  test('shows empty state when no moves', () => {
-    render(<ReplayView game={emptyMovesGame} />)
-    expect(screen.getByText('No move data available for this game.')).toBeDefined()
-  })
-
   test('renders back button', () => {
     render(<ReplayView game={mockGame} />)
     expect(screen.getByRole('button', { name: /back to history/i })).toBeDefined()
   })
 
+  test('renders move navigation buttons (Back and Fwd)', () => {
+    render(<ReplayView game={mockGame} />)
+    expect(screen.getByRole('button', { name: /previous move/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /next move/i })).toBeDefined()
+  })
+
   test('renders game mode indicator', () => {
     render(<ReplayView game={mockGame} />)
     expect(screen.getByText('Offline')).toBeDefined()
-  })
-
-  test('filters out move entries with empty fenAfter', () => {
-    render(<ReplayView game={emptyFenGame} />)
-    expect(screen.getByText('Nf3')).toBeDefined()
-    expect(screen.queryByText('e4')).toBeNull()
   })
 })

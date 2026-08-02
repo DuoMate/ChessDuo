@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { CompletedGame } from '@/lib/matchHistory'
-import { MovePlayback, MoveEntry } from './MovePlayback'
+import { BoardBottomNav } from './BoardBottomNav'
 import { ChessBoard } from './ChessBoard'
 import { MobileChessBoard } from './MobileChessBoard'
-import { BoardBottomNav } from './BoardBottomNav'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import type { MoveEntry } from './MovePlayback'
 
 const reasonLabels: Record<string, string> = {
   checkmate: 'Checkmate',
@@ -131,33 +131,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           </div>
         </div>
 
-        {moves.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <MovePlayback
-              moves={moves}
-              currentIndex={playbackIndex}
-              initialFen={initialFen}
-              onSelectMove={(index, fen) => {
-                setPlaybackIndex(index)
-                setPlaybackFen(fen)
-              }}
-              onReset={() => {
-                setPlaybackIndex(null)
-                setPlaybackFen(null)
-              }}
-            />
-          </motion.div>
-        )}
-
-        {moves.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-slate-500 text-sm">No move data available for this game.</p>
-          </div>
-        )}
+        <div className="flex-1 mb-24" /> {/* spacer for BoardBottomNav */}
 
         <BoardBottomNav
           activeTab="game"
