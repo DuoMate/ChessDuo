@@ -17,6 +17,7 @@ export interface CompletedGame {
   challenge_id: string | null
   played_at: string
   created_at: string
+  player_labels?: { white: string[]; black: string[] }
 }
 
 export interface MatchSummaryData {
@@ -35,6 +36,7 @@ export interface MatchSummaryData {
   roomId?: string
   moveComparisons?: unknown[]
   challengeId?: string
+  playerLabels?: { white: string[]; black: string[] }
 }
 
 const HISTORY_KEY_PREFIX = 'chessduo_history_'
@@ -86,6 +88,7 @@ function makeLocalGameEntry(data: MatchSummaryData): CompletedGame {
     challenge_id: data.challengeId || null,
     played_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    player_labels: data.playerLabels,
   }
 }
 

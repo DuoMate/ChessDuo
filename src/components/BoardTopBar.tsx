@@ -84,7 +84,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
             <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${dotClass} ring-2 ring-white dark:ring-slate-900`} />
           )}
         </div>
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[60px]">
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">
           {player.label}
         </span>
       </div>
@@ -109,7 +109,7 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
           </span>
         )}
       </div>
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[60px]">
+      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">
         {player.label}
       </span>
     </div>

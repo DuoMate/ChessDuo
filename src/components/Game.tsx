@@ -283,6 +283,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [matchTimerStarted, setMatchTimerStarted] = useState(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
+
+  // Auto-reset playback to live position when game state updates (new move arrives)
+  const prevGameFenRef = useRef(gameState.fen)
+  useEffect(() => {
+    if (playbackFen !== null && gameState.fen !== prevGameFenRef.current) {
+      setPlaybackFen(null)
+      setPlaybackIndex(null)
+    }
+    prevGameFenRef.current = gameState.fen
+  }, [gameState.fen])
+
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
   const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
   const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
@@ -572,6 +583,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       },
       isOnline: !!isOnline,
       moveComparisons: moveHistoryRef.current,
+      playerLabels: {
+        white: teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim()),
+        black: teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim()),
+      },
     }, playerId || undefined)
 
     toast.gameOver(result)

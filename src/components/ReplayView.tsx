@@ -45,12 +45,15 @@ export function ReplayView({ game }: ReplayViewProps) {
 
   const currentFen = playbackFen || (moves.length > 0 ? moves[moves.length - 1].fenAfter : initialFen)
 
-  // Replay uses generic labels — no live profiles. Always 1v1 shell.
+  // Use saved player labels if available, otherwise fall back to generic names
+  const whiteLabels = game.player_labels?.white ?? ['Player 1']
+  const blackLabels = game.player_labels?.black ?? ['Player 2']
+
   const whitePlayers: BoardTopBarPlayer[] = [
-    { id: 'p1', label: 'Player 1', type: 'human', isYou: game.winner === 'WHITE', online: true },
+    { id: 'p1', label: whiteLabels[0] || 'Player 1', type: 'human', isYou: game.winner === 'WHITE', online: true },
   ]
   const blackPlayers: BoardTopBarPlayer[] = [
-    { id: 'p2', label: 'Player 2', type: 'human', isYou: game.winner === 'BLACK', online: true },
+    { id: 'p2', label: blackLabels[0] || 'Player 2', type: 'human', isYou: game.winner === 'BLACK', online: true },
   ]
 
   return (

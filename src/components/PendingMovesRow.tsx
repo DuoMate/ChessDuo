@@ -61,7 +61,7 @@ export function PendingMovesRow({
             <span className="text-2xl leading-none">{pieceChar(yourMove?.piece, yourMove?.color)}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold uppercase tracking-wider ${youSubmitted ? 'text-green-400' : 'text-slate-400'} truncate`}>
+            <p className={`text-xs font-bold uppercase tracking-wider ${youSubmitted ? 'text-green-400' : 'text-slate-400'}`}>
               {yourLabel}{yourName ? <> · <span className="text-slate-300 normal-case tracking-normal">{yourName}</span></> : null}
             </p>
             <p className="text-sm font-bold text-slate-100 truncate">
@@ -95,7 +95,7 @@ export function PendingMovesRow({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold uppercase tracking-wider ${teammateSubmitted ? 'text-green-400' : 'text-amber-400'} truncate`}>
+            <p className={`text-xs font-bold uppercase tracking-wider ${teammateSubmitted ? 'text-green-400' : 'text-amber-400'}`}>
               {teammateLabel}{teammateName ? <> · <span className="text-slate-300 normal-case tracking-normal">{teammateName}</span></> : null}
             </p>
             <p className="text-sm font-bold text-slate-100 truncate">
