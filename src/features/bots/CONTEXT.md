@@ -28,4 +28,5 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 - `BrowserMoveEvaluator` (mobile-engine), `shared/gameConstants.ts`
 
 ## Recent Changes
+- **2026-08-02**: Reverted evaluator changes from Phase 6.4 — `BrowserMoveEvaluator` restored to MultiPV=6 + eager init + all-moves-in-results. Bot evaluation now sees 6 Stockfish-evaluated moves at all levels, preventing fallback to crude material-count heuristic for unscored moves.
 - **2026-07-30**: Removed `SERVER_URL` env var dependency. Evaluator always uses browser WASM (no remote server). `isUsingStockfish()` check removed from constructor — always true. Evaluator reuses shared instance from `evaluatorFactory`.

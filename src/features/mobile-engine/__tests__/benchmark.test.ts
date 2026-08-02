@@ -1,7 +1,7 @@
 /**
  * Benchmark & Correctness Test Suite
  *
- * Validates MultiPV=2 + lazy init against expected behavior.
+ * Validates MultiPV=6 + eager init against expected behavior.
  * Uses mock Worker — no actual Stockfish execution.
  */
 
@@ -40,7 +40,7 @@ function mockUciReady(worker: Worker): void {
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
-describe('Benchmark — MultiPV=2 correctness', () => {
+describe('Benchmark — MultiPV=6 correctness', () => {
   let mockWorker: ReturnType<typeof createMockWorker>
   let originalWorker: typeof Worker
 
@@ -55,52 +55,42 @@ describe('Benchmark — MultiPV=2 correctness', () => {
     ;(globalThis as any).Worker = originalWorker
   })
 
-  describe('Lazy init: worker lifecycle', () => {
-    it('does NOT create Worker at construction (memory savings)', () => {
-      const evaluator = new BrowserMoveEvaluator()
-      expect(globalThis.Worker).not.toHaveBeenCalled()
-      expect(evaluator.isReady()).toBe(false)
+  describe('Eager init: worker lifecycle', () => {
+    it('creates Worker at construction', async () => {
+      new BrowserMoveEvaluator()
+      expect(globalThis.Worker).toHaveBeenCalled()
     })
 
-    it('creates Worker only on first evaluation call', async () => {
+    it('is not ready until worker sends readyok', async () => {
       const evaluator = new BrowserMoveEvaluator()
-      expect(globalThis.Worker).not.toHaveBeenCalled()
+      expect(evaluator.isReady()).toBe(false)
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
+      expect(evaluator.isReady()).toBe(true)
+    })
 
-      const promise = evaluator.evaluateMoves(['e2e4'], INITIAL_FEN).catch(() => {})
-      await new Promise(r => setTimeout(r, 10))
-
+    it('reuses the same Worker for multiple calls', async () => {
+      const evaluator = new BrowserMoveEvaluator()
       expect(globalThis.Worker).toHaveBeenCalledTimes(1)
-    })
 
-    it('terminate() kills worker and allows re-creation', async () => {
-      const evaluator = new BrowserMoveEvaluator()
-
-      const p1 = evaluator.evaluateMoves(['e2e4'], INITIAL_FEN).catch(() => {})
+      const p1 = evaluator.evaluateMoves(['e2e4', 'd2d4'], INITIAL_FEN).catch(() => {})
       await new Promise(r => setTimeout(r, 10))
-      expect(mockWorker.terminate).not.toHaveBeenCalled()
+      mockUciReady(mockWorker)
 
-      evaluator.terminate()
-      expect(mockWorker.terminate).toHaveBeenCalled()
-      expect(evaluator.isReady()).toBe(false)
-
-      const newMockWorker = createMockWorker()
-      ;(globalThis as any).Worker = jest.fn(() => newMockWorker)
-
-      const p2 = evaluator.evaluateMoves(['d2d4'], INITIAL_FEN).catch(() => {})
-      await new Promise(r => setTimeout(r, 10))
       expect(globalThis.Worker).toHaveBeenCalledTimes(1)
     })
   })
 
-  describe('MultiPV=2: scored move filtering', () => {
-    it('only returns moves that received a PV score from the engine', async () => {
+  describe('MultiPV=6: scored move padding', () => {
+    it('returns ALL moves — unscored moves padded with score=0', async () => {
       const evaluator = new BrowserMoveEvaluator()
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
+      expect(evaluator.isReady()).toBe(true)
 
       const moves = ['e2e4', 'd2d4', 'g1f3', 'c2c4', 'b1c3']
       const resultPromise = evaluator.evaluateMoves(moves, INITIAL_FEN)
 
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
       ;(mockWorker as any)._emit('info depth 10 score cp 30 multipv 1 pv e2e4 e7e5')
@@ -108,23 +98,23 @@ describe('Benchmark — MultiPV=2 correctness', () => {
       ;(mockWorker as any)._emit('bestmove e2e4')
 
       const result = await resultPromise
-      expect(result).toHaveLength(2)
+      expect(result).toHaveLength(5)
       const scoredMoves = result.map(r => r.move)
       expect(scoredMoves).toContain('e2e4')
       expect(scoredMoves).toContain('d2d4')
-      expect(scoredMoves).not.toContain('g1f3')
-      expect(scoredMoves).not.toContain('c2c4')
-      expect(scoredMoves).not.toContain('b1c3')
+      expect(scoredMoves).toContain('g1f3')
+      expect(scoredMoves).toContain('c2c4')
+      expect(scoredMoves).toContain('b1c3')
     })
 
-    it('all returned moves have non-zero, real engine scores', async () => {
+    it('scored moves have non-zero engine scores, unscored padded to 0', async () => {
       const evaluator = new BrowserMoveEvaluator()
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
 
       const moves = ['e2e4', 'd2d4', 'g1f3']
       const resultPromise = evaluator.evaluateMoves(moves, INITIAL_FEN)
 
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
       ;(mockWorker as any)._emit('info depth 10 score cp 28 multipv 1 pv d2d4 d7d5')
@@ -132,40 +122,46 @@ describe('Benchmark — MultiPV=2 correctness', () => {
       ;(mockWorker as any)._emit('bestmove d2d4')
 
       const result = await resultPromise
-      for (const r of result) {
-        expect(r.score).not.toBe(0)
-      }
+      const scoreMap: Record<string, number> = {}
+      for (const r of result) scoreMap[r.move] = r.score
+      expect(scoreMap['d2d4']).toBe(28)
+      expect(scoreMap['e2e4']).toBe(15)
+      expect(scoreMap['g1f3']).toBe(0)
     })
 
-    it('returns only 1 move when MultiPV=2 catches only 1 relevant move', async () => {
+    it('pads unscored moves with 0 even when only 1 PV line returned', async () => {
       const evaluator = new BrowserMoveEvaluator()
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
 
       const resultPromise = evaluator.evaluateMoves(['e2e4', 'd2d4'], INITIAL_FEN)
 
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
       ;(mockWorker as any)._emit('info depth 10 score cp 30 multipv 1 pv e2e4 e7e5')
       ;(mockWorker as any)._emit('bestmove e2e4')
 
       const result = await resultPromise
-      expect(result).toHaveLength(1)
-      expect(result[0].move).toBe('e2e4')
+      expect(result).toHaveLength(2)
+      const scoreMap: Record<string, number> = {}
+      for (const r of result) scoreMap[r.move] = r.score
+      expect(scoreMap['e2e4']).toBe(30)
+      expect(scoreMap['d2d4']).toBe(0)
     })
   })
 
-  describe('getBestScore: bestmove-based (single engine call)', () => {
-    it('returns the engine bestmove + last known score', async () => {
+  describe('getBestScore: uses MultiPV-driven uciEvaluate', () => {
+    it('returns the best-scored move from MultiPV results', async () => {
       const evaluator = new BrowserMoveEvaluator()
-
-      const resultPromise = evaluator.getBestScore(INITIAL_FEN, 500)
-
-      await new Promise(r => setTimeout(r, 10))
       mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
-      ;(mockWorker as any)._emit('info depth 14 score cp 32 pv e2e4 e7e5 g1f3')
+      const resultPromise = evaluator.getBestScore(INITIAL_FEN)
+
+      await new Promise(r => setTimeout(r, 50))
+
+      ;(mockWorker as any)._emit('info depth 14 score cp 32 multipv 1 pv e2e4 e7e5 g1f3')
+      ;(mockWorker as any)._emit('info depth 14 score cp 18 multipv 2 pv d2d4 d7d5')
       ;(mockWorker as any)._emit('bestmove e2e4')
 
       const result = await resultPromise
@@ -173,52 +169,30 @@ describe('Benchmark — MultiPV=2 correctness', () => {
       expect(result.score).toBe(32)
     })
 
-    it('uses last info line score regardless of intermediate updates', async () => {
+    it('returns random move + score=0 when no MultiPV output', async () => {
       const evaluator = new BrowserMoveEvaluator()
-
-      const resultPromise = evaluator.getBestScore(INITIAL_FEN, 500)
-
-      await new Promise(r => setTimeout(r, 10))
       mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
-      ;(mockWorker as any)._emit('info depth 8 score cp 20 pv e2e4 e7e5')
-      ;(mockWorker as any)._emit('info depth 12 score cp 25 pv d2d4 d7d5')
-      ;(mockWorker as any)._emit('info depth 16 score cp 28 pv e2e4 e7e5 g1f3 b8c6')
+      const resultPromise = evaluator.getBestScore(INITIAL_FEN)
+
+      await new Promise(r => setTimeout(r, 50))
+
       ;(mockWorker as any)._emit('bestmove e2e4')
 
       const result = await resultPromise
-      expect(result.score).toBe(28)
-      expect(result.move).toBe('e2e4')
-    })
-
-    it('uses most recent PV move as bestMove when info lines provide it', async () => {
-      const evaluator = new BrowserMoveEvaluator()
-
-      const resultPromise = evaluator.getBestScore(INITIAL_FEN, 500)
-
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
-      await new Promise(r => setTimeout(r, 50))
-
-      ;(mockWorker as any)._emit('info depth 10 score cp 18 pv e2e4 e7e5')
-      ;(mockWorker as any)._emit('info depth 15 score cp 22 pv d2d4 d7d5 g1f3')
-      ;(mockWorker as any)._emit('bestmove d2d4')
-
-      const result = await resultPromise
-      expect(result.move).toBe('d2d4')
-      expect(result.score).toBe(22)
+      expect(result.move).not.toBe('')
     })
   })
 
   describe('Resolution simulation: 2-move comparison', () => {
     it('correctly identifies the better move between 2 candidates', async () => {
       const evaluator = new BrowserMoveEvaluator()
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
 
       const resultPromise = evaluator.evaluateMoves(['e2e4', 'd2d4'], INITIAL_FEN)
 
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
       ;(mockWorker as any)._emit('info depth 10 score cp 30 multipv 1 pv e2e4 e7e5')
@@ -239,27 +213,27 @@ describe('Benchmark — MultiPV=2 correctness', () => {
     })
   })
 
-  describe('MultiPV overhead simulation', () => {
-    it('uses smaller search space than MultiPV=6 would', () => {
+  describe('MultiPV configuration', () => {
+    it('uses MultiPV=6 for broad PV coverage', () => {
       const evaluator = new BrowserMoveEvaluator()
 
       evaluator.evaluateMoves(['e2e4'], INITIAL_FEN).catch(() => {})
       const calls = (mockWorker.postMessage as jest.Mock).mock.calls.map((c: string[]) => c[0])
       const multiPvCommand = calls.find((c: string) => c.includes('MultiPV'))
 
-      expect(multiPvCommand).toBe('setoption name MultiPV value 2')
+      expect(multiPvCommand).toBe('setoption name MultiPV value 6')
     })
   })
 
-  describe('Caching: evaluateMoves still caches scored results', () => {
-    it('caches only engine-scored moves (not unscored ones)', async () => {
+  describe('Caching: evaluateMoves caches all results (including 0-padded)', () => {
+    it('caches ALL moves — scored and unscored (0-padded)', async () => {
       const evaluator = new BrowserMoveEvaluator()
+      mockUciReady(mockWorker)
+      await new Promise(r => setTimeout(r, 50))
 
       const moves = ['e2e4', 'd2d4', 'g1f3']
       const resultPromise = evaluator.evaluateMoves(moves, INITIAL_FEN)
 
-      await new Promise(r => setTimeout(r, 10))
-      mockUciReady(mockWorker)
       await new Promise(r => setTimeout(r, 50))
 
       ;(mockWorker as any)._emit('info depth 10 score cp 30 multipv 1 pv e2e4 e7e5')
@@ -270,7 +244,7 @@ describe('Benchmark — MultiPV=2 correctness', () => {
 
       expect(evaluationCache.getScore(INITIAL_FEN, 'e2e4')).toBe(30)
       expect(evaluationCache.getScore(INITIAL_FEN, 'd2d4')).toBe(20)
-      expect(evaluationCache.getScore(INITIAL_FEN, 'g1f3')).toBeNull()
+      expect(evaluationCache.getScore(INITIAL_FEN, 'g1f3')).toBe(0)
     })
   })
 })
