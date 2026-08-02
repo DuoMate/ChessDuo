@@ -47,7 +47,8 @@ All React components — co-located by feature, not by type. Components handle r
 | `ResignConfirmModal.tsx` | Resign confirmation |
 | `LeaveConfirmModal.tsx` | Leave game confirmation |
 | `MatchmakingQueue.tsx` | Queueing UI |
-| `AnalyzingIndicator.tsx` | Stockfish thinking spinner |
+| `PageLoading.tsx` | **NEW** — Centralized page-level loading component. Must be used for all page-loading states. Auto-detects `pb-20` for bottom-nav pages. Replaces inline `<Spinner>` + full-viewport div patterns. |
+| `ChessLoader.tsx` | **NEW** — Premium chess-inspired loading animation. 3×3 node grid with Knight jumping between nodes (clockwise perimeter). Framer Motion spring-based movement, 5-phase cycle. For payment processing, game loading, branded wait states. |
 | `EvaluatingLoader.tsx` | Full-screen evaluation loader |
 | `BoardTopBar.tsx` | **Board-page revamp** — team avatars row + center timer card (uses InitialsAvatar for humans, images for bots) |
 | `TeamHexagon.tsx` | **Board-page revamp** — decorative team-position hexagon |
@@ -65,6 +66,7 @@ All React components — co-located by feature, not by type. Components handle r
 - Interactive elements: `min-h-[44px] min-w-[44px]`.
 - No hardcoded hex colors — Tailwind classes only.
 - Co-located `__tests__/` directory for component tests.
+- **All page-level loading must use `PageLoading`** — never inline `<Spinner>` wrapped in a full-viewport div. The centralized component ensures consistent styling, dark mode, and auto-detected `pb-20` padding. See `PageLoading.test.tsx` and `PageLoadingArchitecture.test.tsx` for enforcement.
 
 ## Board Page Revamp (2026-07-12)
 - Dark glassmorphism theme (`#0a0e1a` background + slate-900/70 cards + backdrop-blur).
@@ -86,6 +88,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-08-02**: **PageLoading consolidation** — Created centralized `PageLoading` component. Replaced ~22 inline loading blocks across 12+ files (game, duel, replay, four-player, history, challenge, invite, home, AuthGate, premium, delete-account). Standardized background (`bg-gray-50 dark:bg-[var(--color-page-bg)]`), auto-detected `pb-20` via `usePathname()` (skipped on `/game`, `/duel`, `/`). Deleted `ChessLoader` one-off from premium page. Added `loading.tsx` files for `(main)/`, `/invite/[userId]/`, `/challenge/[code]/`, `/replay/[gameId]/` route groups. Fixed Gap 1 (Play button now shows spinner during room creation). Fixed Gap 4 (nav spinners have 400ms minimum visibility). Rewrote global `loading.tsx` with Tailwind classes + dark mode. Architectural enforcement test at `PageLoadingArchitecture.test.tsx`.
 - **2026-08-01**: `ProfilePanel` "Premium Active" card is now a clickable button that routes to `/premium` (view premium features) — it was a plain `div` with a `Lock`/Creem badge. Lock badge removed from the card; plan name kept in the subtitle.
 - **2026-07-31**: `ProfilePanel` now shows a "Premium Active" card when the user is premium (plan name + "Secured by Creem" badge) instead of rendering nothing.
 - **2026-07-31**: **Game-invite push deep link fix** — `ChallengePicker` now passes the RECEIVER's identity (`friendId`) and `'BLACK'` to `notifyGameInvite(...)`. It previously passed the challenger's own id + `'WHITE'`, so the friend's `/duel` page session check (`session.user.id === playerId`) failed with "Session Expired". Share copy in `ProfilePanel`/`FriendsPanel`/`profile/page.tsx` updated to "ChessDuo Invite" / "Play ChessDuo with me!" (points at `/invite/[userId]`, not the dead `/profile/[userId]`).

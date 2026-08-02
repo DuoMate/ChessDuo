@@ -27,73 +27,27 @@ export default function Loading() {
   }, [])
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        width: '100vw',
-        background: '#0f1119',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        overflow: 'hidden',
-      }}
-    >
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center min-h-screen w-screen bg-[var(--color-page-bg)] dark:bg-[var(--color-page-bg)] overflow-hidden">
       <div ref={logoRef}>
         <ChessDuoLogo size="xl" animate />
       </div>
 
       <p
         ref={taglineRef}
-        style={{
-          fontFamily: 'inherit',
-          fontSize: 'clamp(9px, 2.5vw, 11px)',
-          color: '#6b7280',
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          opacity: 0,
-        }}
+        className="font-sans text-[clamp(9px,2.5vw,11px)] text-slate-500 dark:text-slate-500 tracking-[0.2em] uppercase opacity-0"
       >
         Play Smarter, Together
       </p>
 
-      <div ref={barRef} style={{ opacity: 0 }}>
-        <div
-          style={{
-            width: 'min(200px, 50vw)',
-            height: '3px',
-            borderRadius: '9999px',
-            background: 'rgba(255,255,255,0.06)',
-            marginTop: '36px',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, transparent 0%, #3b82f6 50%, transparent 100%)',
-              animation: 'shimmer 1.8s linear infinite',
-              backgroundSize: '200% 100%',
-            }}
-          />
+      <div ref={barRef} className="opacity-0">
+        <div className="relative w-[min(200px,50vw)] h-[3px] rounded-full bg-white/[0.06] dark:bg-white/[0.06] mt-9 overflow-hidden">
+          <div className="absolute inset-0 animate-shimmer bg-[length:200%_100%] bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
         </div>
       </div>
 
       <p
         ref={statusRef}
-        style={{
-          fontFamily: 'inherit',
-          fontSize: 'clamp(10px, 2.5vw, 12px)',
-          color: '#4b5563',
-          marginTop: '16px',
-          letterSpacing: '0.05em',
-          opacity: 1,
-        }}
+        className="font-sans text-[clamp(10px,2.5vw,12px)] text-slate-600 dark:text-slate-600 mt-4 tracking-[0.05em]"
       >
         Preparing board...
       </p>
@@ -102,6 +56,9 @@ export default function Loading() {
         @keyframes shimmer {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
+        }
+        .animate-shimmer {
+          animation: shimmer 1.8s linear infinite;
         }
       `}</style>
     </div>

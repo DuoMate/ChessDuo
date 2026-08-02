@@ -6,6 +6,7 @@ const mockPush = jest.fn()
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  usePathname: () => '/delete-account',
 }))
 
 jest.mock('@/hooks/useCapacitorBackButton', () => ({

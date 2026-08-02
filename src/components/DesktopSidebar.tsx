@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { History, Users, User, Home as HomeIcon, Loader2 } from 'lucide-react'
 import ChessDuoLogo from './ChessDuoLogo'
@@ -13,6 +13,7 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+  const navigatingSinceRef = useRef<number>(0)
 
   const tabs = [
     { label: 'Home', icon: HomeIcon, path: '/' },
@@ -24,13 +25,21 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
   const handleNavigate = (path: string) => {
     if (pathname === path) return
     if (navigatingTo) return
+    navigatingSinceRef.current = Date.now()
     setNavigatingTo(path)
     router.push(path)
   }
 
   useEffect(() => {
     if (navigatingTo && pathname === navigatingTo) {
-      setNavigatingTo(null)
+      const elapsed = Date.now() - navigatingSinceRef.current
+      const remaining = Math.max(0, 400 - elapsed)
+      if (remaining === 0) {
+        setNavigatingTo(null)
+      } else {
+        const timer = setTimeout(() => setNavigatingTo(null), remaining)
+        return () => clearTimeout(timer)
+      }
     }
   }, [pathname, navigatingTo])
 

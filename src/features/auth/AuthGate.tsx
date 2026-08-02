@@ -6,7 +6,7 @@ import { useAuthSession } from './useAuthSession'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { BackButton } from '@/components/BackButton'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
@@ -76,13 +76,7 @@ export function AuthGate({
   }, [variant, playerId, loading, onBack])
 
   if (loading) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex items-center justify-center pb-20">
-          <Spinner size="md" />
-        </div>
-      </ErrorBoundary>
-    )
+    return <PageLoading />
   }
 
   if (needsUsername) {

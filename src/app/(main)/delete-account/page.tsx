@@ -7,7 +7,7 @@ import { AuthService } from '@/lib/authService'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { AuthGate } from '@/components/AuthGate'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
@@ -137,8 +137,7 @@ function DeleteAccountContent() {
 
           {step === 'loading' && (
             <div className="text-center py-20">
-              <Spinner size="lg" />
-              <p className="text-gray-500 dark:text-slate-400">Deleting your account...</p>
+              <PageLoading label="Deleting your account..." size="lg" className="min-h-0" />
             </div>
           )}
 

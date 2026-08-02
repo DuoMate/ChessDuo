@@ -10,7 +10,8 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 | `providers.tsx` | Client providers (Toast, Network, Suspense) |
 | `globals.css` | Tailwind v4 CSS with custom theme variables |
 | `page.tsx` | Home page (marketing + session check) |
-| `loading.tsx` | Global loading fallback |
+| `loading.tsx` | Global branded loading fallback (ChessDuoLogo + anime.js shimmer). Uses Tailwind classes, supports dark mode. |
+| — | Route-level `loading.tsx` in `(main)/`, `invite/[userId]/`, `challenge/[code]/`, `replay/[gameId]/` — all use `PageLoading` |
 | — | Proxy/middleware at `src/proxy.ts` |
 
 ## Sub-modules
@@ -30,10 +31,12 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 - Non-game-room pages (history, profile, premium, privacy, terms, delete-account, four-player) are in the `(main)/` route group and share a layout with HomeBottomNav + SlideOver panels for Profile, Friends, and History.
 - Dynamic routes `challenge/[code]`, `invite/[userId]`, `replay/[gameId]` are at root level (not in `(main)/`) because they need server component `page.tsx` with `generateStaticParams()` for static export.
 - Pages in `(main)/` use `BackButton` instead of `HomeButton` for smart back navigation (`router.back()` with fallback to home).
-- All pages in `(main)/` have `pb-20` spacing to prevent overlap with the fixed-position HomeBottomNav.
+- All pages in `(main)/` and most outside pages have `pb-20` spacing to prevent overlap with the fixed-position HomeBottomNav. This padding is now auto-detected by `PageLoading` (skipped only on `/game`, `/duel`, `/`).
 - Game rooms (`/game`, `/duel`) do NOT show HomeBottomNav — they have their own `BoardBottomNav`.
+- **Page-level loading must use `PageLoading`** from `src/components/PageLoading.tsx` — never inline `<Spinner>` wrapped in a full-viewport div. The centralized component ensures consistent styling, dark mode, and auto-detected `pb-20`. Route-level `loading.tsx` files in `(main)/`, `invite/[userId]/`, `challenge/[code]/`, `replay/[gameId]/` also use `PageLoading`.
 
 ## Recent Changes
+- **2026-08-02**: **PageLoading consolidation** — All page-level loading states consolidated into `PageLoading` component. Created `loading.tsx` for `(main)/`, `/invite/[userId]/`, `/challenge/[code]/`, `/replay/[gameId]/` route groups. Play button now shows spinner during room creation (`creatingTime` feedback). Nav spinners have 400ms minimum visibility. Global `loading.tsx` rewritten with Tailwind classes + dark mode support. See `src/components/CONTEXT.md` for full details.
 - **2026-08-01**: Legal pages — added `/terms` (Terms of Service) page and updated `/privacy` (added Creem payment processor, corrected Cloudflare/Render hosting, Terms cross-link). Legal links added to Profile page and a home-page footer. Meets Creem's requirement for valid Privacy Policy + Terms of Service URLs.
 - **2026-07-31**: **Bug 39 + deep-link fixes**. Home page (`page.tsx`) auto-join (`/?code=` param) and both join paths no longer read the RLS-locked `room_players` table before joining — the joiner's team is derived from the room's new `host_team` column (opposite) and team/fullness comes from the public `get_room_join_state` RPC (`white_count`/`black_count`). Room lookups also filter on `expires_at`. The `?code=` param is stripped from the URL only after a successful `router.push`. `challenge/[code]` join now uses the pre-created `room_id` from the challenge row (creator WHITE + acceptor BLACK), falls back to `generateRoomCode()` if it's gone, and routes by `challenge.game_mode` (`/duel` for pre-created rooms, else `/game`). `invite/[userId]` now requires an explicit "Send Friend Request" confirmation instead of auto-sending on page load. `replay/[gameId]` shows a sign-in prompt (via `Auth`) for logged-out users instead of "Game Not Found".
 - **2026-07-31**: **Bug 37/38** fixes — share links are now always clickable HTTPS App Links (never the `chessduo://` custom scheme, which is non-clickable in chat apps); native premium checkout returns to the app via the new `/api/creem/return` redirect bridge → `chessduo://premium?session_id=…` → `/premium` verifies the session and shows the premium state.

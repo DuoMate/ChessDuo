@@ -8,6 +8,7 @@ import { sendFriendRequest, isFriend } from '@/lib/friends'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { PageLoading } from '@/components/PageLoading'
 import { ArrowLeft } from 'lucide-react'
 import InstallBanner from '@/components/InstallBanner'
 
@@ -154,11 +155,7 @@ export default function InvitePageClient() {
     return (
       <>
         <InstallBanner />
-        <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-            <p className="text-gray-500 dark:text-gray-400">Loading...</p>
-          </div>
-        </ErrorBoundary>
+        <PageLoading />
       </>
     )
   }

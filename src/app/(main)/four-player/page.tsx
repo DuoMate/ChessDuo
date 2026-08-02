@@ -10,17 +10,10 @@ import { joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 
 const FourPlayerLobbyComponent = dynamic(() => import('@/components/FourPlayerLobby').then(mod => ({ default: mod.FourPlayerLobby })), {
-  loading: () => (
-    <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-      <div className="flex flex-col items-center gap-3">
-        <Spinner size="md" />
-        <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading lobby...</p>
-      </div>
-    </div>
-  ),
+  loading: () => <PageLoading label="Loading lobby..." />,
   ssr: false,
 })
 
@@ -84,11 +77,7 @@ function FourPlayerContent() {
   }
 
   if (!roomId || !roomCode || !urlPlayerId) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <Spinner size="md" />
-      </div>
-    )
+    return <PageLoading label="Joining room..." />
   }
 
   return (
@@ -105,14 +94,7 @@ function FourPlayerContent() {
 
 export default function FourPlayerPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner size="md" />
-          <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">Loading...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoading />}>
       <ErrorBoundary>
         <FourPlayerContent />
       </ErrorBoundary>

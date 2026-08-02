@@ -8,6 +8,8 @@ import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
 import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
+import { PageLoading } from '@/components/PageLoading'
+import ChessLoader from '@/components/ChessLoader'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
 import { getAppBaseUrl } from '@/lib/appUrl'
@@ -214,11 +216,7 @@ export default function PremiumPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center pb-20 bg-[var(--color-page-bg)] px-4 py-6">
-        <ChessLoader />
-      </div>
-    )
+    return <PageLoading label="Loading premium..." />
   }
 
   return (
@@ -248,7 +246,9 @@ export default function PremiumPage() {
                 )}
 
                 {subscribing ? (
-                  <ChessLoader />
+                  <div className="py-12">
+                    <ChessLoader />
+                  </div>
                 ) : (
                   <>
                     {/* Monthly Card */}
@@ -518,20 +518,6 @@ function BenefitRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
         <p className="text-slate-400 text-xs">{desc}</p>
       </div>
       <ChevronRight size={16} className="text-slate-500 flex-shrink-0" />
-    </div>
-  )
-}
-
-function ChessLoader() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="relative mb-6">
-        <div className="text-5xl animate-bounce">♞</div>
-        <div className="absolute inset-0 bg-amber-400/20 blur-xl rounded-full scale-50 animate-pulse" />
-      </div>
-      <p className="text-slate-400 text-sm animate-pulse">
-        Loading premium...
-      </p>
     </div>
   )
 }

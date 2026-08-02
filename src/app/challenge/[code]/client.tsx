@@ -10,6 +10,7 @@ import { generateRoomCode } from '@/lib/roomActions'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import InstallBanner from '@/components/InstallBanner'
 
@@ -179,11 +180,7 @@ export default function ChallengePageClient() {
     return (
       <>
         <InstallBanner />
-        <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-            <p className="text-gray-500 dark:text-gray-400">Loading challenge...</p>
-          </div>
-        </ErrorBoundary>
+        <PageLoading label="Loading challenge..." />
       </>
     )
   }

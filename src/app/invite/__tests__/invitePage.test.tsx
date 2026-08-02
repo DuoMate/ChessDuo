@@ -8,6 +8,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => '/invite/test-user-id',
 }))
 
 jest.mock('@/lib/supabase', () => ({

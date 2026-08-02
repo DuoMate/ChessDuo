@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
 import { AuthGate } from '@/components/AuthGate'
@@ -59,13 +60,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
   }, [playerId])
 
   if (loading) {
-    return (
-      <ErrorBoundary>
-        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex items-center justify-center pb-20">
-          <p className="text-slate-400">Loading...</p>
-        </div>
-      </ErrorBoundary>
-    )
+    return <PageLoading />
   }
 
   return (

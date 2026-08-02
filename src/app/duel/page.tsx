@@ -5,16 +5,12 @@ import { Suspense, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 
 const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {
-  loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
-      <Spinner size="md" label="Loading duel..." />
-    </div>
-  ),
+  loading: () => <PageLoading label="Loading duel..." />,
   ssr: false,
 })
 
@@ -41,11 +37,7 @@ function DuelContent() {
   }, [playerId])
 
   if (!sessionChecked) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
-        <Spinner size="md" label="Verifying session..." />
-      </div>
-    )
+    return <PageLoading label="Verifying session..." />
   }
 
   if (!roomId || !roomCode || !playerId || !team) {
@@ -99,11 +91,7 @@ function DuelContent() {
 export default function DuelPage() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center">
-          <Spinner size="md" label="Loading..." />
-        </div>
-      }>
+      <Suspense fallback={<PageLoading />}>
         <DuelContent />
       </Suspense>
     </ErrorBoundary>

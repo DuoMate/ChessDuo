@@ -8,16 +8,12 @@ import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import dynamic from 'next/dynamic'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
-  loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-      <Spinner size="md" label="Loading replay..." />
-    </div>
-  ),
+  loading: () => <PageLoading label="Loading replay..." />,
   ssr: false,
 })
 
@@ -89,11 +85,7 @@ export default function ReplayPageClient() {
   }
 
   if (authState === 'checking') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <Spinner size="md" label="Loading replay..." />
-      </div>
-    )
+    return <PageLoading label="Loading replay..." />
   }
 
   if (authState === 'signed_out') {
@@ -112,11 +104,7 @@ export default function ReplayPageClient() {
   }
 
   if (game === undefined) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center pb-20">
-        <Spinner size="md" label="Loading replay..." />
-      </div>
-    )
+    return <PageLoading label="Loading replay..." />
   }
 
   if (!game || error) {

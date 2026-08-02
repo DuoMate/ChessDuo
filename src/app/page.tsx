@@ -27,6 +27,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { ColorPicker } from '@/components/ColorPicker'
 import { DesktopSidebar } from '@/components/DesktopSidebar'
 import { ConfigurationPanel } from '@/components/ConfigurationPanel'
@@ -858,16 +859,7 @@ export default function SetupPage() {
     }
   }
 
-  if (!sessionChecked) return (
-    <ErrorBoundary>
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-page-bg)]">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner size="md" />
-          <p className="text-sm text-slate-400">Loading...</p>
-        </div>
-      </div>
-    </ErrorBoundary>
-  )
+  if (!sessionChecked) return <PageLoading />
 
   const showTopBar = !gameMode
 
@@ -1176,14 +1168,19 @@ if (!gameMode) {
               <div className="w-full max-w-lg">
                 <button
                   onClick={handlePlay}
+                  disabled={!!creatingTime}
                   className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
                     selectedGameMode === 'four'
                       ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
                       : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                  }`}
+                  } ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  <Play size={20} strokeWidth={2.5} fill="currentColor" />
-                  {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                  {creatingTime ? (
+                    <Spinner size="sm" className="border-white/30 border-t-white" />
+                  ) : (
+                    <Play size={20} strokeWidth={2.5} fill="currentColor" />
+                  )}
+                  {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : 'Start Game'}
                 </button>
               </div>
             </div>
@@ -1236,14 +1233,19 @@ if (!gameMode) {
                 <div className="mt-3">
                   <button
                     onClick={handlePlay}
+                    disabled={!!creatingTime}
                     className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
                       selectedGameMode === 'four'
                         ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
                         : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                    }`}
+                    } ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    <Play size={20} strokeWidth={2.5} fill="currentColor" />
-                    {selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                    {creatingTime ? (
+                      <Spinner size="sm" className="border-white/30 border-t-white" />
+                    ) : (
+                      <Play size={20} strokeWidth={2.5} fill="currentColor" />
+                    )}
+                    {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : 'Start Game'}
                   </button>
                 </div>
               )}
@@ -1333,11 +1335,7 @@ if (!gameMode) {
   )
 }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-page-bg)]">
-      <Spinner size="lg" />
-    </div>
-  )
+  return <PageLoading />
 }
 
 // ============================================

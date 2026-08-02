@@ -4,16 +4,12 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
-import { Spinner } from '@/components/Spinner'
+import { PageLoading } from '@/components/PageLoading'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 
 const GameComponent = dynamic(() => import('@/components/Game').then(mod => ({ default: mod.Game })), {
-  loading: () => (
-    <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
-      <Spinner size="md" label="Loading game..." />
-    </div>
-  ),
+  loading: () => <PageLoading label="Loading game..." />,
   ssr: false,
 })
 
@@ -77,11 +73,7 @@ function GameContent() {
   }, [mode, playerId, roomId, roomCode, team, timeLimit, challengeId, fourplayer, router])
 
   if (!validated) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
-        <Spinner size="md" label="Verifying session..." />
-      </div>
-    )
+    return <PageLoading label="Verifying session..." />
   }
 
   return (
@@ -104,11 +96,7 @@ function GameContent() {
 
 export default function GamePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] flex items-center justify-center">
-        <Spinner size="md" label="Loading..." />
-      </div>
-    }>
+    <Suspense fallback={<PageLoading />}>
       <GameContent />
     </Suspense>
   )
