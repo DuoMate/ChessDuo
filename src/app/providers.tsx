@@ -15,6 +15,8 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
+import { PremiumProvider } from '@/hooks/usePremium'
+import { PremiumCornerBadge } from '@/components/PremiumCornerBadge'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -76,8 +78,11 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <NetworkAwareToastProvider>
-      <SplashHandler />
-      {children}
+      <PremiumProvider>
+        <SplashHandler />
+        <PremiumCornerBadge />
+        {children}
+      </PremiumProvider>
     </NetworkAwareToastProvider>
   )
 }
