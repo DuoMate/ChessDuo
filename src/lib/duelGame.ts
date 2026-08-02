@@ -28,6 +28,9 @@ export interface DuelGameState {
   moveHistory: string[]
   moveAccuracy: number | null
   opponentAccuracy: number | null
+  pollTimeout?: boolean
+  disconnectedAgeMs: number
+}
 }
 
 export type DuelEventCallback = (state: DuelGameState) => void
@@ -56,6 +59,10 @@ export class DuelGame {
   private onStateChange: DuelEventCallback | null = null
   private evaluator: GameEvaluator | null = null
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
+  private _pollIterations = 0
+  private static readonly MAX_POLL_ITERATIONS = 30
+  private _disconnectedAt: number | null = null
+  private _disconnectCheckInterval: ReturnType<typeof setInterval> | null = null
 
   constructor(roomId: string, playerId: string, team: 'WHITE' | 'BLACK', timeLimit: number) {
     this.chess = new Chess()
@@ -84,6 +91,10 @@ export class DuelGame {
   get opponentAccuracy() { return this._opponentAccuracy }
   get playerId() { return this._playerId }
   get team() { return this._team }
+  get disconnectedAgeMs(): number {
+    if (!this._disconnectedAt) return 0
+    return Date.now() - this._disconnectedAt
+  }
 
   get state(): DuelGameState {
     return {
@@ -102,6 +113,7 @@ export class DuelGame {
       moveHistory: this._moveHistory,
       moveAccuracy: this._moveAccuracy,
       opponentAccuracy: this._opponentAccuracy,
+      disconnectedAgeMs: this.disconnectedAgeMs,
     }
   }
 
@@ -172,7 +184,18 @@ export class DuelGame {
               this._blackPlayer = { ...this._blackPlayer, connected: false }
             }
           }
+          if (!this._disconnectedAt && this._status === 'playing') {
+            this._disconnectedAt = Date.now()
+          }
           this.notify()
+        })
+        .on('presence', { event: 'join' }, () => {
+          if (this._disconnectedAt) {
+            this._disconnectedAt = null
+            if (this._whitePlayer) this._whitePlayer = { ...this._whitePlayer, connected: true }
+            if (this._blackPlayer) this._blackPlayer = { ...this._blackPlayer, connected: true }
+            this.notify()
+          }
         })
         .on('broadcast', { event: 'duel_move' }, ({ payload }) => {
           this.handleOpponentMove(payload as { move: string })
@@ -244,6 +267,14 @@ export class DuelGame {
             this.handleTimeout()
           }
         }
+      }
+    }, 1000)
+    this._disconnectCheckInterval = setInterval(() => {
+      if (this._status !== 'playing') return
+      if (!this._disconnectedAt) return
+      if (Date.now() - this._disconnectedAt > 35000) {
+        const opponentWins = this._team === 'WHITE' ? 'black' : 'white'
+        this.setGameOver(opponentWins, `${opponentWins === 'white' ? 'White' : 'Black'} wins by forfeit`, 'timeout')
       }
     }, 1000)
     this.notify()
@@ -433,6 +464,7 @@ export class DuelGame {
   destroy() {
     this.stopTimer()
     if (this._pollingInterval) clearInterval(this._pollingInterval)
+    if (this._disconnectCheckInterval) clearInterval(this._disconnectCheckInterval)
     if (this._channel) supabase.removeChannel(this._channel)
   }
 }

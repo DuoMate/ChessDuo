@@ -2,6 +2,7 @@
 
 import { Crown, Activity } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { getAvatarUrl, type HumanAvatar } from '@/features/shared/avatars'
 import { Team } from '@/features/game-engine/gameState'
 import { InitialsAvatar } from './InitialsAvatar'
@@ -16,6 +17,7 @@ export interface BoardTopBarPlayer {
   isHost?: boolean
   online?: boolean
   submitted?: boolean
+  disconnectedSinceMs?: number
 }
 
 interface BoardTopBarProps {
@@ -60,6 +62,27 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
     ? 'bg-emerald-500 text-white'
     : 'bg-emerald-500 text-white'
 
+  const GRACE_PERIOD = 5000
+  const FORFEIT_TIME = 35000
+  const disconnected = (player.disconnectedSinceMs ?? 0) > GRACE_PERIOD ? (player.disconnectedSinceMs ?? 0) : 0
+
+  const [countdown, setCountdown] = useState(0)
+  useEffect(() => {
+    if (!disconnected) { setCountdown(0); return }
+    const tick = () => {
+      const elapsed = Date.now() - disconnected
+      const remaining = Math.max(0, Math.round((FORFEIT_TIME - elapsed) / 1000))
+      setCountdown(remaining)
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [disconnected])
+
+  const showCountdown = disconnected > 0
+  const dimmedClass = showCountdown ? 'opacity-60' : ''
+  const countdownText = String(Math.floor(countdown / 60)) + ':' + String(countdown % 60).padStart(2, '0')
+
   if (player.type === 'bot') {
     const imageSrc = getAvatarUrl(player.type, player.avatar)
     return (
@@ -84,16 +107,16 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
             <span className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${dotClass} ring-2 ring-white dark:ring-slate-900`} />
           )}
         </div>
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">
-          {player.label}
+        <span className={`text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px] ${dimmedClass}`}>
+          {showCountdown ? countdownText : player.label}
         </span>
-      </div>
-    )
+    </div>
+  )
   }
 
   return (
     <div className="flex flex-col items-center gap-0.5 min-w-0">
-      <div className="relative">
+      <div className={`relative ${dimmedClass}`}>
         <InitialsAvatar
           username={player.label}
           size="md"
@@ -109,8 +132,8 @@ function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE'
           </span>
         )}
       </div>
-      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">
-        {player.label}
+      <span className={`text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px] ${dimmedClass}`}>
+        {showCountdown ? countdownText : player.label}
       </span>
     </div>
   )

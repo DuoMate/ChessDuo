@@ -66,6 +66,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [opponentUsername, setOpponentUsername] = useState('Opponent')
   const [opponentAvatar, setOpponentAvatar] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<{ username: string | null; avatarUrl: string | null }>({ username: null, avatarUrl: null })
+  const [disconnectedAge, setDisconnectedAge] = useState(0)
   const [activeBoardTab, setActiveBoardTab] = useState<BoardTab>('game')
   const gameRef = useRef<DuelGameEngine | null>(null)
   const accuracyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -109,6 +110,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       setWinner(state.winner)
       setGameResult(state.gameResult)
       setGameOverReason(state.gameOverReason ?? null)
+      setDisconnectedAge(state.disconnectedAgeMs ?? 0)
       setMoveHistory(state.moveHistory)
       if (state.moveAccuracy !== null) {
         setMoveAccuracy(state.moveAccuracy)
@@ -443,8 +445,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
-                whitePlayers={whitePlayers}
-                blackPlayers={blackPlayers}
+                whitePlayers={whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
+                blackPlayers={blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
                 matchTimeRemaining={remainingSeconds}
                 matchTimerActive={timerActive}
                 totalMatchSeconds={totalSeconds}

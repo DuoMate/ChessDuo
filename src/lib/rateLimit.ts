@@ -5,7 +5,6 @@ const DEFAULT_MAX = 60
 
 const ENDPOINT_LIMITS: Record<string, number> = {
   '/api/healthz': 300,
-  '/api/test-supabase': 30,
   '/api/log-crash': 30,
   '/api/push/register': 30,
   '/api/push/send': 60,

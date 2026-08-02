@@ -8,8 +8,7 @@ function getSupabaseClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
   
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('[supabase] Missing env vars at runtime')
-    return createBrowserClient('https://placeholder.supabase.co', 'placeholder')
+    throw new Error('[supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables')
   }
   
   if (supabaseInstance) return supabaseInstance

@@ -84,7 +84,6 @@ describe('Supabase Service Layer Architecture', () => {
     const ALLOWED_API_FILES = [
       'apiAuth.ts',
       'apiAuth.test.ts',
-      'test-supabase/route.ts',
     ]
 
     it('API routes should not duplicate Bearer/cookie auth logic', () => {

@@ -283,6 +283,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [matchTimerStarted, setMatchTimerStarted] = useState(false)
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
+  const [disconnectedAge, setDisconnectedAge] = useState(0)
 
   // Auto-reset playback to live position when game state updates (new move arrives)
   const prevGameFenRef = useRef(gameState.fen)
@@ -293,6 +294,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
     prevGameFenRef.current = gameState.fen
   }, [gameState.fen])
+
+  // Poll connection health for reconnection countdown display
+  useEffect(() => {
+    if (!isOnline) return
+    const interval = setInterval(() => {
+      const age = onlineGameRef.current?.disconnectedAgeMs ?? 0
+      setDisconnectedAge(age)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isOnline])
 
   const [overlayMode, setOverlayMode] = useState<'none' | 'profile' | 'history'>('none')
   const [sessionPlayerId, setSessionPlayerId] = useState<string | null>(null)
@@ -2082,8 +2093,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
-                whitePlayers={whitePlayers}
-                blackPlayers={blackPlayers}
+                whitePlayers={whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
+                blackPlayers={blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
                 capturedWhite={gameState.capturedByWhite}
                 capturedBlack={gameState.capturedByBlack}
                 matchTimeRemaining={gameState.matchTimeRemaining}
@@ -2209,7 +2220,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             setActiveBoardTab('game')
           }}
           onForward={() => {}}
-          onBackMove={() => {
+          onBackMove={gameState.status !== GameStatus.PLAYING ? () => {
             const moves = moveHistoryRef.current
             if (moves.length === 0) return
             const current = playbackIndex ?? moves.length - 1
@@ -2220,11 +2231,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               setPlaybackIndex(current - 1)
               setPlaybackFen(moves[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             }
-          }}
-          onForwardMove={() => {
+          } : undefined}
+          onForwardMove={gameState.status !== GameStatus.PLAYING ? () => {
             const moves = moveHistoryRef.current
             if (moves.length === 0) return
-            if (playbackIndex === null) return // already live
+            if (playbackIndex === null) return
             const current = playbackIndex ?? moves.length - 1
             if (current >= moves.length - 1) {
               setPlaybackIndex(null)
@@ -2233,7 +2244,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               setPlaybackIndex(current + 1)
               setPlaybackFen(moves[current + 1]?.fenAfter || '')
             }
-          }}
+          } : undefined}
           insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>

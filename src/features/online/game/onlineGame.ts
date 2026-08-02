@@ -74,9 +74,18 @@ export class OnlineGame {
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
   private onAbandonCallback: (() => void) | null = null
+  private _forceCreate = false
+  private _lastActivityAt: number = Date.now()
+  private _disconnectedSince: number | null = null
+  private _disconnectCheckInterval: ReturnType<typeof setInterval> | null = null
 
   get savedMoveHistory(): Array<{ team: string; move: string }> {
     return this._savedMoveHistory
+  }
+
+  get disconnectedAgeMs(): number {
+    if (!this._disconnectedSince) return 0
+    return Date.now() - this._disconnectedSince
   }
 
   get highlightSquares() {
@@ -452,31 +461,32 @@ export class OnlineGame {
         .on('presence', { event: 'leave' }, ({ leftPresences }) => {
           DEBUG && console.log('[ONLINE] Presence leave —', leftPresences?.length, 'players left:', leftPresences?.map((p: { presence_ref?: string; player_id?: string }) => p.player_id || p.presence_ref))
           if (this._status !== GameStatus.PLAYING) return
-          const state = this._channel?.presenceState() || {}
-          const playersOnline = Object.keys(state)
-          if (playersOnline.length < 2) {
-            DEBUG && console.log('[ONLINE] Only coordinator remaining — ending game')
-            this._status = GameStatus.GAME_OVER
-            this._gameOverResult = 'Game ended — opponent disconnected'
-            this._gameOverReason = 'disconnected'
-            this.stopMatchTimer()
-            if (this._timerSyncInterval) {
-              clearInterval(this._timerSyncInterval)
-              this._timerSyncInterval = null
-            }
-            this.resolvePendingWaiter()
+          // Progressive: start countdown instead of immediate game-over.
+          // The disconnect check interval will forfeit after 35s of no presence.
+          if (!this._disconnectedSince) {
+            this._disconnectedSince = Date.now()
+          }
+        })
+        .on('presence', { event: 'join' }, () => {
+          if (this._status === GameStatus.PLAYING && this._disconnectedSince) {
+            this._disconnectedSince = null
+            this._lastActivityAt = Date.now()
           }
         })
         .on('broadcast', { event: 'player_move' }, ({ payload }) => {
+          this._lastActivityAt = Date.now()
           this.handleTeammateMove(payload as MovePayload)
         })
         .on('broadcast', { event: 'player_locked' }, ({ payload }) => {
+          this._lastActivityAt = Date.now()
           this.handleTeammateLocked(payload as LockedPayload)
         })
         .on('broadcast', { event: 'turn_resolved' }, ({ payload }) => {
+          this._lastActivityAt = Date.now()
           this.handleTurnResolved(payload as ResolvedPayload)
         })
         .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+          this._lastActivityAt = Date.now()
           this.handleTimerSync(payload as { matchTimeRemaining: number })
         })
         .on('broadcast', { event: 'match_abandoned' }, ({ payload }) => {
@@ -716,6 +726,13 @@ export class OnlineGame {
       }
       
       this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+      this._disconnectCheckInterval = setInterval(() => {
+        if (this._status !== GameStatus.PLAYING) return
+        if (!this._disconnectedSince) return
+        if (Date.now() - this._disconnectedSince > 35000) {
+          this.abandonMatch()
+        }
+      }, 1000)
     } catch (e) {
       console.error('[ONLINE] ❌ Failed to start game:', e)
     } finally {
@@ -1234,10 +1251,14 @@ export class OnlineGame {
 
     if (this.gameState.board.isGameOver()) {
       this._status = GameStatus.GAME_OVER
-      if (this._timerSyncInterval) {
-        clearInterval(this._timerSyncInterval)
-        this._timerSyncInterval = null
-      }
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    if (this._disconnectCheckInterval) {
+      clearInterval(this._disconnectCheckInterval)
+      this._disconnectCheckInterval = null
+    }
       if (this._pollingInterval) {
         clearInterval(this._pollingInterval)
         this._pollingInterval = null

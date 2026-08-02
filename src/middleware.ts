@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 export const runtime = 'experimental-edge'
 
 export async function middleware(request: NextRequest) {
-  if (!request.nextUrl.pathname.startsWith('/game') && !request.nextUrl.pathname.startsWith('/duel')) {
+  if (!request.nextUrl.pathname.startsWith('/game') && !request.nextUrl.pathname.startsWith('/duel') && !request.nextUrl.pathname.startsWith('/history')) {
     return NextResponse.next()
   }
 
@@ -40,5 +40,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/game', '/duel'],
+  matcher: ['/game', '/duel', '/history'],
 }
