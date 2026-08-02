@@ -156,6 +156,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       prevStatusRef.current = state.status
     })
 
+    // Capture opponent move fenAfter for navigation
+    game.setOnOpponentMove((fenAfter: string) => {
+      moveEntriesRef.current = [...moveEntriesRef.current, { accuracy: 0, fenAfter }]
+    })
+
     game.join()
 
     return () => { game.destroy() }

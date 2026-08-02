@@ -18,7 +18,7 @@ interface BoardBottomNavProps {
 export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked }: BoardBottomNavProps) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-30 flex justify-center"
+      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
       style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}
     >
       <div className="flex items-center justify-around h-14 w-[95%] max-w-md px-1 rounded-2xl border border-slate-200/60 bg-white/90 shadow-[0_8px_32px_rgba(2,6,23,0.12)] backdrop-blur-2xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">

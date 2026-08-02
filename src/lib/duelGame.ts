@@ -56,6 +56,7 @@ export class DuelGame {
   private _moveAccuracy: number | null = null
   private _opponentAccuracy: number | null = null
   private onStateChange: DuelEventCallback | null = null
+  private onOpponentMove: ((fen: string) => void) | null = null
   private evaluator: GameEvaluator | null = null
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _pollIterations = 0
@@ -118,6 +119,10 @@ export class DuelGame {
 
   setOnStateChange(cb: DuelEventCallback) {
     this.onStateChange = cb
+  }
+
+  setOnOpponentMove(cb: (fen: string) => void) {
+    this.onOpponentMove = cb
   }
 
   private notify() {
@@ -415,6 +420,7 @@ export class DuelGame {
       this._lastMove = { from: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.from, to: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.to }
       this._moveHistory = [...this._moveHistory, payload.move]
       this.notify()
+      this.onOpponentMove?.(this.chess.fen())
       if (this.chess.isGameOver()) {
         this.handleGameOver()
       }

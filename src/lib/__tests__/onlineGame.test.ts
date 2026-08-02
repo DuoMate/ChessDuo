@@ -573,8 +573,8 @@ describe('OnlineGame', () => {
           fail('Expected NOT_COORDINATOR error')
         } catch (e: any) {
           expect(e.message).toBe('NOT_COORDINATOR')
-          // turnState should be 'resolving' so EvaluatingLoader shows
-          expect((nonCoord as any).turnState).toBe('resolving')
+          // turnState stays 'selecting' — caller (Game.tsx) handles state management
+          expect((nonCoord as any).turnState).toBe('selecting')
         }
       })
     })

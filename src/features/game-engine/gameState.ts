@@ -138,6 +138,7 @@ export class GameState {
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {
     if (this._phase !== GamePhase.SELECTING && this._phase !== GamePhase.LOCKED) {
+      console.warn('[GameState] setPendingMove dropped — phase is', this._phase, 'for player', player)
       return
     }
 

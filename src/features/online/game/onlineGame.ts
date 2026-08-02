@@ -949,8 +949,8 @@ export class OnlineGame {
   private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
     DEBUG && console.log('[ONLINE] Teammate moved:', payload)
     if (payload.playerId !== this._playerId) {
-      // In 4-player mode, only react if the player is on our team
-      if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
+      // Only react if the player is on our team (all modes)
+      if (this.getPlayerTeam(payload.playerId) !== this._team) {
         return
       }
       this.gameState.setPendingMove(payload.playerId as Player, payload.move, payload.from, payload.to, 'unknown')
@@ -969,9 +969,9 @@ export class OnlineGame {
   private handleTeammateLocked(payload: { playerId: string }) {
     DEBUG && console.log('[ONLINE] Teammate locked:', payload)
     if (payload.playerId !== this._playerId) {
-      // In 4-player mode, only react if the player is on our team
-      if (this.isFourPlayer() && this.getPlayerTeam(payload.playerId) !== this._team) {
-        return
+      // Only react if the player is on our team (all modes)
+      if (this.getPlayerTeam(payload.playerId) !== this._team) {
+      
       }
       this.gameState.lockPendingMove(payload.playerId as Player)
       
@@ -1288,20 +1288,12 @@ export class OnlineGame {
     
     if (currentTeam === Team.WHITE && !this.isCoordinator()) {
       DEBUG && console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
-      if (this.turnState !== 'resolving') {
-        this.turnState = 'resolving'
-        this.notifyStateChange()
-      }
       throw new Error('NOT_COORDINATOR')
     }
     
     // In 4-player mode, BLACK turn also needs a coordinator (first BLACK player)
     if (currentTeam === Team.BLACK && this.isFourPlayer() && !this.isBlackCoordinator()) {
       DEBUG && console.log('[ONLINE] Not BLACK coordinator — waiting for BLACK coordinator broadcast')
-      if (this.turnState !== 'resolving') {
-        this.turnState = 'resolving'
-        this.notifyStateChange()
-      }
       throw new Error('NOT_COORDINATOR')
     }
     
@@ -1524,6 +1516,9 @@ export class OnlineGame {
     this.gameState.resolve(winningMove)
 
     await this._finishResolution(currentTeam, winningMove)
+
+    // Notify coordinator client with fresh comparison (setOnStateChange needs this)
+    this.notifyStateChange()
 
     return { winnerId, winningMove }
   }

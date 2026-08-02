@@ -691,7 +691,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         
         // Compute turnStatus for UI
         // In 4-player mode: detailed status only when it's YOUR team's turn
-        // In 2-player mode: detailed status only when it's WHITE's turn
+        // In 2-player mode: detailed status only when it's YOUR team's turn
         const isMyTurnToAct = isFourPlayer
           ? g.currentTurn === myTeam
           : g.currentTurn === myTeam
@@ -700,9 +700,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           const ts = (g as GameInterface).getTurnState()
           const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
           const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
-          const localOtherPlayer = isFourPlayer
-            ? localEntries.filter(([p]) => p !== currentPlayerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
-            : localEntries.filter(([p]) => p !== currentPlayerId)
+          const localOtherPlayer = localEntries.filter(([p]) => p !== currentPlayerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
           const localMyPending = allMovesLocal.get(currentPlayerId)
           const localTeammateLocked = localOtherPlayer.length > 0 && localOtherPlayer[0][1]?.locked
           if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
@@ -1041,9 +1039,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const allMovesLocal = (g as GameInterface).getAllPendingMoves() as Map<string, any>
         const myMove = allMovesLocal.get(playerId)
         const localEntries = Array.from(allMovesLocal.entries()) as [string, any][]
-        const teammateEntry = isFourPlayer
-          ? localEntries.find(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
-          : localEntries.find(([p]) => p !== playerId)
+        const teammateEntry = localEntries.find(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
         const teammateLocked = teammateEntry ? teammateEntry[1]?.locked : false
         if (ts === 'resolving' || ts === 'locked') turnStatus = 'evaluating'
         else if (teammateLocked) turnStatus = 'teammate_locked'
