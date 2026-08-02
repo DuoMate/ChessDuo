@@ -409,7 +409,9 @@ export class OnlineGame {
         .on('broadcast', { event: 'game_started' }, () => {
           DEBUG && console.log('[ONLINE] Received game_started broadcast — syncing...')
           if (this._status !== GameStatus.PLAYING) {
-            this.syncGameState()
+            this.syncGameState().catch(e => {
+              console.error('[ONLINE] game_started syncGameState failed:', e)
+            })
           }
         })
     }
@@ -568,7 +570,11 @@ export class OnlineGame {
       const existing = await loadGameState(this._room!.id)
       if (existing) {
         DEBUG && console.log('[ONLINE] Polling fallback: game already exists, syncing...')
-        await this.syncGameState()
+        try {
+          await this.syncGameState()
+        } catch (e) {
+          console.error('[ONLINE] Polling fallback syncGameState failed:', e)
+        }
         this._pollingInterval = null
         return
       }
@@ -990,6 +996,13 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
+    // If game hasn't started yet on this client (syncGameState from game_started
+    // broadcast is still in progress), defer — syncGameState will restore the
+    // correct board state including this resolved move from the DB.
+    if (this._status !== GameStatus.PLAYING) {
+      DEBUG && console.log('[TURN-RESOLVED] Deferring — game not yet started on this client (status:', this._status, ')')
+      return
+    }
     DEBUG && console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,
