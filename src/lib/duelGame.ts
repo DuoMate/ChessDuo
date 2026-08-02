@@ -24,6 +24,7 @@ export interface DuelGameState {
   lastMove: { from: string; to: string } | null
   winner: 'white' | 'black' | 'draw' | null
   gameResult: string | null
+  gameOverReason: string | null
   moveHistory: string[]
   moveAccuracy: number | null
   opponentAccuracy: number | null
@@ -48,6 +49,7 @@ export class DuelGame {
   private _lastMove: { from: string; to: string } | null = null
   private _winner: 'white' | 'black' | 'draw' | null = null
   private _gameResult: string | null = null
+  private _gameOverReason: string | null = null
   private _moveHistory: string[] = []
   private _moveAccuracy: number | null = null
   private _opponentAccuracy: number | null = null
@@ -96,6 +98,7 @@ export class DuelGame {
       lastMove: this._lastMove,
       winner: this._winner,
       gameResult: this._gameResult,
+      gameOverReason: this._gameOverReason,
       moveHistory: this._moveHistory,
       moveAccuracy: this._moveAccuracy,
       opponentAccuracy: this._opponentAccuracy,
@@ -287,10 +290,11 @@ export class DuelGame {
     this.broadcastGameOver(winner, result, 'timeout')
   }
 
-  setGameOver(winner: 'white' | 'black' | 'draw', result: string, _reason?: string) {
+  setGameOver(winner: 'white' | 'black' | 'draw', result: string, reason?: string) {
     this._status = 'game_over'
     this._winner = winner
     this._gameResult = result
+    this._gameOverReason = reason || null
     this._matchTimerActive = false
     this.stopTimer()
     this.notify()
@@ -413,7 +417,7 @@ export class DuelGame {
 
   private handleGameOverBroadcast(payload: { winner: string; result: string; reason: string }) {
     if (this._status !== 'game_over') {
-      this.setGameOver(payload.winner as any, payload.result)
+      this.setGameOver(payload.winner as any, payload.result, payload.reason)
     }
   }
 

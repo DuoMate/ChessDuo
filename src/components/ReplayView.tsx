@@ -18,6 +18,7 @@ const reasonLabels: Record<string, string> = {
   insufficientMaterial: 'Insufficient Material',
   draw: 'Draw',
   timeout: "Time's Up",
+  resignation: 'Resigned',
 }
 
 function parseMoveComparisons(raw: unknown): MoveEntry[] {

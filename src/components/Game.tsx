@@ -815,7 +815,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           lastMove: g.lastMove,
           matchTimeRemaining: g.getMatchTimeRemaining(),
           matchTimerActive: false,
-          winner: prev.winner
+          winner: g.getResult().includes('White wins') ? 'WHITE' : g.getResult().includes('Black wins') ? 'BLACK' : 'DRAW'
         }))
       }
     })
@@ -1738,34 +1738,26 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         await onlineGameRef.current.abandonMatch()
       } else if (!isOnline && gameRef.current) {
         const g = gameRef.current as LocalGame
-        g.setGameOverResult('Resigned')
-        g.setGameOverReason('resignation')
         const humanTeam = g.getTeam()
-        const result = g.getResult()
-        saveCompletedGame({
-          winner: humanTeam === 'WHITE' ? 'BLACK' : 'WHITE',
-          gameResult: result,
-          gameOverReason: 'resignation',
-          stats: {
-            whiteMovesPlayed: g.getStats().whiteMovesPlayed || 0,
-            whiteSyncRate: g.getStats().whiteSyncRate || 0,
-            whiteConflicts: g.getStats().whiteConflicts || 0,
-            player1Accuracy: g.getStats().player1Accuracy || 0,
-            player2Accuracy: g.getStats().player2Accuracy || 0,
-            totalMoves: moveHistoryRef.current.length,
-          },
-          isOnline: false,
-          moveComparisons: moveHistoryRef.current,
-        }, playerId || undefined)
+        const opponentWins = humanTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+        g.setGameOverResult(`Resigned - ${opponentWins} wins`)
+        g.setGameOverReason('resignation')
+
+        // Set React state so the save-useEffect fires properly
+        setGameState(prev => ({
+          ...prev,
+          status: GameStatus.GAME_OVER,
+          winner: opponentWins,
+        }))
       }
     } catch {
       // Channel may be dead during refresh; navigation still proceeds
     }
-    // Let the state update process before navigating so the save effect fires
-    await new Promise(r => setTimeout(r, 100))
+    // Wait for the save effect to run before navigating away
+    await new Promise(r => setTimeout(r, 200))
     setShowGameOverDismissed(false)
     router.replace('/')
-  }, [isOnline, playerId])
+  }, [isOnline])
 
   const handleLeaveConfirm = useCallback(async () => {
     if (roomCode) {

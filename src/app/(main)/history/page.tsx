@@ -17,6 +17,8 @@ const reasonLabels: Record<string, string> = {
   threefoldRepetition: 'Repetition',
   insufficientMaterial: 'Insufficient Material',
   draw: 'Draw',
+  resignation: 'Resigned',
+  timeout: "Time's Up",
 }
 
 export default function HistoryPage() {

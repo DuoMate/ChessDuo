@@ -53,6 +53,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
   const [winner, setWinner] = useState<'white' | 'black' | 'draw' | null>(null)
   const [gameResult, setGameResult] = useState<string | null>(null)
+  const [gameOverReason, setGameOverReason] = useState<string | null>(null)
   const [moveHistory, setMoveHistory] = useState<string[]>([])
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
@@ -107,6 +108,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       setLastMove(state.lastMove)
       setWinner(state.winner)
       setGameResult(state.gameResult)
+      setGameOverReason(state.gameOverReason ?? null)
       setMoveHistory(state.moveHistory)
       if (state.moveAccuracy !== null) {
         setMoveAccuracy(state.moveAccuracy)
@@ -291,7 +293,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     saveCompletedGame({
       winner: winningSide,
       gameResult: gameResult || 'Game Over',
-      gameOverReason: gameResult || null,
+      gameOverReason: gameOverReason || null,
       stats: {
         whiteMovesPlayed: moveHistory.length,
         whiteSyncRate: 1.0,
