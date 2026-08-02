@@ -31,11 +31,11 @@ describe('GameOnOverlay — Game Start Animation', () => {
     jest.useRealTimers()
   })
 
-  test('renders in fullscreen overlay which blocks pointer events', () => {
+  test('renders in fullscreen overlay with tap-to-skip cursor', () => {
     const onComplete = jest.fn()
     const { container } = render(<GameOnOverlay onComplete={onComplete} />)
     const overlay = container.firstElementChild
-    expect(overlay?.className).toContain('pointer-events-none')
+    expect(overlay?.className).toContain('cursor-pointer')
   })
 
   test('hides itself after onComplete is called', () => {

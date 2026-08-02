@@ -2112,6 +2112,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           roomCode={roomCode}
           inviteUrl={inviteUrl}
           isLoading={gameState.isLoading}
+          lobbyTimeoutSeconds={60}
+          onTimeoutLeave={() => router.push('/')}
         />
       </>
     )

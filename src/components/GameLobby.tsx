@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Timeline } from 'animejs'
-import { Copy, Share2, CheckCircle2, User, Loader2 } from 'lucide-react'
+import { Copy, Share2, CheckCircle2, User, Loader2, Clock, LogOut } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Spinner } from '@/components/Spinner'
@@ -14,9 +14,11 @@ interface GameLobbyProps {
   inviteUrl?: string
   isLoading: boolean
   username?: string
+  lobbyTimeoutSeconds?: number
+  onTimeoutLeave?: () => void
 }
 
-export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobbyProps) {
+export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeoutSeconds = 60, onTimeoutLeave }: GameLobbyProps) {
   const iconRef = useRef<HTMLDivElement>(null)
   const dot1Ref = useRef<HTMLDivElement>(null)
   const dot2Ref = useRef<HTMLDivElement>(null)
@@ -27,6 +29,21 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
   const isMobile = useIsMobile()
+  const [remaining, setRemaining] = useState(lobbyTimeoutSeconds)
+  const [timedOut, setTimedOut] = useState(false)
+
+  // Countdown timer for lobby timeout
+  useEffect(() => {
+    if (isLoading || timedOut) return
+    if (remaining <= 0) {
+      setTimedOut(true)
+      return
+    }
+    const interval = setInterval(() => {
+      setRemaining(r => Math.max(0, r - 1))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isLoading, timedOut, remaining])
 
   const crownSize = isMobile ? 64 : 80
 
@@ -128,7 +145,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
           )}
 
           {/* Waiting phase */}
-          {phase === 'waiting' && (
+          {phase === 'waiting' && !timedOut && (
             <>
               {/* Connected badge */}
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1">
@@ -152,7 +169,36 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username }: GameLobb
                   <span className="text-sm text-slate-500">Waiting for your teammate</span>
                 </div>
               </div>
+
+              {/* Lobby timeout countdown */}
+              {remaining < 30 && (
+                <div className="mb-4 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock size={12} />
+                  <span>Auto-leaving in {remaining}s</span>
+                </div>
+              )}
             </>
+          )}
+
+          {/* Timeout state */}
+          {timedOut && (
+            <div className="mb-5 flex flex-col items-center gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3.5 py-1">
+                <Clock size={14} className="text-amber-400" />
+                <span className="text-sm font-medium text-amber-400">Connection Timed Out</span>
+              </div>
+              <p className="text-sm text-slate-400 text-center">
+                Could not connect with another player. They may have disconnected or been unable to join.
+              </p>
+              {onTimeoutLeave && (
+                <button
+                  onClick={onTimeoutLeave}
+                  className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-5 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-rose-500/30 hover:bg-slate-700/60 hover:text-rose-400"
+                >
+                  <LogOut size={14} /> Leave Room
+                </button>
+              )}
+            </div>
           )}
 
           {/* Dotted separator */}
