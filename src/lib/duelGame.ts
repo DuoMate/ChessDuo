@@ -31,7 +31,6 @@ export interface DuelGameState {
   pollTimeout?: boolean
   disconnectedAgeMs: number
 }
-}
 
 export type DuelEventCallback = (state: DuelGameState) => void
 
