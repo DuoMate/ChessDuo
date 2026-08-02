@@ -485,7 +485,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               {isMobile ? (
                 <MobileChessBoard
                   key={boardKey}
-                  fen={fen}
+                  fen={playbackFen || fen}
                   onMove={handleMove}
                   enabled={isMyTurn && !pendingPromotion}
                   orientation={team === 'WHITE' ? 'white' : 'black'}
@@ -494,7 +494,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               ) : (
                 <ChessBoard
                   key={boardKey}
-                  fen={fen}
+                  fen={playbackFen || fen}
                   onMove={handleMove}
                   enabled={isMyTurn && !pendingPromotion}
                   orientation={team === 'WHITE' ? 'white' : 'black'}
@@ -570,7 +570,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             } else {
               setPlaybackIndex(current - 1)
-              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+              setPlaybackFen(moveEntriesRef.current[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             }
           }}
           onForwardMove={() => {
@@ -582,7 +582,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
               setPlaybackFen(null)
             } else {
               setPlaybackIndex(current + 1)
-              setPlaybackFen(null)
+              setPlaybackFen(moveEntriesRef.current[current + 1]?.fenAfter || null)
             }
           }}
         />

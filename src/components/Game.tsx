@@ -285,15 +285,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [disconnectedAge, setDisconnectedAge] = useState(0)
 
-  // Auto-reset playback to live position when game state updates (new move arrives)
+  // Auto-reset playback to live position only after game ends (not during active play)
   const prevGameFenRef = useRef(gameState.fen)
   useEffect(() => {
-    if (playbackFen !== null && gameState.fen !== prevGameFenRef.current) {
+    if (playbackFen !== null && gameState.fen !== prevGameFenRef.current && gameState.status === GameStatus.GAME_OVER) {
       setPlaybackFen(null)
       setPlaybackIndex(null)
     }
     prevGameFenRef.current = gameState.fen
-  }, [gameState.fen])
+  }, [gameState.fen, gameState.status])
 
   // Poll connection health for reconnection countdown display
   useEffect(() => {
@@ -694,7 +694,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // In 2-player mode: detailed status only when it's WHITE's turn
         const isMyTurnToAct = isFourPlayer
           ? g.currentTurn === myTeam
-          : g.currentTurn === Team.WHITE
+          : g.currentTurn === myTeam
         let turnStatus: GameState['turnStatus'] = 'waiting'
         if (g.status === GameStatus.PLAYING && isMyTurnToAct && currentPlayerId) {
           const ts = (g as GameInterface).getTurnState()
@@ -816,6 +816,52 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       moveHistoryRef.current = [...moveHistoryRef.current, entry]
     }
         DEBUG && console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
+
+        // Trigger initial bot turn when game first enters PLAYING (online, human on non-first-turn team)
+        if (!initialBotTurnTriggeredRef.current && g.status === GameStatus.PLAYING) {
+          initialBotTurnTriggeredRef.current = true
+          const myTeam2 = currentTeam || (g as GameInterface).getTeam()
+          const opponentTeam2 = myTeam2 === 'WHITE' ? Team.BLACK : Team.WHITE
+          if (!isFourPlayer && g.currentTurn === opponentTeam2 && bot && currentPlayerId && g.isCoordinator()) {
+            DEBUG && console.log(`[INITIAL-BOT] Triggering initial ${opponentTeam2} bot turn from onStateChange`)
+            setGameState(prev => ({ ...prev, isBotThinking: true }))
+            const currentFen = g.board.fen()
+            ;(async () => {
+              const botUciMove = await bot.selectBestMove(currentFen)
+              const opponentSlots = g.getPlayers(opponentTeam2)
+
+              const processBotMove = (uciMove: string) => {
+                const sanMove = uciToSan(uciMove, currentFen)
+                const moveInfo = getMoveFromUci(uciMove, currentFen)
+                if (moveInfo) {
+                  for (const slot of opponentSlots) {
+                    g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                    g.lockPendingMove(slot)
+                  }
+                }
+              }
+
+              if (!botUciMove) {
+                const chess = new Chess(currentFen)
+                const legalMoves = chess.moves({ verbose: true })
+                if (legalMoves.length > 0) {
+                  processBotMove(legalMoves[0].from + legalMoves[0].to)
+                }
+              } else {
+                processBotMove(botUciMove)
+              }
+
+              try {
+                await g.resolvePendingMoves()
+                DEBUG && console.log(`[INITIAL-BOT] Resolve succeeded, new turn:`, g.currentTurn)
+                g.setTurnState('selecting')
+                updateStateRef.current()
+              } catch (e) {
+                DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
+              }
+            })()
+          }
+        }
       }
     })
     DEBUG && console.log('[Game] setOnStateChange callback set up complete')
@@ -875,6 +921,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const gameRef = useRef(game)
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
+  const initialBotTurnTriggeredRef = useRef(false)
 
   useEffect(() => {
     gameRef.current = game
@@ -1423,9 +1470,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             DEBUG && console.log(`[RESOLVE] Resolution complete, new turn: ${newTurn}`)
             playResolutionSound()
             
-            // BLACK handling: only coordinator runs bots (non-blocking — UI stays responsive)
-            // In 4-player mode, skip bot handling — humans manage BLACK turn
-            // Use opponentTeam instead of hardcoded BLACK so it works when human is Black
+            // Bot turn handling: only coordinator runs bots (non-blocking — UI stays responsive)
+            // In 4-player mode, skip bot handling — humans manage the turn
+            // Uses opponentTeam so it works when human is on either color
             const myTeam = (g as GameInterface).getTeam()
             const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
             if (!isFourPlayer && newTurn === opponentTeam && bot && playerId && g.isCoordinator()) {
@@ -1438,6 +1485,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 const botUciMove = await bot.selectBestMove(currentFen)
                 DEBUG && console.log(`[RESOLVE] Bot selected move:`, botUciMove)
                 
+                const opponentSlots = g.getPlayers(opponentTeam)
+                
                 if (!botUciMove) {
                   const chess = new Chess(currentFen)
                   const legalMoves = chess.moves({ verbose: true })
@@ -1447,10 +1496,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     const sanMove = uciToSan(fallbackUci, currentFen)
                     const moveInfo = getMoveFromUci(fallbackUci, currentFen)
                     if (moveInfo) {
-                      g.setPendingMove('bot_opponent_1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                      g.setPendingMove('bot_opponent_2', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                      g.lockPendingMove('bot_opponent_1')
-                      g.lockPendingMove('bot_opponent_2')
+                      for (const slot of opponentSlots) {
+                        g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                        g.lockPendingMove(slot)
+                      }
                     }
                   }
                 } else if (botUciMove) {
@@ -1458,21 +1507,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   const moveInfo = getMoveFromUci(botUciMove, currentFen)
                   
                   if (moveInfo) {
-                    g.setPendingMove('bot_opponent_1', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                    g.setPendingMove('bot_opponent_2', sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                    g.lockPendingMove('bot_opponent_1')
-                    g.lockPendingMove('bot_opponent_2')
+                    for (const slot of opponentSlots) {
+                      g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                      g.lockPendingMove(slot)
+                    }
                   }
                 }
                 
                 try {
                   await g.resolvePendingMoves()
-                  DEBUG && console.log(`[RESOLVE] BLACK resolve succeeded, new turn:`, g.currentTurn)
+                  DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve succeeded, new turn:`, g.currentTurn)
                   g.setTurnState('selecting')
-                  DEBUG && console.log(`[STATE] Coordinator BLACK resolve complete, reset to selecting`)
+                  DEBUG && console.log(`[STATE] Coordinator ${opponentTeam} resolve complete, reset to selecting`)
                   updateStateRef.current()
                 } catch (e) {
-                  DEBUG && console.log(`[RESOLVE] BLACK resolve failed:`, e)
+                  DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
                 }
                 
               })()
@@ -2220,7 +2269,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             setActiveBoardTab('game')
           }}
           onForward={() => {}}
-          onBackMove={gameState.status !== GameStatus.PLAYING ? () => {
+          onBackMove={() => {
             const moves = moveHistoryRef.current
             if (moves.length === 0) return
             const current = playbackIndex ?? moves.length - 1
@@ -2231,11 +2280,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               setPlaybackIndex(current - 1)
               setPlaybackFen(moves[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
             }
-          } : undefined}
-          onForwardMove={gameState.status !== GameStatus.PLAYING ? () => {
+          }}
+          onForwardMove={() => {
             const moves = moveHistoryRef.current
             if (moves.length === 0) return
-            if (playbackIndex === null) return
             const current = playbackIndex ?? moves.length - 1
             if (current >= moves.length - 1) {
               setPlaybackIndex(null)
@@ -2244,7 +2292,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               setPlaybackIndex(current + 1)
               setPlaybackFen(moves[current + 1]?.fenAfter || '')
             }
-          } : undefined}
+          }}
           insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>
