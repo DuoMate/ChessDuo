@@ -9,7 +9,6 @@ import { BackButton } from '@/components/BackButton'
 import { Calendar, Star, Crown, BarChart3, Zap, Gamepad2, Ban, Lock, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { PageLoading } from '@/components/PageLoading'
-import ChessLoader from '@/components/ChessLoader'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
 import { getAppBaseUrl } from '@/lib/appUrl'
@@ -247,7 +246,7 @@ export default function PremiumPage() {
 
                 {subscribing ? (
                   <div className="py-12">
-                    <ChessLoader />
+                    <PageLoading className="min-h-0 bg-transparent" />
                   </div>
                 ) : (
                   <>

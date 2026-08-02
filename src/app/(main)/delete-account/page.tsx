@@ -137,7 +137,7 @@ function DeleteAccountContent() {
 
           {step === 'loading' && (
             <div className="text-center py-20">
-              <PageLoading label="Deleting your account..." size="lg" className="min-h-0" />
+              <PageLoading label="Deleting your account..." className="min-h-0" />
             </div>
           )}
 
