@@ -11,7 +11,7 @@ const PAGES_THAT_MUST_USE_PAGE_LOADING = [
   'src/app/challenge/[code]/client.tsx',
   'src/app/invite/[userId]/client.tsx',
   'src/app/page.tsx',
-  'src/features/auth/AuthGate.tsx',
+  'src/components/AuthGate.tsx',
   'src/app/(main)/premium/page.tsx',
   'src/app/(main)/delete-account/page.tsx',
 ]
@@ -106,7 +106,7 @@ describe('PageLoading — architectural enforcement', () => {
   })
 
   it('no page-level loading in AuthGate uses inline Spinner div', () => {
-    const authGatePath = path.join(rootDir, 'src/features/auth/AuthGate.tsx')
+    const authGatePath = path.join(rootDir, 'src/components/AuthGate.tsx')
     const content = fs.readFileSync(authGatePath, 'utf-8')
     expect(content).toContain("from '@/components/PageLoading'")
     expect(content).not.toContain("from '@/components/Spinner'")

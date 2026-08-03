@@ -129,7 +129,7 @@ jest.mock('@/components/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-jest.mock('@/lib/settings', () => ({
+jest.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     autoQueen: false,
     lowTimeWarning: true,

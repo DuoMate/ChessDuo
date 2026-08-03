@@ -1,4 +1,5 @@
-import { getSetting, setSetting, useSettings } from '../../lib/settings'
+import { getSetting, setSetting } from '../../lib/settingsStorage'
+import { useSettings } from '../../hooks/useSettings'
 import { renderHook, act } from '@testing-library/react'
 
 describe('settings', () => {

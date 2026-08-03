@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCallback, useState, useEffect } from 'react'
-import { useSettings } from '@/lib/settings'
+import { useSettings } from '@/hooks/useSettings'
 import { ArrowLeft, Sun, Moon, BellOff, ShieldCheck, Volume2, VolumeX } from 'lucide-react'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useEscapeKey } from '@/hooks/useEscapeKey'

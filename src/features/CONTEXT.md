@@ -31,3 +31,4 @@ Framework-free domain logic — zero React/Next.js imports. Organized by bounded
 
 ## Recent Changes
 - **2026-07-30**: Billing provider swapped from Google Play to Creem (MoR) — new `CreemBillingProvider`, redirect-based checkout, webhook-driven lifecycle. UI only talks to `SubscriptionService`, so no game components changed.
+- **2026-08-03**: Deleted `features/auth/` — `AuthGate` moved to `components/`, `useAuthSession` moved to `hooks/` (BV1/BV2 fix: framework-free invariant restored).

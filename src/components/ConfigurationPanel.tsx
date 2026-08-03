@@ -2,7 +2,7 @@
 
 import { Volume2, VolumeX, Shield, ShieldCheck } from 'lucide-react'
 import { PlayerColor } from '@/features/shared/gameConstants'
-import { useSettings } from '@/lib/settings'
+import { useSettings } from '@/hooks/useSettings'
 import { ColorPicker } from './ColorPicker'
 
 interface ConfigurationPanelProps {

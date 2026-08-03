@@ -13,7 +13,7 @@ import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionInfo } from '@/features/billing'
-import { useSettings } from '@/lib/settings'
+import { useSettings } from '@/hooks/useSettings'
 
 interface ProfilePanelProps {
   playerId: string

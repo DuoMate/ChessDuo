@@ -23,6 +23,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `CapturedPieces.tsx` | Captured pieces display |
 | `PromotionModal.tsx` | Pawn promotion selector |
 | `Auth.tsx` | Login/signup form |
+| `AuthGate.tsx` | Auth gate component (page + overlay variants) with session/username handling |
 | `ChooseUsername.tsx` | Username selection post-signup |
 | `WelcomeDisclaimer.tsx` | First-time welcome modal |
 | `GameTour.tsx` | Onboarding tutorial |
@@ -109,7 +110,7 @@ All React components — co-located by feature, not by type. Components handle r
 - **2026-07-14**: `FourPlayerLobby` — added `useCapacitorBackButton` to leave room and navigate home on hardware back press.
 - **2026-07-14**: `GameMenu` now accepts optional `soundEnabled`/`onToggleSound`/`onOpenProfile` props. Sound toggle and Profile buttons moved into the hamburger dropdown. Standalone sound/profile buttons removed from `Game.tsx` and `DuelGame.tsx`.
 - **2026-07-13**: Fixed RoundHistorySidebar close button to 44×44px touch target. Replaced hardcoded rgba shadows in `ConfirmMoveButton` and `MoveResolvedInline` with CSS variable references (`--shadow-glow-emerald`, `--shadow-glow-emerald-strong`).
-- **2026-08-03**: Fixed `isBotThinking` not being reset after online coordinator bot turn resolution in `Game.tsx`. Bot handler now sets `isBotThinking: false` after `resolvePendingMoves()` completes, preventing the board from staying disabled permanently on the coordinator side.
+- **2026-08-03**: **M01 Auth BV1 fix** — `AuthGate` moved from `features/auth/` to `components/` (was a thin re-export wrapper; now contains the full component). Internal hook import changed to `@/hooks/useAuthSession`. `useAuthSession` moved to `hooks/`. `features/auth/` directory deleted.
 
 ## Dependencies
 - `features/` for game logic, `hooks/` for React hooks, `lib/` for utilities

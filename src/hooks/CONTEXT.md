@@ -13,6 +13,8 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 | `useEscapeKey.ts` | Keyboard Escape key handler for modals/panels |
 | `useScrollLock.ts` | Prevent background scrolling when overlays are open |
 | `useBadgeCount.ts` | Centralized badge count — unread messages + pending friend requests via Supabase Realtime |
+| `useAuthSession.ts` | Auth session lifecycle — initial session fetch, auth state changes, username gate |
+| `useSettings.ts` | User settings hook (autoQueen, lowTimeWarning, confirmMove, soundEnabled, theme) — localStorage-backed |
 
 ## Logic & Decisions
 - `useNavigationGuard` uses `beforeunload` event + Next.js router events.
@@ -28,7 +30,9 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 - React 19, Next.js router
 - Capacitor (for `useCapacitorBackButton`)
 - Supabase JS SDK (for `useBadgeCount`)
+- `@/lib/settingsStorage` (for `useSettings`)
 
 ## Recent Changes
 - **2026-07-18**: Added `useBadgeCount` hook — centralized unread message + pending friend request counting with Supabase Realtime on both `messages` and `friend_requests` tables. No polling. Fixed race condition with unique channel names per instance. Replaces the 30s polling and dual-state pattern that caused badge staleness.
 - **2026-07-15**: `useScrollLock` refactored with module-level lock counter to prevent nested lock interference.
+- **2026-08-03**: Added `useSettings` — moved from `lib/settings.ts` to `hooks/useSettings.ts` (BV3 fix: React hook belongs in hooks/, not lib/). Pure localStorage utilities extracted to `lib/settingsStorage.ts`.

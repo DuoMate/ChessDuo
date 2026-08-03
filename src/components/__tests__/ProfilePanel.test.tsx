@@ -12,7 +12,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace, back: mockBack }),
 }))
 
-jest.mock('@/lib/settings', () => ({
+jest.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ theme: 'dark', setTheme: jest.fn() }),
 }))
 
