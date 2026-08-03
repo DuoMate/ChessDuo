@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 15 |
+| Completed | 16 |
 | In Progress | 0 |
-| Remaining | 2 |
-| Overall Progress | 88% |
+| Remaining | 1 |
+| Overall Progress | 94% |
 | Current Architecture Score (est.) | 52/100 (was 42) |
 | Current Regression Risk | MEDIUM (core paths tested) |
 | Production Readiness (est.) | 48/100 (was 38) |
@@ -43,7 +43,7 @@
 | 13 | M31 Insights BV7 fix | 47.3 | ✅ | `8768a16` | BV7 |
 | 14 | M28 Realtime BV22 factory | 46.3 | ✅ | `4881b69` | BV22 |
 | 15 | M13 Shared Types relocation | 45.5 | ✅ | `164582f` | BV5,S4 |
-| 16 | M04 Browser Routing middleware | 43.0 | ⬜ | — | — |
+| 16 | M04 Browser Routing middleware | 43.0 | ✅ | `564f89d` | DOC-03 |
 | 17 | M22 Timer R4/R18 unification | 40.8 | ⬜ | — | R4,R18 |
 
 ---
