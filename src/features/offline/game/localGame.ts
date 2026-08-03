@@ -428,172 +428,22 @@ export class LocalGame {
   async resolveLegacy(skipStatsUpdate: boolean = false): Promise<void> {
     const currentTeam = this.gameState.currentTeam
     const players = this.gameState.getPlayers(currentTeam)
-    const isBlackTurn = currentTeam === Team.BLACK
-    
-    const teamColor = isBlackTurn ? '🔴 BLACK' : '🟢 WHITE'
     const player1Id = players[0]
     const player2Id = players[1]
-    
-    const getPlayerLabel = (playerId: string): string => {
-      if (playerId === 'player1') return 'player1 (Human)'
-      if (playerId === 'player2') return 'player2 (Teammate)'
-      if (playerId === 'player3') return 'player3 (Opponent)'
-      if (playerId === 'player4') return 'player4 (Opponent)'
-      return playerId
-    }
-
-    for (const player of players) {
-      this.gameState.lockMove(player)
-    }
 
     const player1Move = this.gameState.getSelectedMove(player1Id)!
     const player2Move = this.gameState.getSelectedMove(player2Id)!
 
-    const isSync = player1Move === player2Move
+    const player1Parts = this.getMoveParts(player1Move, this.gameState.fen)
+    const player2Parts = this.getMoveParts(player2Move, this.gameState.fen)
 
-    DEBUG && console.log(`\n${'='.repeat(60)}`)
-    DEBUG && console.log(`[TURN] ${teamColor} team to move`)
-    DEBUG && console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
-    
-    const currentFen = this.gameState.fen
-     
-     const turnStartFen = currentFen
-     
-     const sanToUci = (san: string, fen: string): string => {
-       const chess = new Chess(fen)
-       const moves = chess.moves({ verbose: true })
-       const found = moves.find(m => m.san === san || m.lan === san)
-       if (found) {
-         return found.from + found.to + (found.promotion || '')
-       }
-       return san
-     }
-     
-       const player1Uci = sanToUci(player1Move, turnStartFen)
-       const player2Uci = sanToUci(player2Move, turnStartFen)
-       
-      const ChessLib = (await import('chess.js')).Chess
-      const chess = new ChessLib(turnStartFen)
+    this.gameState.startPendingTurn(this.gameState.fen)
+    this.gameState.setPendingMove(player1Id, player1Move, player1Parts?.from || '', player1Parts?.to || '', 'p')
+    this.gameState.setPendingMove(player2Id, player2Move, player2Parts?.from || '', player2Parts?.to || '', 'p')
+    this.gameState.lockPendingMove(player1Id)
+    this.gameState.lockPendingMove(player2Id)
 
-      // Checkmate short-circuit: skip Stockfish if either move is checkmate
-      try {
-        chess.move(player1Move)
-        if (chess.isCheckmate()) {
-          this._lastMove = this.getMoveParts(player1Move, turnStartFen)
-          this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: CHECKMATE_SCORE, player2Score: 0,
-            player1Accuracy: 100, player2Accuracy: 0, player1Loss: 0, player2Loss: CHECKMATE_SCORE,
-            player1Category: getAccuracyCategory(0), player2Category: getAccuracyCategory(CHECKMATE_SCORE),
-            winningMove: player1Move, winningScore: CHECKMATE_SCORE, isSync: false,
-            bestEngineMove: player1Uci, bestEngineScore: CHECKMATE_SCORE,
-            turnStartFen, winnerId: 'player1', loserId: 'player2',
-            loserFrom: '', loserTo: '',
-            alternatives: [], youMatchedEngine: true, teammateMatchedEngine: false,
-          }
-          this.gameState.resolve(player1Move)
-          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
-          return
-        }
-      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (3):', e) }
-      chess.load(turnStartFen)
-      try {
-        chess.move(player2Move)
-        if (chess.isCheckmate()) {
-          this._lastMove = this.getMoveParts(player2Move, turnStartFen)
-          this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
-            player1Accuracy: 0, player2Accuracy: 100, player1Loss: CHECKMATE_SCORE, player2Loss: 0,
-            player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
-            winningMove: player2Move, winningScore: CHECKMATE_SCORE, isSync: false,
-            bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
-            turnStartFen, winnerId: 'player2', loserId: 'player1',
-            loserFrom: '', loserTo: '',
-            alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
-          }
-          this.gameState.resolve(player2Move)
-          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
-          return
-        }
-      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (4):', e) }
-      chess.load(turnStartFen)
-
-      const evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
-     
-     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
-     
-     const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0])
-     const bestMoveScore = bestResult?.score ?? 0
-     const bestMoveUci = bestResult?.move ?? ''
-     
-     const player1Score = scoreMap.get(player1Uci) ?? 0
-     const player2Score = scoreMap.get(player2Uci) ?? 0
-
-     const player1Loss = Math.abs(bestMoveScore - player1Score)
-     const player2Loss = Math.abs(bestMoveScore - player2Score)
-      
-     if (isSync) {
-       DEBUG && console.log(`[SYNC] Both players chose the same move: ${player1Move}`)
-     }
-
-     const player1Accuracy = calculateAccuracy(player1Loss)
-     const player2Accuracy = calculateAccuracy(player2Loss)
-     const player1Category = getAccuracyCategory(player1Loss)
-     const player2Category = getAccuracyCategory(player2Loss)
-      
-     DEBUG && console.log(`\n[EVALUATION] (from: ${turnStartFen.substring(0, 50)}...)`)
-     DEBUG && console.log(`  [Optimal] ${bestMoveUci}: score=${bestMoveScore}`)
-     DEBUG && console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
-     DEBUG && console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move}: score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
-      
-     const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
-     const winningScore = winningMove === player1Move ? player1Score : player2Score
-     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
-     const winnerId = winningMove === player1Move ? player1Id : player2Id
-     
-     DEBUG && console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
-     DEBUG && console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
-    DEBUG && console.log(`${'='.repeat(60)}\n`)
-
-    const moveParts = this.getMoveParts(winningMove, this.gameState.fen)
-    if (moveParts) {
-      this._lastMove = moveParts
-    }
-
-    this._lastMoveComparison = {
-      player1Move,
-      player2Move,
-      player1Score,
-      player2Score,
-      player1Accuracy,
-      player2Accuracy,
-      player1Loss,
-      player2Loss,
-      player1Category,
-      player2Category,
-      winningMove,
-      winningScore,
-      isSync,
-      bestEngineMove: bestMoveUci,
-      bestEngineScore: bestMoveScore,
-      turnStartFen,
-      winnerId: winnerId as 'player1' | 'player2',
-      loserId: winnerId === player1Id ? player2Id as 'player1' | 'player2' : player1Id as 'player1' | 'player2',
-      loserFrom: '',
-      loserTo: '',
-      alternatives: evalResults.slice(0, 5).filter(r => r.move !== bestMoveUci),
-      youMatchedEngine: player1Uci === bestMoveUci,
-      teammateMatchedEngine: player2Uci === bestMoveUci,
-    }
-
-    if (!skipStatsUpdate) {
-      this.updateStats(isSync, chosenLoss, player1Accuracy, player2Accuracy)
-    }
-    
-    this.gameState.resolve(winningMove)
-
-    if (this.gameState.board.isGameOver()) {
-      this._status = GameStatus.GAME_OVER
-    }
+    await this.resolvePendingMoves(skipStatsUpdate)
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {

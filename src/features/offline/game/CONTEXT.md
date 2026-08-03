@@ -23,4 +23,4 @@ Fully client-side 2v2 game implementation. No network dependency — supports lo
 
 ## Recent Changes
 - **2026-07-30**: Resolution refactored — passes only 2 player moves to `evaluateMoves()` instead of all legal moves. Works with MultiPV=2 evaluator. `SERVER_URL` env var removed (evaluator always local WASM).
-- **2026-07-18**: `LocalGame` constructor accepts `playerColor: PlayerColor` (default `'white'`). `'random'` is resolved once at construction. `getPlayerColor()`, `getHumanSlot()`, `getTeammateSlot()` added. `getTeam()` now returns the resolved color. `player1Id` returns the human's slot ID (so `MoveComparison` consumer "isPlayer1" logic is correct after color swap).
+- **2026-08-03**: **D1 fix** — Deleted ~170-line duplicate `resolveLegacy` body. Replaced with thin adapter that converts legacy `selectMove`/`lockMove` API to `resolvePendingMoves`. Resolution logic now lives in exactly one place.
