@@ -12,7 +12,7 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 | `page.tsx` | Home page (marketing + session check) |
 | `loading.tsx` | Global branded loading fallback (ChessDuoLogo + anime.js shimmer). Uses Tailwind classes, supports dark mode. |
 | — | Route-level `loading.tsx` in `(main)/`, `invite/[userId]/`, `challenge/[code]/`, `replay/[gameId]/` — all use `PageLoading` |
-| — | Proxy/middleware at `src/proxy.ts` |
+| — | Middleware at `src/middleware.ts` |
 
 ## Sub-modules
 | Module | Context |
