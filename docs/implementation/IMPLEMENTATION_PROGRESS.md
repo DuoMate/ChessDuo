@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 4 |
+| Completed | 5 |
 | In Progress | 0 |
-| Remaining | 13 |
-| Overall Progress | 24% |
+| Remaining | 12 |
+| Overall Progress | 29% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -31,7 +31,7 @@
 | 2 | M12 GameState un-skip tests | 73.0 | Not Started | `test/gamestate-unskip` | — | T-03 |
 | 3 | M15 R3 lock timeout fix | 72.3 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `7ca7cd2` | R3 |
 | 4 | M14 D1 delete resolveLegacy | 62.3 | ✅ Completed | `architecture-refactor` | `405e2e0` | S-04,D1 |
-| 5 | M08 Room D7/V8 dedup | 58.0 | Not Started | `refactor/room-creation-consolidate` | — | — |
+| 5 | M08 Room D7/V8 dedup | 58.0 | ✅ Completed | `architecture-refactor` | `3782ba9` | D7,V8 |
 | 6 | M17 Game.tsx critical-path tests | 73.8 | Not Started | `test/gameshell-critical-paths` | — | S-01,B-05,B-06 |
 | 7 | M15 R1 broadcast ordering fix | 68.0 | Not Started | `fix/onlinegame-broadcast-ordering` | — | R1 |
 | 8 | M16/M18 Duel engine + shell tests | 64.8 | Not Started | `test/duel-engine-shell` | — | T-02 |
@@ -149,11 +149,11 @@ Position 17: M22 Timer R4/R18 unification
 | BV6 — profiles bypass | HIGH | Pending | M02 Profile | 11 |
 | BV7 — premium bypass | LOW | Pending | M31 Insights | 13 |
 | BV22 — channel factory bypass | LOW | Pending | M28 Realtime | 14 |
-| D7 — room creation dup | MED | Pending | M08 Room | 5 |
-| V8 — expiry constants dup | MED | Pending | M08 Room | 5 |
+| D7 — room creation dup | MED | ✅ Resolved | M08 Room | 5 |
+| V8 — expiry constants dup | MED | ✅ Resolved | M08 Room | 5 |
 | S6 — friends overlap | MED | Pending | M33 Friends | 12 |
 
-**Summary:** 4 resolved, 22 pending, 0 in progress.
+**Summary:** 6 resolved, 20 pending, 0 in progress.
 
 ---
 
