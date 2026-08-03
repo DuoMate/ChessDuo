@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 3 |
+| Completed | 4 |
 | In Progress | 0 |
-| Remaining | 14 |
-| Overall Progress | 18% |
+| Remaining | 13 |
+| Overall Progress | 24% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -30,7 +30,7 @@
 | 1 | M15 OnlineGame test backfill | 81.8 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `b3d91ff` | R1,R2,R3 |
 | 2 | M12 GameState un-skip tests | 73.0 | Not Started | `test/gamestate-unskip` | — | T-03 |
 | 3 | M15 R3 lock timeout fix | 72.3 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `7ca7cd2` | R3 |
-| 4 | M14 D1 delete resolveLegacy | 62.3 | Not Started | `fix/localgame-resolve-legacy` | — | S-04,D1 |
+| 4 | M14 D1 delete resolveLegacy | 62.3 | ✅ Completed | `architecture-refactor` | `405e2e0` | S-04,D1 |
 | 5 | M08 Room D7/V8 dedup | 58.0 | Not Started | `refactor/room-creation-consolidate` | — | — |
 | 6 | M17 Game.tsx critical-path tests | 73.8 | Not Started | `test/gameshell-critical-paths` | — | S-01,B-05,B-06 |
 | 7 | M15 R1 broadcast ordering fix | 68.0 | Not Started | `fix/onlinegame-broadcast-ordering` | — | R1 |
@@ -135,7 +135,7 @@ Position 17: M22 Timer R4/R18 unification
 | R10 — reconnect double-sync | MED | Pending | M15 OnlineGame | 9 |
 | R14 — friends table mismatch | LOW-MED | Pending | M33 Friends | 12 |
 | R18 — dual-timer race | MED | Pending | M22 Timer | 17 |
-| S-04/D1 — resolveLegacy dup | CRITICAL | Pending | M14 LocalGame | 4 |
+| S-04/D1 — resolveLegacy dup | CRITICAL | ✅ Resolved | M14 LocalGame | 4 |
 | T-01 — Game.tsx zero tests | CRITICAL | Pending | M17 Game.tsx | 6 |
 | T-02 — Duel zero tests | CRITICAL | Pending | M16/M18 | 8 |
 | T-03 — gameState suite skipped | HIGH | Pending | M12 GameState | 2 |
@@ -153,7 +153,7 @@ Position 17: M22 Timer R4/R18 unification
 | V8 — expiry constants dup | MED | Pending | M08 Room | 5 |
 | S6 — friends overlap | MED | Pending | M33 Friends | 12 |
 
-**Summary:** 3 resolved, 23 pending, 0 in progress.
+**Summary:** 4 resolved, 22 pending, 0 in progress.
 
 ---
 
