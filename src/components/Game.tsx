@@ -939,6 +939,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     const remaining = g.getMatchTimeRemaining()
     if (remaining <= 0) {
+      // R18 fix: for online games, the engine owns timeout detection — don't double-fire
+      if (isOnline) return
       if (matchTimerRef.current) {
         clearInterval(matchTimerRef.current)
         matchTimerRef.current = null
