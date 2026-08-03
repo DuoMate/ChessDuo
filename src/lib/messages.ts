@@ -1,4 +1,5 @@
 import { supabase, Message } from './supabase'
+import { subscriptionManager } from './subscriptionManager'
 
 export async function sendMessage(
   senderId: string,
@@ -21,6 +22,7 @@ export async function sendMessage(
   if (error) return { data: null, error: error.message }
 
   const channel = supabase.channel(`messages:${receiverId}`)
+  subscriptionManager.register(channel)
   await channel.send({
     type: 'broadcast',
     event: 'new_message',
@@ -93,6 +95,7 @@ export async function markChallengeAsRead(userId: string, senderId: string): Pro
 export function subscribeToMessages(userId: string, onMessage: (msg: Message) => void) {
   const channelName = `messages:${userId}`
   const channel = supabase.channel(channelName)
+  subscriptionManager.register(channel)
   channel
     .on('broadcast', { event: 'new_message' }, (payload) => {
       onMessage(payload.payload as Message)

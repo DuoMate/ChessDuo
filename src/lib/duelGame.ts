@@ -5,6 +5,7 @@ import { supabase } from './supabase'
 import { createEvaluator, GameEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { calculateAccuracy } from '@/features/shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { subscriptionManager } from './subscriptionManager'
 
 export interface DuelPlayerState {
   id: string
@@ -143,6 +144,7 @@ export class DuelGame {
     this._channel = supabase.channel(`room:${this._roomId}`, {
       config: { presence: { key: this._playerId } }
     })
+    subscriptionManager.register(this._channel)
 
     const tag = this._team === 'WHITE' ? '_WHITE' : '_BLACK'
     const roomId = this._roomId
@@ -218,6 +220,7 @@ export class DuelGame {
         this._channel = supabase.channel(`room:${roomId}`, {
           config: { presence: { key: this._playerId } }
         })
+        subscriptionManager.register(this._channel)
         setupListeners()
         this._channel.subscribe(async (s) => {
           if (s === 'SUBSCRIBED') {
