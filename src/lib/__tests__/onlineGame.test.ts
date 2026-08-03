@@ -3,9 +3,12 @@ import { GameStatus } from '../../features/offline/game/localGame'
 import { Team, GameState } from '../../features/game-engine/gameState'
 
 let saveGameStateMock = jest.fn().mockResolvedValue(undefined)
+var mockLoadGameState = jest.fn().mockResolvedValue(null)
+var mockPlayers: any[] = []
+
 jest.mock('../gamePersistence', () => ({
   saveGameState: (...args: any[]) => saveGameStateMock(...args),
-  loadGameState: jest.fn().mockResolvedValue(null),
+  loadGameState: jest.fn(() => mockLoadGameState()),
 }))
 
 interface TestGame {
@@ -26,29 +29,33 @@ function testG(game: OnlineGame): TestGame {
 // Mock Supabase
 jest.mock('../supabase', () => ({
   supabase: {
-    channel: jest.fn(() => ({
-      on: jest.fn().mockReturnThis(),
-      subscribe: jest.fn((callback: any) => {
-        setTimeout(() => callback('SUBSCRIBED'), 0)
-        return { unsubscribe: jest.fn() }
-      }),
-      track: jest.fn().mockResolvedValue(null),
-      send: jest.fn().mockResolvedValue(null),
-      unsubscribe: jest.fn()
-    })),
-    removeChannel: jest.fn().mockResolvedValue(null),
-    from: jest.fn(() => ({
+      channel: jest.fn(() => ({
+        on: jest.fn().mockReturnThis(),
+        subscribe: jest.fn((callback: any) => {
+          setTimeout(() => callback('SUBSCRIBED'), 0)
+          return { unsubscribe: jest.fn() }
+        }),
+        track: jest.fn().mockResolvedValue(null),
+        send: jest.fn().mockResolvedValue(null),
+        unsubscribe: jest.fn()
+      })),
+      removeChannel: jest.fn().mockResolvedValue(null),
+      rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
+      from: jest.fn(() => ({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      order: jest.fn(() => ({
+        then: (cb: any) => cb({ data: mockPlayers, error: null }),
+      })),
       insert: jest.fn().mockResolvedValue({ data: null, error: null }),
-      single: jest.fn().mockResolvedValue({ 
-        data: { 
-          id: 'room-123', 
-          code: 'ABC123', 
+      single: jest.fn().mockResolvedValue({
+        data: {
+          id: 'room-123',
+          code: 'ABC123',
           status: 'waiting',
-          created_by: 'player1' 
-        }, 
-        error: null 
+          created_by: 'player1'
+        },
+        error: null
       })
     }))
   }
@@ -1033,6 +1040,224 @@ describe('OnlineGame', () => {
       }
 
       expect((game as any).startGameWhenReady).toHaveBeenCalled()
+    })
+  })
+
+  describe('R3 lock timeout — waitForTeammateLock state machine', () => {
+    let game: OnlineGame
+
+    beforeEach(() => {
+      game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._playerId = 'player1'
+      ;(game as any)._team = 'WHITE'
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+    })
+
+    it('should resolve immediately when turnState is already locked', async () => {
+      ;(game as any).turnState = 'locked'
+      const promise = (game as any).waitForTeammateLock()
+      await expect(promise).resolves.toBeUndefined()
+    })
+
+    it('should resolve immediately when teammate pending move is already locked', async () => {
+      const g = testG(game)
+      game.startPendingTurn()
+      g.gameState.setPendingMove('player2' as any, 'd2d4', 'd2', 'd4', 'p')
+      g.gameState.lockPendingMove('player2' as any)
+
+      const promise = (game as any).waitForTeammateLock()
+      await expect(promise).resolves.toBeUndefined()
+      expect((game as any).turnState).toBe('locked')
+    })
+
+    it('should defer resolution when teammate not yet locked', async () => {
+      let resolved = false
+      ;(game as any).turnState = 'waiting_for_teammate'
+      const promise = (game as any).waitForTeammateLock()
+      promise.then(() => { resolved = true })
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(resolved).toBe(false)
+
+      // Set up pending state before locking teammate
+      const g = testG(game)
+      game.startPendingTurn()
+      g.gameState.setPendingMove('player2' as any, 'd2d4', 'd2', 'd4', 'p')
+      ;(game as any).handleTeammateLocked({ playerId: 'player2' })
+
+      await promise
+      expect(resolved).toBe(true)
+    })
+  })
+
+  describe('R1 broadcast ordering — lock vs resolve race', () => {
+    let game: OnlineGame
+
+    beforeEach(() => {
+      game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._playerId = 'player1'
+      ;(game as any)._team = 'WHITE'
+      ;(game as any)._status = GameStatus.PLAYING
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+      ;(game as any).turnState = 'waiting_for_teammate'
+
+      game.startPendingTurn()
+      g.gameState.setPendingMove('player1' as any, 'e2e4', 'e2', 'e4', 'p')
+      g.gameState.lockPendingMove('player1' as any)
+      g.gameState.setPendingMove('player2' as any, 'd2d4', 'd2', 'd4', 'p')
+    })
+
+    it('should reject stale player_locked for non-team player', () => {
+      ;(game as any).handleTeammateLocked({ playerId: 'p3' })
+
+      // Phase should not change — handler returns early for non-team player
+      expect((game as any).turnState).toBe('waiting_for_teammate')
+    })
+
+    it('should transition to resolving when teammate locks', async () => {
+      // Must call waitForTeammateLock first to set resolveTeammateLocked callback
+      const lockPromise = (game as any).waitForTeammateLock()
+
+      ;(game as any).handleTeammateLocked({ playerId: 'player2' })
+
+      expect((game as any).turnState).toBe('resolving')
+      await lockPromise
+    })
+
+    it('should resolve waitForTeammateLock promise when teammate locks', async () => {
+      ;(game as any).turnState = 'waiting_for_teammate'
+      const lockPromise = (game as any).waitForTeammateLock()
+
+      ;(game as any).handleTeammateLocked({ playerId: 'player2' })
+
+      await expect(lockPromise).resolves.toBeUndefined()
+    })
+  })
+
+  describe('R2 reconnect — syncGameState', () => {
+    let game: OnlineGame
+
+    beforeEach(() => {
+      mockPlayers.length = 0
+      mockLoadGameState.mockResolvedValue(null)
+      game = new OnlineGame()
+      ;(game as any)._room = { id: 'room-123' }
+      ;(game as any)._playerId = 'player1'
+      const g = testG(game)
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+    })
+
+    it('should add human players from room_players during sync', async () => {
+      const emptyGame = new OnlineGame()
+      ;(emptyGame as any)._room = { id: 'room-123' }
+      ;(emptyGame as any)._playerId = 'player1'
+
+      mockPlayers.push(
+        { player_id: 'humanA', team: 'WHITE', slot: 0 },
+        { player_id: 'humanB', team: 'BLACK', slot: 0 },
+      )
+
+      await (emptyGame as any).syncGameState()
+
+      const whitePlayers = (emptyGame as any).gameState.getPlayers(Team.WHITE)
+      const blackPlayers = (emptyGame as any).gameState.getPlayers(Team.BLACK)
+      expect(whitePlayers.some((p: string) => p === 'humanA')).toBe(true)
+      expect(blackPlayers.some((p: string) => p === 'humanB')).toBe(true)
+    })
+
+    it('should fill missing slots with bots during sync', async () => {
+      // Start with empty game — sync should add human + bots
+      const emptyGame = new OnlineGame()
+      ;(emptyGame as any)._room = { id: 'room-123' }
+      ;(emptyGame as any)._playerId = 'player1'
+
+      mockPlayers.push(
+        { player_id: 'humanA', team: 'WHITE', slot: 0 },
+      )
+
+      await (emptyGame as any).syncGameState()
+
+      const whitePlayers = (emptyGame as any).gameState.getPlayers(Team.WHITE)
+      const blackPlayers = (emptyGame as any).gameState.getPlayers(Team.BLACK)
+      expect(whitePlayers).toHaveLength(2)
+      expect(blackPlayers).toHaveLength(2)
+      expect(whitePlayers.some((p: string) => p.includes('bot_'))).toBe(true)
+      expect(blackPlayers.every((p: string) => p.includes('bot_'))).toBe(true)
+    })
+
+    it('should restore saved game state from DB on reconnect', async () => {
+      mockLoadGameState.mockResolvedValue({
+        status: 'PLAYING',
+        currentTurn: 'BLACK',
+        matchStartedAt: new Date(Date.now() - 60_000).toISOString(),
+        matchTimeLimitSeconds: 600,
+      })
+
+      await (game as any).syncGameState()
+
+      expect((game as any)._status).toBe('PLAYING')
+      expect(game.currentTurn).toBe(Team.BLACK)
+    })
+
+    it('syncGameState currently overwrites GAME_OVER status (R2 bug — to be fixed in Position 9)', async () => {
+      // R2 BUG: syncGameState does not guard against overwriting terminal GAME_OVER state.
+      // When a reconnect happens after game-over, the saved game state (PLAYING) 
+      // overwrites the already-resolved GAME_OVER status.
+      // This test captures the current behaviour. The fix (Position 9) should make
+      // this test expect GAME_OVER instead of PLAYING.
+      ;(game as any)._status = GameStatus.GAME_OVER
+      ;(game as any)._gameOverResult = 'White wins'
+      ;(game as any)._gameOverReason = 'checkmate'
+      mockLoadGameState.mockResolvedValue({ status: 'PLAYING', currentTurn: 'WHITE' })
+      mockPlayers.push({ player_id: 'p1', team: 'WHITE' })
+
+      await (game as any).syncGameState()
+
+      // Current behaviour: status overwritten to PLAYING (R2 bug)
+      // Desired behaviour: status stays GAME_OVER
+      expect((game as any)._status).toBe(GameStatus.PLAYING)
+    })
+  })
+
+  describe('waitForTurnChange state machine', () => {
+    it('should resolve waitForTurnChange when handleTurnResolved fires', async () => {
+      const game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._playerId = 'player2'
+      ;(game as any)._team = 'WHITE'
+      ;(game as any)._status = GameStatus.PLAYING
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+
+      let resolved = false
+      const promise = (game as any).waitForTurnChange()
+      promise.then(() => { resolved = true })
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(resolved).toBe(false)
+
+      ;(game as any).handleTurnResolved({
+        winningTeam: 'WHITE',
+        winningMove: 'e2e4',
+        coordinatorId: 'player1',
+      })
+
+      await promise
+      expect(resolved).toBe(true)
     })
   })
 })
