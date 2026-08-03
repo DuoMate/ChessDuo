@@ -977,7 +977,7 @@ export class OnlineGame {
     if (payload.playerId !== this._playerId) {
       // Only react if the player is on our team (all modes)
       if (this.getPlayerTeam(payload.playerId) !== this._team) {
-      
+        return
       }
       this.gameState.lockPendingMove(payload.playerId as Player)
       
@@ -996,13 +996,6 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
-    // If game hasn't started yet on this client (syncGameState from game_started
-    // broadcast is still in progress), defer — syncGameState will restore the
-    // correct board state including this resolved move from the DB.
-    if (this._status !== GameStatus.PLAYING) {
-      DEBUG && console.log('[TURN-RESOLVED] Deferring — game not yet started on this client (status:', this._status, ')')
-      return
-    }
     DEBUG && console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,

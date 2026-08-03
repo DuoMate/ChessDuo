@@ -1515,6 +1515,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve succeeded, new turn:`, g.currentTurn)
                   g.setTurnState('selecting')
                   DEBUG && console.log(`[STATE] Coordinator ${opponentTeam} resolve complete, reset to selecting`)
+                  setGameState(prev => ({ ...prev, isBotThinking: false }))
                   updateStateRef.current()
                 } catch (e) {
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
