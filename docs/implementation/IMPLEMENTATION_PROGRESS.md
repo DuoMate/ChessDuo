@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 7 |
+| Completed | 8 |
 | In Progress | 0 |
-| Remaining | 10 |
-| Overall Progress | 41% |
+| Remaining | 9 |
+| Overall Progress | 47% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -33,7 +33,7 @@
 | 4 | M14 D1 delete resolveLegacy | 62.3 | ✅ Completed | `architecture-refactor` | `405e2e0` | S-04,D1 |
 | 5 | M08 Room D7/V8 dedup | 58.0 | ✅ Completed | `architecture-refactor` | `3782ba9` | D7,V8 |
 | 6 | M17 Game.tsx critical-path tests | 73.8 | ✅ Completed | `architecture-refactor` | `42c5efd` | S-01,B-05,B-06 |
-| 7 | M15 R1 broadcast ordering fix | 68.0 | Not Started | `fix/onlinegame-broadcast-ordering` | — | R1 |
+| 7 | M15 R1 broadcast ordering fix | 68.0 | ✅ Completed | `architecture-refactor` | `bee09e2` | R1 |
 | 8 | M16/M18 Duel engine + shell tests | 64.8 | Not Started | `test/duel-engine-shell` | — | T-02 |
 | 9 | M15 R2 reconnect merge fix | 59.0 | Not Started | `fix/onlinegame-reconnect-merge` | — | R2,R10 |
 | 10 | M07 Deep Link skeleton pages | 55.3 | Not Started | `fix/deeplink-skeleton-pages` | — | H10 |
@@ -153,7 +153,7 @@ Position 17: M22 Timer R4/R18 unification
 | V8 — expiry constants dup | MED | ✅ Resolved | M08 Room | 5 |
 | S6 — friends overlap | MED | Pending | M33 Friends | 12 |
 
-**Summary:** 8 resolved, 18 pending, 0 in progress.
+**Summary:** 9 resolved, 17 pending, 0 in progress.
 
 ---
 
