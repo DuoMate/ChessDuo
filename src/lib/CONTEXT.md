@@ -33,7 +33,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 
 ## Logic & Decisions
 - All Supabase channels registered via `subscriptionManager` for centralized cleanup.
-- `settingsStorage.ts` persists to localStorage with Supabase sync when authenticated.
+- `settingsStorage.ts` persists to localStorage.
 - `sounds.ts` uses Web Audio API with preloaded buffers.
 - `chessUtils.ts` handles SAN-to-UCI conversion for Stockfish compatibility.
 - `friends.ts` now includes `friend_avatar_url` in `FriendWithProfile` — sourced from `profiles.avatar_url`.

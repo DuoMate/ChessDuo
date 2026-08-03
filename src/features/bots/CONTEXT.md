@@ -21,7 +21,7 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 - Bot skill controlled by: engine depth, top-move selection, noise injection, blunder probability.
 - `difficulty.ts` uses weighted random selection from top N engine moves.
 - Opening book provides varied early-game play across 5+ common openings.
-- **Evaluator**: All moves evaluated locally via `BrowserMoveEvaluator` (Stockfish WASM, MultiPV=2). Moves not caught by engine PV lines fall back to `fallbackEvaluate()` — material-count heuristic.
+- **Evaluator**: All moves evaluated locally via `BrowserMoveEvaluator` (Stockfish WASM, MultiPV=6). Moves not caught by engine PV lines fall back to `fallbackEvaluate()` — material-count heuristic.
 - Two separate skill levels configurable: opponent bot and teammate bot.
 
 ## Dependencies

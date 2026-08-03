@@ -30,7 +30,7 @@ For directories with multiple files that collectively implement a module.
 | `packages/shared/` | — |
 
 ### Per-route page context
-Every SvelteKit route directory that contains a `+page.svelte` gets its own
+Every Next.js route directory that contains a `page.tsx` gets its own
 `CONTEXT.md` describing the page's logic, API calls, state management, and
 UI behavior. This includes dynamic routes (`[id]`).
 

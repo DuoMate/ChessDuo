@@ -11,7 +11,7 @@ Fully client-side 2v2 game implementation. No network dependency — supports lo
 ## Logic & Decisions
 - Implements `GameInterface` — same contract as OnlineGame.
 - Move selection → lock → resolution cycle resolved entirely client-side.
-- **Evaluator**: All evaluation local via `BrowserMoveEvaluator` (Stockfish WASM, MultiPV=2).
+- **Evaluator**: All evaluation local via `BrowserMoveEvaluator` (Stockfish WASM, MultiPV=6).
 - **Resolution**: `evaluateMoves([player1Uci, player2Uci], fen)` — compares only the 2 player moves (not all legal moves). Both receive real engine scores. `bestEngineMove` = higher-scored of the two.
 - `GameStatus` enum: WAITING → READY → PLAYING → GAME_OVER.
 - `MoveComparison` tracks both players' moves, accuracy, engine evaluation.
@@ -22,5 +22,5 @@ Fully client-side 2v2 game implementation. No network dependency — supports lo
 - `GameState` from `game-engine/`, `GameInterface` from `shared/`, `BrowserMoveEvaluator` from `mobile-engine/`
 
 ## Recent Changes
-- **2026-07-30**: Resolution refactored — passes only 2 player moves to `evaluateMoves()` instead of all legal moves. Works with MultiPV=2 evaluator. `SERVER_URL` env var removed (evaluator always local WASM).
+- **2026-07-30**: Resolution refactored — passes only 2 player moves to `evaluateMoves()` instead of all legal moves. `SERVER_URL` env var removed (evaluator always local WASM).
 - **2026-08-03**: **D1 fix** — Deleted ~170-line duplicate `resolveLegacy` body. Replaced with thin adapter that converts legacy `selectMove`/`lockMove` API to `resolvePendingMoves`. Resolution logic now lives in exactly one place.
