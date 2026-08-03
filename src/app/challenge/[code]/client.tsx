@@ -87,8 +87,7 @@ export default function ChallengePageClient() {
       // join THAT room so both players end up in the same match. Fall back to
       // creating a fresh room if the pre-created one is gone or non-existent.
       if (challengeInfo.room_id) {
-        const { data } = await supabase.from('rooms').select('id, code').eq('id', challengeInfo.room_id).maybeSingle()
-        if (data) room = data
+        room = await RoomService.getRoomById(challengeInfo.room_id)
       }
 
       if (!room) {

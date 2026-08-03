@@ -32,4 +32,9 @@ export const RoomService = {
     const { error } = await supabase.from('rooms').delete().eq('id', roomId)
     if (error) throw error
   },
+
+  async getRoomById(roomId: string): Promise<{ id: string; code: string } | null> {
+    const { data } = await supabase.from('rooms').select('id, code').eq('id', roomId).maybeSingle()
+    return data ?? null
+  },
 }
