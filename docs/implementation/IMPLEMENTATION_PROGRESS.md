@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 5 |
+| Completed | 6 |
 | In Progress | 0 |
-| Remaining | 12 |
-| Overall Progress | 29% |
+| Remaining | 11 |
+| Overall Progress | 35% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -28,7 +28,7 @@
 | # | Module | Priority | Status | Branch | Commit | Bugs |
 |:-:|--------|:--------:|:------:|--------|:------:|------|
 | 1 | M15 OnlineGame test backfill | 81.8 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `b3d91ff` | R1,R2,R3 |
-| 2 | M12 GameState un-skip tests | 73.0 | Not Started | `test/gamestate-unskip` | — | T-03 |
+| 2 | M12 GameState un-skip tests | 73.0 | ✅ Completed | `architecture-refactor` | `5f9dd07` | T-03 |
 | 3 | M15 R3 lock timeout fix | 72.3 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `7ca7cd2` | R3 |
 | 4 | M14 D1 delete resolveLegacy | 62.3 | ✅ Completed | `architecture-refactor` | `405e2e0` | S-04,D1 |
 | 5 | M08 Room D7/V8 dedup | 58.0 | ✅ Completed | `architecture-refactor` | `3782ba9` | D7,V8 |
@@ -138,7 +138,7 @@ Position 17: M22 Timer R4/R18 unification
 | S-04/D1 — resolveLegacy dup | CRITICAL | ✅ Resolved | M14 LocalGame | 4 |
 | T-01 — Game.tsx zero tests | CRITICAL | Pending | M17 Game.tsx | 6 |
 | T-02 — Duel zero tests | CRITICAL | Pending | M16/M18 | 8 |
-| T-03 — gameState suite skipped | HIGH | Pending | M12 GameState | 2 |
+| T-03 — gameState suite skipped | HIGH | ✅ Resolved | M12 GameState | 2 |
 | T-05 — reconnect untested | HIGH | Pending | M15 OnlineGame | 1 |
 | T-06 — broadcast ordering untested | HIGH | Pending | M15 OnlineGame | 1 |
 | H10 — challenge queries rooms | MED | Pending | M07 Deep Link | 10 |
@@ -153,7 +153,7 @@ Position 17: M22 Timer R4/R18 unification
 | V8 — expiry constants dup | MED | ✅ Resolved | M08 Room | 5 |
 | S6 — friends overlap | MED | Pending | M33 Friends | 12 |
 
-**Summary:** 6 resolved, 20 pending, 0 in progress.
+**Summary:** 7 resolved, 19 pending, 0 in progress.
 
 ---
 
