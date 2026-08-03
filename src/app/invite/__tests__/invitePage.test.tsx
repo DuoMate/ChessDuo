@@ -33,6 +33,10 @@ jest.mock('@/lib/friends', () => ({
   sendFriendRequest: jest.fn().mockResolvedValue({ error: null }),
 }))
 
+jest.mock('@/lib/profileService', () => ({
+  getProfileUsername: jest.fn().mockResolvedValue('test-target'),
+}))
+
 jest.mock('@/components/Auth', () => ({
   Auth: () => <div data-testid="auth">Auth</div>,
 }))

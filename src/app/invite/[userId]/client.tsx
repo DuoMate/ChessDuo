@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { sendFriendRequest, isFriend } from '@/lib/friends'
+import { getProfileUsername } from '@/lib/profileService'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -54,15 +54,9 @@ export default function InvitePageClient() {
       setLoading(false)
     })
 
-    supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', targetUserId)
-      .maybeSingle()
-      .then((result: { data: any }) => {
+    getProfileUsername(targetUserId).then((username) => {
         if (!mountedRef.current) return
-        const data = result.data
-        if (data) setTargetUsername(data.username)
+        if (username) setTargetUsername(username)
       }).catch(() => {})
   }, [targetUserId])
 

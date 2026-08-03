@@ -35,3 +35,23 @@ export async function fetchProfile(userId: string): Promise<{ username: string |
     .maybeSingle()
   return { username: data?.username || null, avatar_url: data?.avatar_url || null }
 }
+
+export async function updateProfile(userId: string, fields: { username?: string; avatar_url?: string | null; display_name?: string | null }): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: userId, ...fields }, { onConflict: 'id' })
+    return !error
+  } catch {
+    return false
+  }
+}
+
+export async function getProfileUsername(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle()
+  return data?.username ?? null
+}
