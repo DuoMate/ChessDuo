@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 10 |
+| Completed | 11 |
 | In Progress | 0 |
-| Remaining | 7 |
-| Overall Progress | 59% |
+| Remaining | 6 |
+| Overall Progress | 65% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -36,7 +36,7 @@
 | 7 | M15 R1 broadcast ordering fix | 68.0 | ✅ Completed | `architecture-refactor` | `bee09e2` | R1 |
 | 9 | M15 R2 reconnect merge fix | 59.0 | ✅ Completed | `architecture-refactor` | `55939c9` | R2,R10 |
 | 10 | M07 Deep Link skeleton pages | 55.3 | Not Started | `fix/deeplink-skeleton-pages` | — | H10 |
-| 10 | M07 Deep Link skeleton pages | 55.3 | Not Started | `fix/deeplink-skeleton-pages` | — | H10 |
+| 10 | M07 Deep Link skeleton pages | 55.3 | ✅ Completed | `architecture-refactor` | `f758455` | H10 |
 | 11 | M02 Profile BV6 adoption | 50.8 | Not Started | `refactor/profile-service-adoption` | — | — |
 | 12 | M33 Friends S6 consolidation | 49.5 | Not Started | `refactor/friends-consolidation` | — | R5,R14 |
 | 13 | M31 Insights BV7 fix | 47.3 | Not Started | `fix/insights-premium-bypass` | — | — |
@@ -141,7 +141,7 @@ Position 17: M22 Timer R4/R18 unification
 | T-03 — gameState suite skipped | HIGH | ✅ Resolved | M12 GameState | 2 |
 | T-05 — reconnect untested | HIGH | Pending | M15 OnlineGame | 1 |
 | T-06 — broadcast ordering untested | HIGH | Pending | M15 OnlineGame | 1 |
-| H10 — challenge queries rooms | MED | Pending | M07 Deep Link | 10 |
+| H10 — challenge queries rooms | MED | ✅ Resolved | M07 Deep Link | 10 |
 | BV1 — features/auth/ React | HIGH | ✅ Resolved | M01 Auth | (done) |
 | BV2 — features/auth/ hook | HIGH | ✅ Resolved | M01 Auth | (done) |
 | BV3 — lib/settings.ts hook | HIGH | ✅ Resolved | M03 Settings | (done) |
