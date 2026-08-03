@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 11 |
+| Completed | 12 |
 | In Progress | 0 |
-| Remaining | 6 |
-| Overall Progress | 65% |
+| Remaining | 5 |
+| Overall Progress | 71% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -37,7 +37,7 @@
 | 9 | M15 R2 reconnect merge fix | 59.0 | ✅ Completed | `architecture-refactor` | `55939c9` | R2,R10 |
 | 10 | M07 Deep Link skeleton pages | 55.3 | Not Started | `fix/deeplink-skeleton-pages` | — | H10 |
 | 10 | M07 Deep Link skeleton pages | 55.3 | ✅ Completed | `architecture-refactor` | `f758455` | H10 |
-| 11 | M02 Profile BV6 adoption | 50.8 | Not Started | `refactor/profile-service-adoption` | — | — |
+| 11 | M02 Profile BV6 adoption | 50.8 | ✅ Completed | `architecture-refactor` | `a985456` | BV6 |
 | 12 | M33 Friends S6 consolidation | 49.5 | Not Started | `refactor/friends-consolidation` | — | R5,R14 |
 | 13 | M31 Insights BV7 fix | 47.3 | Not Started | `fix/insights-premium-bypass` | — | — |
 | 14 | M28 Realtime BV22 factory | 46.3 | Not Started | `refactor/realtime-channel-factory` | — | — |
