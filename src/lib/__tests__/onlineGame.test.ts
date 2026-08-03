@@ -1,5 +1,5 @@
 import { OnlineGame } from '../../features/online/game/onlineGame'
-import { GameStatus } from '../../features/offline/game/localGame'
+import { GameStatus } from '../../features/shared/gameTypes'
 import { Team, GameState } from '../../features/game-engine/gameState'
 
 let saveGameStateMock = jest.fn().mockResolvedValue(undefined)

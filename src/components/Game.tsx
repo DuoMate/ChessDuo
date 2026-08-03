@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
+import { ChessBoard, PendingOverlay, HighlightSquares } from './ChessBoard'
+import type { PromotionPiece } from '@/features/shared/gameTypes'
 import { MobileChessBoard } from './MobileChessBoard'
-import { LocalGame, GameStatus, MoveComparison } from '@/features/offline/game/localGame'
+import { LocalGame } from '@/features/offline/game/localGame'
+import { GameStatus, MoveComparison } from '@/features/shared/gameTypes'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import type { GameInterface } from '@/features/shared/GameInterface'
 import { Team, Player } from '@/features/game-engine/gameState'

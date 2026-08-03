@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js'
-import type { PromotionPiece } from '../components/ChessBoard'
+import type { PromotionPiece } from '@/features/shared/gameTypes'
 
 export function normalizeUci(uci: string): string {
   return uci.replace(/-/g, '')

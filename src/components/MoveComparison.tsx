@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Crown, XCircle, Swords } from 'lucide-react'
-import { MoveComparison } from '@/features/offline/game/localGame'
+import { MoveComparison } from '@/features/shared/gameTypes'
 import { InsightsGate } from './InsightsGate'
 
 interface MoveComparisonProps {

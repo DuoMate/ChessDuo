@@ -6,8 +6,7 @@ import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Marke
 import { Chess, Square } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DEBUG } from '@/lib/debug'
-
-export type PromotionPiece = 'q' | 'r' | 'b' | 'n'
+import type { PromotionPiece } from '@/features/shared/gameTypes'
 
 export interface PendingPromotion {
   from: string

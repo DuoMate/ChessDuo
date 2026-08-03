@@ -1,6 +1,7 @@
 'use client'
 
-import { ChessBoard, PromotionPiece, PendingOverlay, HighlightSquares } from './ChessBoard'
+import { ChessBoard, PendingOverlay, HighlightSquares } from './ChessBoard'
+import type { PromotionPiece } from '@/features/shared/gameTypes'
 
 interface MobileChessBoardProps {
   fen: string

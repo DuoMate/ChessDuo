@@ -1,5 +1,6 @@
 import { GameState, GamePhase, Team } from '../../features/game-engine/gameState'
-import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
+import { LocalGame } from '../../features/offline/game/localGame'
+import { GameStatus } from '../../features/shared/gameTypes'
 
 describe('Match Timer', () => {
   describe('GameState match timer', () => {

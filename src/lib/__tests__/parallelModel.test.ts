@@ -1,4 +1,5 @@
-import { LocalGame, GameStatus, MoveComparison } from '../../features/offline/game/localGame'
+import { LocalGame } from '../../features/offline/game/localGame'
+import { GameStatus, MoveComparison } from '../../features/shared/gameTypes'
 import { Team } from '../../features/game-engine/gameState'
 import { calculateAccuracy } from '../../features/shared/accuracy'
 

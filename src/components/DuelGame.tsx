@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChessBoard, PromotionPiece } from './ChessBoard'
+import { ChessBoard } from './ChessBoard'
+import type { PromotionPiece } from '@/features/shared/gameTypes'
 import { MobileChessBoard } from './MobileChessBoard'
 import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { GameOverModal } from './GameOverModal'

@@ -1,7 +1,7 @@
 'use client'
 
 import { Team } from '@/features/game-engine/gameState'
-import { GameStatus } from '@/features/offline/game/localGame'
+import { GameStatus } from '@/features/shared/gameTypes'
 import { ConnectionStatus } from './GameLoading'
 
 interface GameInfoProps {

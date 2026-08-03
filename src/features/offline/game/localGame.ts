@@ -5,12 +5,9 @@ import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE, PlayerColor, ResolvedColor, resolvePlayerColor } from '../../shared/gameConstants'
 import { DEBUG } from '../../../lib/debug'
 
-export enum GameStatus {
-  WAITING = 'WAITING',
-  READY = 'READY',
-  PLAYING = 'PLAYING',
-  GAME_OVER = 'GAME_OVER'
-}
+import { GameStatus, MoveComparison } from '../../shared/gameTypes'
+export { GameStatus }
+export type { MoveComparison } from '../../shared/gameTypes'
 
 export interface GameStats {
   movesPlayed: number
@@ -26,31 +23,6 @@ export interface GameStats {
   whiteConflicts: number
 }
 
-export interface MoveComparison {
-  player1Move: string
-  player2Move: string
-  player1Score: number
-  player2Score: number
-  player1Accuracy: number
-  player2Accuracy: number
-  player1Loss: number
-  player2Loss: number
-  player1Category: { label: string; color: string; emoji: string }
-  player2Category: { label: string; color: string; emoji: string }
-  winningMove: string
-  winningScore: number
-  isSync: boolean
-  bestEngineMove: string
-  bestEngineScore: number
-  turnStartFen: string
-  winnerId: 'player1' | 'player2'
-  loserId: 'player1' | 'player2' | null
-  loserFrom: string
-  loserTo: string
-  alternatives: { move: string; score: number }[]
-  youMatchedEngine: boolean
-  teammateMatchedEngine: boolean
-}
 
 export class LocalGame {
   private gameState: GameState

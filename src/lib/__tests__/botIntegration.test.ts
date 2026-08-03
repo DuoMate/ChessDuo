@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js'
-import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
+import { LocalGame } from '../../features/offline/game/localGame'
+import { GameStatus } from '../../features/shared/gameTypes'
 import { Team } from '../../features/game-engine/gameState'
 import { createBot } from '../../features/bots/chessBot'
 

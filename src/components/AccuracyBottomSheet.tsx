@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Target, PartyPopper, Zap, CheckCircle2, XCircle, AlertTriangle, Sparkles, Lightbulb, Crown, Swords } from 'lucide-react'
-import { MoveComparison } from '@/features/offline/game/localGame'
+import { MoveComparison } from '@/features/shared/gameTypes'
 import { InsightsGate } from './InsightsGate'
 
 interface AccuracyBottomSheetProps {

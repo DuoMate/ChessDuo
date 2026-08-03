@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js'
-import { GameStatus, MoveComparison } from '../offline/game/localGame'
+import { GameStatus, MoveComparison } from './gameTypes'
 import { Team, Player, CapturedPieces, PendingMoveInfo } from '../game-engine/gameState'
 import type { ResolvedColor } from './gameConstants'
 import type { GameEvaluator } from '../mobile-engine/evaluatorFactory'
