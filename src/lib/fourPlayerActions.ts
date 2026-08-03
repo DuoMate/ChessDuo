@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { generateRoomCode } from '@/lib/roomActions'
+import { ROOM_EXPIRY_MS } from '@/features/shared/gameConstants'
 
 export interface FourPlayerRoom {
   roomId: string
@@ -21,7 +22,7 @@ export async function createFourPlayerRoom(options: {
 }): Promise<FourPlayerRoom> {
   const { playerId, timeSeconds } = options
   const code = generateRoomCode()
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const expiresAt = new Date(Date.now() + ROOM_EXPIRY_MS).toISOString()
 
   const { data: room, error: roomError } = await supabase
     .from('rooms')

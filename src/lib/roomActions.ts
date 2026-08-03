@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { PlayerColor, resolvePlayerColor } from '@/features/shared/gameConstants'
+import { PlayerColor, resolvePlayerColor, ROOM_EXPIRY_MS } from '@/features/shared/gameConstants'
 
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -17,7 +17,7 @@ export async function createOnlineRoom(options: {
 }): Promise<{ roomId: string; roomCode: string; team: 'WHITE' | 'BLACK'; playerId: string; time: number }> {
   const { playerId, timeSeconds, hostColor = 'white' } = options
   const code = generateRoomCode()
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const expiresAt = new Date(Date.now() + ROOM_EXPIRY_MS).toISOString()
 
   // Resolve the host's color once at room creation. The host always sits on
   // this color; the joiner inherits the same team so both humans play together

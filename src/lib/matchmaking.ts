@@ -1,7 +1,7 @@
 import { supabase, Room } from './supabase'
 import { RoomService } from './roomService'
-
-const ROOM_EXPIRY_MS = 60_000 // 60 seconds — stale rooms auto-cleanup
+import { generateRoomCode } from './roomActions'
+import { QUICK_MATCH_ROOM_EXPIRY_MS } from '@/features/shared/gameConstants'
 
 export interface QuickMatchResult {
   room: Room
@@ -88,20 +88,12 @@ export async function joinQuickMatchRoom(
   return true
 }
 
-function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
 
 export async function createQuickMatchRoom(playerId: string, timeSeconds: number = 600): Promise<Room | null> {
-  const expiresAt = new Date(Date.now() + ROOM_EXPIRY_MS).toISOString()
+  const expiresAt = new Date(Date.now() + QUICK_MATCH_ROOM_EXPIRY_MS).toISOString()
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const code = generateCode()
+    const code = generateRoomCode()
 
     const { data: room, error } = await supabase
       .from('rooms')
