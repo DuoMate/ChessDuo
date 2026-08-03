@@ -1248,7 +1248,72 @@ describe('OnlineGame', () => {
     })
   })
 
-  describe('waitForTurnChange state machine', () => {
+  describe('R1 sequence numbers — stale broadcast rejection', () => {
+    it('should reject turn_resolved with older sequence', () => {
+      const game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._playerId = 'player2'
+      ;(game as any)._status = GameStatus.PLAYING
+      ;(game as any)._turnSequence = 5
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+
+      ;(game as any).handleTurnResolved({
+        winningTeam: 'WHITE',
+        winningMove: 'e2e4',
+        turnSequence: 3,
+      })
+
+      // Sequence 3 < current 5 — should be rejected. _turnSequence unchanged.
+      expect((game as any)._turnSequence).toBe(5)
+    })
+
+    it('should accept turn_resolved with newer sequence', () => {
+      const game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._playerId = 'player2'
+      ;(game as any)._team = 'WHITE'
+      ;(game as any)._status = GameStatus.PLAYING
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+
+      ;(game as any).handleTurnResolved({
+        winningTeam: 'WHITE',
+        winningMove: 'e2e4',
+        turnSequence: 7,
+      })
+
+      // Sequence 7 >= current 0 — should be accepted. _turnSequence updated.
+      expect((game as any)._turnSequence).toBe(7)
+    })
+
+    it('should set turnSequence to first turn_resolved value', () => {
+      const game = new OnlineGame()
+      const g = testG(game)
+      ;(game as any)._status = GameStatus.PLAYING
+      g.gameState.addPlayer('player1' as any, Team.WHITE)
+      g.gameState.addPlayer('player2' as any, Team.WHITE)
+      g.gameState.addPlayer('p3' as any, Team.BLACK)
+      g.gameState.addPlayer('p4' as any, Team.BLACK)
+      g.gameState.startMatch()
+
+      expect((game as any)._turnSequence).toBe(0)
+
+      ;(game as any).handleTurnResolved({
+        winningTeam: 'WHITE',
+        winningMove: 'e2e4',
+        turnSequence: 1,
+      })
+
+      expect((game as any)._turnSequence).toBe(1)
+    })
+  })
     it('should resolve waitForTurnChange when handleTurnResolved fires', async () => {
       const game = new OnlineGame()
       const g = testG(game)
@@ -1278,4 +1343,3 @@ describe('OnlineGame', () => {
       expect(resolved).toBe(true)
     })
   })
-})

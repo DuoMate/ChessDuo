@@ -72,6 +72,7 @@ export class OnlineGame {
   private _broadcastThrottle: Map<string, number> = new Map()
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private readonly LOCK_TIMEOUT_MS = 15_000
+  private _turnSequence = 0
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
@@ -1010,8 +1011,15 @@ export class OnlineGame {
     }
   }
 
-  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number }) {
+  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number; turnSequence?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
+    // R1: reject stale turn_resolved from previous turns
+    const incomingSeq = payload.turnSequence ?? 0
+    if (incomingSeq < this._turnSequence) {
+      DEBUG && console.warn('[ONLINE] Stale turn_resolved rejected (seq:', incomingSeq, 'current:', this._turnSequence, ')')
+      return
+    }
+    this._turnSequence = incomingSeq
     DEBUG && console.log('[TURN-RESOLVED] Received broadcast:', {
       winningTeam: payload.winningTeam,
       winningMove: payload.winningMove,
@@ -1279,6 +1287,7 @@ export class OnlineGame {
     }
 
     // Broadcast turn_resolved to all non-coordinator clients
+    this._turnSequence++
     if (this._channel) {
       await this._channel.send({
         type: 'broadcast',
@@ -1288,7 +1297,8 @@ export class OnlineGame {
           winningMove,
           comparison: this._lastMoveComparison,
           coordinatorId: this._playerId,
-          matchTimeRemaining: this.gameState.getMatchTimeRemaining()
+          matchTimeRemaining: this.gameState.getMatchTimeRemaining(),
+          turnSequence: this._turnSequence,
         }
       })
     }
