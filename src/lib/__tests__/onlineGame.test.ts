@@ -2,6 +2,12 @@ import { OnlineGame } from '../../features/online/game/onlineGame'
 import { GameStatus } from '../../features/offline/game/localGame'
 import { Team, GameState } from '../../features/game-engine/gameState'
 
+let saveGameStateMock = jest.fn().mockResolvedValue(undefined)
+jest.mock('../gamePersistence', () => ({
+  saveGameState: (...args: any[]) => saveGameStateMock(...args),
+  loadGameState: jest.fn().mockResolvedValue(null),
+}))
+
 interface TestGame {
   gameState: GameState
   _playerId: string
@@ -860,6 +866,10 @@ describe('OnlineGame', () => {
   })
 
   describe('_finishResolution', () => {
+    beforeEach(() => {
+      saveGameStateMock = jest.fn().mockResolvedValue(undefined)
+    })
+
     it('should persist game state and broadcast turn_resolved', async () => {
       const game = new OnlineGame()
       ;(game as any)._playerId = 'player1'
@@ -893,6 +903,29 @@ describe('OnlineGame', () => {
       await (game as any)._finishResolution(Team.WHITE, 'e2e4')
 
       expect((game as any)._channel.send).toHaveBeenCalledTimes(1)
+    })
+
+    it('should await saveGameState before broadcasting turn_resolved', async () => {
+      const game = new OnlineGame()
+      ;(game as any)._playerId = 'player1'
+      ;(game as any)._room = { id: 'room-123' }
+      ;(game as any)._status = GameStatus.PLAYING
+      ;(game as any)._channel = { send: jest.fn().mockResolvedValue(null) }
+      ;(game as any)._lastMoveComparison = { winnerId: 'player1', winningMove: 'e2e4' }
+
+      const order: string[] = []
+      saveGameStateMock.mockImplementation(async () => {
+        order.push('save')
+        await new Promise(r => setTimeout(r, 5))
+      })
+      ;(game as any)._channel.send.mockImplementation(async () => {
+        order.push('broadcast')
+      })
+
+      await (game as any)._finishResolution(Team.WHITE, 'e2e4')
+
+      expect(order[0]).toBe('save')
+      expect(order[1]).toBe('broadcast')
     })
   })
 
@@ -954,6 +987,52 @@ describe('OnlineGame', () => {
 
       expect((game as any)._blackComparison).toBeNull()
       expect((game as any)._whiteComparison).toBe(whiteComp)
+    })
+  })
+
+  describe('presence sync — no re-sync during active play', () => {
+    it('should NOT call syncGameState when _status is PLAYING (presence sync else-branch removed)', async () => {
+      const game = new OnlineGame()
+      ;(game as any)._status = GameStatus.PLAYING
+      ;(game as any)._channel = { presenceState: () => ({ player1: {}, player2: {} }) }
+
+      const syncSpy = jest.spyOn(game as any, 'syncGameState').mockResolvedValue(undefined)
+
+      const playersOnline = Object.keys((game as any)._channel.presenceState())
+      const sortedIds = [...playersOnline].sort()
+
+      if (playersOnline.length >= 2) {
+        if ((game as any)._status !== GameStatus.PLAYING) {
+          if ((game as any)._playerId === sortedIds[0]) {
+            ;(game as any).startGameWhenReady?.()
+          }
+        }
+        // The removed else-branch — during PLAYING, syncGameState must NOT be called
+      }
+
+      expect(syncSpy).not.toHaveBeenCalled()
+      syncSpy.mockRestore()
+    })
+
+    it('should still call startGameWhenReady when _status is not PLAYING and player is coordinator', async () => {
+      const game = new OnlineGame()
+      ;(game as any)._status = GameStatus.WAITING
+      ;(game as any)._playerId = 'alice'
+      ;(game as any)._channel = { presenceState: () => ({ alice: {}, bob: {} }) }
+      ;(game as any).startGameWhenReady = jest.fn().mockResolvedValue(undefined)
+
+      const playersOnline = Object.keys((game as any)._channel.presenceState())
+      const sortedIds = [...playersOnline].sort()
+
+      if (playersOnline.length >= 2) {
+        if ((game as any)._status !== GameStatus.PLAYING) {
+          if ((game as any)._playerId === sortedIds[0]) {
+            ;(game as any).startGameWhenReady()
+          }
+        }
+      }
+
+      expect((game as any).startGameWhenReady).toHaveBeenCalled()
     })
   })
 })

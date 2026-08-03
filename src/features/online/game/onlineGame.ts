@@ -353,9 +353,10 @@ export class OnlineGame {
                 DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
                 this.startGameWhenReady()
               }
-            } else {
-              this.syncGameState()
             }
+            // During active play, state is already current via broadcasts —
+            // do not re-sync from DB (would race with un-awaited DB writes
+            // and clobber pending moves/comparisons/board FEN).
           }
         })
         .on('presence', { event: 'join' }, ({ newPresences }) => {
@@ -1247,7 +1248,7 @@ export class OnlineGame {
     // Persist game state for recovery from refresh/OS kill
     if (this._room) {
       const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
-      saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
+      await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
         team: currentTeam,
         move: winningMove,
         fen_before: fenBefore,
