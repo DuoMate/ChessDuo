@@ -1,6 +1,13 @@
 import { GameState, GamePhase, Team } from '../../features/game-engine/gameState'
 import { LocalGame, GameStatus } from '../../features/offline/game/localGame'
 
+const mockEvaluator = {
+  evaluateMoves: jest.fn().mockResolvedValue([
+    { move: 'e2e4', score: 50 },
+    { move: 'd2d4', score: 30 },
+  ]),
+}
+
 function uciToSan(uciMove: string, fen: string): string | null {
   try {
     const { Chess } = require('chess.js')
@@ -19,7 +26,7 @@ function uciToSan(uciMove: string, fen: string): string | null {
   return null
 }
 
-describe.skip('Game State Machine', () => {
+describe('Game State Machine', () => {
   let gameState: GameState
 
   beforeEach(() => {
@@ -152,6 +159,7 @@ describe.skip('Game State Machine', () => {
   describe('Captured Pieces Tracking', () => {
     test('tracks captured pieces after pawn capture', async () => {
       const game = new LocalGame()
+      ;(game as any).evaluator = mockEvaluator
       game.addPlayer('w1', Team.WHITE)
       game.addPlayer('w2', Team.WHITE)
       game.addPlayer('b1', Team.BLACK)
@@ -211,11 +219,13 @@ describe.skip('Game State Machine', () => {
   }
 })
 
-describe.skip('LocalGame Integration', () => {
+describe('LocalGame Integration', () => {
   let game: LocalGame
 
   beforeEach(() => {
     game = new LocalGame()
+    ;(game as any).evaluator = mockEvaluator
+    mockEvaluator.evaluateMoves.mockClear()
   })
 
   function setupFullGame() {
