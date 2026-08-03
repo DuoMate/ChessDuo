@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 2 |
+| Completed | 3 |
 | In Progress | 0 |
-| Remaining | 15 |
-| Overall Progress | 12% |
+| Remaining | 14 |
+| Overall Progress | 18% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -27,9 +27,9 @@
 
 | # | Module | Priority | Status | Branch | Commit | Bugs |
 |:-:|--------|:--------:|:------:|--------|:------:|------|
-| 1 | M15 OnlineGame test backfill | 81.8 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | TBD | R1,R2,R3 |
+| 1 | M15 OnlineGame test backfill | 81.8 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `b3d91ff` | R1,R2,R3 |
 | 2 | M12 GameState un-skip tests | 73.0 | Not Started | `test/gamestate-unskip` | — | T-03 |
-| 3 | M15 R3 lock timeout fix | 72.3 | Not Started | `fix/onlinegame-lock-timeout` | — | R3 |
+| 3 | M15 R3 lock timeout fix | 72.3 | ✅ Completed | `test/onlinegame-broadcast-reconnect-lock` | `7ca7cd2` | R3 |
 | 4 | M14 D1 delete resolveLegacy | 62.3 | Not Started | `fix/localgame-resolve-legacy` | — | S-04,D1 |
 | 5 | M08 Room D7/V8 dedup | 58.0 | Not Started | `refactor/room-creation-consolidate` | — | — |
 | 6 | M17 Game.tsx critical-path tests | 73.8 | Not Started | `test/gameshell-critical-paths` | — | S-01,B-05,B-06 |
