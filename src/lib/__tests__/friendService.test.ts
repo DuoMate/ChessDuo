@@ -1,4 +1,4 @@
-import { getPendingRequestCount } from '../friendService'
+import { getPendingRequestCount } from '../friends'
 
 const mockEq2 = jest.fn()
 

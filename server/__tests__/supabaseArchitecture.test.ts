@@ -54,8 +54,6 @@ describe('Supabase Service Layer Architecture', () => {
 
   describe('Friendship queries must not select non-existent columns', () => {
     const ALLOWED_FRIEND_SELECT_FILES = [
-      'friendService.ts',
-      'friendService.test.ts',
       'friends.ts',
       'friends.test.ts',
     ]
@@ -72,7 +70,7 @@ describe('Supabase Service Layer Architecture', () => {
           'FRIENDSHIP QUERY VIOLATION: The following files try to select "id" from the friendships table, ' +
           'which has NO id column (composite key: sender_id + receiver_id):\n' +
           violations.map((f) => `  - ${f}`).join('\n') +
-          '\n\nFix: Use { getPendingRequestCount } from "@/lib/friendService" or select sender_id/receiver_id.'
+          '\n\nFix: Use getPendingRequestCount from "@/lib/friends" or select sender_id/receiver_id.'
         )
       }
 
@@ -116,7 +114,6 @@ describe('Supabase Service Layer Architecture', () => {
   describe('Service files exist and are importable', () => {
     const requiredServiceFiles = [
       'src/lib/profileService.ts',
-      'src/lib/friendService.ts',
       'src/lib/apiAuth.ts',
       'src/lib/supabaseTypes.ts',
     ]
