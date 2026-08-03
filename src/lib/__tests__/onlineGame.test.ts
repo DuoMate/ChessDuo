@@ -1093,6 +1093,24 @@ describe('OnlineGame', () => {
       await promise
       expect(resolved).toBe(true)
     })
+
+    it('should resolve after timeout when teammate never locks (R3 fix)', async () => {
+      jest.useFakeTimers()
+      ;(game as any).turnState = 'waiting_for_teammate'
+
+      let resolved = false
+      const promise = (game as any).waitForTeammateLock()
+      promise.then(() => { resolved = true })
+
+      expect(resolved).toBe(false)
+
+      // Fast-forward past the 15s timeout
+      jest.advanceTimersByTime(16_000)
+
+      await promise
+      expect(resolved).toBe(true)
+      jest.useRealTimers()
+    })
   })
 
   describe('R1 broadcast ordering — lock vs resolve race', () => {

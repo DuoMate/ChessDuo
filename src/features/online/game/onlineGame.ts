@@ -59,6 +59,7 @@ export class OnlineGame {
   private turnState: 'selecting' | 'waiting_for_teammate' | 'locked' | 'resolving' = 'selecting'
   private resolveTeammateLocked: (() => void) | null = null
   private resolveTurnChange: (() => void) | null = null
+  private _teammateLockTimeout: ReturnType<typeof setTimeout> | null = null
   private stats = {
     movesPlayed: 0,
     syncRate: 0,
@@ -70,6 +71,7 @@ export class OnlineGame {
   private evaluator: GameEvaluator
   private _broadcastThrottle: Map<string, number> = new Map()
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
+  private readonly LOCK_TIMEOUT_MS = 15_000
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
@@ -267,7 +269,7 @@ export class OnlineGame {
     return null
   }
 
-  // Event-based waiting - no timeouts
+  // Event-based waiting with engine-level timeout (R3 fix)
   waitForTeammateLock(): Promise<void> {
     DEBUG && console.log('[STATE] waitForTeammateLock called, current state:', this.turnState)
     return new Promise((resolve) => {
@@ -284,8 +286,17 @@ export class OnlineGame {
         resolve()
         return
       }
-      // Otherwise, wait for the event
+      // Set up the event-based resolution
       this.resolveTeammateLocked = resolve
+      // Engine-level timeout: if broadcast is lost, don't hang forever (R3)
+      this._teammateLockTimeout = setTimeout(() => {
+        DEBUG && console.warn('[STATE] Teammate lock timeout — resolving with existing state')
+        if (this.resolveTeammateLocked) {
+          this.resolveTeammateLocked()
+          this.resolveTeammateLocked = null
+        }
+        this._teammateLockTimeout = null
+      }, this.LOCK_TIMEOUT_MS)
     })
   }
 
@@ -985,6 +996,10 @@ export class OnlineGame {
       // Resolve the waitForTeammateLock Promise
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
         DEBUG && console.log('[STATE] Teammate locked, transitioning to resolving state')
+        if (this._teammateLockTimeout) {
+          clearTimeout(this._teammateLockTimeout)
+          this._teammateLockTimeout = null
+        }
         this.turnState = 'resolving'
         this.notifyStateChange()
         this.resolveTeammateLocked()
@@ -1073,6 +1088,12 @@ export class OnlineGame {
       this.resolveTurnChange()
       this.resolveTurnChange = null
     }
+    // Clean up stale lock timeout — turn resolved before teammate locked (R1)
+    if (this._teammateLockTimeout) {
+      clearTimeout(this._teammateLockTimeout)
+      this._teammateLockTimeout = null
+    }
+    this.resolveTeammateLocked = null
     
     DEBUG && console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
     if (this.gameState.board.isGameOver()) {
