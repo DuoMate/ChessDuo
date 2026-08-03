@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | Total Modules (roadmap) | 17 |
-| Completed | 8 |
+| Completed | 9 |
 | In Progress | 0 |
-| Remaining | 9 |
-| Overall Progress | 47% |
+| Remaining | 8 |
+| Overall Progress | 53% |
 | Current Architecture Score | 42/100 |
 | Current Regression Risk | HIGH (no test shield) |
 | Production Readiness | 38/100 |
@@ -34,7 +34,7 @@
 | 5 | M08 Room D7/V8 dedup | 58.0 | ✅ Completed | `architecture-refactor` | `3782ba9` | D7,V8 |
 | 6 | M17 Game.tsx critical-path tests | 73.8 | ✅ Completed | `architecture-refactor` | `42c5efd` | S-01,B-05,B-06 |
 | 7 | M15 R1 broadcast ordering fix | 68.0 | ✅ Completed | `architecture-refactor` | `bee09e2` | R1 |
-| 8 | M16/M18 Duel engine + shell tests | 64.8 | Not Started | `test/duel-engine-shell` | — | T-02 |
+| 8 | M16/M18 Duel engine + shell tests | 64.8 | ✅ Completed | `architecture-refactor` | `e941417` | T-02 |
 | 9 | M15 R2 reconnect merge fix | 59.0 | Not Started | `fix/onlinegame-reconnect-merge` | — | R2,R10 |
 | 10 | M07 Deep Link skeleton pages | 55.3 | Not Started | `fix/deeplink-skeleton-pages` | — | H10 |
 | 11 | M02 Profile BV6 adoption | 50.8 | Not Started | `refactor/profile-service-adoption` | — | — |
