@@ -1,5 +1,4 @@
 import { INSIGHTS_FREE_LIMIT } from '@/features/shared/gameConstants'
-import { supabase } from '@/lib/supabase'
 
 const STORAGE_KEY = 'chessduo_insights'
 
@@ -28,16 +27,7 @@ export async function getUserInsightsState(userId: string): Promise<{
   try {
     const { SubscriptionService } = await import('@/features/billing')
     isPremium = await SubscriptionService.isPremium()
-  } catch {
-    try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('is_premium')
-        .eq('id', userId)
-        .maybeSingle()
-      isPremium = data?.is_premium === true
-    } catch { /* db unavailable — default to false */ }
-  }
+  } catch { /* SubscriptionService unavailable — default to false */ }
 
   return {
     revealsUsed: local.revealsUsed,
