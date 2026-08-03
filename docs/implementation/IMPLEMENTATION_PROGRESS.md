@@ -86,12 +86,12 @@
 | Metric | Current | Target |
 |--------|:-------:|:------:|
 | Architecture Health Score | 42/100 → ~52 | 70/100 |
-| Documentation Coverage | 61% | 100% |
+| Documentation Coverage | 75% (was 61%) | 100% |
 | State Ownership (SSOT) | 40/100 | 80/100 |
 | Module Compliance (avg) | 61% | 80% |
 | Active Layer Violations | 2 (BV4, BV5) | 0 |
 | Test skip count | 87 (was 117) | 0 |
-| CONTEXT.md Staleness | ~8 files | 0 |
+| CONTEXT.md Staleness | ~3 files (was 11) | 0 |
 
 ---
 
