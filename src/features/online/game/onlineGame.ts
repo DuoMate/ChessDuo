@@ -839,8 +839,13 @@ export class OnlineGame {
       if (this._room) {
         const saved = await loadGameState(this._room.id)
         if (saved) {
-          this._status = saved.status as GameStatus
-          this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          // R2 fix: only restore from saved if DB state is fresher than current engine state
+          const savedMoves = (saved.moveHistory || []).length
+          const currentMoves = this._savedMoveHistory.length
+          if (savedMoves >= currentMoves || this._status === GameStatus.WAITING) {
+            this._status = saved.status as GameStatus
+            this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
+          }
           
           // Restore match timer from persisted timestamps
           if (saved.matchStartedAt && saved.matchTimeLimitSeconds) {
