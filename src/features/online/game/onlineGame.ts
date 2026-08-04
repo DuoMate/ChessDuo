@@ -73,6 +73,7 @@ export class OnlineGame {
   private readonly BROADCAST_MIN_INTERVAL_MS = 500
   private readonly LOCK_TIMEOUT_MS = 15_000
   private _turnSequence = 0
+  private _coordinatorId: string = ''
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
@@ -143,32 +144,11 @@ export class OnlineGame {
   }
 
   isCoordinator(): boolean {
-    try {
-      const white = this.gameState.getPlayers(Team.WHITE)
-      const black = this.gameState.getPlayers(Team.BLACK)
-      const allPlayers = [...white, ...black]
-      if (allPlayers.length === 0) return false
-      const sorted = [...allPlayers].sort()
-      const coordinatorId = sorted.find(p => !p.startsWith('bot_')) || sorted[0]
-      return this._playerId === coordinatorId
-    } catch (e) {
-      DEBUG && console.error('[OnlineGame] isCoordinator error:', e)
-      return false
-    }
+    return this._playerId === this._coordinatorId && this._coordinatorId !== ''
   }
 
   getCoordinatorId(): string {
-    try {
-      const white = this.gameState.getPlayers(Team.WHITE)
-      const black = this.gameState.getPlayers(Team.BLACK)
-      const allPlayers = [...white, ...black]
-      if (allPlayers.length === 0) return ''
-      const sorted = [...allPlayers].sort()
-      return sorted.find(p => !p.startsWith('bot_')) || sorted[0] || ''
-    } catch (e) {
-      DEBUG && console.error('[OnlineGame] getCoordinatorId error:', e)
-      return ''
-    }
+    return this._coordinatorId
   }
 
   getTeam(): 'WHITE' | 'BLACK' {
@@ -215,18 +195,6 @@ export class OnlineGame {
     if (this.gameState.getPlayers(Team.WHITE).includes(playerId as any)) return 'WHITE'
     if (this.gameState.getPlayers(Team.BLACK).includes(playerId as any)) return 'BLACK'
     return null
-  }
-
-  isBlackCoordinator(): boolean {
-    try {
-      const players = this.gameState.getPlayers(Team.BLACK)
-      if (players.length === 0) return true
-      const sorted = [...players].sort()
-      return this._playerId === sorted[0]
-    } catch (e) {
-      DEBUG && console.error('[OnlineGame] isBlackCoordinator error:', e)
-      return false
-    }
   }
 
   private getMoveParts(move: string, fen: string): { from: string; to: string } | null {
@@ -747,15 +715,21 @@ export class OnlineGame {
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
+      
+      // Compute coordinator: alphabetically-first non-bot player
+      // Stored once at game creation, never recomputed
+      const allPlayerIds = [...this.gameState.getPlayers(Team.WHITE), ...this.gameState.getPlayers(Team.BLACK)]
+      this._coordinatorId = [...allPlayerIds].sort().find(p => !p.startsWith('bot_')) || ''
+      
       this.startPendingTurn()
       this.notifyStateChange()
       DEBUG && console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
-      DEBUG && console.log('[COORDINATOR] Role at game start:', { myId: this._playerId, isCoordinator: this.isCoordinator(), coordinatorId: this.getCoordinatorId() })
+      DEBUG && console.log('[COORDINATOR] Assigned:', { coordinatorId: this._coordinatorId, myId: this._playerId, amCoordinator: this.isCoordinator() })
       
       // Persist initial game state with timer
       if (this._room) {
         const startedAt = new Date().toISOString()
-        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds)
+        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
         // Broadcast game_started so non-coordinator clients sync without polling
         this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
       }
@@ -839,6 +813,11 @@ export class OnlineGame {
       if (this._room) {
         const saved = await loadGameState(this._room.id)
         if (saved) {
+          // Restore coordinator_id from DB (assigned at game creation, never recomputed)
+          if (saved.coordinatorId) {
+            this._coordinatorId = saved.coordinatorId
+            DEBUG && console.log('[ONLINE] Restored coordinator_id:', this._coordinatorId)
+          }
           // R2 fix: only restore from saved if DB state is fresher than current engine state
           const savedMoves = (saved.moveHistory || []).length
           const currentMoves = this._savedMoveHistory.length
@@ -1288,7 +1267,7 @@ export class OnlineGame {
         fen_before: fenBefore,
         fen_after: this.gameState.fen,
         timestamp: new Date().toISOString()
-      }, this._status)
+      }, this._status, undefined, undefined, undefined, this._coordinatorId)
     }
 
     // Broadcast turn_resolved to all non-coordinator clients
@@ -1327,18 +1306,12 @@ export class OnlineGame {
   }
 
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
-    const currentTeam = this.gameState.currentTeam
-    
-    if (currentTeam === Team.WHITE && !this.isCoordinator()) {
+    if (!this.isCoordinator()) {
       DEBUG && console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
       throw new Error('NOT_COORDINATOR')
     }
-    
-    // In 4-player mode, BLACK turn also needs a coordinator (first BLACK player)
-    if (currentTeam === Team.BLACK && this.isFourPlayer() && !this.isBlackCoordinator()) {
-      DEBUG && console.log('[ONLINE] Not BLACK coordinator — waiting for BLACK coordinator broadcast')
-      throw new Error('NOT_COORDINATOR')
-    }
+
+    const currentTeam = this.gameState.currentTeam
     
     this.turnState = 'resolving'
     DEBUG && console.log('[STATE] Resolving, set turnState to resolving')

@@ -117,8 +117,8 @@
 
 | # | Phase | Status | Description |
 |:-:|-------|:------:|-------------|
-| P1 | Database Foundation | ✅ In Progress | Schema: `games` columns + `turn_submissions` table |
-| P2 | Coordinator Determinism | ⬜ Pending | Store coordinator_id on game creation; single resolver |
+| P1 | Database Foundation | ✅ Complete | Schema: `games` columns + `turn_submissions` table |
+| P2 | Coordinator Determinism | ✅ Complete | Stored coordinator_id; single resolver for all teams |
 | P3 | Server-Authoritative Submissions | ⬜ Pending | Write moves to `turn_submissions` table instead of broadcasts |
 | P4 | Single Resolver | ⬜ Pending | Only coordinator runs Stockfish, writes resolved state |
 | P5 | Reconnect Hardening | ⬜ Pending | `syncGameState` loads from DB without clobbering |
@@ -137,3 +137,17 @@
 - Zero behavioral changes — all new fields are optional, no production code reads them yet
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (8 pre-existing failures unchanged) ✅
+
+### Phase 2 Complete — Coordinator Determinism (2026-08-04)
+
+**`_coordinatorId` is computed once at game creation** (alphabetically-first non-bot player) and stored in the instance. It is persisted to DB in both `startGameWhenReady` and `_finishResolution`, and restored on reconnect via `syncGameState`.
+
+**`isCoordinator()` now compares `this._playerId === this._coordinatorId`** instead of recomputing from player lists on every call.
+
+**`resolvePendingMoves()` now rejects non-coordinator for ALL teams** — the old path only guarded WHITE turns, leaving BLACK turns in Duo mode with an ambiguous resolver. The removed `isBlackCoordinator()` method and the `isFourPlayer()` conditional are eliminated.
+
+**Code changes:**
+- `onlineGame.ts`: `_coordinatorId` field, simplified `isCoordinator()`/`getCoordinatorId()`, removed `isBlackCoordinator()`, unified `resolvePendingMoves()` guard
+- `onlineGame.test.ts`: 4 timer tests updated to set `_coordinatorId`
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing ✅

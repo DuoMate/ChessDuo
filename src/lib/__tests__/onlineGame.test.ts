@@ -775,6 +775,7 @@ describe('OnlineGame', () => {
 
       // Setup coordinator and timer at 0
       ;(game as any)._playerId = 'player1'
+      ;(game as any)._coordinatorId = 'player1'
       ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
@@ -795,6 +796,7 @@ describe('OnlineGame', () => {
       const game = new OnlineGame(600)
 
       ;(game as any)._playerId = 'player1'
+      ;(game as any)._coordinatorId = 'player1'
       ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
@@ -816,6 +818,7 @@ describe('OnlineGame', () => {
       const game = new OnlineGame(600)
 
       ;(game as any)._playerId = 'player1'
+      ;(game as any)._coordinatorId = 'player1'
       ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
@@ -837,6 +840,7 @@ describe('OnlineGame', () => {
       const game = new OnlineGame(600)
 
       ;(game as any)._playerId = 'player1'
+      ;(game as any)._coordinatorId = 'player1'
       ;(game as any).gameState.addPlayer('player1' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player2' as any, Team.WHITE)
       ;(game as any).gameState.addPlayer('player3' as any, Team.BLACK)
