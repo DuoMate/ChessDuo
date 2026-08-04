@@ -122,7 +122,7 @@
 | P3 | Server-Authoritative Submissions | ✅ Complete | Moves written to turn_submissions table; DB-backed realtime |
 | P4 | Single Resolver | ✅ Complete | Coordinator-only resolve; non-coordinator waits for broadcast |
 | P5 | Reconnect Hardening | ✅ Complete | Turn comparison; FEN verify; restore submissions from DB |
-| P6 | Timer Ownership | ⬜ Pending | Coordinator is sole timer owner; sync every 5s |
+| P6 | Timer Ownership | ✅ Complete | Coordinator-only countdown; timer_sync authoritative |
 
 ### Phase 1 Complete — Database Foundation (2026-08-04)
 
@@ -194,5 +194,14 @@
 **Code changes:**
 - `onlineGame.ts`: Rewrote `syncGameState` saved-state restoration with turn comparison, FEN verify, `restoreCurrentTurnSubmissions()` helper
 - `onlineGame.test.ts`: Updated R2 bug test — now expects `GAME_OVER` preserved (bug fixed)
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅
+
+### Phase 6 Complete — Timer Ownership (2026-08-04)
+
+**`startMatchTimer()` countdown now runs only on coordinator.** Non-coordinators receive time via `timer_sync` broadcasts (every 5s) and smooth-count locally via `tickMatchTimer` in Game.tsx. `handleTimerSync` corrects any drift between syncs.
+
+**Code changes:**
+- `onlineGame.ts`: `startMatchTimer()` interval body gated by `if (!this.isCoordinator()) return`
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅

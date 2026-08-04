@@ -1000,8 +1000,13 @@ export class OnlineGame {
       clearInterval(this._timerCountdownInterval)
     }
     this._timerCountdownInterval = setInterval(() => {
+      // Only coordinator runs the authoritative countdown.
+      // Non-coordinators receive time via timer_sync broadcasts
+      // (corrected every 5s) and smooth-count via tickMatchTimer.
+      if (!this.isCoordinator()) return
+
       const remaining = this.gameState.getMatchTimeRemaining()
-      if (this.isCoordinator() && remaining <= 0) {
+      if (remaining <= 0) {
         const captured = this.gameState.capturedPieces
         const whiteCaptured = captured.white.length
         const blackCaptured = captured.black.length
