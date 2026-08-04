@@ -71,6 +71,20 @@ ALTER TABLE profiles DROP COLUMN IF EXISTS rzp_payment_id;
 ALTER TABLE games ADD COLUMN IF NOT EXISTS match_started_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE games ADD COLUMN IF NOT EXISTS match_time_limit_seconds INTEGER;
 
+-- ============================================
+-- Phase 1: Game Engine Synchronization Protocol — Schema Foundation
+-- New columns for turn tracking, coordinator assignment, and move resolution
+-- ============================================
+ALTER TABLE games ADD COLUMN IF NOT EXISTS turn_number INTEGER DEFAULT 0;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS coordinator_id TEXT;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS turn_phase TEXT DEFAULT 'SUBMITTING';
+ALTER TABLE games ADD COLUMN IF NOT EXISTS last_resolved_move TEXT;
+
+-- Backfill turn_number from existing move_history JSONB array length
+UPDATE games
+  SET turn_number = jsonb_array_length(COALESCE(move_history, '[]'::jsonb))
+  WHERE turn_number = 0 AND move_history IS NOT NULL;
+
                                               -- Create completed_games table for match history/stats
                                               CREATE TABLE IF NOT EXISTS completed_games (
                                                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -687,6 +701,47 @@ CREATE POLICY "Users can manage their own tokens"
 -- Index for faster message queries
 CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver
   ON messages(sender_id, receiver_id, created_at DESC);
+
+-- ============================================
+-- Phase 1: turn_submissions table — server-authoritative move record
+-- One row per player per turn. Composite PK enforces at most one
+-- submission per player per turn at the database level.
+-- ============================================
+CREATE TABLE IF NOT EXISTS turn_submissions (
+  game_id UUID NOT NULL,
+  turn_number INTEGER NOT NULL,
+  player_id TEXT NOT NULL,
+  move_san TEXT NOT NULL,
+  move_from TEXT NOT NULL,
+  move_to TEXT NOT NULL,
+  piece TEXT NOT NULL,
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (game_id, turn_number, player_id),
+  FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+);
+
+ALTER TABLE turn_submissions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Room members can access turn submissions" ON public.turn_submissions;
+CREATE POLICY "Room members can access turn submissions" ON public.turn_submissions
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM games g
+      WHERE g.id = turn_submissions.game_id
+      AND is_room_member(g.room_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "Allow all" ON public.turn_submissions;
+CREATE POLICY "Allow all" ON public.turn_submissions
+  FOR ALL USING (true) WITH CHECK (true);
+
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.turn_submissions TO anon, authenticated;
+
+-- Index for querying submissions by game + turn (used to check if both teammates submitted)
+CREATE INDEX IF NOT EXISTS idx_turn_submissions_game ON public.turn_submissions(game_id, turn_number);
+
+-- ============================================
 
 -- TTL cleanup: remove stale game data older than 24 hours
 -- Run manually or via Supabase cron when needed:

@@ -15,9 +15,12 @@ interface GameSaveData {
   status: string
   match_started_at?: string
   match_time_limit_seconds?: number
+  turn_number?: number
+  coordinator_id?: string
+  last_resolved_move?: string
 }
 
-export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number): Promise<void> {
+export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number, turnNumber?: number, coordinatorId?: string, lastResolvedMove?: string): Promise<void> {
   try {
     const { data: existing } = await supabase
       .from('games')
@@ -45,6 +48,15 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
     if (matchTimeLimit !== undefined) {
       upsertData.match_time_limit_seconds = matchTimeLimit
     }
+    if (turnNumber !== undefined) {
+      upsertData.turn_number = turnNumber
+    }
+    if (coordinatorId !== undefined) {
+      upsertData.coordinator_id = coordinatorId
+    }
+    if (lastResolvedMove !== undefined) {
+      upsertData.last_resolved_move = lastResolvedMove
+    }
 
     await supabase
       .from('games')
@@ -63,11 +75,15 @@ export async function loadGameState(roomId: string): Promise<{
   status: string
   matchStartedAt?: string
   matchTimeLimitSeconds?: number
+  turnNumber?: number
+  coordinatorId?: string | null
+  turnPhase?: string
+  lastResolvedMove?: string | null
 } | null> {
   try {
     const { data, error } = await supabase
       .from('games')
-      .select('fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds')
+      .select('fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds, turn_number, coordinator_id, turn_phase, last_resolved_move')
       .eq('room_id', roomId)
       .maybeSingle()
 
@@ -83,7 +99,11 @@ export async function loadGameState(roomId: string): Promise<{
       moveHistory: data.move_history || [],
       status: data.status,
       matchStartedAt: data.match_started_at,
-      matchTimeLimitSeconds: data.match_time_limit_seconds
+      matchTimeLimitSeconds: data.match_time_limit_seconds,
+      turnNumber: data.turn_number ?? 0,
+      coordinatorId: data.coordinator_id ?? null,
+      turnPhase: data.turn_phase ?? 'SUBMITTING',
+      lastResolvedMove: data.last_resolved_move ?? null,
     }
   } catch (e) {
     console.warn('[PERSIST] Failed to load game state:', e)

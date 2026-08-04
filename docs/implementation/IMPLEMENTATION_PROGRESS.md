@@ -1,7 +1,7 @@
 # ChessDuo Implementation Progress
 
 > **Single source of truth.** Updated after every module completion.
-> **Last updated:** 2026-08-03
+> **Last updated:** 2026-08-04
 > **Active branch:** `architecture-refactor`
 > **Last commit:** `d2b5830`
 
@@ -108,3 +108,32 @@
 | 4-Mode Smoke Matrix | ⬜ Not run |
 | Play Store Ready | ⬜ |
 | Production Ready | ⬜ |
+
+---
+
+## Game Engine Stabilization (Multiplayer Sync Protocol)
+
+> **[Protocol Design](./GAME_ENGINE_SYNCHRONIZATION_PROTOCOL.md)** — redesigning the multiplayer engine as a distributed system with explicit invariants.
+
+| # | Phase | Status | Description |
+|:-:|-------|:------:|-------------|
+| P1 | Database Foundation | ✅ In Progress | Schema: `games` columns + `turn_submissions` table |
+| P2 | Coordinator Determinism | ⬜ Pending | Store coordinator_id on game creation; single resolver |
+| P3 | Server-Authoritative Submissions | ⬜ Pending | Write moves to `turn_submissions` table instead of broadcasts |
+| P4 | Single Resolver | ⬜ Pending | Only coordinator runs Stockfish, writes resolved state |
+| P5 | Reconnect Hardening | ⬜ Pending | `syncGameState` loads from DB without clobbering |
+| P6 | Timer Ownership | ⬜ Pending | Coordinator is sole timer owner; sync every 5s |
+
+### Phase 1 Complete — Database Foundation (2026-08-04)
+
+**Schema additions:**
+- `games`: added `turn_number INTEGER DEFAULT 0`, `coordinator_id TEXT`, `turn_phase TEXT DEFAULT 'SUBMITTING'`, `last_resolved_move TEXT`
+- `turn_submissions`: new table with composite PK `(game_id, turn_number, player_id)` enforcing one submission per player per turn
+- Backfill: `turn_number` derived from `jsonb_array_length(move_history)` for existing games
+- RLS policies + table grants for `turn_submissions`
+
+**Code changes:**
+- `gamePersistence.ts`: `saveGameState` accepts optional `turnNumber`, `coordinatorId`, `lastResolvedMove`; `loadGameState` returns new fields
+- Zero behavioral changes — all new fields are optional, no production code reads them yet
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (8 pre-existing failures unchanged) ✅
