@@ -1232,23 +1232,21 @@ describe('OnlineGame', () => {
       expect(game.currentTurn).toBe(Team.BLACK)
     })
 
-    it('syncGameState currently overwrites GAME_OVER status (R2 bug — to be fixed in Position 9)', async () => {
-      // R2 BUG: syncGameState does not guard against overwriting terminal GAME_OVER state.
-      // When a reconnect happens after game-over, the saved game state (PLAYING) 
-      // overwrites the already-resolved GAME_OVER status.
-      // This test captures the current behaviour. The fix (Position 9) should make
-      // this test expect GAME_OVER instead of PLAYING.
+    it('syncGameState preserves GAME_OVER status on reconnect', async () => {
+      // R2 FIX: syncGameState no longer overwrites terminal GAME_OVER state.
+      // When a reconnect happens after game-over, the saved game state (PLAYING)
+      // is rejected because local _currentTurnNumber >= DB current turn.
       ;(game as any)._status = GameStatus.GAME_OVER
       ;(game as any)._gameOverResult = 'White wins'
       ;(game as any)._gameOverReason = 'checkmate'
-      mockLoadGameState.mockResolvedValue({ status: 'PLAYING', currentTurn: 'WHITE' })
+      // Set local turn ahead so needsReplay is false
+      ;(game as any)._currentTurnNumber = 99
+      mockLoadGameState.mockResolvedValue({ status: 'PLAYING', currentTurn: 'WHITE', turnNumber: 5 })
       mockPlayers.push({ player_id: 'p1', team: 'WHITE' })
 
       await (game as any).syncGameState()
 
-      // Current behaviour: status overwritten to PLAYING (R2 bug)
-      // Desired behaviour: status stays GAME_OVER
-      expect((game as any)._status).toBe(GameStatus.PLAYING)
+      expect((game as any)._status).toBe(GameStatus.GAME_OVER)
     })
   })
 

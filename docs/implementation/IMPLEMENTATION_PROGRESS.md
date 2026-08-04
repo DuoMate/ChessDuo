@@ -121,7 +121,7 @@
 | P2 | Coordinator Determinism | ✅ Complete | Stored coordinator_id; single resolver for all teams |
 | P3 | Server-Authoritative Submissions | ✅ Complete | Moves written to turn_submissions table; DB-backed realtime |
 | P4 | Single Resolver | ✅ Complete | Coordinator-only resolve; non-coordinator waits for broadcast |
-| P5 | Reconnect Hardening | ⬜ Pending | `syncGameState` loads from DB without clobbering |
+| P5 | Reconnect Hardening | ✅ Complete | Turn comparison; FEN verify; restore submissions from DB |
 | P6 | Timer Ownership | ⬜ Pending | Coordinator is sole timer owner; sync every 5s |
 
 ### Phase 1 Complete — Database Foundation (2026-08-04)
@@ -178,5 +178,21 @@
 **Code changes:**
 - `Game.tsx` (executeMove): Replaced `try { resolvePendingMoves() } catch (NOT_COORDINATOR) { setTimeout fallback }` with clean `if (coordinator) { resolve } else { waitForTurnChange() }` branching
 - `onlineGame.ts`: `_turnChangeTimeout` field, 30s timeout in `waitForTurnChange()`, cleanup in `handleTurnResolved` + `resolvePendingWaiter`
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅
+
+### Phase 5 Complete — Reconnect Hardening (2026-08-04)
+
+**`syncGameState` now compares `_currentTurnNumber` vs DB turn number** instead of move_history lengths. If local is behind (`needsReplay`), board is restored from authoritative DB FEN. If local is ahead or equal, local state is preserved (GAME_OVER is never overwritten).
+
+**FEN verification**: on reconnect where no replay is needed, local FEN is compared against DB FEN. Mismatches trigger reload from authoritative source.
+
+**Submission restoration**: after board restore, `restoreCurrentTurnSubmissions()` queries `turn_submissions` for the current turn and repopulates pending state from the DB — so the teammate's in-progress moves are visible after reconnect.
+
+**R2 bug resolved**: the old test documented that `syncGameState` overwrote `GAME_OVER` status. Now `needsReplay` is false when local turn >= DB turn, preserving terminal states.
+
+**Code changes:**
+- `onlineGame.ts`: Rewrote `syncGameState` saved-state restoration with turn comparison, FEN verify, `restoreCurrentTurnSubmissions()` helper
+- `onlineGame.test.ts`: Updated R2 bug test — now expects `GAME_OVER` preserved (bug fixed)
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅

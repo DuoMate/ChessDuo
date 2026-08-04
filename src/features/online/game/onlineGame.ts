@@ -840,21 +840,34 @@ export class OnlineGame {
             this._coordinatorId = saved.coordinatorId
             DEBUG && console.log('[ONLINE] Restored coordinator_id:', this._coordinatorId)
           }
-          // Restore game_id and current turn number for submission tracking
-          if (saved.gameId && !this._gameId) {
+          // Restore game_id and subscribe to submission changes
+          if (saved.gameId) {
             this._gameId = saved.gameId
-            this._currentTurnNumber = (saved.turnNumber ?? 0) + 1
-            this.subscribeToSubmissions()
-            DEBUG && console.log('[ONLINE] Restored game_id:', this._gameId, 'currentTurnNumber:', this._currentTurnNumber)
+            if (!this._submissionChannel) {
+              this.subscribeToSubmissions()
+            }
+            DEBUG && console.log('[ONLINE] Restored game_id:', this._gameId)
           }
-          // R2 fix: only restore from saved if DB state is fresher than current engine state
-          const savedMoves = (saved.moveHistory || []).length
-          const currentMoves = this._savedMoveHistory.length
-          if (savedMoves >= currentMoves || this._status === GameStatus.WAITING) {
+
+          // Compare turn numbers to decide whether we need to replay
+          const dbTurnNumber = saved.turnNumber ?? 0
+          const dbCurrentTurn = dbTurnNumber + 1
+          const needsReplay = this._currentTurnNumber < dbCurrentTurn || this._status === GameStatus.WAITING
+
+          DEBUG && console.log('[ONLINE] Sync turn compare:', {
+            localTurn: this._currentTurnNumber,
+            dbResolved: dbTurnNumber,
+            dbCurrent: dbCurrentTurn,
+            needsReplay,
+            status: this._status,
+          })
+
+          if (needsReplay) {
             this._status = saved.status as GameStatus
+            this._currentTurnNumber = dbCurrentTurn
             this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
           }
-          
+
           // Restore match timer from persisted timestamps
           if (saved.matchStartedAt && saved.matchTimeLimitSeconds) {
             const startedAt = new Date(saved.matchStartedAt).getTime()
@@ -866,48 +879,65 @@ export class OnlineGame {
               this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 15000)
             }
             this.startMatchTimer()
-            DEBUG && console.log('[ONLINE] Restored match timer:', { 
-              elapsed: Math.floor(elapsed), 
-              remaining: Math.floor(remaining), 
-              total: saved.matchTimeLimitSeconds 
+            DEBUG && console.log('[ONLINE] Restored match timer:', {
+              elapsed: Math.floor(elapsed),
+              remaining: Math.floor(remaining),
+              total: saved.matchTimeLimitSeconds
             })
           }
-          
-          if (saved.moveHistory.length > 0) {
-            DEBUG && console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
-            // Store move history for UI reference (move playback panel)
-            this._savedMoveHistory = saved.moveHistory.map((m: any) => ({
-              team: m.team,
-              move: m.move
-            }))
-            try {
-              this.gameState.resetBoard(saved.fen)
-            } catch (e) {
-              DEBUG && console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
-              this.gameState.startMatch()
-              for (const entry of saved.moveHistory) {
-                try {
-                  this.gameState.board.move(entry.move)
-                } catch (me) {
-                  DEBUG && console.warn('[ONLINE] Could not replay move:', entry.move, me)
+
+          // Restore board from authoritative DB FEN
+          if (needsReplay) {
+            if (saved.moveHistory.length > 0) {
+              DEBUG && console.log('[ONLINE] Replaying saved game state:', { moves: saved.moveHistory.length, fen: saved.fen.substring(0, 30) })
+              this._savedMoveHistory = saved.moveHistory.map((m: any) => ({
+                team: m.team,
+                move: m.move
+              }))
+              try {
+                this.gameState.resetBoard(saved.fen)
+              } catch (e) {
+                DEBUG && console.warn('[ONLINE] Could not restore board from saved FEN, replaying moves')
+                this.gameState.startMatch()
+                for (const entry of saved.moveHistory) {
+                  try {
+                    this.gameState.board.move(entry.move)
+                  } catch (me) {
+                    DEBUG && console.warn('[ONLINE] Could not replay move:', entry.move, me)
+                  }
                 }
               }
-            }
-            // Restore last move from board history
-            try {
-              const verboseHistory = this.gameState.board.history({ verbose: true }) as any[]
-              if (verboseHistory.length > 0) {
-                const lastHistoryMove = verboseHistory[verboseHistory.length - 1]
-                this._lastMove = { from: lastHistoryMove.from, to: lastHistoryMove.to }
+              // Restore last move from board history
+              try {
+                const verboseHistory = this.gameState.board.history({ verbose: true }) as any[]
+                if (verboseHistory.length > 0) {
+                  const lastHistoryMove = verboseHistory[verboseHistory.length - 1]
+                  this._lastMove = { from: lastHistoryMove.from, to: lastHistoryMove.to }
+                }
+              } catch (e) {
+                DEBUG && console.error('[OnlineGame] Failed to restore lastMove:', e)
+                this._lastMove = null
               }
-            } catch (e) {
-              DEBUG && console.error('[OnlineGame] Failed to restore lastMove:', e)
-              this._lastMove = null
+            } else {
+              this.gameState.startMatch()
             }
           } else {
-            this.gameState.startMatch()
+            // Not behind: verify local FEN matches authoritative DB FEN
+            if (this.gameState.fen !== saved.fen) {
+              DEBUG && console.warn('[ONLINE] FEN mismatch — loading authoritative FEN from DB')
+              try {
+                this.gameState.resetBoard(saved.fen)
+              } catch {
+                // Keep local board if reload fails (board may have valid local state)
+              }
+            }
           }
+
+          // Start pending turn for current state, then restore submissions from DB
           this.startPendingTurn()
+          if (this._gameId && this._status !== GameStatus.GAME_OVER) {
+            await this.restoreCurrentTurnSubmissions()
+          }
           this.notifyStateChange()
         } else {
           DEBUG && console.warn('[ONLINE] syncGameState: no saved game found, keeping current state')
@@ -917,6 +947,33 @@ export class OnlineGame {
       }
     } catch (e) {
       DEBUG && console.error('[ONLINE] Failed to sync game state:', e)
+    }
+  }
+
+  /**
+   * Queries turn_submissions for the current turn to restore the submission
+   * state after a reconnect. The gameState.startPendingTurn() call clears
+   * pending moves — we repopulate them from the authoritative DB source.
+   */
+  private async restoreCurrentTurnSubmissions(): Promise<void> {
+    try {
+      const { data } = await supabase
+        .from('turn_submissions')
+        .select('*')
+        .eq('game_id', this._gameId)
+        .eq('turn_number', this._currentTurnNumber)
+
+      if (data && data.length > 0) {
+        for (const sub of data) {
+          this.handleSubmissionFromDB(sub as {
+            game_id: string; turn_number: number; player_id: string
+            move_san: string; move_from: string; move_to: string; piece: string
+          })
+        }
+        DEBUG && console.log('[ONLINE] Restored', data.length, 'submissions for turn', this._currentTurnNumber)
+      }
+    } catch (e) {
+      DEBUG && console.warn('[ONLINE] Failed to restore turn submissions:', e)
     }
   }
 
