@@ -69,6 +69,7 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
 }
 
 export async function loadGameState(roomId: string): Promise<{
+  gameId?: string
   fen: string
   currentTurn: string
   moveHistory: GameSaveData['move_history']
@@ -83,7 +84,7 @@ export async function loadGameState(roomId: string): Promise<{
   try {
     const { data, error } = await supabase
       .from('games')
-      .select('fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds, turn_number, coordinator_id, turn_phase, last_resolved_move')
+      .select('id, fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds, turn_number, coordinator_id, turn_phase, last_resolved_move')
       .eq('room_id', roomId)
       .maybeSingle()
 
@@ -94,6 +95,7 @@ export async function loadGameState(roomId: string): Promise<{
 
     DEBUG && console.log('[PERSIST] Loaded game state:', { roomId, fen: data.fen.substring(0, 30), turn: data.current_turn, moves: data.move_history?.length })
     return {
+      gameId: data.id,
       fen: data.fen,
       currentTurn: data.current_turn,
       moveHistory: data.move_history || [],

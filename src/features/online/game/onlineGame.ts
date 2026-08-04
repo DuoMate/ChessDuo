@@ -74,6 +74,9 @@ export class OnlineGame {
   private readonly LOCK_TIMEOUT_MS = 15_000
   private _turnSequence = 0
   private _coordinatorId: string = ''
+  private _gameId: string = ''
+  private _currentTurnNumber: number = 1
+  private _submissionChannel: RealtimeChannel | null = null
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
@@ -732,6 +735,15 @@ export class OnlineGame {
         saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
         // Broadcast game_started so non-coordinator clients sync without polling
         this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
+
+        // Query the game UUID for turn_submissions FK and subscribe to submission changes
+        const saved = await loadGameState(this._room.id)
+        if (saved?.gameId) {
+          this._gameId = saved.gameId
+          this._currentTurnNumber = 1
+          this.subscribeToSubmissions()
+          DEBUG && console.log('[ONLINE] Game ID stored:', this._gameId)
+        }
       }
       
       this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
@@ -817,6 +829,13 @@ export class OnlineGame {
           if (saved.coordinatorId) {
             this._coordinatorId = saved.coordinatorId
             DEBUG && console.log('[ONLINE] Restored coordinator_id:', this._coordinatorId)
+          }
+          // Restore game_id and current turn number for submission tracking
+          if (saved.gameId && !this._gameId) {
+            this._gameId = saved.gameId
+            this._currentTurnNumber = (saved.turnNumber ?? 0) + 1
+            this.subscribeToSubmissions()
+            DEBUG && console.log('[ONLINE] Restored game_id:', this._gameId, 'currentTurnNumber:', this._currentTurnNumber)
           }
           // R2 fix: only restore from saved if DB state is fresher than current engine state
           const savedMoves = (saved.moveHistory || []).length
@@ -1108,25 +1127,154 @@ export class OnlineGame {
   }
 
   async broadcastMove(move: string, from: string, to: string): Promise<void> {
-    if (!this._channel) return
-    if (!this.canBroadcast('player_move')) return
-
-    await this._channel.send({
-      type: 'broadcast',
-      event: 'player_move',
-      payload: { playerId: this._playerId, move, from, to }
-    })
+    // Replaced by submitMoveToDB — kept for backward compatibility
+    await this.submitMoveToDB(move, from, to, 'unknown')
   }
 
   async broadcastLocked(): Promise<void> {
-    if (!this._channel) return
-    if (!this.canBroadcast('player_locked')) return
+    // Submission to turn_submissions implies lock — no-op
+  }
 
-    await this._channel.send({
-      type: 'broadcast',
-      event: 'player_locked',
-      payload: { playerId: this._playerId }
-    })
+  /**
+   * Writes the player's move to the turn_submissions table.
+   * The composite PK (game_id, turn_number, player_id) enforces
+   * exactly one submission per player per turn.
+   */
+  async submitMoveToDB(move: string, from: string, to: string, piece: string): Promise<void> {
+    if (!this._gameId) {
+      DEBUG && console.warn('[SUBMIT] No gameId — falling back to broadcast')
+      if (this._channel) {
+        await this._channel.send({
+          type: 'broadcast',
+          event: 'player_move',
+          payload: { playerId: this._playerId, move, from, to }
+        })
+      }
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('turn_submissions')
+        .upsert({
+          game_id: this._gameId,
+          turn_number: this._currentTurnNumber,
+          player_id: this._playerId,
+          move_san: move,
+          move_from: from,
+          move_to: to,
+          piece,
+        }, { onConflict: 'game_id,turn_number,player_id' })
+
+      if (error) {
+        DEBUG && console.warn('[SUBMIT] DB insert failed:', error.message)
+        return
+      }
+
+      // Also update local state immediately (so the UI reflects the move before
+      // the postgres_changes listener fires on this client)
+      this.gameState.setPendingMove(this._playerId as Player, move, from, to, piece)
+      this.gameState.lockPendingMove(this._playerId as Player)
+
+      if (this.turnState === 'selecting') {
+        this.turnState = 'waiting_for_teammate'
+      }
+
+      this.notifyStateChange()
+      DEBUG && console.log('[SUBMIT] Move written to DB:', { turn: this._currentTurnNumber, player: this._playerId, move })
+    } catch (e) {
+      DEBUG && console.error('[SUBMIT] DB write failed:', e)
+    }
+  }
+
+  /**
+   * Subscribes to postgres_changes on turn_submissions for this game.
+   * When the teammate's submission arrives, it updates local pending state
+   * and transitions to LOCKED if both players have submitted.
+   */
+  private subscribeToSubmissions(): void {
+    if (!this._gameId) return
+
+    this._submissionChannel = supabase.channel(`submissions:${this._gameId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'turn_submissions',
+        filter: `game_id=eq.${this._gameId}`,
+      }, (payload) => {
+        this.handleSubmissionFromDB(payload.new as {
+          game_id: string
+          turn_number: number
+          player_id: string
+          move_san: string
+          move_from: string
+          move_to: string
+          piece: string
+        })
+      })
+      .subscribe((status: string) => {
+        DEBUG && console.log('[SUBMIT] Submission channel status:', status)
+      })
+  }
+
+  private handleSubmissionFromDB(submission: {
+    game_id: string
+    turn_number: number
+    player_id: string
+    move_san: string
+    move_from: string
+    move_to: string
+    piece: string
+  }): void {
+    // Ignore own submissions (already processed locally in submitMoveToDB)
+    if (submission.player_id === this._playerId) return
+
+    // Ignore submissions for past/future turns
+    if (submission.turn_number !== this._currentTurnNumber) {
+      DEBUG && console.log('[SUBMIT] Ignoring submission for turn', submission.turn_number, '(current:', this._currentTurnNumber, ')')
+      return
+    }
+
+    // Only react if the player is on our team
+    if (this.getPlayerTeam(submission.player_id) !== this._team) return
+
+    // Dedup: don't process if already locked
+    if (this.gameState.isPendingMoveLocked(submission.player_id as Player)) return
+
+    DEBUG && console.log('[SUBMIT] Received teammate submission from DB:', submission)
+    this._lastActivityAt = Date.now()
+
+    this.gameState.setPendingMove(
+      submission.player_id as Player,
+      submission.move_san,
+      submission.move_from,
+      submission.move_to,
+      submission.piece,
+    )
+
+    // If we're still in selecting (human hasn't moved yet), transition to waiting_for_teammate
+    if (this.turnState === 'selecting') {
+      DEBUG && console.log('[STATE] Teammate moved first, transitioning to waiting_for_teammate')
+      this.turnState = 'waiting_for_teammate'
+    }
+
+    // Lock the teammate's move (submission to DB implies lock)
+    this.gameState.lockPendingMove(submission.player_id as Player)
+
+    // Resolve the waitForTeammateLock Promise
+    if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
+      DEBUG && console.log('[STATE] Teammate submission received, transitioning to resolving state')
+      if (this._teammateLockTimeout) {
+        clearTimeout(this._teammateLockTimeout)
+        this._teammateLockTimeout = null
+      }
+      this.turnState = 'resolving'
+      this.notifyStateChange()
+      this.resolveTeammateLocked()
+      this.resolveTeammateLocked = null
+    }
+
+    this.notifyStateChange()
   }
 
   start(): void {
@@ -1259,6 +1407,9 @@ export class OnlineGame {
 
   private async _finishResolution(currentTeam: Team, winningMove: string): Promise<void> {
     // Persist game state for recovery from refresh/OS kill
+    const resolvedTurnNumber = this._currentTurnNumber
+    this._currentTurnNumber++
+
     if (this._room) {
       const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
       await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
@@ -1267,7 +1418,7 @@ export class OnlineGame {
         fen_before: fenBefore,
         fen_after: this.gameState.fen,
         timestamp: new Date().toISOString()
-      }, this._status, undefined, undefined, undefined, this._coordinatorId)
+      }, this._status, undefined, undefined, resolvedTurnNumber, this._coordinatorId, winningMove)
     }
 
     // Broadcast turn_resolved to all non-coordinator clients
@@ -1549,6 +1700,10 @@ export class OnlineGame {
       this._timerSyncInterval = null
     }
     this.stopMatchTimer()
+    if (this._submissionChannel) {
+      await supabase.removeChannel(this._submissionChannel)
+      this._submissionChannel = null
+    }
     if (this._channel) {
       await supabase.removeChannel(this._channel)
       this._channel = null

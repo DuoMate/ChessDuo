@@ -1391,8 +1391,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         DEBUG && console.log(`[HUMAN] SAN: ${sanMove}, moveInfo:`, moveInfo)
 
         if (moveInfo) {
-          g.setPendingMove(playerId!, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-          g.broadcastMove(sanMove, moveInfo.from, moveInfo.to)
+          g.submitMoveToDB(sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
 
           setGameState(prev => ({
             ...prev,
@@ -1401,13 +1400,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }))
         }
 
-        g.lockPendingMove(playerId!)
-        g.broadcastLocked()
         playLockSound()
 
-        DEBUG && console.log(`[STATE] Setting turn state to waiting_for_teammate`)
-        g.setTurnState('waiting_for_teammate')
-        
         // Event-based waiting - no polling, no timeouts
         // Wait for teammate lock event (or if already locked, resolve immediately)
         DEBUG && console.log(`[STATE] Waiting for teammate to lock move...`)

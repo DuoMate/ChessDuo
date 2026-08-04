@@ -119,7 +119,7 @@
 |:-:|-------|:------:|-------------|
 | P1 | Database Foundation | ✅ Complete | Schema: `games` columns + `turn_submissions` table |
 | P2 | Coordinator Determinism | ✅ Complete | Stored coordinator_id; single resolver for all teams |
-| P3 | Server-Authoritative Submissions | ⬜ Pending | Write moves to `turn_submissions` table instead of broadcasts |
+| P3 | Server-Authoritative Submissions | ✅ Complete | Moves written to turn_submissions table; DB-backed realtime |
 | P4 | Single Resolver | ⬜ Pending | Only coordinator runs Stockfish, writes resolved state |
 | P5 | Reconnect Hardening | ⬜ Pending | `syncGameState` loads from DB without clobbering |
 | P6 | Timer Ownership | ⬜ Pending | Coordinator is sole timer owner; sync every 5s |
@@ -151,3 +151,20 @@
 - `onlineGame.test.ts`: 4 timer tests updated to set `_coordinatorId`
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing ✅
+
+### Phase 3 Complete — Server-Authoritative Submissions (2026-08-04)
+
+**Moves are now written to `turn_submissions` table** instead of broadcast-only. The composite PK `(game_id, turn_number, player_id)` enforces exactly one submission per player per turn at the database level.
+
+**Supabase Realtime `postgres_changes`** channel on `turn_submissions` notifies all connected clients when a teammate submits. Submissions for past/future turns and duplicate submissions are silently discarded.
+
+**`broadcastMove()`** now delegates to `submitMoveToDB()` (backward compat). **`broadcastLocked()`** is a no-op — submission to DB implies lock.
+
+**`_currentTurnNumber`** increments after each resolution in `_finishResolution` and is persisted to `games.turn_number`. `_gameId` is populated from DB and restored on reconnect.
+
+**Code changes:**
+- `onlineGame.ts`: `_gameId`, `_currentTurnNumber`, `_submissionChannel` fields; `submitMoveToDB()`, `subscribeToSubmissions()`, `handleSubmissionFromDB()` methods; `_finishResolution` persists turn number; `syncGameState` restores game ID + turn number; `leaveRoom` cleans up submission channel
+- `Game.tsx`: `executeMove` calls `submitMoveToDB` instead of `setPendingMove` + `broadcastMove` + `lockPendingMove` + `broadcastLocked` + `setTurnState`
+- `gamePersistence.ts`: `loadGameState` returns `gameId`
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅
