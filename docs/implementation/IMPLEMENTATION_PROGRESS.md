@@ -120,7 +120,7 @@
 | P1 | Database Foundation | ✅ Complete | Schema: `games` columns + `turn_submissions` table |
 | P2 | Coordinator Determinism | ✅ Complete | Stored coordinator_id; single resolver for all teams |
 | P3 | Server-Authoritative Submissions | ✅ Complete | Moves written to turn_submissions table; DB-backed realtime |
-| P4 | Single Resolver | ⬜ Pending | Only coordinator runs Stockfish, writes resolved state |
+| P4 | Single Resolver | ✅ Complete | Coordinator-only resolve; non-coordinator waits for broadcast |
 | P5 | Reconnect Hardening | ⬜ Pending | `syncGameState` loads from DB without clobbering |
 | P6 | Timer Ownership | ⬜ Pending | Coordinator is sole timer owner; sync every 5s |
 
@@ -166,5 +166,17 @@
 - `onlineGame.ts`: `_gameId`, `_currentTurnNumber`, `_submissionChannel` fields; `submitMoveToDB()`, `subscribeToSubmissions()`, `handleSubmissionFromDB()` methods; `_finishResolution` persists turn number; `syncGameState` restores game ID + turn number; `leaveRoom` cleans up submission channel
 - `Game.tsx`: `executeMove` calls `submitMoveToDB` instead of `setPendingMove` + `broadcastMove` + `lockPendingMove` + `broadcastLocked` + `setTurnState`
 - `gamePersistence.ts`: `loadGameState` returns `gameId`
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅
+
+### Phase 4 Complete — Single Resolver (2026-08-04)
+
+**Only the coordinator runs Stockfish evaluation** and broadcasts `turn_resolved`. Non-coordinators call `waitForTurnChange()` instead of `resolvePendingMoves()`, which resolves when the `turn_resolved` broadcast arrives via `handleTurnResolved`. The `NOT_COORDINATOR` catch block with the 30s setTimeout fallback is eliminated.
+
+**`waitForTurnChange()` now has a 30s timeout** (matching the existing 15s timeout on `waitForTeammateLock()`). Timeout cleanup is added to both `handleTurnResolved` and `resolvePendingWaiter()`.
+
+**Code changes:**
+- `Game.tsx` (executeMove): Replaced `try { resolvePendingMoves() } catch (NOT_COORDINATOR) { setTimeout fallback }` with clean `if (coordinator) { resolve } else { waitForTurnChange() }` branching
+- `onlineGame.ts`: `_turnChangeTimeout` field, 30s timeout in `waitForTurnChange()`, cleanup in `handleTurnResolved` + `resolvePendingWaiter`
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅

@@ -59,6 +59,7 @@ export class OnlineGame {
   private turnState: 'selecting' | 'waiting_for_teammate' | 'locked' | 'resolving' = 'selecting'
   private resolveTeammateLocked: (() => void) | null = null
   private resolveTurnChange: (() => void) | null = null
+  private _turnChangeTimeout: ReturnType<typeof setTimeout> | null = null
   private _teammateLockTimeout: ReturnType<typeof setTimeout> | null = null
   private stats = {
     movesPlayed: 0,
@@ -277,6 +278,15 @@ export class OnlineGame {
     DEBUG && console.log('[STATE] waitForTurnChange called')
     return new Promise((resolve) => {
       this.resolveTurnChange = resolve
+      // Timeout: if coordinator never broadcasts turn_resolved, auto-recover
+      this._turnChangeTimeout = setTimeout(() => {
+        if (this.resolveTurnChange) {
+          DEBUG && console.warn('[STATE] Turn change timeout — forcing recovery')
+          this.resolveTurnChange()
+          this.resolveTurnChange = null
+        }
+        this._turnChangeTimeout = null
+      }, 30000)
     })
   }
 
@@ -1099,6 +1109,10 @@ export class OnlineGame {
       this.resolveTurnChange()
       this.resolveTurnChange = null
     }
+    if (this._turnChangeTimeout) {
+      clearTimeout(this._turnChangeTimeout)
+      this._turnChangeTimeout = null
+    }
     // Clean up stale lock timeout — turn resolved before teammate locked (R1)
     if (this._teammateLockTimeout) {
       clearTimeout(this._teammateLockTimeout)
@@ -1740,6 +1754,10 @@ export class OnlineGame {
     if (this.resolveTurnChange) {
       this.resolveTurnChange()
       this.resolveTurnChange = null
+    }
+    if (this._turnChangeTimeout) {
+      clearTimeout(this._turnChangeTimeout)
+      this._turnChangeTimeout = null
     }
   }
 

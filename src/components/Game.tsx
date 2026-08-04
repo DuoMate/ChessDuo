@@ -1416,15 +1416,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           return
         }
 
-        if (g.isBothPendingLocked()) {
-          DEBUG && console.log(`[RESOLVE] Both locked, my role:`, { 
-            playerId, 
-            isCoordinator: g.isCoordinator(), 
-            coordinatorId: onlineGameRef.current?.getCoordinatorId()
-          })
-          DEBUG && console.log(`[RESOLVE] Attempting resolve...`)
-          
-          try {
+        if (g.isCoordinator()) {
+          // Coordinator: evaluate and broadcast turn_resolved
+          if (g.isBothPendingLocked()) {
+            DEBUG && console.log(`[RESOLVE] Coordinator resolving...`)
+            
             await g.resolvePendingMoves()
             updateStateRef.current()
             DEBUG && console.log(`[RESOLVE] Resolve succeeded`)
@@ -1466,10 +1462,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             
             // Bot turn handling: only coordinator runs bots (non-blocking — UI stays responsive)
             // In 4-player mode, skip bot handling — humans manage the turn
-            // Uses opponentTeam so it works when human is on either color
             const myTeam = (g as GameInterface).getTeam()
             const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
-            if (!isFourPlayer && newTurn === opponentTeam && bot && playerId && g.isCoordinator()) {
+            if (!isFourPlayer && newTurn === opponentTeam && bot && playerId) {
               DEBUG && console.log(`[RESOLVE] Coordinator handling ${opponentTeam} bot moves...`)
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
@@ -1521,29 +1516,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 
               })()
             }
-          } catch (e: any) {
-            if (e?.message === 'NOT_COORDINATOR') {
-              DEBUG && console.log(`[RESOLVE] Not coordinator — setting up recovery timeout`)
-              const turnAtCatch = g.currentTurn
-              const timeoutMs = 30000
-              setTimeout(() => {
-                const gNow = onlineGameRef.current
-                if (!gNow) return
-                if (gNow.currentTurn === turnAtCatch && gNow.getTurnState() !== 'selecting') {
-                  DEBUG && console.warn(`[RESOLVE] Coordinator timeout — forcing state refresh`)
-                  gNow.setTurnState('selecting')
-                  gNow.startPendingTurn?.()
-                  updateStateRef.current()
-                }
-              }, timeoutMs)
-            } else {
-              DEBUG && console.log(`[RESOLVE] Resolve failed:`, e)
-              toast.warning('Move evaluation failed. Please try again.')
-              updateStateRef.current()
-            }
           }
         } else {
-          DEBUG && console.log(`[RESOLVE] Timeout waiting for teammate, moves:`, g.getPendingMoves())
+          // Non-coordinator: wait for coordinator's turn_resolved broadcast
+          DEBUG && console.log(`[RESOLVE] Non-coordinator — waiting for turn_resolved broadcast`)
+          g.setTurnState('locked')
+          await g.waitForTurnChange()
+          playResolutionSound()
+          DEBUG && console.log(`[RESOLVE] Non-coordinator received turn_resolved`)
         }
 
       } catch (e) {
