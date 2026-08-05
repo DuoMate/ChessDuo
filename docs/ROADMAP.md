@@ -29,7 +29,7 @@ This project uses **Cloudflare Workers for the frontend** and **Render for the b
 
 | Service | URL | Build Config | Directory |
 |---------|-----|------------|-----------|
-| **Frontend** | https://chessduo.chessdoubles27.workers.dev | `wrangler.jsonc` | `/` (root) |
+| **Frontend** | https://chessduo.navron.org | `wrangler.jsonc` | `/` (root) |
 | **Backend** | https://chessduo-bllo.onrender.com | `Dockerfile` | `server/` |
 
 ### Frontend Deployment (Cloudflare Workers)
