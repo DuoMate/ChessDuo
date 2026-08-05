@@ -22,4 +22,5 @@ Full-page friends management — add friends, accept/reject requests, block user
 - `@/hooks/useCapacitorBackButton` — Android back
 
 ## Recent Changes
+- **2026-08-05**: Search results dropdown redesigned with `InitialsAvatar` + styled emerald "Invite" button (matching Accept pattern). Added loading state (spinner + disabled button per result) and `useToast` success/error feedback after sending invites.
 - **2026-07-18**: Created as full page route (was slide-over). Added loading skeleton. Sign-in button for unauthenticated state.
