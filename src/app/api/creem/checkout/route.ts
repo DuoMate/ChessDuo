@@ -8,7 +8,7 @@ const CREEM_TEST_MODE = CREEM_API_KEY.startsWith('creem_test_')
 const MONTHLY_PRODUCT_ID = process.env.CREEM_PRODUCT_ID_MONTHLY || ''
 const YEARLY_PRODUCT_ID = process.env.CREEM_PRODUCT_ID_YEARLY || ''
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chessduo.chessdoubles27.workers.dev'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chessduo.navron.org'
 
 function getCreemProductId(internalId: string): string {
   if (internalId === 'premium_monthly') return MONTHLY_PRODUCT_ID

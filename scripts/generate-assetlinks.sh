@@ -68,4 +68,4 @@ cat > "$DEST" <<- EOF
 EOF
 
 echo "[assetlinks] Written: $DEST"
-echo "[assetlinks] Verify at: https://chessduo.chessdoubles27.workers.dev/.well-known/assetlinks.json"
+echo "[assetlinks] Verify at: https://chessduo.navron.org/.well-known/assetlinks.json"

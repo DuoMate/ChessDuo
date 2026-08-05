@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chessduo.chessdoubles27.workers.dev'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://chessduo.navron.org'
 
 function buildRedirectHtml(sessionId: string | null): string {
   // Redirect to the HTTPS /premium App Link (verified via assetlinks.json) instead

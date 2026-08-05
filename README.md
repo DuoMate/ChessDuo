@@ -3,13 +3,13 @@
 A real-time 2v2 chess game where teammates make simultaneous moves and compete against an opposing team.
 
 ## Live Demo
-https://chessduo.chessdoubles27.workers.dev/
+https://chessduo.navron.org/
 
 ## Architecture
 
 | Service | URL | Description | Config |
 |---------|-----|-------------|--------|
-| **Frontend** | https://chessduo.chessdoubles27.workers.dev | Next.js FE (Cloudflare Workers) | `wrangler.jsonc` |
+| **Frontend** | https://chessduo.navron.org | Next.js FE (Cloudflare Workers) | `wrangler.jsonc` |
 
 ### Environment Variables
 

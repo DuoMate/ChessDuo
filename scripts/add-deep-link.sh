@@ -19,7 +19,7 @@ if grep -q "com.navron.chessduo" "$MANIFEST" 2>/dev/null && grep -q "android:aut
   exit 0
 fi
 
-SITE_URL="${NEXT_PUBLIC_SITE_URL:-chessduo.chessdoubles27.workers.dev}"
+SITE_URL="${NEXT_PUBLIC_SITE_URL:-chessduo.navron.org}"
 SITE_HOST=$(echo "$SITE_URL" | sed 's|https\?://||' | sed 's|/.*||')
 
 echo "[INFO] Adding deep link intent filters (OAuth + App Links + Custom Scheme) ..."

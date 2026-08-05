@@ -8,7 +8,7 @@
 
 **Repository size**: ~60+ source files, 30+ CONTEXT.md documentation files, 20+ components, 25+ lib services, 10 database tables.
 
-**Live URL**: `https://chessduo.chessdoubles27.workers.dev/`
+**Live URL**: `https://chessduo.navron.org/`
 
 ---
 

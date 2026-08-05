@@ -2,7 +2,7 @@
 
 ## Overview
 
-ChessDuo uses **Capacitor** as a thin WebView wrapper around the deployed web app at `https://chessduo.chessdoubles27.workers.dev`. No Next.js build changes needed — the Android app loads the live web URL.
+ChessDuo uses **Capacitor** as a thin WebView wrapper around the deployed web app at `https://chessduo.navron.org`. No Next.js build changes needed — the Android app loads the live web URL.
 
 ---
 
@@ -145,7 +145,7 @@ Push notifications use **Firebase Cloud Messaging (FCM)** via the `@capacitor/pu
 | `License not accepted` | See Manual Setup → Step 1 |
 | **Lost keystore password** | Cannot update app on Play Store. Generate new keystore, publish as new app |
 | `app-release-unsigned.apk` instead of signed | Run `npm run cap:build` (injects signing config) |
-| App crashes on launch | Check app is live: `curl https://chessduo.chessdoubles27.workers.dev` |
+| App crashes on launch | Check app is live: `curl https://chessduo.navron.org` |
 | Supabase auth loop in WebView | Ensure `androidScheme: 'https'` in capacitor.config.ts |
 
 ---
@@ -164,7 +164,7 @@ Push notifications use **Firebase Cloud Messaging (FCM)** via the `@capacitor/pu
 ## Deploy Flow
 
 ```
-1. Push web changes → Cloudflare Workers auto-deploys to chessduo.chessdoubles27.workers.dev
+1. Push web changes → Cloudflare Workers auto-deploys to chessduo.navron.org
 2. Run npm run cap:build → generates app-release.apk
 3. Sideload APK → test
 4. (For Play Store) Upload .aab to Google Play Console → internal testing track
