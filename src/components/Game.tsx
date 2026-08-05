@@ -333,6 +333,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const playerIdRef = useRef(playerId)
   playerIdRef.current = playerId
 
+  const inputLockedRef = useRef(false)
+
   useEffect(() => {
     if (!showInsights || !playerId) return
     if (insightsState.revealsRemaining !== null) return
@@ -1370,15 +1372,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
 
       // Block if player already submitted a move this turn
+      if (inputLockedRef.current) {
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
+        return
+      }
       const allPending = (g as GameInterface).getAllPendingMoves() as Map<string, any>
       if (allPending && allPending.has(playerId)) {
-        DEBUG && console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn`)
+        DEBUG && console.warn(`[HUMAN] BLOCKED - Already submitted a move this turn (pending map)`)
         return
       }
 
       // Clear accuracy panel when player starts new turn
       setAccuracyComparison(null)
       DEBUG && console.log(`[ACCURACY-CLEAR] Cleared accuracy for new ${myTeam} move`)
+
+      // Lock input immediately — prevents duplicate submissions within a single turn
+      inputLockedRef.current = true
 
       DEBUG && console.log(`[HUMAN] Turn confirmed as ${myTeam} - processing move...`)
 
@@ -1716,6 +1725,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       executeBotMove()
     }
   }, [isOnline, gameState.status, gameState.currentTurn, executeBotMove])
+
+  // Reset input lock when it's the player's turn to move again
+  useEffect(() => {
+    if (gameState.turnStatus === 'your_turn' && gameState.isMyTurn) {
+      inputLockedRef.current = false
+    }
+  }, [gameState.turnStatus, gameState.isMyTurn])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
