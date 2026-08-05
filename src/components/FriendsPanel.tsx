@@ -28,6 +28,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
+import { useToast } from './Toast'
 import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip } from 'lucide-react'
 
 interface FriendsPanelProps {
@@ -53,6 +54,8 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   const [pendingChallenges, setPendingChallenges] = useState<Map<string, { roomId: string; roomCode: string; time: number }>>(new Map())
   const [onlineFriends, setOnlineFriends] = useState<Set<string>>(new Set())
   const [currentUserName, setCurrentUserName] = useState('')
+  const [inviting, setInviting] = useState<Set<string>>(new Set())
+  const toast = useToast()
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -185,12 +188,17 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   }, [searchQuery, playerId])
 
   const handleAddFriend = async (receiverId: string) => {
+    setInviting((prev) => new Set(prev).add(receiverId))
     const { error } = await sendFriendRequest(playerId, receiverId)
+    setInviting((prev) => { const next = new Set(prev); next.delete(receiverId); return next })
     if (!error) {
       setSearchQuery('')
       setSearchResults([])
       loadData()
       notifyFriendRequest(playerId, receiverId, currentUserName || 'Someone')
+      toast.addToast('success', 'Friend request sent!')
+    } else {
+      toast.addToast('error', error)
     }
   }
 
@@ -289,19 +297,37 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
             <SlidersHorizontal size={16} />
           </button>
           {searching && (
-            <p className="text-slate-500 text-xs mt-1">Searching...</p>
+            <p className="text-slate-500 text-xs mt-1 flex items-center gap-1.5">
+              <Spinner size="sm" />
+              <span>Searching...</span>
+            </p>
           )}
           {searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-xl overflow-hidden z-20 shadow-lg">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-white/10 rounded-2xl z-20 shadow-lg p-1.5 space-y-1">
               {searchResults.map((user) => (
-                <button
+                <div
                   key={user.id}
-                  onClick={() => handleAddFriend(user.id)}
-                  className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors flex items-center justify-between min-h-[44px]"
+                  className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl hover:bg-slate-800/70 transition-colors"
                 >
-                  <span>{user.username}</span>
-                  <span className="text-blue-400 text-xs">+ Invite</span>
-                </button>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <InitialsAvatar username={user.username} size="md" />
+                    <span className="text-white text-sm font-medium truncate">{user.username}</span>
+                  </div>
+                  <button
+                    onClick={() => handleAddFriend(user.id)}
+                    disabled={inviting.has(user.id)}
+                    className="min-h-[44px] px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    {inviting.has(user.id) ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Sending</span>
+                      </>
+                    ) : (
+                      'Invite'
+                    )}
+                  </button>
+                </div>
               ))}
             </div>
           )}

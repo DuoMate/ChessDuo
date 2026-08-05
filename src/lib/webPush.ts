@@ -113,14 +113,15 @@ async function encryptPayload(
   payload: string,
   aesKey: Uint8Array,
   nonce: Uint8Array,
+  localPublicKey: Uint8Array,
 ): Promise<Uint8Array> {
   const encoder = new TextEncoder()
   const payloadBytes = encoder.encode(payload)
 
-  // Add padding (2-byte padding length + payload + padding)
+  // Add padding (2-byte padding delimiter + payload, 0 padding bytes)
   const padding = new Uint8Array(2 + payloadBytes.length)
-  padding[0] = 0 // padding length low byte
-  padding[1] = 0 // padding length high byte
+  padding[0] = 0
+  padding[1] = 0
   padding.set(payloadBytes, 2)
 
   const keyObject = await crypto.subtle.importKey(
@@ -137,23 +138,19 @@ async function encryptPayload(
     new Uint8Array(padding.buffer),
   )
 
-  // Build the message: salt(16) + keyIdLen(4) + keyId(65) + recordSize(4) + encrypted
+  // Per RFC 8188 section 3.1:
+  // salt(16) | record_size(4, uint32 BE) | keyid_length(1, uint8) | keyid(keyid_length bytes)
   const salt = crypto.getRandomValues(new Uint8Array(16))
-  const keyId = new Uint8Array(65) // empty key ID for now
+  const recordSize4096 = 4096
 
-  const header = new Uint8Array(16 + 4 + 65 + 4)
+  const header = new Uint8Array(16 + 4 + 1 + localPublicKey.length)
   header.set(salt, 0)
-  // keyId length (big-endian uint32)
-  header[16] = 0
-  header[17] = 0
-  header[18] = 0
-  header[19] = 65
-  header.set(keyId, 20)
-  // record size (big-endian uint32)
-  header[85] = 0
-  header[86] = 0
-  header[87] = 0
-  header[88] = 0
+  header[16] = (recordSize4096 >> 24) & 0xff
+  header[17] = (recordSize4096 >> 16) & 0xff
+  header[18] = (recordSize4096 >> 8) & 0xff
+  header[19] = recordSize4096 & 0xff
+  header[20] = localPublicKey.length
+  header.set(localPublicKey, 21)
 
   return new Uint8Array([...header, ...new Uint8Array(encrypted)])
 }
@@ -289,8 +286,8 @@ export async function sendWebPush(
   // Derive encryption keys
   const { localPublicKey, aesKey, nonce } = await derivePushKeys(pushSub.keys)
 
-  // Encrypt payload
-  const encrypted = await encryptPayload(payload, aesKey, nonce)
+  // Encrypt payload — pass ephemeral public key so the browser can perform ECDH key agreement
+  const encrypted = await encryptPayload(payload, aesKey, nonce, localPublicKey)
 
   // Sign VAPID JWT
   const audience = new URL(pushSub.endpoint).origin

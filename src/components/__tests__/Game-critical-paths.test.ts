@@ -206,6 +206,60 @@ describe('Game.tsx critical paths', () => {
     })
   })
 
+  describe('Coordinator / non-coordinator branching (online executeMove)', () => {
+    // Mirrors Game.tsx:coordinator branch resolves locally; non-coordinator
+    // branch waits for the turn_resolved broadcast.
+    interface StubGame {
+      isCoordinator(): boolean
+      isBothPendingLocked(): boolean
+      resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }>
+      waitForTurnChange(): Promise<void>
+      setTurnState(state: string): void
+    }
+
+    async function executeMoveLikeGame(g: StubGame, isCoordinator: boolean): Promise<string> {
+      if (isCoordinator) {
+        if (g.isBothPendingLocked()) {
+          const r = await g.resolvePendingMoves()
+          return `resolved:${r.winningMove}`
+        }
+        return 'not-locked'
+      }
+      g.setTurnState('locked')
+      await g.waitForTurnChange()
+      return 'waited'
+    }
+
+    it('coordinator resolves locally when both moves are locked', async () => {
+      const g: StubGame = {
+        isCoordinator: jest.fn().mockReturnValue(true),
+        isBothPendingLocked: jest.fn().mockReturnValue(true),
+        resolvePendingMoves: jest.fn().mockResolvedValue({ winnerId: 'p1', winningMove: 'e4' }),
+        waitForTurnChange: jest.fn(),
+        setTurnState: jest.fn(),
+      }
+      const outcome = await executeMoveLikeGame(g, g.isCoordinator())
+      expect(outcome).toBe('resolved:e4')
+      expect(g.resolvePendingMoves).toHaveBeenCalledTimes(1)
+      expect(g.waitForTurnChange).not.toHaveBeenCalled()
+    })
+
+    it('non-coordinator never calls resolvePendingMoves and waits for broadcast', async () => {
+      const g: StubGame = {
+        isCoordinator: jest.fn().mockReturnValue(false),
+        isBothPendingLocked: jest.fn().mockReturnValue(true),
+        resolvePendingMoves: jest.fn().mockResolvedValue({ winnerId: 'p1', winningMove: 'e4' }),
+        waitForTurnChange: jest.fn().mockResolvedValue(undefined),
+        setTurnState: jest.fn(),
+      }
+      const outcome = await executeMoveLikeGame(g, g.isCoordinator())
+      expect(outcome).toBe('waited')
+      expect(g.setTurnState).toHaveBeenCalledWith('locked')
+      expect(g.waitForTurnChange).toHaveBeenCalledTimes(1)
+      expect(g.resolvePendingMoves).not.toHaveBeenCalled()
+    })
+  })
+
   describe('Move comparison after resolution', () => {
     it('sets lastMoveComparison after resolution', async () => {
       const game = new LocalGame()

@@ -742,7 +742,7 @@ export class OnlineGame {
       // Persist initial game state with timer
       if (this._room) {
         const startedAt = new Date().toISOString()
-        saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
+        await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
         // Broadcast game_started so non-coordinator clients sync without polling
         this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
 
@@ -862,9 +862,14 @@ export class OnlineGame {
             status: this._status,
           })
 
-          if (needsReplay) {
+          // Status and turn number are DB-authoritative — sync unconditionally.
+          // Exception: never overwrite terminal GAME_OVER (client may know
+          // the game ended before the DB was persisted).
+          if (this._status !== GameStatus.GAME_OVER) {
             this._status = saved.status as GameStatus
-            this._currentTurnNumber = dbCurrentTurn
+          }
+          this._currentTurnNumber = dbCurrentTurn
+          if (needsReplay) {
             this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
           }
 
