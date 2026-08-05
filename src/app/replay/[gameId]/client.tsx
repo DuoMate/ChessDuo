@@ -40,7 +40,7 @@ export default function ReplayPageClient() {
   }, [])
 
   useEffect(() => {
-    if (authState !== 'signed_in') return
+    if (authState !== 'signed_in' || !userId) return
     let cancelled = false
     async function load() {
       try {
