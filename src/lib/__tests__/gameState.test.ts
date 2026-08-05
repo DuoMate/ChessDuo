@@ -197,6 +197,43 @@ describe('Game State Machine', () => {
     })
   })
 
+  describe('startPendingTurn (Phase 5 reconnect recovery)', () => {
+    it('clears pending moves, locked set, and selections', () => {
+      setupFullGame()
+      gameState.selectMove('w1', 'e4')
+      gameState.selectMove('w2', 'e4')
+      gameState.lockMove('w1')
+      gameState.lockMove('w2')
+
+      gameState.startPendingTurn(gameState.fen)
+
+      expect(gameState.getAllPendingMoves().size).toBe(0)
+      expect(gameState.isBothPendingLocked()).toBe(false)
+      expect(gameState.getSelectedMove('w1')).toBeNull()
+    })
+
+    it('records the turn-start FEN', () => {
+      setupFullGame()
+      gameState.startPendingTurn('start-fen-xyz')
+      expect(gameState.getTurnStartFen()).toBe('start-fen-xyz')
+    })
+
+    it('does not change phase when called mid-turn', () => {
+      setupFullGame()
+      expect(gameState.phase).toBe(GamePhase.SELECTING)
+      gameState.startPendingTurn(gameState.fen)
+      expect(gameState.phase).toBe(GamePhase.SELECTING)
+    })
+
+    it('allows a fresh pending move to be set in the same turn', () => {
+      setupFullGame()
+      gameState.selectMove('w1', 'e4')
+      gameState.startPendingTurn(gameState.fen)
+      gameState.setPendingMove('w1', 'd4', 'd2', 'd4', 'p')
+      expect(gameState.getAllPendingMoves().get('w1')).toMatchObject({ move: 'd4' })
+    })
+  })
+
   function setupFullGame() {
     gameState.addPlayer('w1', Team.WHITE)
     gameState.addPlayer('w2', Team.WHITE)
