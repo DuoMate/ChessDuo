@@ -28,6 +28,7 @@ interface ResolvedPayload {
   comparison?: MoveComparison | null
   coordinatorId?: string
   matchTimeRemaining?: number
+  turnNumber?: number
 }
 
 export interface OnlineGameState {
@@ -988,11 +989,14 @@ export class OnlineGame {
     this._channel.send({
       type: 'broadcast',
       event: 'timer_sync',
-      payload: { matchTimeRemaining: remaining }
+      payload: { matchTimeRemaining: remaining, turnNumber: this._currentTurnNumber }
     })
   }
 
-  private handleTimerSync(payload: { matchTimeRemaining: number }): void {
+  private handleTimerSync(payload: { matchTimeRemaining: number; turnNumber?: number }): void {
+    if (payload.turnNumber !== undefined && payload.turnNumber > this._currentTurnNumber) {
+      this._currentTurnNumber = payload.turnNumber
+    }
     if (payload.matchTimeRemaining !== undefined) {
       this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
       this.notifyStateChange()
@@ -1091,7 +1095,7 @@ export class OnlineGame {
     }
   }
 
-  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number; turnSequence?: number }) {
+  private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number; turnSequence?: number; turnNumber?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
     // R1: reject stale turn_resolved from previous turns
     const incomingSeq = payload.turnSequence ?? 0
@@ -1168,6 +1172,12 @@ export class OnlineGame {
       }
     }
     
+    // Sync turn number from coordinator to keep submission filtering in sync
+    if (payload.turnNumber !== undefined && payload.turnNumber > this._currentTurnNumber) {
+      DEBUG && console.log('[ONLINE] Syncing turn number:', this._currentTurnNumber, '->', payload.turnNumber)
+      this._currentTurnNumber = payload.turnNumber
+    }
+
     // Ensure we're in correct phase for next turn
     this.startPendingTurn()
     
@@ -1515,6 +1525,7 @@ export class OnlineGame {
           coordinatorId: this._playerId,
           matchTimeRemaining: this.gameState.getMatchTimeRemaining(),
           turnSequence: this._turnSequence,
+          turnNumber: this._currentTurnNumber,
         }
       })
     }
