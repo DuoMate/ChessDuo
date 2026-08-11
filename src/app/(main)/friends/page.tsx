@@ -36,7 +36,6 @@ function FriendsContent({ playerId }: { playerId: string }) {
           <FriendsPanel
             playerId={playerId}
             unreadBySender={unreadBySender}
-            onClose={() => router.push('/')}
           />
         </div>
       </div>

@@ -274,11 +274,6 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
             <p className="text-xs text-slate-400">Connect, play &amp; grow together</p>
           </div>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span className="text-slate-400 text-lg">&times;</span>
-          </button>
-        )}
       </div>
 
       {/* Content */}
@@ -518,11 +513,6 @@ function FriendList({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-white text-sm font-medium truncate">{friend.friend_username}</span>
-                {unreadBySender[friend.friend_id] && (
-                  <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">
-                    {unreadBySender[friend.friend_id]}
-                  </span>
-                )}
               </div>
               {onlineFriends.has(friend.friend_id) && (
                 <span className="text-emerald-400 text-xs">Online</span>
@@ -540,9 +530,14 @@ function FriendList({
             )}
             <button
               onClick={() => onMessage(friend)}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+              className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
             >
               <MessageCircle size={16} />
+              {unreadBySender[friend.friend_id] && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
+                  {unreadBySender[friend.friend_id] > 9 ? '9+' : unreadBySender[friend.friend_id]}
+                </span>
+              )}
             </button>
             <FriendActionsMenu
               onDelete={() => onDelete(friend)}
