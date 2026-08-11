@@ -87,9 +87,6 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         googleAuthInProgressRef.current = false
       }
     } else if (onNeedUsername) {
-      if (googleAvatarUrl || googleDisplayName) {
-        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
-      }
       const suggested = googleDisplayName || email.split('@')[0]
       onNeedUsername(userId, suggested, googleAvatarUrl)
       if (googleAuthInProgressRef.current) {

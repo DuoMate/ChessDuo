@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthSession } from '@/hooks/useAuthSession'
 import { Auth } from '@/components/Auth'
@@ -9,6 +9,8 @@ import { BackButton } from '@/components/BackButton'
 import { PageLoading } from '@/components/PageLoading'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+
+const LOADING_TIMEOUT_MS = 15_000
 
 interface AuthGateProps {
   variant: 'page' | 'overlay'
@@ -36,6 +38,8 @@ export function AuthGate({
   redirectUrl,
 }: AuthGateProps) {
   const [authDismissed, setAuthDismissed] = useState(false)
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false)
   const {
     loading,
     playerId,
@@ -43,6 +47,26 @@ export function AuthGate({
     handleAuthComplete: hookAuthComplete,
     handleUsernameChosen,
   } = useAuthSession()
+
+  useEffect(() => {
+    if (loading) {
+      loadingTimeoutRef.current = setTimeout(() => {
+        setLoadingTimedOut(true)
+      }, LOADING_TIMEOUT_MS)
+    } else {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+        loadingTimeoutRef.current = null
+      }
+      setLoadingTimedOut(false)
+    }
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current)
+        loadingTimeoutRef.current = null
+      }
+    }
+  }, [loading])
 
   const handleAuthComplete = useCallback((userId: string) => {
     hookAuthComplete(userId)
@@ -76,6 +100,27 @@ export function AuthGate({
   }, [variant, playerId, loading, onBack])
 
   if (loading) {
+    if (loadingTimedOut) {
+      return (
+        <ErrorBoundary>
+          <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
+            <div className="text-5xl mb-3">⚠️</div>
+            <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
+            <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">We couldn&apos;t verify your session. Please try again.</p>
+            <button
+              onClick={() => {
+                setLoadingTimedOut(false)
+                window.location.reload()
+              }}
+              className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
+            >
+              Try Again
+            </button>
+            <BackButton label="Go Home" onClick={onBack} />
+          </div>
+        </ErrorBoundary>
+      )
+    }
     return <PageLoading />
   }
 

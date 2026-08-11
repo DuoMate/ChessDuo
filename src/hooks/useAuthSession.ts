@@ -73,7 +73,17 @@ export function useAuthSession(): UseAuthSessionResult {
     if (authCompletedRef.current === userId) return
     authCompletedRef.current = userId
 
-    const profile = await fetchProfile(userId)
+    let profile: { username: string | null; avatar_url: string | null } | null = null
+    try {
+      profile = await fetchProfile(userId)
+    } catch {
+      authCompletedRef.current = null
+      if (mountedRef.current) {
+        setLoading(false)
+        setPlayerId(null)
+      }
+      return
+    }
 
     if (!mountedRef.current) return
 
