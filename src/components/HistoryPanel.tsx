@@ -19,6 +19,7 @@ const reasonLabels: Record<string, string> = {
   threefoldRepetition: 'Repetition',
   insufficientMaterial: 'Insufficient Material',
   draw: 'Draw',
+  resignation: 'Resigned',
   timeout: "Time's Up",
 }
 
@@ -140,7 +141,21 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
         ) : (
           <div className="space-y-2">
             <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
-            {games.map((game, i) => (
+            {games.map((game, i) => {
+              const playerLabel = game.player_labels
+              const playerColor = playerLabel
+                ? (playerLabel.white.includes(playerId) ? 'WHITE' : playerLabel.black.includes(playerId) ? 'BLACK' : null)
+                : null
+              const isDraw = game.winner === 'DRAW'
+              const isWin = playerColor ? game.winner === playerColor : game.winner === 'WHITE'
+              const resultBg = isDraw ? 'bg-amber-500/20' : isWin ? 'bg-emerald-500/20' : 'bg-rose-500/20'
+              const resultColor = isDraw ? 'text-amber-400' : isWin ? 'text-emerald-400' : 'text-rose-400'
+              const resultText = isDraw ? 'Draw' : isWin ? 'You Win' : 'You Lose'
+              const icon = isDraw ? (<Handshake size={14} className="text-amber-400" />)
+                : isWin ? (<Trophy size={14} className="text-emerald-400" />)
+                : (<Skull size={14} className="text-rose-400" />)
+
+              return (
               <motion.div
                 key={game.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -150,30 +165,12 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      game.winner === 'WHITE' 
-                        ? 'bg-emerald-500/20' 
-                        : game.winner === 'DRAW' 
-                          ? 'bg-amber-500/20' 
-                          : 'bg-rose-500/20'
-                    }`}>
-                      {game.winner === 'WHITE' ? (
-                        <Trophy size={14} className="text-emerald-400" />
-                      ) : game.winner === 'DRAW' ? (
-                        <Handshake size={14} className="text-amber-400" />
-                      ) : (
-                        <Skull size={14} className="text-rose-400" />
-                      )}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${resultBg}`}>
+                      {icon}
                     </div>
                     <div>
-                      <span className={`text-sm font-semibold ${
-                        game.winner === 'WHITE' 
-                          ? 'text-emerald-400' 
-                          : game.winner === 'DRAW' 
-                            ? 'text-amber-400' 
-                            : 'text-rose-400'
-                      }`}>
-                        {game.winner === 'WHITE' ? 'White Wins' : game.winner === 'DRAW' ? 'Draw' : 'Black Wins'}
+                      <span className={`text-sm font-semibold ${resultColor}`}>
+                        {resultText}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
                         <span>{game.is_online ? '🌐 Online' : '🤖 Offline'}</span>
@@ -204,7 +201,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                   </span>
                 </div>
               </motion.div>
-            ))}
+            )})}
           </div>
         )}
       </div>

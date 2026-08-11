@@ -1823,7 +1823,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         const g = gameRef.current as LocalGame
         const humanTeam = g.getTeam()
         const opponentWins = humanTeam === 'WHITE' ? 'BLACK' : 'WHITE'
-        g.setGameOverResult(`Resigned - ${opponentWins} wins`)
+        g.setGameOverResult(`Resigned - ${humanTeam === 'WHITE' ? 'Black' : 'White'} wins`)
         g.setGameOverReason('resignation')
 
         // Set React state so the save-useEffect fires properly
