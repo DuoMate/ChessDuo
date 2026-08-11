@@ -264,7 +264,14 @@ export class OnlineGame {
       this.resolveTeammateLocked = resolve
       // Engine-level timeout: if broadcast is lost, don't hang forever (R3)
       this._teammateLockTimeout = setTimeout(() => {
-        DEBUG && console.warn('[STATE] Teammate lock timeout — resolving with existing state')
+        DEBUG && console.warn('[STATE] Teammate lock timeout — checking state: turnState=', this.turnState, 'currentTeam=', this.gameState.currentTeam)
+        // If handleTurnResolved already processed the resolution out-of-band,
+        // turnState would be 'selecting' and currentTeam would have changed.
+        // In that case, resolve cleanly without further state transitions —
+        // executeMove will detect the turn change and return gracefully.
+        if (this.turnState === 'selecting') {
+          DEBUG && console.warn('[STATE] Teammate lock timeout — turn already resolved, resolving cleanly')
+        }
         if (this.resolveTeammateLocked) {
           this.resolveTeammateLocked()
           this.resolveTeammateLocked = null
@@ -1195,6 +1202,13 @@ export class OnlineGame {
       clearTimeout(this._teammateLockTimeout)
       this._teammateLockTimeout = null
     }
+    // Resolve before nullifying — non-coordinator may be stuck in
+    // waitForTeammateLock() if postgres_changes never delivered the
+    // teammate's submission. The turn_resolved broadcast is the
+    // authority; free the waiter so executeMove can return gracefully.
+    if (this.resolveTeammateLocked) {
+      this.resolveTeammateLocked()
+    }
     this.resolveTeammateLocked = null
     
     DEBUG && console.log('[ONLINE] After handleTurnResolved - phase:', this.gameState.phase, 'turn:', this.gameState.currentTeam)
@@ -1244,6 +1258,17 @@ export class OnlineGame {
       return
     }
 
+    // Set local state BEFORE DB write — the board and inputLockedRef are
+    // already locked by the UI layer; eager local state keeps them in sync.
+    this.gameState.setPendingMove(this._playerId as Player, move, from, to, piece)
+    this.gameState.lockPendingMove(this._playerId as Player)
+    const prevTurnState = this.turnState
+    if (this.turnState === 'selecting') {
+      this.turnState = 'waiting_for_teammate'
+    }
+    this.notifyStateChange()
+    DEBUG && console.log('[SUBMIT] Move set locally, writing to DB:', { turn: this._currentTurnNumber, player: this._playerId, move })
+
     try {
       const { error } = await supabase
         .from('turn_submissions')
@@ -1259,22 +1284,16 @@ export class OnlineGame {
 
       if (error) {
         DEBUG && console.warn('[SUBMIT] DB insert failed:', error.message)
+        this.turnState = prevTurnState
+        this.notifyStateChange()
         return
       }
 
-      // Also update local state immediately (so the UI reflects the move before
-      // the postgres_changes listener fires on this client)
-      this.gameState.setPendingMove(this._playerId as Player, move, from, to, piece)
-      this.gameState.lockPendingMove(this._playerId as Player)
-
-      if (this.turnState === 'selecting') {
-        this.turnState = 'waiting_for_teammate'
-      }
-
-      this.notifyStateChange()
-      DEBUG && console.log('[SUBMIT] Move written to DB:', { turn: this._currentTurnNumber, player: this._playerId, move })
+      DEBUG && console.log('[SUBMIT] DB write confirmed:', { turn: this._currentTurnNumber, player: this._playerId, move })
     } catch (e) {
       DEBUG && console.error('[SUBMIT] DB write failed:', e)
+      this.turnState = prevTurnState
+      this.notifyStateChange()
     }
   }
 
@@ -1286,26 +1305,37 @@ export class OnlineGame {
   private subscribeToSubmissions(): void {
     if (!this._gameId) return
 
-    this._submissionChannel = supabase.channel(`submissions:${this._gameId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'turn_submissions',
-        filter: `game_id=eq.${this._gameId}`,
-      }, (payload) => {
-        this.handleSubmissionFromDB(payload.new as {
-          game_id: string
-          turn_number: number
-          player_id: string
-          move_san: string
-          move_from: string
-          move_to: string
-          piece: string
+    const gameId = this._gameId
+    const setup = () => {
+      this._submissionChannel = supabase.channel(`submissions:${gameId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'turn_submissions',
+          filter: `game_id=eq.${gameId}`,
+        }, (payload) => {
+          this.handleSubmissionFromDB(payload.new as {
+            game_id: string
+            turn_number: number
+            player_id: string
+            move_san: string
+            move_from: string
+            move_to: string
+            piece: string
+          })
         })
-      })
-      .subscribe((status: string) => {
-        DEBUG && console.log('[SUBMIT] Submission channel status:', status)
-      })
+        .subscribe(async (status: string) => {
+          DEBUG && console.log('[SUBMIT] Submission channel status:', status)
+          if (status === 'CHANNEL_ERROR') {
+            DEBUG && console.warn('[SUBMIT] Channel error — re-creating subscription channel')
+            try {
+              await supabase.removeChannel(this._submissionChannel!)
+            } catch (e) { DEBUG && console.error('[SUBMIT] Failed to remove errored channel:', e) }
+            setup()
+          }
+        })
+    }
+    setup()
   }
 
   private handleSubmissionFromDB(submission: {

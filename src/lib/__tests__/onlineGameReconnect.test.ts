@@ -406,8 +406,10 @@ describe('syncGameState — additional reconnect scenarios', () => {
     // Should not throw — error is caught internally
     await expect(game.submitMoveToDB('e4', 'e2', 'e4', 'p')).resolves.toBeUndefined()
 
-    // Local state should not be updated (error path returns early)
-    expect(game.isPendingMoveLocked('player1' as any)).toBe(false)
+    // Local pending state is set eagerly before DB write (P0 fix).
+    // The pending move persists so board lock stays in sync with inputLockedRef.
+    // turnState is rolled back on error.
+    expect(game.isPendingMoveLocked('player1' as any)).toBe(true)
 
     jest.requireMock('../supabase').supabase.from = origFrom
   })
