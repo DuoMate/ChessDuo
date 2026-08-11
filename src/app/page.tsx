@@ -175,10 +175,8 @@ export default function SetupPage() {
       if (!mountedRef.current) return
       if (session?.user) {
         setPlayerId(session.user.id)
-        setUsername('')
         setJoinError(null)
         setJoinCode('')
-        // Dismiss auth overlay immediately on sign-in
         if (_event === 'SIGNED_IN' && showAuthOverlay) {
           setShowAuthOverlay(false)
         }
@@ -208,7 +206,7 @@ export default function SetupPage() {
     })
 
     return () => unsubscribe()
-  }, [])
+  }, [showAuthOverlay])
 
   useEffect(() => {
     try { localStorage.setItem(SELECTED_TIME_KEY, String(selectedTime)) } catch { /* localStorage may throw if quota exceeded */ }
