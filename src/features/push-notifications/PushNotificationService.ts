@@ -153,6 +153,9 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
       if (vapidKeyChanged) {
         console.log('[Push] VAPID key changed — unsubscribing old subscription and creating new one')
         await existingSubscription.unsubscribe()
+      } else if (Notification.permission !== 'granted') {
+        console.log('[Push] Permission revoked since subscription was created — unsubscribing stale subscription')
+        await existingSubscription.unsubscribe()
       } else {
         console.log('[Push] Existing browser subscription found, reusing')
         await saveTokenToServer(JSON.stringify(existingSubscription), 'web', accessToken)
@@ -161,7 +164,14 @@ async function registerBrowserPush(accessToken?: string): Promise<boolean> {
       }
     }
 
-    const permission = await Notification.requestPermission()
+    let permission: NotificationPermission = Notification.permission
+    if (permission === 'denied') {
+      console.log('[Push] Browser notification permission denied in OS')
+      return false
+    }
+    if (permission !== 'granted') {
+      permission = await Notification.requestPermission()
+    }
     if (permission !== 'granted') {
       console.log('[Push] Browser notification permission denied')
       return false
