@@ -1,6 +1,6 @@
 {
   "name": "chessduo",
-  "version": "1.0.300",
+  "version": "1.0.303",
   "private": true,
   "scripts": {
     "dev": "next dev",
