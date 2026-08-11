@@ -334,6 +334,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   playerIdRef.current = playerId
 
   const inputLockedRef = useRef(false)
+  const submissionTurnRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!showInsights || !playerId) return
@@ -1388,6 +1389,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       // Lock input immediately — prevents duplicate submissions within a single turn
       inputLockedRef.current = true
+      submissionTurnRef.current = currentTurn
 
       DEBUG && console.log(`[HUMAN] Turn confirmed as ${myTeam} - processing move...`)
 
@@ -1422,6 +1424,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         if (g.currentTurn !== myTeam) {
           DEBUG && console.log(`[STATE] Turn changed, another client resolved`)
           g.setTurnState('selecting')
+          return
+        }
+
+        // Check if handleTurnResolved already processed this turn
+        // (resolution applied out-of-band while we were waiting).
+        // turnState is 'selecting' after startPendingTurn() ran.
+        if (g.getTurnState() === 'selecting') {
+          DEBUG && console.log(`[STATE] Turn already resolved via broadcast — returning cleanly`)
           return
         }
 
@@ -1726,12 +1736,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [isOnline, gameState.status, gameState.currentTurn, executeBotMove])
 
-  // Reset input lock when it's the player's turn to move again
+  // Reset input lock when it's genuinely a new turn (not just turnStatus
+  // flipping due to an out-of-band broadcast resolution).
   useEffect(() => {
     if (gameState.turnStatus === 'your_turn' && gameState.isMyTurn) {
-      inputLockedRef.current = false
+      // Only unlock if the board's current turn differs from the turn we
+      // submitted on. Prevents premature unlock when handleTurnResolved
+      // processes a bot resolution during our stuck executeMove flow.
+      if (!submissionTurnRef.current || gameState.currentTurn !== submissionTurnRef.current) {
+        inputLockedRef.current = false
+        submissionTurnRef.current = null
+      }
     }
-  }, [gameState.turnStatus, gameState.isMyTurn])
+  }, [gameState.turnStatus, gameState.isMyTurn, gameState.currentTurn])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
@@ -2170,7 +2187,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 const myTeamEnabled = isFourPlayer
                   ? currentTurn === myTeamRef.current
                   : currentTurn === myTeamRef.current
-                const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)))
+                const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)) && !(isOnline && inputLockedRef.current))
                 const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
                 return isMobile ? (
                   <MobileChessBoard

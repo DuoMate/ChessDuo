@@ -130,13 +130,16 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     expect(testG(game).turnState).toBe('waiting_for_teammate')
   })
 
-  it('does NOT update local state when the DB returns an error', async () => {
+  it('rolls back turnState but keeps local pending on DB error', async () => {
     upsertError = { message: 'network down' }
     const game = setupPlayingGame('player1', 'WHITE')
 
     await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
 
-    expect(game.isPendingMoveLocked('player1' as any)).toBe(false)
+    // Local pending state is set eagerly before DB write (P0 fix).
+    // The pending move stays so the board stays locked in sync with inputLockedRef.
+    expect(game.isPendingMoveLocked('player1' as any)).toBe(true)
+    // turnState is rolled back on DB error so the engine knows the move isn't persisted.
     expect(testG(game).turnState).toBe('selecting')
   })
 
