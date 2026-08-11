@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     const baseResponse = {
       isPremium,
-      subscriptionProvider: (profile?.subscription_provider as 'GOOGLE_PLAY' | 'APPLE' | 'WEB' | 'CREEM' | null) || null,
+      subscriptionProvider: (profile?.subscription_provider as 'GOOGLE_PLAY' | 'APPLE' | 'WEB' | null) || null,
       subscriptionPlan: (profile?.subscription_plan as 'monthly' | 'yearly' | null) || null,
       purchaseToken: (profile?.purchase_token as string | null) || null,
       subscriptionExpiryDate: (profile?.subscription_expiry_date as string | null) || null,

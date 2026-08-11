@@ -92,13 +92,13 @@ describe('SubscriptionService', () => {
     it('returns success with checkoutUrl for redirect-based providers', async () => {
       (mockProvider.purchase as jest.Mock).mockResolvedValueOnce({
         success: true,
-        checkoutUrl: 'https://checkout.creem.io/test',
+        purchaseToken: 'google_play_token',
         productId: 'premium_monthly',
       })
 
       const result = await SubscriptionService.purchaseMonthly()
       expect(result.success).toBe(true)
-      expect(result.checkoutUrl).toBe('https://checkout.creem.io/test')
+      expect(result.purchaseToken).toBe('google_play_token')
     })
 
     it('handles null provider gracefully', async () => {
@@ -118,7 +118,7 @@ describe('SubscriptionService', () => {
 
     it('returns true when restored purchases found (DB-backed, no verify call)', async () => {
       (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
-        { success: true, purchaseToken: 'creem_restored', productId: 'premium_yearly', orderId: '' },
+        { success: true, purchaseToken: 'google_play_restored', productId: 'premium_yearly', orderId: '' },
       ])
 
       const result = await SubscriptionService.restore()
@@ -130,9 +130,9 @@ describe('SubscriptionService', () => {
 
     it('refreshes status after successful restore', async () => {
       (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
-        { success: true, purchaseToken: 'creem_restored', productId: 'premium_monthly', orderId: '' },
+        { success: true, purchaseToken: 'google_play_restored', productId: 'premium_monthly', orderId: '' },
       ])
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
 
       const result = await SubscriptionService.restore()
       expect(result).toBe(true)
@@ -156,7 +156,7 @@ describe('SubscriptionService', () => {
     })
 
     it('returns true when server says premium', async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
       const premium = await SubscriptionService.isPremium()
       expect(premium).toBe(true)
     })
@@ -190,10 +190,10 @@ describe('SubscriptionService', () => {
 
   describe('getStatus', () => {
     it('fetches server status', async () => {
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM', subscriptionPlan: 'monthly' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY', subscriptionPlan: 'monthly' }) })
       const status = await SubscriptionService.getStatus()
       expect(status.isPremium).toBe(true)
-      expect(status.subscriptionProvider).toBe('CREEM')
+      expect(status.subscriptionProvider).toBe('GOOGLE_PLAY')
     })
 
     it('handles server error', async () => {
@@ -209,7 +209,7 @@ describe('SubscriptionService', () => {
       await SubscriptionService.getStatus()
       const callsBefore = mockFetch.mock.calls.length
 
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'CREEM' }) })
+      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
       const cached = await SubscriptionService.getStatus()
       expect(cached.isPremium).toBe(false)
 

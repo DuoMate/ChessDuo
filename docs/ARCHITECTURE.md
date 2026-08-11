@@ -110,7 +110,7 @@ src/
 │       ├── types.ts              # BillingProvider interface, SubscriptionPlan, PurchaseResult
 │       ├── SubscriptionService.ts # High-level API: purchase/restore/isPremium/getPlans
 │       ├── SubscriptionStateMachine.ts # Pure lifecycle transitions
-│       ├── CreemBillingProvider.ts    # Creem checkout integration (web + Android)
+│       ├── GooglePlayBillingProvider.ts  # Google Play Billing integration (Android)
 │       ├── index.ts              # Public API re-exports
 │       └── CONTEXT.md            # Module documentation
 │
@@ -246,7 +246,7 @@ const { confirmLeave } = useNavigationGuard({
 
 ### 7. Billing Provider Abstraction
 
-**RULE**: UI and `SubscriptionService` MUST NOT depend on the payment processor directly. All payment logic goes through the `BillingProvider` interface (`src/features/billing/types.ts`). Currently backed by Creem (Merchant of Record) for both web and Android.
+**RULE**: UI and `SubscriptionService` MUST NOT depend on the payment processor directly. All payment logic goes through the `BillingProvider` interface (`src/features/billing/types.ts`). Currently backed by Google Play Billing for Android. Web users are directed to download the Android app for premium features.
 
 ```
 UI (React Components)
@@ -254,21 +254,14 @@ UI (React Components)
   ▼
 SubscriptionService
   ├─► BillingProvider (interface)
-  │     └─► CreemBillingProvider   ← web (window.location) + Android (Browser.open)
-  └─► /api/creem/*  (Next.js API routes)
-        ├─► /checkout    — creates Creem checkout session
-        ├─► /products    — fetches product pricing from Creem
-        ├─► /subscriptions — lists active subscriptions (restore)
-        ├─► /verify-checkout — server-side verify of completed checkout on redirect (immediate grant)
-        └─► /webhook     — handles Creem webhook events (@creem_io/nextjs)
+  │     └─► GooglePlayBillingProvider   ← Android (native Google Play dialog)
+  └─► /api/subscription/status  (reads from Supabase)
 ```
 
-- Purchase is **redirect-based**: `purchase()` → `POST /api/creem/checkout` → redirect to Creem-hosted checkout → back to `/premium?session_id=…` → `GET /api/creem/verify-checkout` grants immediately → webhook is the durable backup.
-- **Immediate grant**: `verify-checkout` runs `checkouts.retrieve(session_id)`, grants when the checkout **or** its subscription is completed (`active|completed|paid|trialing` — lenient on transient checkout statuses), and enforces ownership (checkout `referenceId`/`userId` must match the authenticated user, else 403) before upserting `profiles` via the service-role key. `/premium` polls `getStatus()` up to 5× after an unverified return to catch the async webhook grant.
-- Subscription lifecycle is **webhook-driven** (`onGrantAccess` / `onRevokeAccess` / `onCheckoutCompleted` / `onSubscriptionCanceled` / `onSubscriptionPastDue`). No server-side re-verification on `status` reads. Webhook events sometimes arrive with **empty metadata**; handlers safe-deref `customer`/`product` and fall back to `creem.checkouts.retrieve(id)` to resolve the userId (the checkout object always carries `metadata.referenceId`). Unresolvable events are logged loudly and still resolve 200 so Creem does not retry-spam.
-- Checkout metadata carries `userId`, `referenceId`, and `plan`; webhook attributes events to the ChessDuo profile.
-- Pricing comes from Creem products (cents → `$X.XX`); plans are mapped to internal IDs `premium_monthly` / `premium_yearly`.
-- Environment: `CREEM_API_KEY` (test mode auto-detected when prefixed `creem_test_`), `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`.
+- Purchase is **native**: `purchase()` → Google Play Billing dialog via `@capgo/native-purchases` Capacitor plugin → Google Play processes payment → result returned to the app.
+- Subscription status is read from Supabase `profiles` table (set by webhooks or native purchase callbacks).
+- Web users see a "Download on Google Play" CTA instead of purchase buttons — `GooglePlayBillingProvider.isAvailable()` returns `false` on web.
+- Pricing comes from Google Play product definitions; plans are `premium_monthly` / `premium_yearly`.
 
 ### 8. Room Join Model (RLS-safe)
 

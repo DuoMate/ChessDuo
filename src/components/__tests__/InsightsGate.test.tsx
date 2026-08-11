@@ -22,7 +22,7 @@ jest.mock('@/features/billing', () => ({
     purchaseYearly: jest.fn(),
     restore: jest.fn(),
   },
-  CreemBillingProvider: {},
+  GooglePlayBillingProvider: {},
 }))
 
 jest.mock('../MoveInsights', () => ({

@@ -101,7 +101,7 @@ describe('ProfilePanel', () => {
   it('shows premium active card with plan when premium', async () => {
     ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce({
       isPremium: true,
-      subscriptionProvider: 'CREEM',
+      subscriptionProvider: 'GOOGLE_PLAY',
       subscriptionPlan: 'monthly',
       purchaseToken: 'chk_123',
       subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
@@ -115,14 +115,14 @@ describe('ProfilePanel', () => {
 
     expect(await screen.findByText('Premium Active')).toBeDefined()
     expect(screen.getByText(/Monthly plan/)).toBeDefined()
-    expect(screen.queryByText('Creem')).toBeNull()
+    expect(screen.queryByText('Google Play')).toBeNull()
     expect(screen.queryByText('Upgrade to Premium')).toBeNull()
   })
 
   it('opens the premium page when the premium active card is tapped', async () => {
     ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce({
       isPremium: true,
-      subscriptionProvider: 'CREEM',
+      subscriptionProvider: 'GOOGLE_PLAY',
       subscriptionPlan: 'monthly',
       purchaseToken: 'chk_123',
       subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
@@ -142,7 +142,7 @@ describe('ProfilePanel', () => {
   it('shows annual plan when premium yearly', async () => {
     ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce({
       isPremium: true,
-      subscriptionProvider: 'CREEM',
+      subscriptionProvider: 'GOOGLE_PLAY',
       subscriptionPlan: 'yearly',
       purchaseToken: 'chk_123',
       subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',

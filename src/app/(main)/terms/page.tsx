@@ -49,16 +49,14 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">4. Premium Subscription</h2>
             <p>
               ChessDuo offers a premium subscription that unlocks premium insights and other features. Premium purchases are
-              processed by <strong>Creem</strong>, a Merchant of Record, who is the seller of record for the transaction. Your
-              receipt and bank statement will show a charge from Creem.
+              processed by <strong>Google Play</strong> on the Android app. Your purchase is subject to Google Play&apos;s terms of service
+              and you can manage your subscription through your Google Play account settings.
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>Subscriptions auto-renew on a monthly or yearly basis depending on the plan you select.</li>
               <li>You can cancel your subscription at any time. Cancellation takes effect at the end of the current billing period.</li>
               <li>Purchases are non-refundable, except where required by applicable law.</li>
-              <li>By purchasing, you also agree to Creem&apos;s terms of service, available at{' '}
-                <a href="https://creem.io/terms" className="text-yellow-600 dark:text-yellow-400 hover:underline" target="_blank" rel="noopener noreferrer">creem.io/terms</a>.
-              </li>
+              <li>By purchasing, you also agree to Google Play&apos;s terms of service.</li>
             </ul>
           </div>
 

@@ -451,50 +451,46 @@ Key files:
 
 ## Premium Features
 
-### Creem Billing (July 2026)
+### Google Play Billing (August 2026)
 
-**Payment processor**: Creem (Merchant of Record) via `@creem_io/nextjs` (webhook handler) + `creem` (TypeScript SDK). Works on both web and Android (in-app browser via `@capacitor/browser`).
+**Payment processor**: Google Play Billing for Android via `@capgo/native-purchases` Capacitor plugin. Web users are directed to download the Android app.
 
 **Architecture**:
 - `src/features/billing/types.ts` — `BillingProvider` abstract interface for all billing providers
-- `src/features/billing/CreemBillingProvider.ts` — Creem checkout integration (redirect-based)
+- `src/features/billing/GooglePlayBillingProvider.ts` — Google Play Billing integration (native dialog)
 - `src/features/billing/SubscriptionService.ts` — High-level API: purchase, restore, isPremium, getPlans
 - `src/features/billing/SubscriptionStateMachine.ts` — Pure function for subscription lifecycle transitions
-- `POST /api/creem/checkout` — Creates Creem checkout session, returns `checkoutUrl`
-- `GET /api/creem/products` — Fetches product pricing from Creem
-- `GET /api/creem/subscriptions` — Lists active subscriptions (restore)
-- `POST /api/creem/webhook` — Handles Creem webhook events, updates Supabase (service-role key)
+- `GET /api/subscription/status` — Reads subscription state from Supabase profiles table
 
-**Pricing plans** (configured in Creem dashboard):
+**Pricing plans** (configured in Google Play Console):
 - Monthly — $1.99/mo (`premium_monthly`)
 - Annual — $14.99/yr (`premium_yearly`)
-- Prices fetched dynamically from Creem — never hardcoded
+- Prices displayed as fallback; actual prices fetched from Google Play on Android
 
 **Database columns** (on `profiles`):
-- `subscription_provider` — `CREEM`, `APPLE`, or `WEB`
+- `subscription_provider` — `GOOGLE_PLAY`, `APPLE`, or `WEB`
 - `subscription_plan` — `monthly` or `yearly`
-- `purchase_token` — Creem checkout/session ID
+- `purchase_token` — Google Play purchase token
 - `subscription_expiry_date` — When the subscription expires
 - `auto_renew_status` — Whether auto-renew is enabled
 - `purchase_state` — `purchased`, `pending`, `cancelled`, or `expired`
 - `last_verified_date` — Last time the subscription state was confirmed
 
 **Security**:
-- Webhook payloads verified with `CREEM_WEBHOOK_SECRET` (HMAC signature via `@creem_io/nextjs`)
+- Purchases processed through Google Play's secure billing system
 - Access granted/revoked server-side only — the client can never set `is_premium` directly
-- `CREEM_API_KEY` never exposed to client (test mode auto-detected when prefixed `creem_test_`)
-- Supabase writes use the service-role key inside the webhook handler
+- Supabase writes use the service-role key for webhook/verification handlers
 
-**Flow**:
+**Flow (Android)**:
 1. User taps "Upgrade to Premium" on `/premium`
-2. `SubscriptionService.purchaseMonthly()` → `POST /api/creem/checkout` → Creem-hosted checkout page
-3. User pays on Creem's page → redirected back to `/premium?session_id=...` (web) or through `/api/creem/return` → `chessduo://premium` (native)
-4. `GET /api/creem/verify-checkout` grants immediately when the checkout **or** its subscription is completed (Bug 40: lenient status). If not yet verified, `/premium` polls `getStatus()` up to 5× to catch the async webhook.
-5. Creem webhook fires → `is_premium = true` on the user's profile. Events with empty metadata fall back to `creem.checkouts.retrieve(id)` to resolve the userId — an unresolvable event logs loudly and still resolves 200.
-6. Premium unlocked on next status refresh — no app restart required
+2. `SubscriptionService.purchaseMonthly()` → `GooglePlayBillingProvider.purchase()` → native Google Play dialog
+3. User completes payment in Google Play
+4. Purchase token returned, status refreshed
+5. Premium unlocked — no app restart required
 
-**GitHub Secrets required**:
-`CREEM_API_KEY`, `CREEM_WEBHOOK_SECRET`, `CREEM_PRODUCT_ID_MONTHLY`, `CREEM_PRODUCT_ID_YEARLY`
+**Flow (Web)**:
+1. User navigates to `/premium`
+2. Sees "Download on Google Play" CTA with a link to the Play Store
 
 ### Move Insights (Freemium)
 
@@ -527,7 +523,7 @@ Shipped to prod alongside the social/premium features after a QA audit found tha
 | # | Bug | Root Cause | Fix |
 |---|-----|-----------|-----|
 | 39 | `/?code=` invite links never reach the lobby (stuck "Preparing board") | RLS policy "Room members can view players" blocks the pre-join `room_players` read → joiner always gets the host's team | `rooms.host_team` column (joiner = opposite) + public `get_room_join_state` RPC for counts/fullness; `?code=` stripped only after a successful `router.push` |
-| 40 | Successful Creem payment never activates premium | Webhook showed `checkout.completed`/`subscription.paid` as Successful but returned 200 while skipping the grant — event metadata was empty → no userId | Webhook resolves userId via metadata then `creem.checkouts.retrieve(id)` fallback; safe-derefs `customer`/`product`; always logs + 200. `verify-checkout` grants when checkout OR subscription is completed. `/premium` polls status after unverified return |
+| 40 | Successful payment never activates premium | Webhook returned 200 but skipped the grant — event metadata was empty → no userId | Webhook resolves userId via metadata then API fallback; safe-derefs customer/product; always logs + 200. Verify-checkout grants when checkout OR subscription is completed. Premium page polls status after unverified return |
 | — | Push game-invite shows "Session Expired" | `ChallengePicker` passed the challenger's id + `'WHITE'` to the friend → `/duel` session check (`session.user.id === playerId`) failed | Pass `friendId` + `'BLACK'` in the push payload |
 | — | Profile share was a dead link | `/profile/[userId]` route doesn't exist | `getProfileLink()` → `/invite/[userId]`; share copy updated |
 | — | Challenge link created a second room | `/challenge/[code]` ignored the pre-created room and generated `Math.random()` codes (can be <6 chars / collide) | Accept into the challenge's `room_id` (creator WHITE, acceptor BLACK), `generateRoomCode()` fallback, route by `game_mode` |
@@ -685,7 +681,7 @@ Add `console.error` to critical empty catch blocks in:
 Completed as part of go-live preparation:
 
 ### P0 — Payment Security
-- **Creem subscription lifecycle** — All premium state changes are webhook-driven (HMAC-verified via `CREEM_WEBHOOK_SECRET`); the client can never set `is_premium` directly. Previously Google Play Developer API verification.
+- **Google Play subscription lifecycle** — All premium state changes are verified server-side; the client can never set `is_premium` directly.
 - **RLS policy documented** — `Allow all` policies on `games` and `room_players` flagged with detailed comment explaining the security gap and staging test requirements before removal.
 
 ### P1 — Infrastructure Hardening

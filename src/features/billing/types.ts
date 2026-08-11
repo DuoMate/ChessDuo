@@ -27,7 +27,7 @@ export interface SubscriptionPlan {
 
 export interface SubscriptionInfo {
   isPremium: boolean
-  subscriptionProvider: 'GOOGLE_PLAY' | 'APPLE' | 'WEB' | 'CREEM' | null
+  subscriptionProvider: 'GOOGLE_PLAY' | 'APPLE' | 'WEB' | null
   subscriptionPlan: 'monthly' | 'yearly' | null
   purchaseToken: string | null
   subscriptionExpiryDate: string | null

@@ -12,12 +12,6 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 | `test-supabase/route.ts` | Supabase connectivity test |
 | `push/register/route.ts` | Register device token for push (accepts `android`, `ios`, `web` platforms) |
 | `push/send/route.ts` | Send push notification — FCM for native, web-push for browser |
-| `creem/checkout/route.ts` | Create Creem checkout session → returns `checkoutUrl` (native uses `/api/creem/return` success URL) |
-| `creem/return/route.ts` | GET redirect-bridge for native checkout returns — bounces `session_id` to `chessduo://premium` |
-| `creem/products/route.ts` | Fetch product details (pricing) from Creem |
-| `creem/subscriptions/route.ts` | List active subscriptions from Supabase (restore) |
-| `creem/verify-checkout/route.ts` | Verify completed checkout after redirect → grants premium via service-role upsert |
-| `creem/webhook/route.ts` | Creem webhook handler (`@creem_io/nextjs` Webhook) → updates Supabase |
 | `subscription/status/route.ts` | Get subscription status from Supabase |
 
 ## Logic & Decisions
@@ -25,23 +19,14 @@ Next.js API route handlers for server-side operations (health checks, billing, a
 - Health check returns 200 with timestamp for monitoring (Cloudflare Workers).
 - Push routes use `createServerClient` from `@supabase/ssr` for auth (same pattern as delete-account).
 - `/api/push/send` uses FCM HTTP v1 API with JWT assertion via `jose` library (no Firebase Admin SDK needed).
-- Creem routes use the `creem` TypeScript SDK; test mode is auto-detected when `CREEM_API_KEY` starts with `creem_test_` (server `test` vs `prod`).
-- Subscription lifecycle is **webhook-driven**: `creem/webhook` grants/revokes access and updates `profiles` via the Supabase service-role key. `subscription/status` reads Supabase only — no re-verification call.
-- `creem/verify-checkout` provides **immediate grant** on checkout redirect: server-side `checkouts.retrieve()` confirms `status === 'completed'`, then the checkout `metadata.referenceId`/`userId` must equal the authenticated user's ID (else 403 — prevents one user's paid session from granting another). Grants premium via service-role upsert so the user doesn't wait for the async webhook.
-- Checkout metadata carries `userId`, `referenceId`, and `plan` so webhooks can attribute events to a ChessDuo profile.
-- Creem pricing is returned in cents; the client formats `$X.XX`.
+- Subscription lifecycle: Google Play Billing manages subscriptions natively on Android and reports status to the app.
 
 ## Dependencies
 - Supabase SSR client, `jose` (JWT signing for FCM + Google Play OAuth2), `web-push` (push notifications for browser/web platform)
-- `creem` (server SDK), `@creem_io/nextjs` (webhook verification handler)
 - `@supabase/supabase-js` (service-role admin client in webhook)
 
 ## Recent Changes
-- **2026-08-01**: **Bug 41** fix — `creem/return` (native checkout return bridge) now redirects to the HTTPS `/premium` App Link (`https://<SITE_URL>/premium?session_id=…`) instead of the `chessduo://` custom scheme. Custom schemes are non-clickable/unreliable when opened from the system browser (same reason Bug 37 removed them from share links), which left the app stuck after paying on mobile — web showed the success page but the APK never returned. The App Link reopens the app when verified (assetlinks); otherwise the browser loads the web `/premium`, which runs the same verify-on-return flow.
-- **2026-07-31**: **Bug 40** fix — webhook could return 200 while silently skipping the grant when an event's metadata was empty (`checkout.completed`/`subscription.paid`), so a successful Creem payment never activated premium. `creem/webhook` now (1) safe-derefs `customer.email`/`product.name` in logs, (2) resolves the userId from event metadata then falls back to `creem.checkouts.retrieve(id)` (the checkout object always carries `metadata.referenceId`), and (3) always logs unresolvable events and resolves 200. `creem/verify-checkout` is now lenient: it grants when the checkout **or** its subscription is completed (`active|completed|paid|trialing`) and returns the raw status otherwise — previously a transient checkout status blocked the immediate grant even though the webhook had completed the subscription.
-- **2026-07-31**: **Bug 38** fix — `creem/checkout` now accepts `isNative` and sets the native success URL to `/api/creem/return` (a redirect-bridge that bounces to the `chessduo://` deep link, since Creem rejects custom-scheme success URLs). Added `creem/return` route (GET, public) — serves an HTML meta-refresh page redirecting `session_id` into the app.
-- **2026-07-30**: Added `creem/verify-checkout` — verifies a completed Creem checkout on redirect and immediately grants premium (ownership check via `referenceId`/`userId`, service-role upsert). Webhook hardened: sets `subscription_expiry_date` from `current_period_end_date` and `purchase_token` from checkout `id`. Rate limits added for all `/api/creem/*` routes.
-- **2026-07-30**: Creem billing migration — added `/api/creem/*` routes (checkout, products, subscriptions, webhook). Removed `subscription/verify` (Google Play token verification) and `subscription/rtdn` (RTDN placeholder). `subscription/status` simplified to read from Supabase only. Webhook-driven lifecycle replaces Google Play Developer API verification.
+- **2026-08-11**: **Creem removal** — removed all `/api/creem/*` routes (checkout, return, products, subscriptions, verify-checkout, webhook). Reverted to Google Play Billing for subscription management. `subscription/status` reads Supabase only.
 - **2026-07-17**: Fixed RLS bypass in Bearer token auth path — all API routes now pass the user's JWT to `createClient` via `global.headers.Authorization`, ensuring `auth.uid()` works correctly in RLS policies. Affected routes: `push/register`, `push/send`, `subscription/status`, `subscription/verify`, `delete-account`.
 - **2026-07-17**: `/api/push/register` now accepts `platform: 'web'` in addition to `android`/`ios`. `/api/push/send` splits tokens by platform: native tokens use FCM HTTP v1, web tokens use `web-push` with VAPID keys. FCM config is only required when native tokens exist (web-only users work without FCM).
 - **2026-07-15**: Replaced Razorpay API routes with Google Play Billing subscription endpoints (`verify`, `status`, `rtdn`). Same jose JWT OAuth2 pattern as push notifications. Removed `razorpay/` directory entirely.

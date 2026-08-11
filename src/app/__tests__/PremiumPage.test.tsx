@@ -1,6 +1,5 @@
 import React from 'react'
-import { render, screen, act, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen } from '@testing-library/react'
 import PremiumPage from '../(main)/premium/page'
 import { SubscriptionService } from '@/features/billing'
 
@@ -34,40 +33,50 @@ jest.mock('@/features/billing', () => ({
     setProvider: jest.fn(),
     invalidate: jest.fn(),
   },
-  CreemBillingProvider: {},
+  GooglePlayBillingProvider: {},
 }))
 
 jest.mock('@/components/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-describe('PremiumPage Component', () => {
+function setNativePlatform(native: boolean) {
+  if (native) {
+    (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor = { isNativePlatform: () => true }
+  } else {
+    delete (window as unknown as { Capacitor?: unknown }).Capacitor
+  }
+}
+
+describe('PremiumPage Component — Web', () => {
+  beforeEach(() => { setNativePlatform(false) })
+
   test('renders the ChessDuo Premium heading', async () => {
     render(<PremiumPage />)
     const heading = await screen.findByText('Premium')
     expect(heading).toBeDefined()
-    const chessText = screen.getByText('Chess')
-    expect(chessText).toBeDefined()
-    const duoText = screen.getByText('Duo')
-    expect(duoText).toBeDefined()
   })
 
-  test('renders Monthly plan card', async () => {
+  test('shows download app CTA on web', async () => {
     render(<PremiumPage />)
-    const monthly = await screen.findByText('Monthly')
-    expect(monthly).toBeDefined()
+    const heading = await screen.findByText('Premium on Android')
+    expect(heading).toBeDefined()
+    const download = screen.getByText('Download on Google Play')
+    expect(download).toBeDefined()
   })
 
-  test('renders Annual plan card', async () => {
+  test('does not show pricing cards on web', async () => {
     render(<PremiumPage />)
-    const annual = await screen.findByText('Annual')
-    expect(annual).toBeDefined()
+    await screen.findByText('Premium on Android')
+    expect(screen.queryByText('Monthly')).toBeNull()
+    expect(screen.queryByText('Annual')).toBeNull()
+    expect(screen.queryByText('Upgrade to Premium')).toBeNull()
   })
 
-  test('renders Upgrade to Premium buttons', async () => {
+  test('does not show Restore Purchases on web', async () => {
     render(<PremiumPage />)
-    const buttons = await screen.findAllByText('Upgrade to Premium')
-    expect(buttons).toHaveLength(2)
+    await screen.findByText('Premium on Android')
+    expect(screen.queryByText('Restore Purchases')).toBeNull()
   })
 
   test('renders feature list', async () => {
@@ -75,70 +84,46 @@ describe('PremiumPage Component', () => {
     const feature = await screen.findByText('Unlimited Move Insights')
     expect(feature).toBeDefined()
   })
+})
 
-  test('shows free insights note', async () => {
+describe('PremiumPage Component — Native (Android)', () => {
+  beforeEach(() => { setNativePlatform(true) })
+
+  test('renders Monthly plan card on native', async () => {
     render(<PremiumPage />)
-    const note = await screen.findByText(/3 free insights/i)
-    expect(note).toBeDefined()
+    const monthly = await screen.findByText('Monthly')
+    expect(monthly).toBeDefined()
   })
 
-  test('shows Restore Purchases button', async () => {
+  test('renders Annual plan card on native', async () => {
+    render(<PremiumPage />)
+    const annual = await screen.findByText('Annual')
+    expect(annual).toBeDefined()
+  })
+
+  test('renders Upgrade to Premium buttons on native', async () => {
+    render(<PremiumPage />)
+    const buttons = await screen.findAllByText('Upgrade to Premium')
+    expect(buttons).toHaveLength(2)
+  })
+
+  test('shows Restore Purchases button on native', async () => {
     render(<PremiumPage />)
     const restore = await screen.findByText('Restore Purchases')
     expect(restore).toBeDefined()
   })
 
-  test('verifies a checkout and shows premium after upgrade', async () => {
-    // session_id is no longer in the URL — the API resolves it from
-    // pending_checkout_id stored at checkout creation time.
-    window.history.replaceState({}, '', '/premium')
-
-    const premiumStatus = {
+  test('shows premium success screen when premium', async () => {
+    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce({
       isPremium: true,
-      subscriptionProvider: 'CREEM',
-      subscriptionPlan: 'monthly',
-      purchaseToken: 'chk_123',
-      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
-      autoRenewStatus: true,
-      purchaseState: 'purchased',
-      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
-      subscriptionStatus: 'active',
-    }
-
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ verified: true, status: premiumStatus }),
-    })
-
-    render(<PremiumPage />)
-    const premium = await screen.findByText(/You're Premium/)
-    expect(premium).toBeDefined()
-    expect(SubscriptionService.invalidate).toHaveBeenCalled()
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/creem/verify-checkout'),
-      expect.anything(),
-    )
-  })
-
-  test('success layout renders all premium success elements', async () => {
-    window.history.replaceState({}, '', '/premium')
-
-    const premiumStatus = {
-      isPremium: true,
-      subscriptionProvider: 'CREEM',
+      subscriptionProvider: 'GOOGLE_PLAY',
       subscriptionPlan: 'yearly',
-      purchaseToken: 'chk_123',
+      purchaseToken: 'gpa_123',
       subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
       autoRenewStatus: true,
-      purchaseState: 'purchased',
+      purchaseState: 'active',
       lastVerifiedDate: '2026-07-31T00:00:00.000Z',
       subscriptionStatus: 'active',
-    }
-
-    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValueOnce(premiumStatus)
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ verified: true, status: premiumStatus }),
     })
 
     render(<PremiumPage />)
@@ -155,66 +140,8 @@ describe('PremiumPage Component', () => {
     expect(screen.getByText('Features')).toBeDefined()
     expect(screen.getByText('Secure &')).toBeDefined()
     expect(screen.getByText('Protected')).toBeDefined()
-    expect(screen.getByText('Secured by Creem')).toBeDefined()
+    expect(screen.getByText('Secured by Google Play')).toBeDefined()
     expect(screen.getByText(/Thank you for choosing ChessDuo Premium/)).toBeDefined()
     expect(screen.getByText('Go to Dashboard')).toBeDefined()
-  })
-
-  test('re-verifies premium when the app returns to the foreground after a mobile checkout', async () => {
-    window.history.replaceState({}, '', '/premium')
-    ;(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor = { isNativePlatform: () => true }
-
-    let resumeCb: ((d: { isActive: boolean }) => void) | undefined
-    const { App } = jest.requireMock('@capacitor/app')
-    ;(App.addListener as jest.Mock).mockImplementation((event: string, cb: (d: unknown) => void) => {
-      if (event === 'appStateChange') resumeCb = cb as (d: { isActive: boolean }) => void
-      return Promise.resolve({ remove: jest.fn() })
-    })
-
-    // verify-checkout is unreachable on mount → the page settles on the pricing
-    // view quickly instead of running the slow webhook poll.
-    global.fetch = jest.fn().mockRejectedValue(new Error('offline'))
-
-    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValue({
-      isPremium: false,
-      subscriptionProvider: null,
-      subscriptionPlan: null,
-      purchaseToken: null,
-      subscriptionExpiryDate: null,
-      autoRenewStatus: false,
-      purchaseState: null,
-      lastVerifiedDate: null,
-      subscriptionStatus: null,
-    })
-    ;(SubscriptionService.purchaseMonthly as jest.Mock).mockResolvedValue({
-      success: true,
-      checkoutUrl: 'https://checkout.creem.io/test',
-      productId: 'premium_monthly',
-    })
-
-    render(<PremiumPage />)
-    await screen.findByText('Monthly')
-
-    // User taps Upgrade → external browser opens, checkout flagged as pending.
-    await userEvent.click(screen.getAllByText('Upgrade to Premium')[0])
-
-    // While the user is away paying, the webhook grants premium.
-    ;(SubscriptionService.getStatus as jest.Mock).mockResolvedValue({
-      isPremium: true,
-      subscriptionProvider: 'CREEM',
-      subscriptionPlan: 'monthly',
-      purchaseToken: 'chk_123',
-      subscriptionExpiryDate: '2026-08-30T00:00:00.000Z',
-      autoRenewStatus: true,
-      purchaseState: 'purchased',
-      lastVerifiedDate: '2026-07-31T00:00:00.000Z',
-      subscriptionStatus: 'active',
-    })
-
-    // User returns to the app → appStateChange(resume) → re-verify → success screen.
-    await waitFor(() => expect(resumeCb).toBeDefined())
-    await act(async () => { resumeCb!({ isActive: true }) })
-
-    expect(await screen.findByText(/You're Premium/)).toBeDefined()
   })
 })
