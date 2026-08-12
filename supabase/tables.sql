@@ -300,7 +300,7 @@ DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
                                                                              DROP POLICY IF EXISTS "Authenticated users can create challenge links" ON challenge_links;
                                                                              DROP POLICY IF EXISTS "Creator can deactivate challenge links" ON challenge_links;
                                                                             -- function
-                                                                            DROP FUNCTION IF EXISTS public.is_room_member(UUID);
+                                                                            DROP FUNCTION IF EXISTS public.is_room_member(UUID) CASCADE;
 
                                                                             -- ============================================
                                                                             -- RLS Policies — Production Hardening
