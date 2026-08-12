@@ -334,7 +334,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   playerIdRef.current = playerId
 
   const inputLockedRef = useRef(false)
-  const submissionTurnRef = useRef<string | null>(null)
+  const submissionTurnRef = useRef(false)
 
   useEffect(() => {
     if (!showInsights || !playerId) return
@@ -1389,7 +1389,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
       // Lock input immediately — prevents duplicate submissions within a single turn
       inputLockedRef.current = true
-      submissionTurnRef.current = currentTurn
+      submissionTurnRef.current = true
 
       DEBUG && console.log(`[HUMAN] Turn confirmed as ${myTeam} - processing move...`)
 
@@ -1736,19 +1736,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [isOnline, gameState.status, gameState.currentTurn, executeBotMove])
 
-  // Reset input lock when it's genuinely a new turn (not just turnStatus
-  // flipping due to an out-of-band broadcast resolution).
+  // Reset input lock when turnStatus indicates a genuinely new turn.
+  // turnStatus === 'your_turn' means: currentTurn === myTeam, no pending
+  // moves exist, and turnState is 'selecting' — the engine is ready.
   useEffect(() => {
     if (gameState.turnStatus === 'your_turn' && gameState.isMyTurn) {
-      // Only unlock if the board's current turn differs from the turn we
-      // submitted on. Prevents premature unlock when handleTurnResolved
-      // processes a bot resolution during our stuck executeMove flow.
-      if (!submissionTurnRef.current || gameState.currentTurn !== submissionTurnRef.current) {
-        inputLockedRef.current = false
-        submissionTurnRef.current = null
-      }
+      inputLockedRef.current = false
+      submissionTurnRef.current = false
     }
-  }, [gameState.turnStatus, gameState.isMyTurn, gameState.currentTurn])
+  }, [gameState.turnStatus, gameState.isMyTurn])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
