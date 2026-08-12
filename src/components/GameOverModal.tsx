@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trophy, Handshake, RotateCcw, LogOut, X, Eye } from 'lucide-react'
+import { Trophy, Handshake, Home, LogOut, X, Eye } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
@@ -76,8 +76,8 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
               {isAbandoned ? 'Your teammate left the match' : 'Great game!'}
             </p>
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onPlayAgain} className="relative z-10 inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-8 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400">
-              <RotateCcw size={18} />
-              {isAbandoned ? 'Go Home' : 'Play Again'}
+              <Home size={18} />
+              Home
             </motion.button>
             {onClose && (
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={onClose} className="relative z-10 mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-3 text-sm font-medium text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700">

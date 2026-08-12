@@ -549,18 +549,7 @@ function FriendList({
         </div>
       ))}
 
-      {/* More Friends Card */}
-      <div className="mt-4 p-4 bg-purple-500/5 border border-purple-500/20 rounded-2xl">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-            <Crown size={20} className="text-purple-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-white text-sm font-semibold mb-1">More friends, more fun!</p>
-            <p className="text-slate-400 text-xs">Challenge your friends and climb the ranks together.</p>
-          </div>
-        </div>
-      </div>
+
     </div>
   )
 }

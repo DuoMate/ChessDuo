@@ -22,15 +22,15 @@ describe('GameOverModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('renders Play Again button for non-abandoned matches', () => {
+  it('renders Home button for non-abandoned matches', () => {
     render(<GameOverModal open={true} winner="DRAW" onPlayAgain={jest.fn()} />)
-    expect(screen.getByText('Play Again')).toBeDefined()
+    expect(screen.getByText('Home')).toBeDefined()
   })
 
-  it('calls onPlayAgain when Play Again button is clicked', () => {
+  it('calls onPlayAgain when Home button is clicked', () => {
     const onPlayAgain = jest.fn()
     render(<GameOverModal open={true} winner="DRAW" onPlayAgain={onPlayAgain} />)
-    fireEvent.click(screen.getByText('Play Again'))
+    fireEvent.click(screen.getByText('Home'))
     expect(onPlayAgain).toHaveBeenCalled()
   })
 
@@ -46,11 +46,10 @@ describe('GameOverModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('shows Go Home for abandoned matches', () => {
+  it('shows Home for abandoned matches', () => {
     render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} gameOverReason="abandoned" />)
     expect(screen.getByText('Match Abandoned')).toBeDefined()
-    expect(screen.getByText('Go Home')).toBeDefined()
-    expect(screen.queryByText('Play Again')).toBeNull()
+    expect(screen.getByText('Home')).toBeDefined()
   })
 
   it('shows trophy icon for White win', () => {
