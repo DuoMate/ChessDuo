@@ -607,7 +607,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     toast.gameOver(result)
 
-    gameSavedRef.current = true
+    if (playerId) gameSavedRef.current = true
   }, [gameState.status, isOnline, game, toast, playerId])
 
   // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
