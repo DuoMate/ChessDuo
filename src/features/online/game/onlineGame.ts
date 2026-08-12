@@ -946,6 +946,13 @@ export class OnlineGame {
             }
           }
 
+          // Ensure game phase is SELECTING. syncGameState() restores state
+          // without calling startMatch(), leaving _phase at WAITING which
+          // causes all setPendingMove calls to be silently dropped.
+          if (this.gameState.phase === GamePhase.WAITING) {
+            this.gameState.startMatch()
+          }
+
           // Start pending turn for current state, then restore submissions from DB
           this.startPendingTurn()
           if (this._gameId && this._status !== GameStatus.GAME_OVER) {

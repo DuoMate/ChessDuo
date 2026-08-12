@@ -1,9 +1,9 @@
 # ChessDuo Implementation Progress
 
 > **Single source of truth.** Updated after every module completion.
-> **Last updated:** 2026-08-04
+> **Last updated:** 2026-08-12
 > **Active branch:** `architecture-refactor`
-> **Last commit:** `d2b5830`
+> **Last commit:** (pending)
 
 ---
 
@@ -123,6 +123,7 @@
 | P4 | Single Resolver | ✅ Complete | Coordinator-only resolve; non-coordinator waits for broadcast |
 | P5 | Reconnect Hardening | ✅ Complete | Turn comparison; FEN verify; restore submissions from DB |
 | P6 | Timer Ownership | ✅ Complete | Coordinator-only countdown; timer_sync authoritative |
+| P7 | SyncGameState Phase Fix | ✅ Complete | Non-coordinator first-join phase WAITING→SELECTING transition |
 
 ### Phase 1 Complete — Database Foundation (2026-08-04)
 
@@ -205,3 +206,18 @@
 - `onlineGame.ts`: `startMatchTimer()` interval body gated by `if (!this.isCoordinator()) return`
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1061/1156 passing (89/89 onlineGame) ✅
+
+### Phase 7 Complete — SyncGameState Phase Fix (2026-08-12)
+
+**`syncGameState()` now ensures `GameState._phase` is `SELECTING`** after state restoration. Previously, when `needsReplay` was false (normal first-join path for non-coordinators), `startMatch()` was never called, leaving `_phase` at `WAITING`. The phase guard in `setPendingMove()` (`gameState.ts:140`) silently dropped all pending moves — including teammate shadow submissions from `postgres_changes` — blocking the entire Duo turn cycle.
+
+**All observed P0 symptoms were consequences of this single missing call:**
+- Teammate shadow move missing (pendingMoves map empty)
+- Board idle, no resolution (non-coordinator never received or applied moves)
+- Forward/backward navigation broken (moveHistoryRef never populated)
+- Turn never advances (phase stuck at WAITING)
+
+**Code changes:**
+- `onlineGame.ts`: Added `if (phase === WAITING) startMatch()` guard after the `needsReplay` else-branch, before `startPendingTurn()`, in `syncGameState()`
+
+**GATE results:** `tsc --noEmit` ✅ | `npm test` 1082/1177 passing (0 new failures) ✅
