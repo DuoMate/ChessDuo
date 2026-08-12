@@ -9,8 +9,6 @@ interface BadgeData {
   unreadBySender: Record<string, number>
 }
 
-let channelCounter = 0
-
 export function useBadgeCount(playerId: string | null): BadgeData {
   const [badge, setBadge] = useState<BadgeData>({
     unreadMessages: 0,
@@ -20,7 +18,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
   })
   const mountedRef = useRef(true)
   const fetchCountsRef = useRef<() => Promise<void>>(async () => {})
-  const instanceId = useRef(++channelCounter)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const fetchCounts = useCallback(async () => {
     if (!playerId) {
@@ -72,27 +70,29 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     fetchCounts()
   }, [fetchCounts])
 
-  // Realtime subscriptions — only re-subscribe when playerId changes
+  // Realtime subscription — single channel with two listeners, INSERT-only, debounced
   useEffect(() => {
     if (!playerId) return
 
-    const onUpdate = () => { if (mountedRef.current) fetchCountsRef.current() }
+    const debouncedUpdate = () => {
+      if (!mountedRef.current) return
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) fetchCountsRef.current()
+      }, 300)
+    }
 
-    const msgChannel = supabase
-      .channel(`badge-messages-${playerId}-${instanceId.current}`)
+    const badgeChannel = supabase
+      .channel(`badge:${playerId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${playerId}` },
-        onUpdate,
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${playerId}` },
+        debouncedUpdate,
       )
-      .subscribe()
-
-    const reqChannel = supabase
-      .channel(`badge-friend-requests-${playerId}-${instanceId.current}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'friendships', filter: `receiver_id=eq.${playerId}` },
-        onUpdate,
+        { event: 'INSERT', schema: 'public', table: 'friendships', filter: `receiver_id=eq.${playerId}` },
+        debouncedUpdate,
       )
       .subscribe()
 
@@ -102,8 +102,8 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
-      supabase.removeChannel(msgChannel)
-      supabase.removeChannel(reqChannel)
+      clearTimeout(debounceTimerRef.current)
+      supabase.removeChannel(badgeChannel)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [playerId])

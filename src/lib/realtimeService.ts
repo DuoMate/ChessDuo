@@ -2,6 +2,8 @@ import { supabase } from './supabase'
 import { subscriptionManager } from './subscriptionManager'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
+let channelCounter = 0
+
 export const RealtimeService = {
   subscribeToTable(
     table: string,
@@ -12,7 +14,7 @@ export const RealtimeService = {
     const channelConfig: any = { event, schema: 'public', table }
     if (filter) channelConfig.filter = filter
 
-    const channel = supabase.channel(`${table}-${event}-${Date.now()}`)
+    const channel = supabase.channel(`${table}-${event}-${++channelCounter}`)
       .on('postgres_changes', channelConfig, callback)
       .subscribe()
 
