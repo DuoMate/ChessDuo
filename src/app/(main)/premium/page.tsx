@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
-import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink } from 'lucide-react'
+import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink, Clock } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { PageLoading } from '@/components/PageLoading'
 import { SubscriptionService } from '@/features/billing'
@@ -131,6 +131,35 @@ export default function PremiumPage() {
 
             {isPremium ? (
               <PremiumSuccess status={status} subscriptionStatus={subscriptionStatus} onGoToProfile={() => router.replace('/profile')} />
+            ) : process.env.NEXT_PUBLIC_PREMIUM_COMING_SOON === 'true' ? (
+              <>
+                {/* Coming Soon — Google Play approval pending */}
+                <div className="flex flex-col flex-1 items-center justify-center text-center py-8">
+                  <div className="w-20 h-20 rounded-full bg-amber-500/15 border border-amber-500/20 flex items-center justify-center mb-6">
+                    <Clock size={36} className="text-amber-400" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white mb-2">Premium — Coming Soon</h2>
+                  <p className="text-slate-400 text-sm max-w-xs mx-auto mb-8">
+                    Premium subscriptions will be available soon. Stay tuned for unlimited move insights, AI analysis, and more!
+                  </p>
+                </div>
+
+                {/* Premium Benefits (informational) */}
+                <div className="text-center mb-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-amber-400">✦</span>
+                    <h3 className="text-lg font-bold text-white">Premium Benefits</h3>
+                    <span className="text-amber-400">✦</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-6">
+                  <BenefitRow icon={<BarChart3 size={18} />} title="Unlimited Move Insights" desc="See why a move won or lost — every turn" />
+                  <BenefitRow icon={<Zap size={18} />} title="AI Position Analysis" desc="Stockfish-powered positional breakdown" />
+                  <BenefitRow icon={<Gamepad2 size={18} />} title="Advanced Stats" desc="Per-player accuracy trends and comparisons" />
+                  <BenefitRow icon={<Ban size={18} />} title="Best Move Suggestions" desc="Engine-recommended alternatives" />
+                </div>
+              </>
             ) : (
               <>
                 {error && (
