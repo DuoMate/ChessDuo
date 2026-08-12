@@ -131,7 +131,7 @@ export default function PremiumPage() {
 
             {isPremium ? (
               <PremiumSuccess status={status} subscriptionStatus={subscriptionStatus} onGoToProfile={() => router.replace('/profile')} />
-            ) : process.env.NEXT_PUBLIC_PREMIUM_COMING_SOON === 'true' ? (
+            ) : true ? (
               <>
                 {/* Coming Soon — Google Play approval pending */}
                 <div className="flex flex-col flex-1 items-center justify-center text-center py-8">
