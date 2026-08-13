@@ -33,6 +33,7 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 - `@/lib/settingsStorage` (for `useSettings`)
 
 ## Recent Changes
+- **2026-08-13**: **Realtime remount crash fix** — `useBadgeCount` now uses a unique channel name per subscription instance (`badge:${playerId}:${++counter}`). Supabase reuses a channel with the same topic while it is still registered (removeChannel is async), so the previous fixed `badge:${playerId}` name caused `.on('postgres_changes')` to throw ("cannot add postgres_changes callbacks ... after subscribe()") on fast home↔profile remounts. Added regression test.
 - **2026-07-18**: Added `useBadgeCount` hook — centralized unread message + pending friend request counting with Supabase Realtime on both `messages` and `friend_requests` tables. No polling. Fixed race condition with unique channel names per instance. Replaces the 30s polling and dual-state pattern that caused badge staleness.
 - **2026-07-15**: `useScrollLock` refactored with module-level lock counter to prevent nested lock interference.
 - **2026-08-03**: Added `useSettings` — moved from `lib/settings.ts` to `hooks/useSettings.ts` (BV3 fix: React hook belongs in hooks/, not lib/). Pure localStorage utilities extracted to `lib/settingsStorage.ts`.

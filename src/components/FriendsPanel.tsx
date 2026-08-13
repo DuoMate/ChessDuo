@@ -25,11 +25,29 @@ import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
 import { supabase } from '@/lib/supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
 import { useToast } from './Toast'
 import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip } from 'lucide-react'
+
+// Unique per-subscription-instance suffix. Supabase reuses a channel with the
+// same topic while it is still registered (removeChannel is async), so a fixed
+// name causes `.on('postgres_changes', ...)` to throw on fast remounts
+// (e.g. friends -> back -> friends). This keeps each mount on a fresh channel.
+let friendshipChannelCounter = 0
+
+// `global-presence` MUST keep a shared topic — presence aggregates across all
+// connected clients on the same channel, so it cannot be unique-named. To avoid
+// the `.on('presence')` throw on remount, we share one channel across all
+// FriendsPanel instances via a module-level ref count (first subscriber creates
+// it, last unmount tears it down).
+let presenceChannel: RealtimeChannel | null = null
+let presenceRefCount = 0
+// Live instance setters — the shared channel's `sync` callback notifies every
+// mounted instance (avoids a stale closure pointing at an unmounted setter).
+const presenceSetters = new Set<(online: Set<string>) => void>()
 
 interface FriendsPanelProps {
   playerId: string
@@ -112,7 +130,7 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
 
   useEffect(() => {
     const channel = supabase
-      .channel('friendship-changes')
+      .channel(`friendship-changes-${++friendshipChannelCounter}`)
       .on(
         'postgres_changes',
         {
@@ -147,24 +165,38 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
   useEffect(() => {
     if (!playerId) return
 
-    const channel = supabase.channel('global-presence', {
-      config: { presence: { key: playerId } },
-    })
+    presenceRefCount += 1
+    presenceSetters.add(setOnlineFriends)
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const online = new Set(Object.keys(state))
-        setOnlineFriends(online)
+    // Create + subscribe the shared presence channel only on the first subscriber.
+    if (!presenceChannel) {
+      presenceChannel = supabase.channel('global-presence', {
+        config: { presence: { key: playerId } },
       })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ user_id: playerId, online_at: new Date().toISOString() })
-        }
-      })
+
+      const sharedChannel = presenceChannel
+      sharedChannel
+        .on('presence', { event: 'sync' }, () => {
+          const state = sharedChannel.presenceState()
+          const online = new Set(Object.keys(state))
+          presenceSetters.forEach((setter) => setter(online))
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await sharedChannel.track({ user_id: playerId, online_at: new Date().toISOString() })
+          }
+        })
+    }
 
     return () => {
-      supabase.removeChannel(channel)
+      presenceSetters.delete(setOnlineFriends)
+      presenceRefCount -= 1
+      if (presenceRefCount <= 0 && presenceChannel) {
+        const ch = presenceChannel
+        presenceChannel = null
+        presenceRefCount = 0
+        supabase.removeChannel(ch)
+      }
     }
   }, [playerId])
 
