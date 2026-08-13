@@ -53,9 +53,10 @@ interface FriendsPanelProps {
   playerId: string
   unreadBySender?: Record<string, number>
   onClose?: () => void
+  openChat?: string
 }
 
-export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: FriendsPanelProps) {
+export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat }: FriendsPanelProps) {
   const router = useRouter()
   const [friends, setFriends] = useState<FriendWithProfile[]>([])
   const [pending, setPending] = useState<{ incoming: FriendWithProfile[]; outgoing: FriendWithProfile[] }>({ incoming: [], outgoing: [] })
@@ -127,6 +128,15 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose }: Friends
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { mountedRef.current = false }
   }, [loadData])
+
+  useEffect(() => {
+    if (openChat && !loading && friends.length > 0) {
+      const friend = friends.find(f => f.friend_id === openChat)
+      if (friend) {
+        setChatFriend({ id: friend.friend_id, name: friend.friend_username })
+      }
+    }
+  }, [openChat, loading, friends])
 
   useEffect(() => {
     const channel = supabase

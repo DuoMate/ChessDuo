@@ -340,6 +340,7 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
             try { storeNotificationRedirect({
               type,
               senderId: data?.senderId,
+              senderName: data?.senderName,
               roomId: data?.roomId,
               code: data?.code,
               joinPlayerId: data?.joinPlayerId,
@@ -378,9 +379,20 @@ export async function registerDeviceToken(accessToken?: string): Promise<void> {
           if (!data) return
           const type = data.type as NotificationType | undefined
           if (!type) return
-          // Do NOT store a redirect here — the hard navigation below happens
-          // immediately. Storing would leave a stale redirect in localStorage
-          // that gets consumed on next home page visit, causing a boomerang nav.
+          // Store redirect so it survives the hard navigation (cold-start recovery).
+          // The consumed flag + 30s TTL in consumeNotificationRedirect prevent
+          // boomerang navigation on subsequent page loads.
+          if (type === 'chat_message' || type === 'friend_request' || type === 'invite_accepted' || type === 'game_invite') {
+            try { storeNotificationRedirect({
+              type,
+              senderId: data?.senderId,
+              senderName: data?.senderName,
+              roomId: data?.roomId,
+              code: data?.code,
+              joinPlayerId: data?.joinPlayerId,
+              joinTeam: data?.joinTeam,
+            }) } catch { /* redirect store is best-effort */ }
+          }
           const route = getNotificationRedirectRoute({
             type,
             senderId: data.senderId,

@@ -3,6 +3,7 @@ const REDIRECT_KEY = 'chessduo_notification_redirect'
 export interface NotificationRedirect {
   type: string
   senderId?: string
+  senderName?: string
   roomId?: string
   code?: string
   joinPlayerId?: string
@@ -46,8 +47,11 @@ export function getNotificationRedirectRoute(data: NotificationRedirect): string
   switch (data.type) {
     case 'friend_request':
     case 'invite_accepted':
-    case 'chat_message':
       return '/friends'
+    case 'chat_message': {
+      if (data.senderId) return `/friends?openChat=${data.senderId}`
+      return '/friends'
+    }
     case 'game_invite': {
       // Require all essential params — partial URLs trigger "Invalid Duel Link"
       if (data.roomId && data.joinPlayerId && data.joinTeam) {
