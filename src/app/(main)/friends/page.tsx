@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FriendsPanel } from '@/components/FriendsPanel'
 import { BackButton } from '@/components/BackButton'
@@ -23,6 +24,8 @@ export default function FriendsPage() {
 
 function FriendsContent({ playerId }: { playerId: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const openChat = searchParams.get('openChat')
   const { unreadBySender } = useBadgeCount(playerId)
 
   return (
@@ -36,6 +39,7 @@ function FriendsContent({ playerId }: { playerId: string }) {
           <FriendsPanel
             playerId={playerId}
             unreadBySender={unreadBySender}
+            openChat={openChat || undefined}
           />
         </div>
       </div>

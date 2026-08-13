@@ -27,6 +27,7 @@ export function useNotificationRedirect(): void {
           storeNotificationRedirect({
             type: payload.data.type,
             senderId: payload.data.senderId,
+            senderName: payload.data.senderName,
             roomId: payload.data.roomId,
             code: payload.data.code,
             joinPlayerId: payload.data.joinPlayerId,

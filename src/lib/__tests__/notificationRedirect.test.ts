@@ -31,10 +31,18 @@ describe('getNotificationRedirectRoute', () => {
     expect(route).toBe('/friends')
   })
 
-  it('routes chat_message to /friends', () => {
+  it('routes chat_message with senderId to /friends?openChat=<senderId>', () => {
     const route = getNotificationRedirectRoute({
       type: 'chat_message',
       senderId: 'sender-1',
+      timestamp: Date.now(),
+    })
+    expect(route).toBe('/friends?openChat=sender-1')
+  })
+
+  it('routes chat_message without senderId to /friends', () => {
+    const route = getNotificationRedirectRoute({
+      type: 'chat_message',
       timestamp: Date.now(),
     })
     expect(route).toBe('/friends')
