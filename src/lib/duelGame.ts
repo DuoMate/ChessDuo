@@ -6,6 +6,7 @@ import { createEvaluator, GameEvaluator } from '@/features/mobile-engine/evaluat
 import { calculateAccuracy } from '@/features/shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { subscriptionManager } from './subscriptionManager'
+import { RealtimeService } from './realtimeService'
 
 export interface DuelPlayerState {
   id: string
@@ -217,6 +218,11 @@ export class DuelGame {
       if (status === 'CHANNEL_ERROR') {
         console.warn('[DUEL] Channel error — reconnecting...')
         try { supabase.removeChannel(this._channel!) } catch (e) { console.error('[DuelGame] Failed to remove channel:', e) }
+        // Force-tear-down any stale channel with the same topic. When the socket
+        // is dead, removeChannel's unsubscribe() can time out and leave the old
+        // channel registered; re-creating the topic would reuse it and make the
+        // `.on(...)` calls below throw.
+        RealtimeService.forceRemoveStaleChannels(`room:${roomId}`)
         this._channel = supabase.channel(`room:${roomId}`, {
           config: { presence: { key: this._playerId } }
         })

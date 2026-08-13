@@ -2,10 +2,12 @@ import { RealtimeService } from '../realtimeService'
 
 const mockChannel = { subscribe: jest.fn(() => mockChannel), unsubscribe: jest.fn(), on: jest.fn(() => mockChannel) }
 const mockSupabaseChannel = jest.fn()
+const mockGetChannels = jest.fn(() => [])
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
     channel: () => mockSupabaseChannel(),
+    getChannels: () => mockGetChannels(),
   },
 }))
 
@@ -19,6 +21,7 @@ jest.mock('@/lib/subscriptionManager', () => ({
 beforeEach(() => {
   jest.clearAllMocks()
   mockSupabaseChannel.mockReturnValue(mockChannel)
+  mockGetChannels.mockReturnValue([])
 })
 
 describe('RealtimeService', () => {
@@ -56,6 +59,29 @@ describe('RealtimeService', () => {
 
       expect(mockChannel.unsubscribe).toHaveBeenCalled()
       expect(subscriptionManager.remove).toHaveBeenCalledWith(mockChannel)
+    })
+  })
+
+  describe('forceRemoveStaleChannels', () => {
+    it('tears down and deregisters any channel whose topic matches', () => {
+      const { subscriptionManager } = require('@/lib/subscriptionManager')
+      const stale = { topic: 'realtime:room:abc', teardown: jest.fn() }
+      const other = { topic: 'realtime:room:xyz', teardown: jest.fn() }
+      mockGetChannels.mockReturnValue([stale, other])
+
+      RealtimeService.forceRemoveStaleChannels('room:abc')
+
+      expect(stale.teardown).toHaveBeenCalledTimes(1)
+      expect(other.teardown).not.toHaveBeenCalled()
+      expect(subscriptionManager.remove).toHaveBeenCalledWith(stale)
+      expect(subscriptionManager.remove).not.toHaveBeenCalledWith(other)
+    })
+
+    it('does not throw when getChannels is unavailable', () => {
+      const { supabase } = require('@/lib/supabase')
+      supabase.getChannels = undefined
+      expect(() => RealtimeService.forceRemoveStaleChannels('room:abc')).not.toThrow()
+      supabase.getChannels = () => mockGetChannels()
     })
   })
 })

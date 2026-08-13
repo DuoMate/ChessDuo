@@ -9,6 +9,12 @@ interface BadgeData {
   unreadBySender: Record<string, number>
 }
 
+// Unique per-subscription-instance suffix. Supabase reuses a channel with the
+// same topic while it is still registered (removeChannel is async), so a fixed
+// name causes `.on('postgres_changes', ...)` to throw on fast remounts
+// (e.g. home <-> profile navigation). This keeps each mount on a fresh channel.
+let badgeChannelCounter = 0
+
 export function useBadgeCount(playerId: string | null): BadgeData {
   const [badge, setBadge] = useState<BadgeData>({
     unreadMessages: 0,
@@ -83,7 +89,7 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     }
 
     const badgeChannel = supabase
-      .channel(`badge:${playerId}`)
+      .channel(`badge:${playerId}:${++badgeChannelCounter}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${playerId}` },

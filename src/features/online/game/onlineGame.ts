@@ -10,6 +10,7 @@ import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
+import { RealtimeService } from '@/lib/realtimeService'
 
 interface MovePayload {
   playerId: string
@@ -427,6 +428,11 @@ export class OnlineGame {
         try {
           await supabase.removeChannel(this._channel!)
         } catch (e) { DEBUG && console.error('[OnlineGame] Failed to remove channel:', e) }
+        // Force-tear-down any stale channel with the same topic. When the socket
+        // is dead, removeChannel's unsubscribe() can time out and leave the old
+        // channel registered; re-creating the topic would reuse it and make the
+        // `.on(...)` calls below throw.
+        RealtimeService.forceRemoveStaleChannels(`room:${room.id}`)
         this._channel = supabase.channel(`room:${room.id}`, {
           config: { presence: { key: playerId } }
         })
@@ -1338,6 +1344,7 @@ export class OnlineGame {
             try {
               await supabase.removeChannel(this._submissionChannel!)
             } catch (e) { DEBUG && console.error('[SUBMIT] Failed to remove errored channel:', e) }
+            RealtimeService.forceRemoveStaleChannels(`submissions:${gameId}`)
             setup()
           }
         })

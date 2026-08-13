@@ -65,6 +65,10 @@ SELECT cron.schedule(
 -- Reduces WAL scan surface for realtime.list_changes (currently
 -- 50.4% of total DB time). Only tables that ChessDuo subscribes to
 -- via postgres_changes channels are included.
+--
+-- NOTE: This publication is pinned to exactly these 7 tables. Any NEW table
+-- that needs postgres_changes subscriptions MUST be ADDed here, otherwise the
+-- client subscription will silently receive no events.
 ALTER PUBLICATION supabase_realtime SET TABLE
   public.messages,
   public.friendships,
