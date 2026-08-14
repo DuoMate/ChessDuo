@@ -861,6 +861,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 updateStateRef.current()
               } catch (e) {
                 DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
+                // Recovery: reset turn state so humans can still play
+                initialBotTurnTriggeredRef.current = false
+                g.setTurnState('selecting')
+                updateStateRef.current()
               }
             })()
           }
@@ -1531,6 +1535,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   updateStateRef.current()
                 } catch (e) {
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
+                  // Recovery: reset state so humans can continue playing
+                  g.setTurnState('selecting')
+                  setGameState(prev => ({ ...prev, isBotThinking: false }))
+                  updateStateRef.current()
                 }
                 
               })()
@@ -1975,10 +1983,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         })
         hasBot = true
       } else {
-        const candidate = labels[0] && labels[0] !== 'Black Team' ? labels[0] : ''
+        const candidate = labels[1] && labels[1] !== 'You' && labels[1] !== 'Black Team' ? labels[1] : ''
         out.push({
           id,
-          label: candidate || 'Opponent',
+          label: candidate || 'Teammate',
           type: 'human',
           avatar: 'ace' as const,
           profileImageUrl: null,
@@ -2226,12 +2234,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               yourLabel="Your Move"
               teammateLabel="Teammate"
               yourName={!isOnline ? (userProfile.username || 'You') : undefined}
-              teammateName={!isOnline ? (
+              teammateName={isOnline ? (
+                (myTeamRef.current === 'WHITE'
+                  ? whitePlayers.find(p => !p.isYou)
+                  : blackPlayers.find(p => !p.isYou)
+                )?.label
+              ) : (
                 (myTeamRef.current === 'WHITE'
                   ? whitePlayers.find(p => p.id === 'white-bot')
                   : blackPlayers.find(p => p.id === 'black-bot')
                 )?.label
-              ) : undefined}
+              )}
             />
           </div>
         )}
