@@ -16,10 +16,10 @@ function getMoveImpact(san: string): string {
   return ''
 }
 
-function getBlunderWarning(loss: number): { label: string; color: string; Icon: typeof XCircle } | null {
-  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', color: '#ef4444', Icon: XCircle }
-  if (loss >= 200) return { label: 'Blunder — costly mistake', color: '#f59e0b', Icon: AlertTriangle }
-  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', color: '#eab308', Icon: AlertTriangle }
+function getBlunderWarning(loss: number): { label: string; colorClass: string; Icon: typeof XCircle } | null {
+  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', colorClass: 'text-rose-400', Icon: XCircle }
+  if (loss >= 200) return { label: 'Blunder — costly mistake', colorClass: 'text-amber-400', Icon: AlertTriangle }
+  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', colorClass: 'text-yellow-400', Icon: AlertTriangle }
   return null
 }
 
@@ -67,26 +67,26 @@ function MoveColumn({
   move: { san: string; piece?: string; color?: 'white' | 'black' }
   accuracy: number
   outcome: 'won' | 'lost' | 'tied'
-  tone: 'blue' | 'purple' | 'green'
+  tone: 'blue' | 'slate' | 'green'
 }) {
   const labelClass = {
     blue: 'text-blue-300',
-    purple: 'text-purple-300',
+    slate: 'text-slate-300',
     green: 'text-emerald-300',
   }[tone]
   const accClass = {
     blue: 'text-blue-400',
-    purple: 'text-purple-400',
+    slate: 'text-slate-400',
     green: 'text-emerald-400',
   }[tone]
   const borderClass = {
     blue: 'border-blue-500/30',
-    purple: 'border-purple-500/30',
+    slate: 'border-slate-600/30',
     green: 'border-emerald-500/30',
   }[tone]
   const bgClass = {
     blue: 'bg-blue-500/5',
-    purple: 'bg-purple-500/5',
+    slate: 'bg-slate-800/40',
     green: 'bg-emerald-500/5',
   }[tone]
 
@@ -118,14 +118,13 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-      className="w-full max-w-3xl mx-auto rounded-2xl border border-purple-500/30 bg-gradient-to-br from-slate-900/95 to-slate-950/95 p-4 shadow-2xl backdrop-blur-xl"
+      className="w-full max-w-3xl mx-auto rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl"
     >
       <div className="flex items-center justify-center gap-2 mb-3">
-        <Zap size={16} className="text-amber-400" />
-        <span className="text-sm font-extrabold uppercase tracking-[0.2em] text-amber-300">
+        <Zap size={14} className="text-blue-400" />
+        <span className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-100">
           Move Resolved
         </span>
-        <Zap size={16} className="text-amber-400" />
       </div>
 
       <div className="flex items-stretch gap-2">
@@ -136,13 +135,13 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
           outcome={data.result === 'you_won' ? 'won' : data.result === 'teammate_won' ? 'lost' : 'tied'}
           tone="blue"
         />
-        <div className="flex flex-col items-center justify-center gap-2 px-1 min-w-[100px]">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">Engine Chose</span>
-          <Trophy size={22} className="text-amber-300" />
-          <span className="text-2xl font-extrabold text-emerald-300">
+        <div className="flex flex-col items-center justify-center gap-2 px-2 py-3 min-w-[100px] rounded-xl border border-blue-500/40 bg-blue-500/5">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-300">Engine Chose</span>
+          <Trophy size={22} className="text-amber-400" />
+          <span className="text-2xl font-extrabold text-blue-300">
             {data.engineChoseMove.san}
           </span>
-          <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+          <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
             Played
           </span>
         </div>
@@ -151,7 +150,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
           move={data.teammateMove}
           accuracy={data.teammateAccuracy}
           outcome={data.result === 'teammate_won' ? 'won' : data.result === 'you_won' ? 'lost' : 'tied'}
-          tone="purple"
+          tone="slate"
         />
       </div>
 
@@ -203,18 +202,20 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
               </p>
             )}
             {!data.isSync && blunder && (
-              <p
-                className="text-center text-[11px] font-semibold inline-flex items-center justify-center gap-1 w-full"
-                style={{ color: blunder.color }}
-              >
+              <p className={`text-center text-[11px] font-semibold inline-flex items-center justify-center gap-1 w-full ${blunder.colorClass}`}>
                 <blunder.Icon size={12} /> {loserName}: {blunder.label}
               </p>
             )}
             {!data.isSync && (
               <div className="flex items-center justify-center gap-1.5 text-xs flex-wrap">
                 <span
-                  className="px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
-                  style={{ backgroundColor: `${verdict.color}22`, color: verdict.color }}
+                  className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                    verdict.color === '#22c55e' ? 'bg-emerald-500/10 text-emerald-400' :
+                    verdict.color === '#84cc16' ? 'bg-lime-500/10 text-lime-400' :
+                    verdict.color === '#eab308' ? 'bg-yellow-500/10 text-yellow-400' :
+                    verdict.color === '#ef4444' ? 'bg-rose-500/10 text-rose-400' :
+                    'bg-slate-700/40 text-slate-300'
+                  }`}
                 >
                   {verdict.emoji}{verdict.label} move
                 </span>

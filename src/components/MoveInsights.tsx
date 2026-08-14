@@ -33,11 +33,11 @@ export function MoveInsights({
       <motion.div
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
-        className="mt-3 pt-3 border-t border-gray-600"
+        className="mt-3 pt-3 border-t border-slate-700/50"
       >
-        <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-3 text-center">
-          <p className="text-green-400 text-sm font-medium">✓ Both players synchronized</p>
-          <p className="text-gray-500 text-xs mt-1">You and your teammate chose the same move</p>
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
+          <p className="text-emerald-400 text-sm font-medium">✓ Both players synchronized</p>
+          <p className="text-slate-500 text-xs mt-1">You and your teammate chose the same move</p>
         </div>
       </motion.div>
     )
@@ -61,13 +61,13 @@ export function MoveInsights({
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
-      className="mt-3 pt-3 border-t border-gray-600 space-y-2"
+      className="mt-3 pt-3 border-t border-slate-700/50 space-y-2"
     >
       {bestEngineMove && (
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between">
+        <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Engine best:</span>
-            <span className="text-gray-900 dark:text-white text-sm font-bold">{bestEngineMove}</span>
+            <span className="text-xs text-slate-400">Engine best:</span>
+            <span className="text-slate-100 text-sm font-bold">{bestEngineMove}</span>
           </div>
           {bestEngineScore != null && (
             <span className="text-xs text-blue-400">+{Math.round(bestEngineScore)}cp</span>
@@ -113,16 +113,16 @@ function InsightCard({
   scoreDiff: number
 }) {
   return (
-    <div className={`p-2 rounded-lg border text-sm ${isWinner ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+    <div className={`p-2 rounded-lg border text-sm ${isWinner ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
       <div className="flex items-center gap-1 mb-1">
-        <span className="text-gray-900 dark:text-white font-bold">{move}</span>
+        <span className="text-slate-100 font-bold">{move}</span>
         <span className="text-xs">{classification.icon}</span>
       </div>
-      <p className="text-xs text-gray-400 leading-tight">{classification.description}</p>
+      <p className="text-xs text-slate-400 leading-tight">{classification.description}</p>
       <div className="mt-1 flex items-center justify-between">
-        <span className="text-xs text-gray-500">{accuracy.toFixed(0)}% · {loss.toFixed(0)}cp loss</span>
+        <span className="text-xs text-slate-500">{accuracy.toFixed(0)}% · {loss.toFixed(0)}cp loss</span>
         {!isWinner && scoreDiff > 0 && (
-          <span className="text-xs text-yellow-600 dark:text-yellow-400">{scoreDiff.toFixed(0)}cp worse</span>
+          <span className="text-xs text-amber-400">{scoreDiff.toFixed(0)}cp worse</span>
         )}
       </div>
     </div>

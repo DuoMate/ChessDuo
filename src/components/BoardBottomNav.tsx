@@ -59,8 +59,8 @@ export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBa
           onClick={() => onTabChange('insights')}
           className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-all min-h-[44px] min-w-[44px] flex-1 ${
             activeTab === 'insights'
-              ? 'bg-gradient-to-b from-purple-500/25 to-indigo-500/20 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.25)]'
-              : 'bg-gradient-to-b from-purple-500/10 to-indigo-500/5 text-purple-400 hover:from-purple-500/15 hover:to-indigo-500/10'
+              ? 'bg-blue-500/15 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.2)]'
+              : 'text-slate-400 hover:text-slate-300 hover:bg-blue-500/5'
           }`}
           aria-label="Insights"
         >

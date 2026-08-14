@@ -58,7 +58,7 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
   }
 
   if (loading) {
-    return <div className="mt-3 pt-3 border-t border-gray-600 flex justify-center"><Spinner size="sm" /></div>
+    return <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-center"><Spinner size="sm" /></div>
   }
 
   if (isPremium || showInsights) {
@@ -125,7 +125,7 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-      className="mt-3 pt-3 border-t border-gray-600 text-center"
+        className="mt-3 pt-3 border-t border-slate-700/50 text-center"
     >
       <div className="flex items-center justify-center gap-2 text-xs text-slate-400 mb-2">
         <BarChart3 size={14} strokeWidth={2} />

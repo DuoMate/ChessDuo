@@ -159,9 +159,9 @@ export function BoardTopBar({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-1 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
         {/* White team */}
-        <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
+        <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1 overflow-hidden">
           <div className="flex items-center gap-1">
             <Crown size={11} className="text-slate-700 dark:text-slate-200 shrink-0" />
             <span className="text-xs font-bold tracking-widest text-slate-700 dark:text-slate-200 uppercase">
@@ -191,7 +191,7 @@ export function BoardTopBar({
         </div>
 
         {/* Black team */}
-        <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1">
+        <div className="flex flex-col items-center gap-0.5 min-w-0 flex-1 overflow-hidden">
           <div className="flex items-center gap-1">
             <span className="text-xs font-bold tracking-widest text-slate-700 dark:text-slate-200 uppercase">
               Black
