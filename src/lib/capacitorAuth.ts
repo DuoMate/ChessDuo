@@ -76,6 +76,11 @@ export async function registerCapacitorAuthListener() {
       targetPath = `/${joinParams}`
     }
 
+    // Skip navigation if already at target — prevents infinite reload loop
+    // when getLaunchUrl() returns the same URL after window.location.replace()
+    const currentPath = window.location.pathname + window.location.search
+    if (currentPath === targetPath) return
+
     // Handle /?code=X (home page with room code) — need to go through home page
     // where the auto-join effect can consume the code param
     if (targetPath.startsWith('/') && targetPath.includes('?code=')) {

@@ -36,3 +36,35 @@ describe('getPathFromUrl (deep-link parsing)', () => {
     expect(getPathFromUrl('somescheme://nope')).toBeNull()
   })
 })
+
+describe('infinite-loop guard (currentPath === targetPath)', () => {
+  // The guard in handleDeepLink compares:
+  //   window.location.pathname + window.location.search  ===  targetPath
+  // where targetPath = getPathFromUrl(deepLinkUrl)
+  //
+  // When they match, window.location.replace is skipped, preventing the
+  // reload loop caused by getLaunchUrl() returning the URL on every call.
+
+  it('https invite URL maps to same path as browser current URL', () => {
+    const deepLinkUrl = 'https://chessduo.navron.org/?code=ABC123'
+    const targetPath = getPathFromUrl(deepLinkUrl)
+    const currentPath = '/?code=ABC123'
+    expect(targetPath).toBe(currentPath)
+    // Guard: currentPath === targetPath → skip replace → no reload loop
+  })
+
+  it('https challenge URL maps to same path as browser current URL', () => {
+    const deepLinkUrl = 'https://chessduo.navron.org/challenge/XYZ'
+    const targetPath = getPathFromUrl(deepLinkUrl)
+    const currentPath = '/challenge/XYZ'
+    expect(targetPath).toBe(currentPath)
+  })
+
+  it('different paths trigger navigation (cold start)', () => {
+    const deepLinkUrl = 'https://chessduo.navron.org/?code=DEF456'
+    const targetPath = getPathFromUrl(deepLinkUrl)
+    const currentPath = '/'
+    expect(targetPath).not.toBe(currentPath)
+    // Guard does NOT match → replace IS called → normal cold-start navigation
+  })
+})
