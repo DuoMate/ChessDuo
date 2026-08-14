@@ -238,7 +238,7 @@ export class OnlineGame {
           }
         }
         
-        return { from: pending.from, to: pending.to, piece, color: 'white' }
+        return { from: pending.from, to: pending.to, piece, color: this.gameState.currentTeam === Team.WHITE ? 'white' : 'black' }
       }
     }
     return null

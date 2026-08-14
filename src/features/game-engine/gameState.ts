@@ -142,9 +142,11 @@ export class GameState {
       return
     }
 
-    // In online mode, we use actual player IDs. Determine isHuman based on team.
-    // WHITE team = human players, BLACK team = bots (in 2v2 mode)
-    const isHuman = this.whitePlayers.includes(player) || (player === 'player1' || player === 'player3')
+    // Determine isHuman: offline slots (player1-player4) are human,
+    // online UUIDs are human, bot_ prefixed IDs are bots.
+    const isOfflineSlot = (player === 'player1' || player === 'player2' || player === 'player3' || player === 'player4')
+    const isBot = player.startsWith('bot_')
+    const isHuman = isOfflineSlot || (!isBot && player.length > 8)
 
     this.pendingMoves.set(player, {
       move,
