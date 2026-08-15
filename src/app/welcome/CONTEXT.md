@@ -22,4 +22,5 @@ Onboarding instruction screen — shows how ChessDuo works with a chess board de
 - `@/hooks/useCapacitorBackButton` — Android back
 
 ## Recent Changes
+- **2026-08-15**: **UX layout restructure** — "Got it!" button moved to fixed bottom action bar with safe-area padding. Removed `justify-center` and `pb-20` from outer shell. Content area is now scrollable (`flex-1 overflow-y-auto`). Board max-width changed to `max-w-[min(260px,55vw)]` for better small-screen fit. Button is now immediately visible without scrolling on all mobile viewports.
 - **2026-07-18**: Created as full page route (was modal overlay). Supports `?mode=online` and `?mode=offline`. Added loading state on button. Removed WelcomeDisclaimer modal usage from page.tsx.
