@@ -267,11 +267,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const isMobile = useIsMobile()
 
-  useNavigationGuard({
-    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING,
-    onAttemptLeave: () => setShowLeaveModal(true),
-  })
-
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
   const moveHistoryRef = useRef<MoveEntry[]>([])
@@ -316,12 +311,47 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const [insightsState, setInsightsState] = useState<{ isPremium: boolean; revealsRemaining: number | null }>({ isPremium: false, revealsRemaining: null })
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
 
+  // Refs for overlay states — used by onOverlayBack to avoid stale closures
+  const showRoundHistoryRef = useRef(false)
+  const showInsightsRef = useRef(false)
+  const showChatRef = useRef(false)
+  const showSettingsRef = useRef(false)
+  const overlayModeRef = useRef<'none' | 'profile' | 'history'>('none')
+  const showResignConfirmRef = useRef(false)
+  const showLeaveModalRef = useRef(false)
+
   const closeAllPanels = useCallback(() => {
     setShowRoundHistory(false)
     setShowInsights(false)
     setShowChat(false)
     setOverlayMode('none')
   }, [])
+
+  // Sync overlay refs with state — keeps onOverlayBack from seeing stale values
+  useEffect(() => { showRoundHistoryRef.current = showRoundHistory }, [showRoundHistory])
+  useEffect(() => { showInsightsRef.current = showInsights }, [showInsights])
+  useEffect(() => { showChatRef.current = showChat }, [showChat])
+  useEffect(() => { showSettingsRef.current = showSettings }, [showSettings])
+  useEffect(() => { overlayModeRef.current = overlayMode }, [overlayMode])
+  useEffect(() => { showResignConfirmRef.current = showResignConfirm }, [showResignConfirm])
+  useEffect(() => { showLeaveModalRef.current = showLeaveModal }, [showLeaveModal])
+
+  const closeTopmostOverlay = useCallback((): boolean => {
+    if (showRoundHistoryRef.current) { setShowRoundHistory(false); return true }
+    if (showInsightsRef.current) { setShowInsights(false); return true }
+    if (showChatRef.current) { setShowChat(false); return true }
+    if (showSettingsRef.current) { setShowSettings(false); return true }
+    if (overlayModeRef.current !== 'none') { setOverlayMode('none'); return true }
+    if (showResignConfirmRef.current) { setShowResignConfirm(false); return true }
+    if (showLeaveModalRef.current) { setShowLeaveModal(false); return true }
+    return false
+  }, [])
+
+  useNavigationGuard({
+    enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING,
+    onAttemptLeave: () => setShowLeaveModal(true),
+    onOverlayBack: closeTopmostOverlay,
+  })
 
   const handleUpgradeClick = useCallback(() => {
     router.push('/premium')
@@ -2301,10 +2331,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               return
             }
             setActiveBoardTab(t)
-          }}
-          onBack={() => {
-            closeAllPanels()
-            setActiveBoardTab('game')
           }}
           onForward={() => {}}
           onBackMove={() => {

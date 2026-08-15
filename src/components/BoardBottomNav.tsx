@@ -7,7 +7,6 @@ export type BoardTab = 'moves' | 'game' | 'insights' | 'chat'
 interface BoardBottomNavProps {
   activeTab: BoardTab
   onTabChange: (tab: BoardTab) => void
-  onBack?: () => void
   onForward?: () => void
   onBackMove?: () => void
   onForwardMove?: () => void
@@ -15,7 +14,7 @@ interface BoardBottomNavProps {
   insightsLocked?: boolean
 }
 
-export function BoardBottomNav({ activeTab, onTabChange, onBack, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked }: BoardBottomNavProps) {
+export function BoardBottomNav({ activeTab, onTabChange, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked }: BoardBottomNavProps) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
