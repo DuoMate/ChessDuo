@@ -68,10 +68,19 @@ export function ChessBoard({
   const [overlayWidth, setOverlayWidth] = useState(0)
 
   useLayoutEffect(() => {
-    if (overlayContainerRef.current) {
-      setOverlayWidth(overlayContainerRef.current.getBoundingClientRect().width)
+    const measure = () => {
+      if (overlayContainerRef.current) {
+        setOverlayWidth(overlayContainerRef.current.getBoundingClientRect().width)
+      }
     }
-  }, [])
+    measure()
+
+    if (typeof ResizeObserver !== 'undefined' && overlayContainerRef.current) {
+      const observer = new ResizeObserver(measure)
+      observer.observe(overlayContainerRef.current)
+      return () => observer.disconnect()
+    }
+  }, [orientation])
  
   useEffect(() => {
     onMoveRef.current = onMove
@@ -96,7 +105,11 @@ export function ChessBoard({
     })
 
     return () => {
-      boardRef.current?.destroy()
+      const board = boardRef.current
+      if (board) {
+        ;(board as any).view?.resizeObserver?.disconnect()
+        board.destroy()
+      }
       boardRef.current = null
     }
   }, [])
@@ -121,7 +134,7 @@ export function ChessBoard({
     } catch {
       // Rook already positioned by setPosition or no longer exists — skip animation
     }
-  }, [fen])
+  }, [fen, lastMove])
 
   useEffect(() => {
     if (boardRef.current) {
