@@ -80,6 +80,7 @@ export class OnlineGame {
   private _gameId: string = ''
   private _currentTurnNumber: number = 1
   private _submissionChannel: RealtimeChannel | null = null
+  private _gameStatusChannel: RealtimeChannel | null = null
   private _pollingInterval: ReturnType<typeof setInterval> | null = null
   private _timerSyncInterval: ReturnType<typeof setInterval> | null = null
   private _timerCountdownInterval: ReturnType<typeof setInterval> | null = null
@@ -766,6 +767,7 @@ export class OnlineGame {
           this._gameId = saved.gameId
           this._currentTurnNumber = 1
           this.subscribeToSubmissions()
+          this.subscribeToGameStatus()
           DEBUG && console.log('[ONLINE] Game ID stored:', this._gameId)
         }
       }
@@ -859,6 +861,9 @@ export class OnlineGame {
             this._gameId = saved.gameId
             if (!this._submissionChannel) {
               this.subscribeToSubmissions()
+            }
+            if (!this._gameStatusChannel) {
+              this.subscribeToGameStatus()
             }
             DEBUG && console.log('[ONLINE] Restored game_id:', this._gameId)
           }
@@ -1352,6 +1357,57 @@ export class OnlineGame {
     setup()
   }
 
+  /**
+   * Subscribes to postgres_changes on the games table to detect GAME_OVER
+   * status changes (e.g. resignation) even if the broadcast event is lost.
+   */
+  private subscribeToGameStatus(): void {
+    if (!this._room) return
+
+    const roomId = this._room.id
+    this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'games',
+        filter: `room_id=eq.${roomId}`,
+      }, (payload) => {
+        const newStatus = (payload.new as any)?.status
+        if (newStatus === 'GAME_OVER' && this._status !== GameStatus.GAME_OVER) {
+          DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update')
+          // Determine resigning team from the broadcast payload if available,
+          // otherwise use the opposite of our team as fallback
+          const resigningTeam = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
+          this.handleMatchAbandoned({ playerId: 'unknown', team: resigningTeam as 'WHITE' | 'BLACK' })
+        }
+      })
+      .subscribe(async (status: string) => {
+        DEBUG && console.log('[GAME-STATUS] Channel status:', status)
+        if (status === 'CHANNEL_ERROR') {
+          DEBUG && console.warn('[GAME-STATUS] Channel error — re-creating')
+          try {
+            await supabase.removeChannel(this._gameStatusChannel!)
+          } catch (e) { DEBUG && console.error('[GAME-STATUS] Failed to remove errored channel:', e) }
+          RealtimeService.forceRemoveStaleChannels(`game-status:${roomId}`)
+          this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
+            .on('postgres_changes', {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'games',
+              filter: `room_id=eq.${roomId}`,
+            }, (p) => {
+              const ns = (p.new as any)?.status
+              if (ns === 'GAME_OVER' && this._status !== GameStatus.GAME_OVER) {
+                DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update (reconnect)')
+                const rt = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
+                this.handleMatchAbandoned({ playerId: 'unknown', team: rt as 'WHITE' | 'BLACK' })
+              }
+            })
+            .subscribe()
+        }
+      })
+  }
+
   private handleSubmissionFromDB(submission: {
     game_id: string
     turn_number: number
@@ -1840,6 +1896,10 @@ export class OnlineGame {
       await supabase.removeChannel(this._submissionChannel)
       this._submissionChannel = null
     }
+    if (this._gameStatusChannel) {
+      await supabase.removeChannel(this._gameStatusChannel)
+      this._gameStatusChannel = null
+    }
     if (this._channel) {
       await supabase.removeChannel(this._channel)
       this._channel = null
@@ -1855,17 +1915,35 @@ export class OnlineGame {
         payload: { playerId: this._playerId, team: this._team }
       })
     }
+
+    // Persist GAME_OVER to the games table BEFORE cleanup so the non-resigning
+    // client can detect it via postgres_changes even if the broadcast is lost.
+    if (this._room) {
+      await saveGameState(
+        this._room.id,
+        this.gameState.fen,
+        this.gameState.currentTeam === Team.WHITE ? 'WHITE' : 'BLACK',
+        null,
+        GameStatus.GAME_OVER,
+        undefined,
+        undefined,
+        this._currentTurnNumber,
+        this._coordinatorId
+      )
+    }
+
     if (this._room) {
       await supabase
         .from('rooms')
         .update({ status: 'finished' })
         .eq('id', this._room.id)
     }
-    await this.leaveRoom()
+
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = `Resigned - ${this._team === 'WHITE' ? 'Black' : 'White'} wins`
     this._gameOverReason = 'resignation'
     this.onAbandonCallback?.()
+    await this.leaveRoom()
   }
 
   private resolvePendingWaiter(): void {
