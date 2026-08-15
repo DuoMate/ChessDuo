@@ -712,8 +712,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           else if (localTeammateLocked) turnStatus = 'teammate_locked'
           else if (localOtherPlayer.length > 0 || localMyPending) turnStatus = 'waiting_for_teammate'
           else turnStatus = 'your_turn'
+          DEBUG && console.log(`[TURN-STATUS] myTurn=${isMyTurnToAct}, ts=${ts}, otherPlayer=${localOtherPlayer.length}, myPending=${!!localMyPending}, teammateLocked=${localTeammateLocked} → ${turnStatus}`)
         } else if (g.status === GameStatus.PLAYING) {
           turnStatus = 'opponent_turn'
+          DEBUG && console.log(`[TURN-STATUS] opponent_turn (isMyTurnToAct=${isMyTurnToAct}, hasPlayerId=${!!currentPlayerId})`)
         }
 
         setGameState(prev => {
@@ -751,47 +753,43 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
         const prevTurn = prevTurnRef.current
         const currentTurn = g.currentTurn
-        
+
+        // Populate accuracyHistory deterministically: use moveHistoryRef length
+        // as the authoritative count (both clients receive the same resolutions
+        // via turn_resolved broadcasts). Only add when there's a new comparison
+        // with a turnStartFen not already in the history.
+        const comp = g.lastMoveComparison as MoveComparison | null
+        if (comp && comp.turnStartFen) {
+          const shouldAdd = accuracyHistory.length === 0 ||
+            accuracyHistory[accuracyHistory.length - 1]?.turnStartFen !== comp.turnStartFen
+          if (shouldAdd) {
+            // Only add comparisons for the viewer's team turns (same logic as before)
+            const isViewerTeamTurn = !isFourPlayer && (
+              (prevTurn === Team.WHITE && currentTurn === Team.BLACK && myTeam === 'WHITE') ||
+              (prevTurn === Team.BLACK && currentTurn === Team.WHITE && myTeam === 'BLACK')
+            )
+            if (isViewerTeamTurn || isFourPlayer) {
+              setAccuracyHistory(prev => [...prev, comp])
+              DEBUG && console.log(`[ACCURACY-HISTORY] Added entry #${accuracyHistory.length + 1}, team=${prevTurn}, viewerTeam=${myTeam}`)
+            }
+          }
+        }
+
+        // Set the current accuracy comparison for inline display
         if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
-          const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
-          DEBUG && console.log('[ACCURACY-TRANSITION] WHITE→BLACK detected', {
-            hasComparison: !!comp,
-            compPlayer1Move: comp?.player1Move,
-            compPlayer2Move: comp?.player2Move,
-            compWinnerId: comp?.winnerId,
-            isSync: comp?.isSync
-          })
           if (comp) {
             if (!isFourPlayer || myTeam === 'WHITE') {
               setAccuracyComparison(comp)
-              setAccuracyHistory(prev => {
-                const last = prev[prev.length - 1]
-                if (last && last.turnStartFen === comp.turnStartFen) return prev
-                return [...prev, comp]
-              })
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for WHITE→BLACK')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
-          const comp = (g as GameInterface).lastMoveComparison as MoveComparison | null
-          DEBUG && console.log('[ACCURACY-TRANSITION] BLACK→WHITE detected', {
-            hasComparison: !!comp,
-            compPlayer1Move: comp?.player1Move,
-            compPlayer2Move: comp?.player2Move,
-            compWinnerId: comp?.winnerId,
-            isSync: comp?.isSync
-          })
           if (comp) {
             if (!isFourPlayer || myTeam === 'BLACK') {
               setAccuracyComparison(comp)
-              setAccuracyHistory(prev => {
-                const last = prev[prev.length - 1]
-                if (last && last.turnStartFen === comp.turnStartFen) return prev
-                return [...prev, comp]
-              })
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for BLACK→WHITE')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
@@ -799,7 +797,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }
     prevTurnRef.current = currentTurn
 
-    const comp = g.lastMoveComparison as MoveComparison | null
     if (comp && moveHistoryRef.current.length === 0 ||
         (comp && comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
       const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
@@ -822,10 +819,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         // Trigger initial bot turn when game first enters PLAYING (online, human on non-first-turn team)
         if (!initialBotTurnTriggeredRef.current && g.status === GameStatus.PLAYING) {
-          initialBotTurnTriggeredRef.current = true
           const myTeam2 = currentTeam || (g as GameInterface).getTeam()
           const opponentTeam2 = myTeam2 === 'WHITE' ? Team.BLACK : Team.WHITE
           if (!isFourPlayer && g.currentTurn === opponentTeam2 && bot && currentPlayerId && g.isCoordinator()) {
+            initialBotTurnTriggeredRef.current = true
             DEBUG && console.log(`[INITIAL-BOT] Triggering initial ${opponentTeam2} bot turn from onStateChange`)
             setGameState(prev => ({ ...prev, isBotThinking: true }))
             const currentFen = g.board.fen()
@@ -1146,14 +1143,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const viewerTeam = team || (g as GameInterface).getTeam()
     if (prevTurn === viewerTeam && currentTurn !== viewerTeam) {
       const comp = g.lastMoveComparison as MoveComparison | null
-      if (comp) {
+      if (comp && comp.turnStartFen) {
+        const shouldAdd = accuracyHistory.length === 0 ||
+          accuracyHistory[accuracyHistory.length - 1]?.turnStartFen !== comp.turnStartFen
+        if (shouldAdd) {
+          setAccuracyHistory(prev => [...prev, comp])
+          DEBUG && console.log(`[ACCURACY-HISTORY] (updateState) Added entry #${accuracyHistory.length + 1}`)
+        }
         DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) human→opponent detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
         setAccuracyComparison(comp)
-        setAccuracyHistory(prev => {
-          const last = prev[prev.length - 1]
-          if (last && last.turnStartFen === comp.turnStartFen) return prev
-          return [...prev, comp]
-        })
       }
     }
     prevTurnRef.current = currentTurn
@@ -1489,6 +1487,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
             if (!isFourPlayer && newTurn === opponentTeam && bot && playerId) {
               DEBUG && console.log(`[RESOLVE] Coordinator handling ${opponentTeam} bot moves...`)
+              DEBUG && console.log(`[BOT-DIAG] Before bot handler: inputLocked=${inputLockedRef.current}, submissionTurn=${submissionTurnRef.current}, turnState=${g.getTurnState()}, phase=${g.gamePhase}`)
+              DEBUG && console.log(`[BOT-DIAG] pendingMoves=[${Array.from(g.getAllPendingMoves().keys()).join(', ')}]`)
+
+              // Reset input locks from previous turn so humans can submit next turn
+              inputLockedRef.current = false
+              submissionTurnRef.current = false
+
               setGameState(prev => ({ ...prev, isBotThinking: true }))
               
               const currentFen = g.board.fen()
@@ -1529,6 +1534,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 try {
                   await g.resolvePendingMoves()
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve succeeded, new turn:`, g.currentTurn)
+                  DEBUG && console.log(`[BOT-DIAG] After resolve: turnState=${g.getTurnState()}, phase=${g.gamePhase}, pendingMoves=[${Array.from(g.getAllPendingMoves().keys()).join(', ')}]`)
                   g.setTurnState('selecting')
                   DEBUG && console.log(`[STATE] Coordinator ${opponentTeam} resolve complete, reset to selecting`)
                   setGameState(prev => ({ ...prev, isBotThinking: false }))
@@ -1537,6 +1543,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
                   // Recovery: reset state so humans can continue playing
                   g.setTurnState('selecting')
+                  inputLockedRef.current = false
+                  submissionTurnRef.current = false
                   setGameState(prev => ({ ...prev, isBotThinking: false }))
                   updateStateRef.current()
                 }
@@ -1748,9 +1756,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // turnStatus === 'your_turn' means: currentTurn === myTeam, no pending
   // moves exist, and turnState is 'selecting' — the engine is ready.
   useEffect(() => {
+    DEBUG && console.log(`[INPUT-LOCK-RESET] turnStatus=${gameState.turnStatus}, isMyTurn=${gameState.isMyTurn}, prevLocked=${inputLockedRef.current}`)
     if (gameState.turnStatus === 'your_turn' && gameState.isMyTurn) {
       inputLockedRef.current = false
       submissionTurnRef.current = false
+      DEBUG && console.log(`[INPUT-LOCK-RESET] Lock reset successfully`)
     }
   }, [gameState.turnStatus, gameState.isMyTurn])
 
@@ -2362,7 +2372,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               const isExhausted = !isVisible && insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0
 
               return (
-                <div key={i} className={i < accuracyHistory.length - 1 ? 'mb-3 pb-3 border-b border-slate-700/30' : ''}>
+                <div key={`${comp.turnStartFen}-${i}`} className={i < accuracyHistory.length - 1 ? 'mb-3 pb-3 border-b border-slate-700/30' : ''}>
                   {accuracyHistory.length > 1 && (
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
                       Move {i + 1}
