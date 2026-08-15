@@ -1189,24 +1189,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (comparison) {
       const winnerId = comparison.winnerId
       const loserId = comparison.loserId
-      const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
-      const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
 
       const highlightSquares: HighlightSquares = {}
 
-      if (winnerId === humanSlot && humanMove) {
-        if (isValidSquare(humanMove.from)) highlightSquares.winnerFrom = humanMove.from
-        if (isValidSquare(humanMove.to)) highlightSquares.winnerTo = humanMove.to
-        if (!comparison.isSync && loserId === teammateSlot && teammateMove) {
-          if (isValidSquare(teammateMove.from)) highlightSquares.loserFrom = teammateMove.from
-          if (isValidSquare(teammateMove.to)) highlightSquares.loserTo = teammateMove.to
-        }
-      } else if (winnerId === teammateSlot && teammateMove) {
-        if (isValidSquare(teammateMove.from)) highlightSquares.winnerFrom = teammateMove.from
-        if (isValidSquare(teammateMove.to)) highlightSquares.winnerTo = teammateMove.to
-        if (!comparison.isSync && loserId === humanSlot && humanMove) {
-          if (isValidSquare(humanMove.from)) highlightSquares.loserFrom = humanMove.from
-          if (isValidSquare(humanMove.to)) highlightSquares.loserTo = humanMove.to
+      // winnerId/loserId refer to 'player1'/'player2' (first/second submitted move).
+      // In offline mode, humanMove is player1's move and teammateMove is player2's.
+      const winMove = winnerId === 'player1' ? humanMove : teammateMove
+      const loseMove = loserId === 'player1' ? humanMove : teammateMove
+
+      if (winMove) {
+        if (isValidSquare(winMove.from)) highlightSquares.winnerFrom = winMove.from
+        if (isValidSquare(winMove.to)) highlightSquares.winnerTo = winMove.to
+        if (!comparison.isSync && loseMove) {
+          if (isValidSquare(loseMove.from)) highlightSquares.loserFrom = loseMove.from
+          if (isValidSquare(loseMove.to)) highlightSquares.loserTo = loseMove.to
         }
       }
 
@@ -1452,25 +1448,39 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               const isValidSquare = (sq: string): sq is string => 
                 !!sq && sq.length === 2 && /^[a-h][1-8]$/.test(sq)
               
-              const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
-              const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
-              const isHumanWinner = comparison.winnerId === humanSlot
+              // Use chess.js to convert SAN moves to from/to coordinates.
+              // comparison.player1Move/player2Move are SAN strings (e.g. "e4").
+              const fenForMoves = comparison.turnStartFen || g.board.fen()
               
-              const winningMove = isHumanWinner ? comparison.player1Move : comparison.player2Move
-              const losingMove = isHumanWinner ? comparison.player2Move : comparison.player1Move
+              const getMoveCoords = (san: string | null): { from: string; to: string } | null => {
+                if (!san) return null
+                try {
+                  const chess = new Chess(fenForMoves)
+                  const move = chess.move(san)
+                  if (move) return { from: move.from, to: move.to }
+                } catch {
+                  // Invalid SAN — skip coordinate extraction
+                }
+                return null
+              }
+              
+              // winnerId is 'player1' or 'player2' (first/second submitted move)
+              const winCoords = comparison.winnerId === 'player1'
+                ? getMoveCoords(comparison.player1Move)
+                : getMoveCoords(comparison.player2Move)
+              const loseCoords = comparison.isSync ? null
+                : (comparison.winnerId === 'player1'
+                  ? getMoveCoords(comparison.player2Move)
+                  : getMoveCoords(comparison.player1Move))
               
               const highlightSquares: HighlightSquares = {}
 
-              if (winningMove) {
-                const wf = winningMove.substring(0, 2)
-                const wt = winningMove.substring(2, 4)
-                if (isValidSquare(wf)) highlightSquares.winnerFrom = wf
-                if (isValidSquare(wt)) highlightSquares.winnerTo = wt
-                if (!comparison.isSync && losingMove) {
-                  const lf = losingMove.substring(0, 2)
-                  const lt = losingMove.substring(2, 4)
-                  if (isValidSquare(lf)) highlightSquares.loserFrom = lf
-                  if (isValidSquare(lt)) highlightSquares.loserTo = lt
+              if (winCoords) {
+                if (isValidSquare(winCoords.from)) highlightSquares.winnerFrom = winCoords.from
+                if (isValidSquare(winCoords.to)) highlightSquares.winnerTo = winCoords.to
+                if (loseCoords) {
+                  if (isValidSquare(loseCoords.from)) highlightSquares.loserFrom = loseCoords.from
+                  if (isValidSquare(loseCoords.to)) highlightSquares.loserTo = loseCoords.to
                 }
               }
               

@@ -113,7 +113,14 @@ export function ChessBoard({
     const rank = from[1]
     const rookFrom = to.charCodeAt(0) > from.charCodeAt(0) ? `h${rank}` : `a${rank}`
     const rookTo = to.charCodeAt(0) > from.charCodeAt(0) ? `f${rank}` : `d${rank}`
-    boardRef.current.movePiece(rookFrom, rookTo, true)
+    // cm-chessboard's setPosition already handles castling internally, so the
+    // rook may already be on the target square. Guard against stale lastMove
+    // where the rook no longer exists at rookFrom.
+    try {
+      boardRef.current.movePiece(rookFrom, rookTo, true)
+    } catch {
+      // Rook already positioned by setPosition or no longer exists — skip animation
+    }
   }, [fen])
 
   useEffect(() => {
