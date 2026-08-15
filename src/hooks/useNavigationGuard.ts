@@ -6,16 +6,22 @@ import { useRouter } from 'next/navigation'
 interface UseNavigationGuardOptions {
   enabled: boolean
   onAttemptLeave: () => void
+  onOverlayBack?: () => boolean
 }
 
-export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGuardOptions) {
+export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: UseNavigationGuardOptions) {
   const router = useRouter()
   const blockedRef = useRef(false)
   const onAttemptLeaveRef = useRef(onAttemptLeave)
+  const onOverlayBackRef = useRef(onOverlayBack)
 
   useEffect(() => {
     onAttemptLeaveRef.current = onAttemptLeave
   }, [onAttemptLeave])
+
+  useEffect(() => {
+    onOverlayBackRef.current = onOverlayBack
+  }, [onOverlayBack])
 
   const blockNavigation = useCallback(() => {
     if (!enabled) return
@@ -43,6 +49,11 @@ export function useNavigationGuard({ enabled, onAttemptLeave }: UseNavigationGua
 
     const handlePopState = () => {
       if (!blockedRef.current) {
+        // Check for open overlays first — close them before showing leave modal
+        if (onOverlayBackRef.current && onOverlayBackRef.current()) {
+          window.history.pushState(null, '', window.location.pathname + window.location.search)
+          return
+        }
         window.history.pushState(null, '', window.location.pathname + window.location.search)
         blockedRef.current = true
         onAttemptLeaveRef.current()

@@ -69,3 +69,39 @@ describe('useNavigationGuard', () => {
     expect(pushState).toHaveBeenCalled()
   })
 })
+
+  describe('onOverlayBack', () => {
+    it('calls onOverlayBack before onAttemptLeave on popstate', () => {
+      const onLeave = jest.fn()
+      const onOverlayBack = jest.fn(() => false)
+      renderHook(() =>
+        useNavigationGuard({ enabled: true, onAttemptLeave: onLeave, onOverlayBack })
+      )
+
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      expect(onOverlayBack).toHaveBeenCalled()
+      expect(onLeave).toHaveBeenCalled()
+    })
+
+    it('does not call onAttemptLeave when onOverlayBack returns true', () => {
+      const onLeave = jest.fn()
+      const onOverlayBack = jest.fn(() => true)
+      renderHook(() =>
+        useNavigationGuard({ enabled: true, onAttemptLeave: onLeave, onOverlayBack })
+      )
+
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      expect(onOverlayBack).toHaveBeenCalled()
+      expect(onLeave).not.toHaveBeenCalled()
+    })
+
+    it('works without onOverlayBack (backward compatible)', () => {
+      const onLeave = jest.fn()
+      renderHook(() =>
+        useNavigationGuard({ enabled: true, onAttemptLeave: onLeave })
+      )
+
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      expect(onLeave).toHaveBeenCalled()
+    })
+  })

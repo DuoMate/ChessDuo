@@ -128,7 +128,7 @@ describe('RoundHistorySidebar', () => {
 describe('BoardBottomNav', () => {
   it('renders all tabs and navigation buttons', () => {
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
     )
     expect(screen.getByText('Moves')).toBeInTheDocument()
     expect(screen.getByText('Insights')).toBeInTheDocument()
@@ -140,7 +140,7 @@ describe('BoardBottomNav', () => {
   it('calls onTabChange when a tab is tapped', () => {
     const onTabChange = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={onTabChange} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={onTabChange} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} />
     )
     fireEvent.click(screen.getByText('Moves'))
     expect(onTabChange).toHaveBeenCalledWith('moves')
@@ -149,7 +149,7 @@ describe('BoardBottomNav', () => {
   it('calls onBackMove when Back button is tapped', () => {
     const onBackMove = jest.fn()
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={onBackMove} onForwardMove={jest.fn()} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onForward={jest.fn()} onBackMove={onBackMove} onForwardMove={jest.fn()} />
     )
     fireEvent.click(screen.getByText('Back'))
     expect(onBackMove).toHaveBeenCalled()
@@ -157,7 +157,7 @@ describe('BoardBottomNav', () => {
 
   it('shows lock badge on Insights tab when insightsLocked is true', () => {
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked />
     )
     const lockIcons = screen.getAllByLabelText('Insights')[0].querySelectorAll('svg')
     // There should be 2 SVGs: BarChart3 + Lock
@@ -166,7 +166,7 @@ describe('BoardBottomNav', () => {
 
   it('does not show lock badge on Insights tab when insightsLocked is false', () => {
     render(
-      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onBack={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked={false} />
+      <BoardBottomNav activeTab="game" onTabChange={jest.fn()} onForward={jest.fn()} onBackMove={jest.fn()} onForwardMove={jest.fn()} insightsLocked={false} />
     )
     const lockIcons = screen.getAllByLabelText('Insights')[0].querySelectorAll('svg')
     // Only BarChart3 SVG, no extra Lock SVG

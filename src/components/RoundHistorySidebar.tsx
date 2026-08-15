@@ -1,9 +1,11 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useCallback } from 'react'
 import { X, History, Crown } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 export interface RoundHistoryEntry {
   round: number
@@ -35,6 +37,12 @@ function pieceFor(san: string, color: 'white' | 'black'): string {
 export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory }: RoundHistorySidebarProps) {
   useEscapeKey(onClose, open)
   useScrollLock(open)
+
+  const backHandler = useCallback(() => {
+    onClose()
+    return true
+  }, [onClose])
+  useCapacitorBackButton(backHandler, open)
   return (
     <AnimatePresence>
       {open && (

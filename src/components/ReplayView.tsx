@@ -139,7 +139,6 @@ export function ReplayView({ game }: ReplayViewProps) {
         <BoardBottomNav
           activeTab="game"
           onTabChange={() => {}}
-          onBack={() => router.push('/history')}
           onForward={() => {}}
           onBackMove={() => {
             const current = playbackIndex ?? moves.length - 1

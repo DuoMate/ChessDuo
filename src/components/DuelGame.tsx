@@ -44,6 +44,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const [showSettings, setShowSettings] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
+
+  // Refs for overlay states — used by onOverlayBack to avoid stale closures
+  const showSettingsRef = useRef(false)
+  const showLeaveModalRef = useRef(false)
   const [showGameOverDismissed, setShowGameOverDismissed] = useState(false)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over'>('waiting')
@@ -79,9 +83,20 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
 
+  // Sync overlay refs with state — keeps onOverlayBack from seeing stale values
+  useEffect(() => { showSettingsRef.current = showSettings }, [showSettings])
+  useEffect(() => { showLeaveModalRef.current = showLeaveModal }, [showLeaveModal])
+
+  const closeTopmostOverlay = useCallback((): boolean => {
+    if (showSettingsRef.current) { setShowSettings(false); return true }
+    if (showLeaveModalRef.current) { setShowLeaveModal(false); return true }
+    return false
+  }, [])
+
   const { confirmLeave: confirmNavLeave } = useNavigationGuard({
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeaveModal(true),
+    onOverlayBack: closeTopmostOverlay,
   })
 
   useCapacitorBackButton(
@@ -566,7 +581,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         <BoardBottomNav
           activeTab={activeBoardTab}
           onTabChange={(t) => setActiveBoardTab(t)}
-          onBack={() => setActiveBoardTab('game')}
           onForward={() => {}}
           onBackMove={() => {
             if (moveHistory.length === 0) return
