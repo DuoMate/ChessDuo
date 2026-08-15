@@ -1827,7 +1827,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const handleCancelHeldMove = useCallback(() => {
     setHeldMove(null)
-    setBoardKey(k => k + 1)
   }, [])
 
   const handlePromotionSelect = useCallback((piece: PromotionPiece) => {
