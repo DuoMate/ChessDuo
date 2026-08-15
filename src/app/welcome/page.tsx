@@ -116,8 +116,9 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
-      <div className="w-full max-w-md mb-4 flex justify-start">
+    <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col">
+      {/* Top bar with back button */}
+      <div className="w-full px-4 pt-4 flex justify-start">
         <BackButton label="Back" onClick={() => {
           localStorage.removeItem('chessduo_pending_offline_game')
           localStorage.removeItem('chessduo_pending_online_game')
@@ -125,86 +126,96 @@ export default function WelcomePage() {
         }} />
       </div>
 
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-        className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[var(--color-page-bg)] p-6 shadow-2xl"
-      >
-        {/* Header */}
-        <div className="mb-5 text-center">
-          <div className="flex items-center justify-center gap-0 text-3xl font-black tracking-tight">
-            <span className="text-white">Chess</span>
-            <span className="relative text-blue-500">
-              Duo
-              <Crown size={18} className="absolute -left-0.5 -top-3.5 text-blue-400" fill="currentColor" strokeWidth={0} />
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-400">
-            <span className="text-blue-400/70">&#9670;</span>
-            <span>How it works</span>
-            <span className="text-blue-400/70">&#9670;</span>
-          </div>
-        </div>
-
-        {/* Board */}
-        <div className="mb-5 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-          <div className="relative mx-auto aspect-square w-full max-w-[260px] onboarding-board">
-            <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
-            <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-              <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">You</span>
-            </div>
-            <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-              <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-              <span className="text-xs font-semibold text-slate-200">Your Move</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-              <span className="text-xs font-semibold text-slate-200">{partnerLabel}</span>
-            </div>
-          </div>
-          <p className="mt-3 text-center text-sm font-medium leading-relaxed text-slate-300">
-            {isOffline
-              ? <>You and your botmate — <span className="font-semibold text-amber-400">the best move wins.</span></>
-              : <>Two players, one board — <span className="font-semibold text-amber-400">the best move wins.</span></>}
-          </p>
-        </div>
-
-        {/* Steps */}
-        <div className="mb-5 flex items-stretch justify-between">
-          {steps.map((step, index) => (
-            <div key={step.word} className="flex flex-1 items-center">
-              <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
-                {step.icon}
-                <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
-                <span className="mt-0.5 text-center text-xs leading-tight text-slate-400">{step.desc}</span>
-              </div>
-              {index < steps.length - 1 && <Chevron />}
-            </div>
-          ))}
-        </div>
-
-        {/* Don't show again */}
-        <label className="mb-4 flex cursor-pointer items-center gap-2.5">
-          <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0" />
-          <span className="text-sm text-slate-400">Don&apos;t show this again</span>
-        </label>
-
-        {/* Got it */}
-        <button
-          type="button"
-          onClick={handleDismiss}
-          disabled={navigating}
-          className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-base font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:from-amber-400 hover:to-orange-400 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 flex items-start justify-center">
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+          className="relative w-full max-w-md rounded-[32px] border border-slate-700/50 bg-[var(--color-page-bg)] p-6 shadow-2xl"
         >
-          {navigating ? <Loader2 size={18} className="animate-spin" /> : 'Got it!'}
-        </button>
-      </motion.div>
+          {/* Header */}
+          <div className="mb-4 text-center">
+            <div className="flex items-center justify-center gap-0 text-3xl font-black tracking-tight">
+              <span className="text-white">Chess</span>
+              <span className="relative text-blue-500">
+                Duo
+                <Crown size={18} className="absolute -left-0.5 -top-3.5 text-blue-400" fill="currentColor" strokeWidth={0} />
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-400">
+              <span className="text-blue-400/70">&#9670;</span>
+              <span>How it works</span>
+              <span className="text-blue-400/70">&#9670;</span>
+            </div>
+          </div>
+
+          {/* Board */}
+          <div className="mb-4 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
+            <div className="relative mx-auto aspect-square w-full max-w-[min(260px,55vw)] onboarding-board">
+              <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
+              <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
+                <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">You</span>
+              </div>
+              <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
+                <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
+                <span className="text-xs font-semibold text-slate-200">Your Move</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
+                <span className="text-xs font-semibold text-slate-200">{partnerLabel}</span>
+              </div>
+            </div>
+            <p className="mt-2 text-center text-sm font-medium leading-relaxed text-slate-300">
+              {isOffline
+                ? <>You and your botmate — <span className="font-semibold text-amber-400">the best move wins.</span></>
+                : <>Two players, one board — <span className="font-semibold text-amber-400">the best move wins.</span></>}
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="mb-4 flex items-stretch justify-between">
+            {steps.map((step, index) => (
+              <div key={step.word} className="flex flex-1 items-center">
+                <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
+                  {step.icon}
+                  <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
+                  <span className="mt-0.5 text-center text-xs leading-tight text-slate-400">{step.desc}</span>
+                </div>
+                {index < steps.length - 1 && <Chevron />}
+              </div>
+            ))}
+          </div>
+
+          {/* Don't show again */}
+          <label className="mb-2 flex cursor-pointer items-center gap-2.5">
+            <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0" />
+            <span className="text-sm text-slate-400">Don&apos;t show this again</span>
+          </label>
+        </motion.div>
+      </div>
+
+      {/* Fixed bottom action bar */}
+      <div
+        className="w-full px-4 pb-4 pt-2 border-t border-slate-700/30 bg-[var(--color-page-bg)]/95 backdrop-blur-sm"
+        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
+      >
+        <div className="max-w-md mx-auto">
+          <button
+            type="button"
+            onClick={handleDismiss}
+            disabled={navigating}
+            className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-base font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:from-amber-400 hover:to-orange-400 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {navigating ? <Loader2 size={18} className="animate-spin" /> : 'Got it!'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
