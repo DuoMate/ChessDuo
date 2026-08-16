@@ -1250,131 +1250,119 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const executeBotMove = useCallback(async () => {
     if (isOnline || !bot) return // Only run in offline mode with bot
-    
+
     if (opponentInProgressRef.current) {
       DEBUG && console.log(`[OPPONENT] Already in progress, skipping`)
       return
     }
-    
+
     const g = gameRef.current
-    
+
     if (!g || g.status === GameStatus.GAME_OVER) {
       DEBUG && console.log(`[OPPONENT] Game is over, not making move`)
       return
     }
-    
+
     const myTeam = (g as GameInterface).getTeam()
     const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
     const opponentSlots = g.getPlayers(opponentTeam)
-    
+
     if (opponentSlots.length === 0) {
       DEBUG && console.warn(`[OPPONENT] No opponent slots found`)
-      opponentInProgressRef.current = false
       return
     }
-    
+
     // Guard: only run when it's actually the opponent's turn
     if (g.currentTurn !== opponentTeam) {
       DEBUG && console.warn(`[OPPONENT] Not opponent's turn (${opponentTeam}), current: ${g.currentTurn}`)
-      opponentInProgressRef.current = false
       return
     }
-    
-    opponentInProgressRef.current = true
-    
-    DEBUG && console.log(`[OPPONENT] Starting... currentTurn=${g.currentTurn}, opponentTeam=${opponentTeam}, slots=${opponentSlots.join(',')}`)
-    
-    const currentFen = g.board.fen()
-    const currentTurn = g.currentTurn
-    
-    DEBUG && console.log(`\n[OPPONENT] Bot thinking... (current turn: ${currentTurn})`)
-    const startTime = Date.now()
-    
-    const botUciMove = await bot.selectMoveAsync(currentFen)
-    DEBUG && console.log(`[OPPONENT] Bot evaluation took: ${Date.now() - startTime}ms`)
-    
-    if (!botUciMove) {
-      DEBUG && console.warn('[OPPONENT] Bot could not find a move, using random legal move fallback')
-      const chess = new Chess(currentFen)
-      const legalMoves = chess.moves({ verbose: true })
-      if (legalMoves.length > 0) {
-        const fallback = legalMoves[Math.floor(Math.random() * legalMoves.length)]
-        const fallbackUci = fallback.from + fallback.to + (fallback.promotion || '')
-        const sanMove = uciToSan(fallbackUci, currentFen)
-        g.selectMove(opponentSlots[0], sanMove)
-        if (opponentSlots[1]) {
-          g.selectMove(opponentSlots[1], sanMove)
-        }
-        g.lockMove(opponentSlots[0])
-        if (opponentSlots[1]) {
-          g.lockMove(opponentSlots[1])
-        }
-        await g.resolveLegacy(true)
-        updateStateRef.current()
 
-        const fbComp = g.lastMoveComparison as MoveComparison | null
+    opponentInProgressRef.current = true
+    setGameState(prev => ({ ...prev, isBotThinking: true }))
+
+    try {
+      DEBUG && console.log(`[OPPONENT] Starting... currentTurn=${g.currentTurn}, opponentTeam=${opponentTeam}, slots=${opponentSlots.join(',')}`)
+
+      const currentFen = g.board.fen()
+      const currentTurn = g.currentTurn
+
+      DEBUG && console.log(`\n[OPPONENT] Bot thinking... (current turn: ${currentTurn})`)
+      const startTime = Date.now()
+
+      const botUciMove = await bot.selectMoveAsync(currentFen)
+      DEBUG && console.log(`[OPPONENT] Bot evaluation took: ${Date.now() - startTime}ms`)
+
+      const recordMoveHistory = (comp: MoveComparison | null) => {
         const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
-        const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
-        if (fbComp && (moveHistoryRef.current.length === 0 ||
-            fbComp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
-          const isHumanWinner = fbComp.winnerId === humanSlot
+        if (comp && (moveHistoryRef.current.length === 0 ||
+            comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
+          const isHumanWinner = comp.winnerId === humanSlot
           const entry: MoveEntry = {
             turn: moveHistoryRef.current.length + 1,
             team: opponentTeam,
-            winningMove: fbComp.winningMove,
-            winningMoveUci: fbComp.winningMove || '',
-            shadowMove: fbComp.isSync ? null : (isHumanWinner ? fbComp.player2Move : fbComp.player1Move),
+            winningMove: comp.winningMove,
+            winningMoveUci: comp.winningMove || '',
+            shadowMove: comp.isSync ? null : (isHumanWinner ? comp.player2Move : comp.player1Move),
             shadowMoveUci: '',
-            isSync: fbComp.isSync,
-            player1Accuracy: fbComp.player1Accuracy,
-            player2Accuracy: fbComp.player2Accuracy,
+            isSync: comp.isSync,
+            player1Accuracy: comp.player1Accuracy,
+            player2Accuracy: comp.player2Accuracy,
             fenAfter: g.board.fen(),
           }
           moveHistoryRef.current = [...moveHistoryRef.current, entry]
         }
       }
-      opponentInProgressRef.current = false
-      return
-    }
-    
-    const sanMove = uciToSan(botUciMove, currentFen)
-    DEBUG && console.log(`[OPPONENT] Selected move: ${sanMove}`)
-    
-    g.selectMove(opponentSlots[0], sanMove)
-    if (opponentSlots[1]) {
-      g.selectMove(opponentSlots[1], sanMove)
-    }
-    g.lockMove(opponentSlots[0])
-    if (opponentSlots[1]) {
-      g.lockMove(opponentSlots[1])
-    }
-    
-    await g.resolveLegacy(true)
-    updateStateRef.current()
 
-    const comp = g.lastMoveComparison as MoveComparison | null
-    const humanSlot = (g as GameInterface).getHumanSlot?.() || 'player1'
-    const teammateSlot = (g as GameInterface).getTeammateSlot?.() || 'player2'
-    if (comp && (moveHistoryRef.current.length === 0 ||
-        comp !== (moveHistoryRef.current[moveHistoryRef.current.length - 1] as unknown))) {
-      const isHumanWinner = comp.winnerId === humanSlot
-      const entry: MoveEntry = {
-        turn: moveHistoryRef.current.length + 1,
-        team: opponentTeam,
-        winningMove: comp.winningMove,
-        winningMoveUci: comp.winningMove || '',
-        shadowMove: comp.isSync ? null : (isHumanWinner ? comp.player2Move : comp.player1Move),
-        shadowMoveUci: '',
-        isSync: comp.isSync,
-        player1Accuracy: comp.player1Accuracy,
-        player2Accuracy: comp.player2Accuracy,
-        fenAfter: g.board.fen(),
+      if (!botUciMove) {
+        DEBUG && console.warn('[OPPONENT] Bot could not find a move, using random legal move fallback')
+        const chess = new Chess(currentFen)
+        const legalMoves = chess.moves({ verbose: true })
+        if (legalMoves.length > 0) {
+          const fallback = legalMoves[Math.floor(Math.random() * legalMoves.length)]
+          const fallbackUci = fallback.from + fallback.to + (fallback.promotion || '')
+          const sanMove = uciToSan(fallbackUci, currentFen)
+          g.selectMove(opponentSlots[0], sanMove)
+          if (opponentSlots[1]) {
+            g.selectMove(opponentSlots[1], sanMove)
+          }
+          g.lockMove(opponentSlots[0])
+          if (opponentSlots[1]) {
+            g.lockMove(opponentSlots[1])
+          }
+          await g.resolveLegacy(true)
+          updateStateRef.current()
+          recordMoveHistory(g.lastMoveComparison as MoveComparison | null)
+        }
+        return
       }
-      moveHistoryRef.current = [...moveHistoryRef.current, entry]
-    }
 
-    DEBUG && console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
-    opponentInProgressRef.current = false
+      const sanMove = uciToSan(botUciMove, currentFen)
+      DEBUG && console.log(`[OPPONENT] Selected move: ${sanMove}`)
+
+      g.selectMove(opponentSlots[0], sanMove)
+      if (opponentSlots[1]) {
+        g.selectMove(opponentSlots[1], sanMove)
+      }
+      g.lockMove(opponentSlots[0])
+      if (opponentSlots[1]) {
+        g.lockMove(opponentSlots[1])
+      }
+
+      await g.resolveLegacy(true)
+      updateStateRef.current()
+
+      recordMoveHistory(g.lastMoveComparison as MoveComparison | null)
+
+      DEBUG && console.log(`[DEBUG] After opponent turn, currentTurn: ${g.currentTurn}`)
+    } catch (error) {
+      DEBUG && console.error('[OPPONENT] Bot turn failed:', error)
+      toast.warning('Bot move failed — you can still play your turn.')
+    } finally {
+      opponentInProgressRef.current = false
+      setGameState(prev => ({ ...prev, isBotThinking: false }))
+      updateStateRef.current()
+    }
   }, [isOnline, bot])
 
   const executeMove = useCallback(async (uciMove: string, promotion?: PromotionPiece) => {
