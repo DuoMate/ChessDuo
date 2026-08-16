@@ -1,4 +1,4 @@
-import { upsertProfile, fetchProfile, deriveUsername } from '../profileService'
+import { upsertProfile, fetchProfile, getProfileUsername, deriveUsername, invalidateProfileCache, clearProfileCache } from '../profileService'
 
 const mockUpsert = jest.fn()
 const mockSelect = jest.fn()
@@ -18,6 +18,7 @@ jest.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
+  clearProfileCache()
 })
 
 describe('ProfileService', () => {
@@ -157,6 +158,80 @@ describe('ProfileService', () => {
       expect(mockSelect).toHaveBeenCalledWith('username, avatar_url')
       expect(mockEq).toHaveBeenCalledWith('id', 'user-1')
       expect(mockMaybeSingle).toHaveBeenCalled()
+    })
+  })
+
+  describe('profile cache', () => {
+    it('returns cached profile on second fetch without a second query', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'cached', avatar_url: null }, error: null })
+
+      const first = await fetchProfile('user-1')
+      const second = await fetchProfile('user-1')
+
+      expect(first).toEqual({ username: 'cached', avatar_url: null })
+      expect(second).toEqual(first)
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(1)
+    })
+
+    it('caches separate users separately', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'a', avatar_url: null }, error: null })
+
+      await fetchProfile('user-1')
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'b', avatar_url: null }, error: null })
+      await fetchProfile('user-2')
+
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(2)
+    })
+
+    it('getProfileUsername shares the fetchProfile cache entry', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'shared', avatar_url: 'https://x/a.png' }, error: null })
+
+      await fetchProfile('user-1')
+      const username = await getProfileUsername('user-1')
+
+      expect(username).toBe('shared')
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(1)
+    })
+
+    it('upsertProfile invalidates the cached entry for that user', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'old', avatar_url: null }, error: null })
+      await fetchProfile('user-1')
+
+      mockUpsert.mockResolvedValue({ error: null })
+      const result = await upsertProfile({ id: 'user-1', username: 'new' })
+      expect(result.success).toBe(true)
+
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'new', avatar_url: null }, error: null })
+      const fresh = await fetchProfile('user-1')
+
+      expect(fresh.username).toBe('new')
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(2)
+    })
+
+    it('invalidateProfileCache re-queries a single user on next fetch', async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'before', avatar_url: null }, error: null })
+      await fetchProfile('user-1')
+      invalidateProfileCache('user-1')
+
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'after', avatar_url: null }, error: null })
+      const fresh = await fetchProfile('user-1')
+
+      expect(fresh.username).toBe('after')
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(2)
+    })
+
+    it('re-queries after the TTL expires', async () => {
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000_000)
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'ttl-1', avatar_url: null }, error: null })
+      await fetchProfile('user-1')
+
+      nowSpy.mockReturnValue(1_000_000 + 61_000)
+      mockMaybeSingle.mockResolvedValue({ data: { username: 'ttl-2', avatar_url: null }, error: null })
+      const fresh = await fetchProfile('user-1')
+
+      expect(fresh.username).toBe('ttl-2')
+      expect(mockMaybeSingle).toHaveBeenCalledTimes(2)
+      nowSpy.mockRestore()
     })
   })
 })

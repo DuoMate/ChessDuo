@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { fetchProfile, updateProfile } from '@/lib/profileService'
 import { validateUsernameFormat } from '@/components/Auth'
 import { Spinner } from '@/components/Spinner'
 
@@ -20,14 +21,10 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', playerId)
-          .maybeSingle()
-        if (data) {
-          setUsername(data.username)
-          setOriginalUsername(data.username)
+        const profile = await fetchProfile(playerId)
+        if (profile.username) {
+          setUsername(profile.username)
+          setOriginalUsername(profile.username)
         }
       } catch { /* supabase query may fail — fallback to empty profile */ } finally {
         setLoading(false)
@@ -96,15 +93,12 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
     setSaved(false)
 
     try {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: playerId,
-          username: username.trim(),
-          username_lower: username.trim().toLowerCase()
-        }, { onConflict: 'id' })
+      const success = await updateProfile(playerId, {
+        username: username.trim(),
+        username_lower: username.trim().toLowerCase()
+      })
 
-      if (updateError) throw updateError
+      if (!success) throw new Error('Update failed')
 
       setOriginalUsername(username.trim())
       setSaved(true)

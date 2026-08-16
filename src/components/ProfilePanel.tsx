@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
+import { fetchProfile, invalidateProfileCache } from '@/lib/profileService'
 import { getProfileLink } from '@/lib/friends'
 import { shareLink } from '@/lib/share'
-import { supabase } from '@/lib/supabase'
 import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
@@ -42,34 +42,27 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   useEffect(() => {
     Promise.all([
       SubscriptionService.getStatus(),
-      supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', playerId)
-        .maybeSingle(),
+      fetchProfile(playerId),
     ]).then(([statusResult, profileResult]) => {
       setIsPremium(statusResult.isPremium)
       setSubscriptionStatus(statusResult)
-      if (profileResult.data?.username) setUsername(profileResult.data.username)
-      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+      if (profileResult.username) setUsername(profileResult.username)
+      if (profileResult.avatar_url) setAvatarUrl(profileResult.avatar_url)
       setCheckingPremium(false)
     }).catch(() => {
       setCheckingPremium(false)
     })
 
     const channel = RealtimeService.subscribeToTable('profiles', 'UPDATE', `id=eq.${playerId}`, async () => {
+      invalidateProfileCache(playerId)
       const [statusResult, profileResult] = await Promise.all([
         SubscriptionService.getStatus(),
-        supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', playerId)
-          .maybeSingle(),
+        fetchProfile(playerId),
       ])
       setIsPremium(statusResult.isPremium)
       setSubscriptionStatus(statusResult)
-      if (profileResult.data?.username) setUsername(profileResult.data.username)
-      if (profileResult.data?.avatar_url) setAvatarUrl(profileResult.data.avatar_url)
+      if (profileResult.username) setUsername(profileResult.username)
+      if (profileResult.avatar_url) setAvatarUrl(profileResult.avatar_url)
     })
 
     return () => {
