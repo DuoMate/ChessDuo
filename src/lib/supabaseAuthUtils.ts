@@ -174,7 +174,7 @@ async function authenticateWithGoogleCapacitorBrowser(): Promise<{
   }
 }
 
-async function authenticateWithGoogleWeb(): Promise<{
+async function authenticateWithGoogleWeb(redirectUrl?: string): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -183,10 +183,21 @@ async function authenticateWithGoogleWeb(): Promise<{
   error?: string
 }> {
   try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    // Encode the original destination in a `redirect` query param so it survives
+    // the OAuth round-trip. Supabase appends its own `code` param; without this,
+    // an invite `?code=` on the original URL is overwritten by the OAuth code.
+    let redirectTo = origin
+    if (redirectUrl) {
+      redirectTo = `${origin}/?redirect=${encodeURIComponent(redirectUrl)}`
+    } else if (typeof window !== 'undefined') {
+      redirectTo = `${origin}${window.location.pathname}`
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href,
+        redirectTo,
         queryParams: {
           access_type: 'offline',
           prompt: 'select_account consent',
@@ -200,7 +211,7 @@ async function authenticateWithGoogleWeb(): Promise<{
   }
 }
 
-export async function authenticateWithGoogle(): Promise<{
+export async function authenticateWithGoogle(opts?: { redirectUrl?: string }): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -229,5 +240,5 @@ export async function authenticateWithGoogle(): Promise<{
   }
   
   DEBUG && console.log('[Auth] Running on web platform')
-  return authenticateWithGoogleWeb()
+  return authenticateWithGoogleWeb(opts?.redirectUrl)
 }

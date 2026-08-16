@@ -59,6 +59,28 @@ describe('Local Game Flow', () => {
     expect(game.getSelectedMove('w1')).toBe('e4')
     expect(game.getHiddenMove('w2')).toBeNull()
   })
+
+  test('resolves turn when evaluator fails', async () => {
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+
+    // Simulate a Stockfish/WASM init failure
+    ;(game as any).evaluator = {
+      evaluateMoves: jest.fn().mockRejectedValue(new Error('Stockfish not ready')),
+    }
+
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+
+    await expect(game.lockAndResolve()).resolves.not.toThrow()
+
+    expect(game.currentTurn).toBe(Team.BLACK)
+    expect(game.board.fen()).not.toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    expect(game.status).toBe(GameStatus.PLAYING)
+  })
 })
 
 // Stockfish-dependent tests - require browser environment

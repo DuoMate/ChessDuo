@@ -1,7 +1,7 @@
 # ChessDuo Implementation Progress
 
 > **Single source of truth.** Updated after every module completion.
-> **Last updated:** 2026-08-12
+> **Last updated:** 2026-08-16
 > **Active branch:** `architecture-refactor`
 > **Last commit:** (pending)
 
@@ -221,3 +221,58 @@
 - `onlineGame.ts`: Added `if (phase === WAITING) startMatch()` guard after the `needsReplay` else-branch, before `startPendingTurn()`, in `syncGameState()`
 
 **GATE results:** `tsc --noEmit` ✅ | `npm test` 1082/1177 passing (0 new failures) ✅
+
+---
+
+## Production Bug Fix Sprint — August 2026
+
+Selected bugs from the August 2026 production backlog, grouped by priority and implemented in strict P0 → P1 → P2 order.
+
+| # | Bug | Severity | Status | Files |
+|:-:|-----|:--------:|:------:|-------|
+| 2 | Deep-link / OAuth bounce loop (sign-in from invite/game link kicks user back to lobby) | P0 | ✅ Resolved | `middleware.ts`, `src/app/page.tsx`, `src/components/Auth.tsx`, `src/lib/supabaseAuthUtils.ts` |
+| 3 | OAuth sign-in loses pending invite / challenge action | P0 | ✅ Resolved | `src/components/Auth.tsx`, `src/lib/supabaseAuthUtils.ts`, `src/app/page.tsx` |
+| 4 | Native app deep-link opens in browser or full-reloads instead of in-app routing | P0 | ✅ Resolved | `src/lib/capacitorAuth.ts`, `src/app/providers.tsx` |
+| 5 | Online game entry takes 10–15 s before first turn is playable | P0 | ✅ Resolved | `src/features/online/game/onlineGame.ts` |
+| — | P1 bugs (next batch) | P1 | ⏸ Pending selection | — |
+| — | P2 bugs (final batch) | P2 | ⏸ Pending selection | — |
+
+### P0 Completion Report
+
+**Bug #2 — Deep-link / OAuth bounce loop**
+- Removed `/game` and `/duel` from `middleware.ts` auth matcher so SSR no longer redirects authed users with stale/edge cookies.
+- Hardened `src/app/page.tsx`:
+  - Only shows the auth overlay when there is no client-side session (`!playerId`).
+  - Validates the `playerId` returned by `consumeAndFollowRedirect()` before following `?redirect=`.
+  - Persists the intended destination in `sessionStorage` before triggering OAuth so the post-auth landing is exact.
+
+**Bug #3 — OAuth loses pending invite / challenge**
+- `Auth.tsx` now passes the current `redirectUrl` into the Google OAuth flow.
+- `supabaseAuthUtils.ts` encodes the original destination into the OAuth `redirectTo` parameter and restores it after the callback.
+- `page.tsx` preserves the pending action when the auth overlay is dismissed without signing in.
+
+**Bug #4 — Native deep-link routing**
+- Refactored `capacitorAuth.ts` to accept a `navigate` callback instead of calling `window.location` directly.
+- Recognizes both `https://chessduo.app/auth/callback` and `chessduo://auth/callback`.
+- For warm opens, uses the supplied `router.replace` callback; only cold opens fall back to full reload.
+- Wired the callback through `src/app/providers.tsx`.
+
+**Bug #5 — 10–15 s online game-entry delay**
+- Added an event-driven fast-start retry in `onlineGame.ts`:
+  - `_fastStartTimer`, `_fastStartAttempts`, `attemptStartGameWhenReady()`.
+  - Retries are triggered immediately after the local player's DB upsert completes and after presence/join events arrive.
+  - Bails out cleanly once the game has started, the player leaves, or a small attempt cap is reached.
+- This reduces the common “waiting for everyone to appear” window without changing polling intervals or replacing realtime.
+
+**Defensive test fixes**
+- `src/lib/__tests__/onlineGameReconnect.test.ts`: fixed duplicate key and private `_gameState` access introduced by the P0 onlineGame changes.
+- `src/lib/__tests__/onlineGame.test.ts` & `onlineGameSubmission.test.ts`: added `presenceState` to channel mocks required by the new fast-start listener.
+
+**GATE results (P0)**
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | ✅ pass |
+| `npm run build` | ✅ pass (1 pre-existing `@capgo/native-purchases` dynamic-import warning) |
+| `npm test` | ✅ 1036 passing; 4 pre-existing suite failures unchanged: `PremiumPage.test.tsx`, `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, `server/__tests__/engine.test.ts` |
+
+**Next step:** Await approval to proceed to P1 bugs.

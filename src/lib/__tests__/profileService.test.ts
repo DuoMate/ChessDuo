@@ -1,4 +1,4 @@
-import { upsertProfile, fetchProfile } from '../profileService'
+import { upsertProfile, fetchProfile, deriveUsername } from '../profileService'
 
 const mockUpsert = jest.fn()
 const mockSelect = jest.fn()
@@ -103,6 +103,32 @@ describe('ProfileService', () => {
         { id: 'user-1', avatar_url: null, display_name: null },
         { onConflict: 'id' },
       )
+    })
+  })
+
+  describe('deriveUsername', () => {
+    it('keeps a valid candidate unchanged', () => {
+      expect(deriveUsername('john_doe')).toBe('john_doe')
+      expect(deriveUsername('alice123')).toBe('alice123')
+    })
+
+    it('sanitizes invalid characters from a candidate', () => {
+      expect(deriveUsername('john.doe@gmail')).toMatch(/^[a-zA-Z0-9_]{3,30}$/)
+      expect(deriveUsername('john.doe@gmail')).not.toContain('.')
+    })
+
+    it('falls back to a seeded player_ username for empty/invalid input', () => {
+      const seeded = deriveUsername('', 'user-abc')
+      expect(seeded).toMatch(/^player_[a-z0-9]{6}$/)
+      expect(deriveUsername(null, 'user-abc')).toMatch(/^player_[a-z0-9]{6}$/)
+      expect(deriveUsername('  ', 'user-abc')).toMatch(/^player_[a-z0-9]{6}$/)
+    })
+
+    it('always produces a format-valid username (3-30, alnum + underscore)', () => {
+      const cases = ['', 'x', 'with spaces here', 'emoji😀', 'a'.repeat(50), 'double--dash']
+      for (const c of cases) {
+        expect(deriveUsername(c, 'seed')).toMatch(/^[a-zA-Z0-9_]{3,30}$/)
+      }
     })
   })
 

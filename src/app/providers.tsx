@@ -9,6 +9,7 @@ import { registerCapacitorAuthListener } from '@/lib/capacitorAuth'
 import { registerBackButtonListener } from '@/hooks/useCapacitorBackButton'
 import { SplashHandler } from '@/components/SplashHandler'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
+import { useRouter } from 'next/navigation'
 import { initPushNotifications, clearCachedAccessToken, setCachedAccessToken, resetPushState } from '@/features/push-notifications'
 import { SubscriptionService, GooglePlayBillingProvider } from '@/features/billing'
 import { supabase } from '@/lib/supabase'
@@ -30,15 +31,16 @@ function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
 }
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const router = useRouter()
   useEffect(() => {
-    registerCapacitorAuthListener().catch(() => {})
+    registerCapacitorAuthListener({ navigate: (path) => router.replace(path) }).catch(() => {})
     registerBackButtonListener()
     SubscriptionService.setProvider(GooglePlayBillingProvider)
-    
+
     // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
     // (especially critical when human plays as Black - White bots move first)
     createEvaluator()
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

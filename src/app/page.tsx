@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
@@ -321,8 +321,21 @@ export default function SetupPage() {
       setShowAuthOverlay(true)
     }
 
-    if (redirectParam && sessionChecked) {
+    if (redirectParam && sessionChecked && !playerId) {
       setShowAuthOverlay(true)
+      return
+    }
+
+    if (redirectParam && sessionChecked && playerId) {
+      // Client already has a session; consume any pending action first,
+      // then follow the redirect. This prevents a stale join_by_code action
+      // from executing after we have already navigated.
+      const pending = consumePendingAction()
+      if (pending) {
+        executePendingAction(pending, playerId)
+        return
+      }
+      consumeAndFollowRedirect(playerId)
       return
     }
 
@@ -568,6 +581,31 @@ export default function SetupPage() {
     }
   }
 
+  const consumeAndFollowRedirect = useCallback((userId: string) => {
+    const url = redirectUrlRef.current
+    redirectUrlRef.current = null
+    if (!url || !url.startsWith('/')) {
+      return
+    }
+    try {
+      const parsedUrl = new URL(url, window.location.origin)
+      const urlPlayerId = parsedUrl.searchParams.get('playerId')
+      if (urlPlayerId && urlPlayerId !== userId) {
+        // Redirect targets a different user's game link — drop it to avoid
+        // the /game <-> /?redirect= loop.
+        return
+      }
+      // Strip redirect/signup params from the browser URL before navigating.
+      const currentUrl = new URL(window.location.href)
+      currentUrl.searchParams.delete('redirect')
+      currentUrl.searchParams.delete('signup')
+      window.history.replaceState(null, '', currentUrl.toString())
+      router.replace(url)
+    } catch {
+      // Malformed URL — ignore.
+    }
+  }, [router])
+
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
     setUsername(name)
@@ -577,15 +615,7 @@ export default function SetupPage() {
       executePendingAction(pending, userId)
       return
     }
-    if (redirectUrlRef.current) {
-      const url = redirectUrlRef.current
-      redirectUrlRef.current = null
-      if (url.startsWith('/')) {
-        router.replace(url)
-      } else {
-        router.push('/')
-      }
-    }
+    consumeAndFollowRedirect(userId)
   }
 
   const handleNeedUsername = (userId: string, suggestedName: string, avatarUrl?: string | null, displayName?: string | null) => {
@@ -602,15 +632,7 @@ export default function SetupPage() {
       executePendingAction(pending, userId)
       return
     }
-    if (redirectUrlRef.current) {
-      const url = redirectUrlRef.current
-      redirectUrlRef.current = null
-      if (url.startsWith('/')) {
-        router.replace(url)
-      } else {
-        router.push('/')
-      }
-    }
+    consumeAndFollowRedirect(userId)
   }
 
   function clearInsightsKeys() {
@@ -871,7 +893,10 @@ export default function SetupPage() {
         onClose={() => {
           setShowAuthOverlay(false)
           redirectUrlRef.current = null
-          clearPendingAction()
+          // NOTE: we intentionally do NOT clearPendingAction() here.
+          // If the user clicked Google OAuth, the browser navigates away and
+          // the invite/room code in localStorage must survive to be consumed
+          // on return. The action has a 5-minute TTL and is deleted on consume.
           if (typeof window !== 'undefined') {
             const url = new URL(window.location.href)
             const changed = url.searchParams.has('redirect') || url.searchParams.has('signup')

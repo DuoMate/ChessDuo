@@ -308,11 +308,22 @@ export class LocalGame {
       } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
       chess.load(turnStartFen)
 
-      const evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
-     
-     const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
-     
-     const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0])
+      let evalResults: { move: string; score: number }[]
+      try {
+        evalResults = await this.evaluator.evaluateMoves([player1Uci, player2Uci], turnStartFen)
+      } catch (evalError) {
+        DEBUG && console.error('[LocalGame] Evaluator failed during resolve, using neutral fallback:', evalError)
+        // Fallback keeps the game moving when Stockfish is not ready or has failed.
+        // Both moves are treated as equal; the first submitted move wins.
+        evalResults = [
+          { move: player1Uci, score: 0 },
+          { move: player2Uci, score: 0 },
+        ]
+      }
+
+      const scoreMap = new Map<string, number>(evalResults.map(r => [r.move, r.score]))
+
+      const bestResult = evalResults.reduce((a, b) => a.score > b.score ? a : b, evalResults[0]!)
      const bestMoveScore = bestResult?.score ?? 0
      const bestMoveUci = bestResult?.move ?? ''
      

@@ -430,7 +430,8 @@ GRANT INSERT, SELECT, UPDATE, DELETE ON public.messages TO anon, authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.challenge_links TO anon, authenticated;
 
 -- Function to auto-create profile on signup
--- Handles both email/password (username in metadata) and OAuth (email prefix fallback)
+-- Handles both email/password (username in metadata), OAuth (email prefix fallback),
+-- and anonymous (email IS NULL → generated fallback) flows. Idempotent + collision-safe.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 SECURITY DEFINER
@@ -448,37 +449,90 @@ AS $$
   IF meta_username IS NOT NULL THEN
     -- Email/password flow
     IF meta_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
-      meta_username := 'player_' || substr(md5(random()::text), 1, 6);
+      meta_username := 'player_' || substr(md5(NEW.id::text), 1, 6);
     END IF;
     INSERT INTO public.profiles (id, username, username_lower)
       VALUES (NEW.id, meta_username, LOWER(meta_username))
       ON CONFLICT (id) DO NOTHING;
   ELSE
-    -- OAuth flow: derive username from email prefix
-    email_prefix := split_part(NEW.email, '@', 1);
-    base_username := regexp_replace(email_prefix, '[^a-zA-Z0-9_]', '_', 'g');
-    IF length(base_username) < 3 THEN
-      base_username := 'player_' || substr(md5(random()::text), 1, 6);
+    -- OAuth or anonymous flow: derive username from email prefix if present
+    IF NEW.email IS NOT NULL THEN
+      email_prefix := split_part(NEW.email, '@', 1);
+      base_username := regexp_replace(email_prefix, '[^a-zA-Z0-9_]', '_', 'g');
+      IF length(base_username) < 3 THEN
+        base_username := 'player_' || substr(md5(NEW.id::text), 1, 6);
+      END IF;
+      base_username := left(base_username, 30);
+      IF base_username !~ '^[a-zA-Z0-9_]{3,30}$' THEN
+        base_username := 'player_' || substr(md5(NEW.id::text), 1, 6);
+      END IF;
+    ELSE
+      -- Anonymous signup: email is NULL, generate a deterministic fallback
+      base_username := 'player_' || substr(md5(NEW.id::text), 1, 6);
     END IF;
-    base_username := left(base_username, 30);
 
     meta_display_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name');
     meta_avatar_url := NEW.raw_user_meta_data->>'avatar_url';
 
-    INSERT INTO public.profiles (id, username, username_lower, display_name, avatar_url)
-      VALUES (NEW.id, base_username, LOWER(base_username), meta_display_name, meta_avatar_url)
-      ON CONFLICT (id) DO NOTHING;
+    -- Collision-safe insert: retry with a fresh suffix if the username is taken
+    LOOP
+      BEGIN
+        INSERT INTO public.profiles (id, username, username_lower, display_name, avatar_url)
+          VALUES (NEW.id, base_username, LOWER(base_username), meta_display_name, meta_avatar_url)
+          ON CONFLICT (id) DO NOTHING;
+        EXIT;
+      EXCEPTION WHEN unique_violation THEN
+        base_username := 'player_' || substr(md5(random()::text), 1, 6);
+      END;
+    END LOOP;
   END IF;
 
    RETURN NEW;
  END;
  $$ LANGUAGE plpgsql;
 
-                                                                                                                                                                         -- Trigger for new user signup
-                                                                                                                                                                         DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-                                                                                                                                                                         CREATE TRIGGER on_auth_user_created
-                                                                                                                                                                           AFTER INSERT ON auth.users
-                                                                                                                                                                             FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+                                                                                                          -- Trigger for new user signup
+                                                                                                          DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+                                                                                                          CREATE TRIGGER on_auth_user_created
+                                                                                                            AFTER INSERT ON auth.users
+                                                                                                              FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Backfill missing profiles for auth users who predate the trigger or whose
+-- trigger failed (email NULL, collision). Idempotent: safe to re-run.
+INSERT INTO public.profiles (id, username, username_lower, created_at)
+SELECT u.id::text,
+       'player_' || substr(md5(u.id::text), 1, 6),
+       'player_' || substr(md5(u.id::text), 1, 6),
+       u.created_at
+FROM auth.users u
+LEFT JOIN public.profiles p ON p.id = u.id::text
+WHERE p.id IS NULL
+ON CONFLICT (id) DO NOTHING;
+
+-- Collision-safe retry for the backfill above (username taken): rename stragglers
+DO $$
+DECLARE
+  orphan RECORD;
+  new_name TEXT;
+BEGIN
+  FOR orphan IN
+    SELECT u.id::text AS uid
+    FROM auth.users u
+    LEFT JOIN public.profiles p ON p.id = u.id::text
+    WHERE p.id IS NULL
+  LOOP
+    LOOP
+      new_name := 'player_' || substr(md5(orphan.uid), 1, 6);
+      BEGIN
+        INSERT INTO public.profiles (id, username, username_lower, created_at)
+        VALUES (orphan.uid, new_name, LOWER(new_name), NOW());
+        EXIT;
+      EXCEPTION WHEN unique_violation THEN
+        -- suffix collision on existing username, try again
+      END;
+    END LOOP;
+  END LOOP;
+END $$;
 
 -- ============================================
 -- friendships RLS

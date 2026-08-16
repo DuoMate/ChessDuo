@@ -250,7 +250,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     setError(null)
     googleAuthInProgressRef.current = true
     try {
-      const result = await authenticateWithGoogle()
+      const result = await authenticateWithGoogle({ redirectUrl })
       if (result.success && result.userId) {
         await fetchAndCompleteAuth(result.userId, result.email || '', result.displayName, result.avatarUrl)
       } else if (result.error) {

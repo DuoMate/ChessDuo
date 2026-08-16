@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
-import { upsertProfile, fetchProfile } from '@/lib/profileService'
+import { upsertProfile, fetchProfile, deriveUsername } from '@/lib/profileService'
 
 interface NeedUsername {
   userId: string
@@ -98,7 +98,8 @@ export function useAuthSession(): UseAuthSessionResult {
     } else {
       const displayName = googleDisplayName || email.split('@')[0]
       if (googleAvatarUrl || googleDisplayName) {
-        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: displayName })
+        const fallbackUsername = deriveUsername(displayName, userId)
+        upsertProfile({ id: userId, username: fallbackUsername, avatar_url: googleAvatarUrl, display_name: googleDisplayName || displayName })
       }
       setPlayerId(userId)
       setNeedsUsername({
