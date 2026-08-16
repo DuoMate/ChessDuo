@@ -22,5 +22,6 @@ Fully client-side 2v2 game implementation. No network dependency — supports lo
 - `GameState` from `game-engine/`, `GameInterface` from `shared/`, `BrowserMoveEvaluator` from `mobile-engine/`
 
 ## Recent Changes
+- **2026-08-16**: **Black-human freeze fix** — `resolvePendingMoves()` now catches `BrowserMoveEvaluator` failures and falls back to neutral scores so the turn still resolves when Stockfish/WASM is not ready. Prevents the stuck "White to move" state on the first bot turn.
 - **2026-07-30**: Resolution refactored — passes only 2 player moves to `evaluateMoves()` instead of all legal moves. `SERVER_URL` env var removed (evaluator always local WASM).
 - **2026-08-03**: **D1 fix** — Deleted ~170-line duplicate `resolveLegacy` body. Replaced with thin adapter that converts legacy `selectMove`/`lockMove` API to `resolvePendingMoves`. Resolution logic now lives in exactly one place.
