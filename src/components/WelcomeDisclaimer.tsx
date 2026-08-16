@@ -46,7 +46,7 @@ function Chevron() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="mx-1 h-3.5 w-3.5 shrink-0 text-slate-600"
+      className="mx-1 h-3 w-3 shrink-0 text-slate-600"
       aria-hidden="true"
     >
       <path d="m9 18 6-6-6-6" />
@@ -75,8 +75,8 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
       word: 'Pick',
       desc: isOffline ? 'You & bot submit moves' : 'Each player submits a move',
       icon: (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-green-500/30 bg-green-500/15 text-green-400 shadow-[0_0_16px_rgba(34,197,94,0.25)]">
-          <Pointer size={22} strokeWidth={2} />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-green-500/30 bg-green-500/15 text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.25)] sm:h-10 sm:w-10">
+          <Pointer size={16} strokeWidth={2} className="sm:size-[18]" />
         </div>
       ),
     },
@@ -84,8 +84,8 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
       word: 'Compare',
       desc: 'Engine compares both moves',
       icon: (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/15 text-blue-400 shadow-[0_0_16px_rgba(96,165,250,0.25)]">
-          <Scale size={22} strokeWidth={2} />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/15 text-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.25)] sm:h-10 sm:w-10">
+          <Scale size={16} strokeWidth={2} className="sm:size-[18]" />
         </div>
       ),
     },
@@ -93,8 +93,8 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
       word: 'Play',
       desc: 'Best move gets played',
       icon: (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-400 shadow-[0_0_16px_rgba(168,85,247,0.25)]">
-          <PawnIcon className="h-6 w-6" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)] sm:h-10 sm:w-10">
+          <PawnIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
       ),
     },
@@ -114,39 +114,41 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.92, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-            className="relative w-full max-w-md overflow-y-auto rounded-[32px] border border-slate-700/50 bg-[var(--color-page-bg)] p-6 shadow-2xl max-h-[calc(100vh-2rem)] dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]"
+            className="relative w-full max-w-md overflow-y-auto rounded-[24px] border border-slate-700/50 bg-[var(--color-page-bg)] p-4 shadow-2xl max-h-[calc(100vh-2rem)] dark:border-slate-700/50 dark:bg-[var(--color-page-bg)] sm:p-5"
           >
             <button
               type="button"
               onClick={handleDismiss}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
               aria-label="Close"
             >
-              <X size={22} />
+              <X size={18} />
             </button>
 
-            <div className="mb-5 text-center">
-              <div className="flex items-center justify-center gap-0 text-3xl font-black tracking-tight">
+            {/* Header — compact */}
+            <div className="mb-3 text-center">
+              <div className="flex items-center justify-center gap-0 text-2xl font-black tracking-tight">
                 <span className="text-white">Chess</span>
                 <span className="relative text-blue-500">
                   Duo
                   <Crown
-                    size={18}
-                    className="absolute -left-0.5 -top-3.5 text-blue-400"
+                    size={16}
+                    className="absolute -left-0.5 -top-3 text-blue-400"
                     fill="currentColor"
                     strokeWidth={0}
                   />
                 </span>
               </div>
-              <div className="mt-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-400">
+              <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400">
                 <span className="text-blue-400/70">&#9670;</span>
                 <span>How it works</span>
                 <span className="text-blue-400/70">&#9670;</span>
               </div>
             </div>
 
-            <div className="mb-5 rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4">
-              <div className="relative mx-auto aspect-square w-full max-w-[260px] onboarding-board">
+            {/* Board — compact */}
+            <div className="mb-3 rounded-xl border border-slate-700/50 bg-slate-800/30 p-3">
+              <div className="relative mx-auto aspect-square w-full max-w-[140px] sm:max-w-[180px] onboarding-board">
                 <ChessBoard
                   fen={TOUR_FEN}
                   onMove={() => {}}
@@ -159,7 +161,7 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   className="pointer-events-none absolute z-10"
                   style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
-                  <span className="inline-block rounded-full bg-green-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(34,197,94,0.5)]">
+                  <span className="inline-block rounded-full bg-green-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-[0_0_4px_rgba(34,197,94,0.5)] sm:text-[11px]">
                     You
                   </span>
                 </div>
@@ -167,44 +169,46 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
                   className="pointer-events-none absolute z-10"
                   style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}
                 >
-                  <span className="inline-block rounded-full bg-violet-500/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_6px_rgba(139,92,246,0.5)]">
+                  <span className="inline-block rounded-full bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-[0_0_4px_rgba(139,92,246,0.5)] sm:text-[11px]">
                     {partnerLabel}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-center gap-6">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-                  <span className="text-xs font-semibold text-slate-200">Your Move</span>
+              <div className="mt-2 flex items-center justify-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
+                  <span className="text-[11px] font-semibold text-slate-200">Your Move</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-                  <span className="text-xs font-semibold text-slate-200">{partnerLabel}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-violet-500 shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
+                  <span className="text-[11px] font-semibold text-slate-200">{partnerLabel}</span>
                 </div>
               </div>
 
-              <p className="mt-3 text-center text-sm font-medium leading-relaxed text-slate-300">
+              <p className="mt-2 text-center text-xs font-medium leading-snug text-slate-300">
                 {isOffline
                   ? <>You and your botmate — <span className="font-semibold text-amber-400">the best move wins.</span></>
                   : <>Two players, one board — <span className="font-semibold text-amber-400">the best move wins.</span></>}
               </p>
             </div>
 
-            <div className="mb-5 flex items-stretch justify-between">
+            {/* Steps — compact columns */}
+            <div className="mb-3 flex items-stretch justify-between">
               {steps.map((step, index) => (
                 <div key={step.word} className="flex flex-1 items-center">
-                  <div className="flex flex-1 flex-col items-center rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
+                  <div className="flex flex-1 flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/30 p-2">
                     {step.icon}
-                    <span className="mt-2 text-sm font-bold text-white">{step.word}</span>
-                    <span className="mt-0.5 text-center text-xs leading-tight text-slate-400">{step.desc}</span>
+                    <span className="mt-1.5 text-xs font-bold text-white">{step.word}</span>
+                    <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-400">{step.desc}</span>
                   </div>
                   {index < steps.length - 1 && <Chevron />}
                 </div>
               ))}
             </div>
 
-            <label className="mb-4 flex cursor-pointer items-center gap-2.5">
+            {/* Don't show again */}
+            <label className="mb-3 flex cursor-pointer items-center gap-2.5">
               <input
                 type="checkbox"
                 checked={dontShow}
