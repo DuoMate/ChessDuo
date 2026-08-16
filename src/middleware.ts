@@ -40,5 +40,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/game', '/duel', '/history'],
+  // Only guard /history at the edge. /game and /duel have their own
+  // client-side session checks; the SSR cookie race was causing deep-link
+  // / OAuth bounce loops back to /?redirect=... (Bug #2).
+  matcher: ['/history'],
 }

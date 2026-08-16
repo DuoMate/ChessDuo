@@ -37,6 +37,7 @@ jest.mock('../supabase', () => ({
         }),
         track: jest.fn().mockResolvedValue(null),
         send: jest.fn().mockResolvedValue(null),
+        presenceState: jest.fn(() => ({})),
         unsubscribe: jest.fn()
       })),
       removeChannel: jest.fn().mockResolvedValue(null),

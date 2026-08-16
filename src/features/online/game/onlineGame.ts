@@ -89,6 +89,14 @@ export class OnlineGame {
   private _lastActivityAt: number = Date.now()
   private _disconnectedSince: number | null = null
   private _disconnectCheckInterval: ReturnType<typeof setInterval> | null = null
+  // Fast-start retry: when an event-driven trigger fires before the DB rows
+  // are visible, startGameWhenReady() defers. Without a fast retry the lobby
+  // waits for the next scheduled poll, which can be several seconds away and
+  // accumulates toward the observed 10–15 s entry delay.
+  private _fastStartTimer: ReturnType<typeof setTimeout> | null = null
+  private _fastStartAttempts = 0
+  private readonly MAX_FAST_START_ATTEMPTS = 12
+  private readonly FAST_START_RETRY_MS = 250
 
   get savedMoveHistory(): Array<{ team: string; move: string }> {
     return this._savedMoveHistory
@@ -329,6 +337,11 @@ export class OnlineGame {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
     }
+    if (this._fastStartTimer) {
+      clearTimeout(this._fastStartTimer)
+      this._fastStartTimer = null
+    }
+    this._fastStartAttempts = 0
 
     this._room = room
     this._playerId = playerId
@@ -354,7 +367,7 @@ export class OnlineGame {
             if (this._status !== GameStatus.PLAYING) {
               if (this._playerId === sortedIds[0]) {
                 DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
-                this.startGameWhenReady()
+                this.attemptStartGameWhenReady()
               }
             }
             // During active play, state is already current via broadcasts —
@@ -371,7 +384,7 @@ export class OnlineGame {
           if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
             if (this._playerId === sortedIds[0]) {
               DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
-              this.startGameWhenReady()
+              this.attemptStartGameWhenReady()
             }
           }
         })
@@ -560,6 +573,17 @@ export class OnlineGame {
       console.warn('[ONLINE] Could not register in room_players:', e)
     }
 
+    // After our own DB row is written, immediately attempt to start. In the
+    // common case the other player is already present in the channel and their
+    // DB row is visible, so this fires the game without waiting for the
+    // fallback polling loop.
+    const presenceState = this._channel?.presenceState() || {}
+    const presentIds = Object.keys(presenceState).sort()
+    if (this._playerId === presentIds[0]) {
+      DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady immediately after own upsert')
+      this.attemptStartGameWhenReady()
+    }
+
     // Fallback polling: if presence events are delayed, poll room_players directly.
     // Only counts REAL human players (bots are never in room_players table).
     // Only the alphabetically-first present player triggers the start.
@@ -620,7 +644,7 @@ export class OnlineGame {
         const sortedIds = Object.keys(this._channel?.presenceState() || {}).sort()
         if (this._playerId === sortedIds[0]) {
           DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
-          await this.startGameWhenReady()
+          await this.attemptStartGameWhenReady()
         }
         this._pollingInterval = null
         return
@@ -640,6 +664,31 @@ export class OnlineGame {
     this._status = GameStatus.READY
     this.notifyStateChange()
     DEBUG && console.log('[ONLINE] joinRoom completed, status:', this._status)
+  }
+
+  /**
+   * Event-driven start with fast retry. When presence fires before the
+   * opponent's room_players row is visible, startGameWhenReady() defers.
+   * Without a fast retry the lobby waits for the next scheduled poll,
+   * which is the dominant contributor to the observed 10–15 s entry delay.
+   */
+  private async attemptStartGameWhenReady(): Promise<void> {
+    if (this._status === GameStatus.PLAYING) return
+    if (this.starting) return
+
+    await this.startGameWhenReady()
+
+    // _status may have been set to PLAYING inside startGameWhenReady.
+    const statusAfterStart = this._status as GameStatus
+    if (statusAfterStart === GameStatus.PLAYING) return
+
+    if (this._fastStartAttempts < this.MAX_FAST_START_ATTEMPTS) {
+      this._fastStartAttempts++
+      DEBUG && console.log('[ONLINE] startGameWhenReady deferred — fast retry', this._fastStartAttempts, 'in', this.FAST_START_RETRY_MS, 'ms')
+      this._fastStartTimer = setTimeout(() => this.attemptStartGameWhenReady(), this.FAST_START_RETRY_MS)
+    } else {
+      DEBUG && console.log('[ONLINE] startGameWhenReady deferred — fast retries exhausted, leaving fallback polling')
+    }
   }
 
   async startGameWhenReady(): Promise<void> {
@@ -743,7 +792,11 @@ export class OnlineGame {
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
-      
+      if (this._fastStartTimer) {
+        clearTimeout(this._fastStartTimer)
+        this._fastStartTimer = null
+      }
+
       // Compute coordinator: alphabetically-first non-bot player
       // Stored once at game creation, never recomputed
       const allPlayerIds = [...this.gameState.getPlayers(Team.WHITE), ...this.gameState.getPlayers(Team.BLACK)]

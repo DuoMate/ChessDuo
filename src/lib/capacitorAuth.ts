@@ -30,18 +30,31 @@ export function getPathFromUrl(url: string): string | null {
 
 let lastHandledUrl = ''
 
-export async function registerCapacitorAuthListener() {
+interface RegisterOptions {
+  /** Client-side router navigate function (e.g. router.replace). Used for
+   *  warm opens so the app does not do a full page reload. */
+  navigate?: (path: string) => void
+}
+
+export async function registerCapacitorAuthListener(opts?: RegisterOptions) {
   const isNative = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 
   if (!isNative || listenerRegistered) return
 
   listenerRegistered = true
 
-  function handleDeepLink(url: string) {
-    if (!url || url === lastHandledUrl) return
-    lastHandledUrl = url
+  const isOAuthCallback = (url: string) =>
+    url.includes('com.navron.chessduo://auth/callback') || url.includes('chessduo://auth/callback')
 
-    if (url.includes('com.navron.chessduo://auth/callback')) {
+  function handleDeepLink(url: string, allowClientNav: boolean) {
+    if (!url) return
+    // Normalize before dedupe so the same logical target from different raw
+    // schemes is treated once.
+    const normalized = getPathFromUrl(url) || url
+    if (normalized === lastHandledUrl) return
+    lastHandledUrl = normalized
+
+    if (isOAuthCallback(url)) {
       const params = new URLSearchParams(url.split('?')[1])
       const code = params.get('code')
 
@@ -76,41 +89,48 @@ export async function registerCapacitorAuthListener() {
       targetPath = `/${joinParams}`
     }
 
-    // Skip navigation if already at target — prevents infinite reload loop
-    // when getLaunchUrl() returns the same URL after window.location.replace()
+    // Skip navigation if already at target
     const currentPath = window.location.pathname + window.location.search
     if (currentPath === targetPath) return
 
-    // Handle /?code=X (home page with room code) — need to go through home page
-    // where the auto-join effect can consume the code param
+    // Cold start must use full reload to bootstrap the app shell.
+    // Warm appUrlOpen should use the provided router navigate to avoid
+    // tearing down the JS context and losing realtime state.
+    const navigate = allowClientNav && opts?.navigate
+      ? opts.navigate
+      : (p: string) => window.location.replace(p)
+
+    // These paths need a full reload when no router is available.
+    const needsReload = !opts?.navigate
+
     if (targetPath.startsWith('/') && targetPath.includes('?code=')) {
-      window.location.replace(targetPath)
+      navigate(targetPath)
       return
     }
 
     if (targetPath.startsWith('/invite/') || targetPath.startsWith('/challenge/') || targetPath.startsWith('/replay/')) {
-      window.location.replace(targetPath)
+      navigate(targetPath)
       return
     }
 
     if (targetPath.startsWith('/duel') || targetPath.startsWith('/game') || targetPath.startsWith('/friends') || targetPath.startsWith('/profile') || targetPath.startsWith('/history') || targetPath.startsWith('/premium')) {
-      window.location.replace(targetPath)
+      navigate(targetPath)
       return
     }
 
-    window.location.replace(targetPath || '/')
+    navigate(targetPath || '/')
   }
 
   try {
     const result = await App.getLaunchUrl()
     if (result?.url) {
-      handleDeepLink(result.url)
+      handleDeepLink(result.url, false)
     }
   } catch {
     // getLaunchUrl not supported or app was not launched via deep link
   }
 
   await App.addListener('appUrlOpen', async (data) => {
-    handleDeepLink(data.url)
+    handleDeepLink(data.url, true)
   })
 }

@@ -131,7 +131,6 @@ describe('syncGameState (Phase 5 — reconnect restores state from DB)', () => {
       status: GameStatus.PLAYING,
       turnNumber: 3,
       coordinatorId: 'player1',
-      currentTurn: 'BLACK',
     })
 
     const game = makeClient('player1', 'WHITE', 'player1')
@@ -186,13 +185,13 @@ describe('syncGameState (Phase 5 — reconnect restores state from DB)', () => {
     testG(game)._currentTurnNumber = 1
 
     // register the humans so getPlayerTeam('player1') resolves to WHITE
-    game.gameState.addPlayer('player1' as any, Team.WHITE)
-    game.gameState.addPlayer('player2' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('player1' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('player2' as any, Team.WHITE)
     // startMatch requires 2 per team — fill with bots
-    game.gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
-    game.gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+    testG(game).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+    testG(game).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
     // makeClient leaves gameState at WAITING; ensure SELECTING so restore can lock a pending move
-    game.gameState.startMatch()
+    testG(game).gameState.startMatch()
 
     await (game as any).syncGameState()
 
@@ -344,11 +343,11 @@ describe('syncGameState — additional reconnect scenarios', () => {
 
     const game = makeClient('player2', 'WHITE', 'player1')
     testG(game)._currentTurnNumber = 1
-    game.gameState.addPlayer('player1' as any, Team.WHITE)
-    game.gameState.addPlayer('player2' as any, Team.WHITE)
-    game.gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
-    game.gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
-    game.gameState.startMatch()
+    testG(game).gameState.addPlayer('player1' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('player2' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+    testG(game).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+    testG(game).gameState.startMatch()
 
     // After sync, teammate's move is already restored as pending
     await (game as any).syncGameState()
@@ -389,11 +388,11 @@ describe('syncGameState — additional reconnect scenarios', () => {
 
   it('C11: network interruption during submission — submitMoveToDB does not throw', async () => {
     const game = makeClient('player1', 'WHITE', 'player1')
-    game.gameState.addPlayer('player1' as any, Team.WHITE)
-    game.gameState.addPlayer('player2' as any, Team.WHITE)
-    game.gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
-    game.gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
-    game.gameState.startMatch()
+    testG(game).gameState.addPlayer('player1' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('player2' as any, Team.WHITE)
+    testG(game).gameState.addPlayer('bot_opponent_1' as any, Team.BLACK)
+    testG(game).gameState.addPlayer('bot_opponent_2' as any, Team.BLACK)
+    testG(game).gameState.startMatch()
     testG(game).gameState.startPendingTurn(START_POS_FEN)
 
     // Simulate network failure: make upsert throw
