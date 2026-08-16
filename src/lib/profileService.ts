@@ -7,6 +7,7 @@ export interface ProfileUpsertFields {
   username?: string
   avatar_url?: string | null
   display_name?: string | null
+  username_lower?: string | null
 }
 
 /**
@@ -30,6 +31,7 @@ export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ succ
   if (fields.username !== undefined) payload.username = fields.username
   if (fields.avatar_url !== undefined) payload.avatar_url = fields.avatar_url
   if (fields.display_name !== undefined) payload.display_name = fields.display_name
+  if (fields.username_lower !== undefined) payload.username_lower = fields.username_lower
 
   try {
     const { error } = await supabase
@@ -39,26 +41,60 @@ export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ succ
       const isUniqueConflict = error.message?.includes('unique') || error.code === '23505'
       return { success: false, isUniqueConflict }
     }
+    invalidateProfileCache(fields.id)
     return { success: true, isUniqueConflict: false }
   } catch {
     return { success: false, isUniqueConflict: false }
   }
 }
 
+interface CachedProfile {
+  username: string | null
+  avatar_url: string | null
+}
+
+const profileCache = new Map<string, { value: CachedProfile; fetchedAt: number }>()
+const PROFILE_CACHE_TTL_MS = 60_000
+
+export function invalidateProfileCache(userId: string): void {
+  profileCache.delete(userId)
+}
+
+export function clearProfileCache(): void {
+  profileCache.clear()
+}
+
+function getCachedProfile(userId: string): CachedProfile | null {
+  const entry = profileCache.get(userId)
+  if (!entry) return null
+  if (Date.now() - entry.fetchedAt > PROFILE_CACHE_TTL_MS) {
+    profileCache.delete(userId)
+    return null
+  }
+  return entry.value
+}
+
 export async function fetchProfile(userId: string): Promise<{ username: string | null; avatar_url: string | null }> {
+  const cached = getCachedProfile(userId)
+  if (cached) return cached
+
   const { data } = await supabase
     .from('profiles')
     .select('username, avatar_url')
     .eq('id', userId)
     .maybeSingle()
-  return { username: data?.username || null, avatar_url: data?.avatar_url || null }
+
+  const value: CachedProfile = { username: data?.username || null, avatar_url: data?.avatar_url || null }
+  profileCache.set(userId, { value, fetchedAt: Date.now() })
+  return value
 }
 
-export async function updateProfile(userId: string, fields: { username?: string; avatar_url?: string | null; display_name?: string | null }): Promise<boolean> {
+export async function updateProfile(userId: string, fields: { username?: string; avatar_url?: string | null; display_name?: string | null; username_lower?: string | null }): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('profiles')
       .upsert({ id: userId, ...fields }, { onConflict: 'id' })
+    if (!error) invalidateProfileCache(userId)
     return !error
   } catch {
     return false
@@ -66,10 +102,5 @@ export async function updateProfile(userId: string, fields: { username?: string;
 }
 
 export async function getProfileUsername(userId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('username')
-    .eq('id', userId)
-    .maybeSingle()
-  return data?.username ?? null
+  return (await fetchProfile(userId)).username
 }

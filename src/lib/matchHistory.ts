@@ -98,6 +98,8 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
   existing.unshift(localEntry)
   saveLocalHistory(existing, userId)
 
+  invalidateStatsCache(userId)
+
   if (userId) {
     try {
       await supabase.from('completed_games').insert({
@@ -178,7 +180,7 @@ export async function getCompletedGame(gameId: string, userId?: string): Promise
   }
 }
 
-export async function getPlayerStats(userId?: string): Promise<{
+export interface PlayerStats {
   totalGames: number
   wins: number
   losses: number
@@ -186,31 +188,64 @@ export async function getPlayerStats(userId?: string): Promise<{
   avgSyncRate: number
   avgAccuracy: number
   totalConflicts: number
-} | null> {
+}
+
+const statsCache = new Map<string, { value: PlayerStats | null; fetchedAt: number }>()
+const STATS_CACHE_TTL_MS = 60_000
+
+export function invalidateStatsCache(userId?: string): void {
+  statsCache.delete(userId ?? 'guest')
+}
+
+function getStatsCacheKey(userId?: string): string {
+  return userId ?? 'guest'
+}
+
+function getCachedStats(userId?: string): PlayerStats | null | 'expired' {
+  const key = getStatsCacheKey(userId)
+  const entry = statsCache.get(key)
+  if (!entry) return 'expired'
+  if (Date.now() - entry.fetchedAt > STATS_CACHE_TTL_MS) {
+    statsCache.delete(key)
+    return 'expired'
+  }
+  return entry.value
+}
+
+export async function getPlayerStats(userId?: string): Promise<PlayerStats | null> {
+  const cached = getCachedStats(userId)
+  if (cached !== 'expired') return cached
+
   const games = await getMatchHistory(1000, userId)
-  if (games.length === 0) return null
+  let value: PlayerStats | null
+  if (games.length === 0) {
+    value = null
+  } else {
+    let wins = 0
+    let draws = 0
+    let totalSyncRate = 0
+    let totalAccuracy = 0
+    let totalConflicts = 0
 
-  let wins = 0
-  let draws = 0
-  let totalSyncRate = 0
-  let totalAccuracy = 0
-  let totalConflicts = 0
+    for (const game of games) {
+      if (game.winner === 'WHITE') wins++
+      else if (game.winner === 'DRAW') draws++
+      totalSyncRate += game.white_sync_rate
+      totalAccuracy += (game.player1_accuracy + game.player2_accuracy) / 2
+      totalConflicts += game.white_conflicts
+    }
 
-  for (const game of games) {
-    if (game.winner === 'WHITE') wins++
-    else if (game.winner === 'DRAW') draws++
-    totalSyncRate += game.white_sync_rate
-    totalAccuracy += (game.player1_accuracy + game.player2_accuracy) / 2
-    totalConflicts += game.white_conflicts
+    value = {
+      totalGames: games.length,
+      wins,
+      losses: games.length - wins - draws,
+      draws,
+      avgSyncRate: games.length > 0 ? totalSyncRate / games.length : 0,
+      avgAccuracy: games.length > 0 ? totalAccuracy / games.length : 0,
+      totalConflicts,
+    }
   }
 
-  return {
-    totalGames: games.length,
-    wins,
-    losses: games.length - wins - draws,
-    draws,
-    avgSyncRate: games.length > 0 ? totalSyncRate / games.length : 0,
-    avgAccuracy: games.length > 0 ? totalAccuracy / games.length : 0,
-    totalConflicts,
-  }
+  statsCache.set(getStatsCacheKey(userId), { value, fetchedAt: Date.now() })
+  return value
 }
