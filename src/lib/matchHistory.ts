@@ -121,12 +121,61 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
   }
 }
 
+async function getUserRoomIds(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('room_players')
+    .select('room_id')
+    .eq('player_id', userId)
+
+  if (error) throw error
+  return data.map(rp => rp.room_id)
+}
+
+async function getMatchHistoryFromDB(userId: string, limit: number): Promise<CompletedGame[]> {
+  const roomIds = await getUserRoomIds(userId)
+  if (roomIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('completed_games')
+    .select('*')
+    .in('room_id', roomIds)
+    .order('played_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data || []
+}
+
 export async function getMatchHistory(limit = 20, userId?: string): Promise<CompletedGame[]> {
+  if (!userId) return getLocalHistory(userId).slice(0, limit)
+
+  try {
+    const dbGames = await getMatchHistoryFromDB(userId, limit)
+    if (dbGames.length > 0) return dbGames
+  } catch (e) {
+    console.error('[MatchHistory] Supabase query failed, falling back to localStorage:', e)
+  }
+
   return getLocalHistory(userId).slice(0, limit)
 }
 
 export async function getCompletedGame(gameId: string, userId?: string): Promise<CompletedGame | null> {
-  return getLocalHistory(userId).find(g => g.id === gameId) || null
+  const local = getLocalHistory(userId).find(g => g.id === gameId)
+  if (local) return local
+
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('completed_games')
+      .select('*')
+      .eq('id', gameId)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  } catch (e) {
+    console.error('[MatchHistory] Supabase query failed for single game:', e)
+    return null
+  }
 }
 
 export async function getPlayerStats(userId?: string): Promise<{

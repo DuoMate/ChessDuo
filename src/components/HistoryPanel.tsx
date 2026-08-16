@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { RealtimeService } from '@/lib/realtimeService'
 
 interface HistoryPanelProps {
   playerId: string
@@ -39,15 +37,6 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
       setPlayerStats(s)
       setLoading(false)
     }).catch(() => setLoading(false))
-
-    const channel = RealtimeService.subscribeToTable('completed_games', 'INSERT', `player_id=eq.${playerId}`, () => {
-      getMatchHistory(50, playerId).then(setGames).catch(() => {})
-      getPlayerStats(playerId).then(setPlayerStats).catch(() => {})
-    })
-
-    return () => {
-      RealtimeService.cleanupChannel(channel)
-    }
   }, [playerId])
 
   if (loading) {
