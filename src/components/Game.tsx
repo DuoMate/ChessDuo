@@ -1775,8 +1775,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
       game.start()
       updateStateRef.current()
+
+      // Trigger initial opponent bot turn if it's their turn (e.g. human plays Black, White moves first)
+      const myTeam = (game as GameInterface).getTeam()
+      const initOpponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
+      if (game.currentTurn === initOpponentTeam && bot) {
+        DEBUG && console.log(`[INIT-BOT] Triggering initial ${initOpponentTeam} bot turn`)
+        setGameState(prev => ({ ...prev, isBotThinking: true }))
+        setTimeout(() => executeBotMove(), 0)
+      }
     }
-  }, [isOnline, game])
+  }, [isOnline, game, bot, executeBotMove])
 
   // Auto-trigger opponent bot when it's their turn in offline mode
   useEffect(() => {
