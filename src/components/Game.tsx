@@ -865,6 +865,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }))
           if (initialBotTurnTriggeredRef.current) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'already triggered once' }))
+          } else if (initialBotTurnInProgressRef.current) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'initial bot turn already in progress or retry scheduled' }))
           } else if (isFourPlayer) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'four-player mode (all humans)' }))
           } else if (g.currentTurn !== opponentTeam2) {
@@ -876,54 +878,76 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           } else if (!g.isCoordinator()) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'coordinator guard failed', coordinatorId: g.getCoordinatorId() }))
           } else {
-            initialBotTurnTriggeredRef.current = true
-            DEBUG && console.log(`[INITIAL-BOT] Triggering initial ${opponentTeam2} bot turn from onStateChange`)
-            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_TRIGGERED', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: g.board.fen() }))
-            setGameState(prev => ({ ...prev, isBotThinking: true }))
-            const currentFen = g.board.fen()
-            ;(async () => {
-              DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: currentFen }))
-              const botUciMove = await bot.selectBestMove(currentFen)
-              DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: botUciMove }))
-              const opponentSlots = g.getPlayers(opponentTeam2)
-
-              const processBotMove = (uciMove: string) => {
-                const sanMove = uciToSan(uciMove, currentFen)
-                const moveInfo = getMoveFromUci(uciMove, currentFen)
-                if (moveInfo) {
-                  for (const slot of opponentSlots) {
-                    g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
-                    g.lockPendingMove(slot)
-                  }
-                  DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: sanMove, slots: opponentSlots }))
-                }
-              }
-
-              if (!botUciMove) {
-                const chess = new Chess(currentFen)
-                const legalMoves = chess.moves({ verbose: true })
-                if (legalMoves.length > 0) {
-                  processBotMove(legalMoves[0].from + legalMoves[0].to)
-                }
-              } else {
-                processBotMove(botUciMove)
-              }
-
+            const runInitialBotTurn = async () => {
+              if (initialBotTurnTriggeredRef.current || initialBotTurnInProgressRef.current) return
+              if (g.status !== GameStatus.PLAYING || g.currentTurn !== opponentTeam2) return
+              initialBotTurnTriggeredRef.current = true
+              initialBotTurnInProgressRef.current = true
+              DEBUG && console.log(`[INITIAL-BOT] Triggering initial ${opponentTeam2} bot turn from onStateChange`)
+              DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_TRIGGERED', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: g.board.fen() }))
+              setGameState(prev => ({ ...prev, isBotThinking: true }))
+              const currentFen = g.board.fen()
               try {
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: currentFen }))
+                const botUciMove = await bot.selectBestMove(currentFen)
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: botUciMove }))
+                const opponentSlots = g.getPlayers(opponentTeam2)
+
+                const processBotMove = (uciMove: string) => {
+                  const sanMove = uciToSan(uciMove, currentFen)
+                  const moveInfo = getMoveFromUci(uciMove, currentFen)
+                  if (moveInfo) {
+                    for (const slot of opponentSlots) {
+                      g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+                      g.lockPendingMove(slot)
+                    }
+                    DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: sanMove, slots: opponentSlots }))
+                  }
+                }
+
+                if (!botUciMove) {
+                  const chess = new Chess(currentFen)
+                  const legalMoves = chess.moves({ verbose: true })
+                  if (legalMoves.length > 0) {
+                    processBotMove(legalMoves[0].from + legalMoves[0].to)
+                  }
+                } else {
+                  processBotMove(botUciMove)
+                }
+
                 await g.resolvePendingMoves()
                 DEBUG && console.log(`[INITIAL-BOT] Resolve succeeded, new turn:`, g.currentTurn)
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, winningMove: g.lastMoveComparison?.winningMove || null, nextTurn: g.currentTurn }))
                 g.setTurnState('selecting')
+                initialBotTurnRetryRef.current = 0
+                if (initialBotTurnTimerRef.current) {
+                  clearTimeout(initialBotTurnTimerRef.current)
+                  initialBotTurnTimerRef.current = null
+                }
                 updateStateRef.current()
               } catch (e) {
                 DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
-                // Recovery: reset turn state so humans can still play
-                initialBotTurnTriggeredRef.current = false
+                // Recovery: reset turn state so humans can still play, then
+                // retry if we are still on the bot's turn.
                 g.setTurnState('selecting')
+                initialBotTurnTriggeredRef.current = false
+                initialBotTurnInProgressRef.current = false
                 updateStateRef.current()
+                const stillBotTurn = g.status === GameStatus.PLAYING && g.currentTurn === opponentTeam2
+                if (stillBotTurn && initialBotTurnRetryRef.current < MAX_INITIAL_BOT_RETRIES) {
+                  initialBotTurnRetryRef.current += 1
+                  DEBUG && console.log(`[INITIAL-BOT] Scheduling retry ${initialBotTurnRetryRef.current}/${MAX_INITIAL_BOT_RETRIES} in ${INITIAL_BOT_RETRY_DELAY_MS}ms`)
+                  initialBotTurnTimerRef.current = setTimeout(() => {
+                    initialBotTurnTimerRef.current = null
+                    runInitialBotTurn()
+                  }, INITIAL_BOT_RETRY_DELAY_MS)
+                }
+              } finally {
+                initialBotTurnInProgressRef.current = false
               }
-            })()
+            }
+            runInitialBotTurn()
           }
         }
       }
@@ -955,6 +979,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         }))
       }
     })
+    // Cleanup any pending initial-bot retry timer when the online game
+    // effect tears down (unmount / mode switch).
+    return () => {
+      if (initialBotTurnTimerRef.current) {
+        clearTimeout(initialBotTurnTimerRef.current)
+        initialBotTurnTimerRef.current = null
+      }
+    }
   }, [onlineGame, playerId])
 
   // Initialize online game - runs AFTER setOnStateChange is set up
@@ -986,6 +1018,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const opponentInProgressRef = useRef(false)
   const pendingOpponentTurnRef = useRef(false)
   const initialBotTurnTriggeredRef = useRef(false)
+  // Bounded retries for the very first bot turn (online + human on Black).
+  // The first resolution can fail transiently (Stockfish cold start / pending
+  // moves not yet seeded); retry instead of leaving the board stuck forever.
+  const initialBotTurnRetryRef = useRef(0)
+  const initialBotTurnInProgressRef = useRef(false)
+  const initialBotTurnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const INITIAL_BOT_RETRY_DELAY_MS = 1000
+  const MAX_INITIAL_BOT_RETRIES = 5
 
   useEffect(() => {
     gameRef.current = game
