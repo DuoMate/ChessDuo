@@ -104,10 +104,40 @@ export function ChessBoard({
       extensions: [{ class: Markers }]
     })
 
+    // cm-chessboard wires its own ResizeObserver (and window-resize fallback)
+    // against the board view. If a resize/orientation event lands after the
+    // board was torn down (React unmount, remount on layout change), its
+    // internal handleResize → redrawBoard reads a destroyed context and throws
+    // "Cannot read properties of undefined (reading 'invokeExtensionPoints')".
+    // Patch the handlers so redraws no-op once the container is gone from the
+    // DOM or the view has been disposed.
+    const view = (boardRef.current as any).view
+    if (view && typeof view.handleResize === 'function') {
+      const originalHandleResize = view.handleResize.bind(view)
+      const safeResize = () => {
+        try {
+          if (!view.container || !view.container.isConnected) return
+          originalHandleResize()
+        } catch {
+          // Board torn down mid-resize — ignore.
+        }
+      }
+      view.handleResize = safeResize
+      if (view.resizeListener) view.resizeListener = safeResize
+    }
+
     return () => {
       const board = boardRef.current
       if (board) {
-        ;(board as any).view?.resizeObserver?.disconnect()
+        const v = (board as any).view
+        if (v?.resizeObserver) {
+          v.resizeObserver.disconnect()
+          v.resizeObserver = null
+        }
+        if (v?.resizeListener) {
+          window.removeEventListener('resize', v.resizeListener)
+          v.resizeListener = null
+        }
         board.destroy()
       }
       boardRef.current = null

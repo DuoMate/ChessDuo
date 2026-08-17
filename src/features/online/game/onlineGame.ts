@@ -369,6 +369,11 @@ export class OnlineGame {
                 DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
                 this.attemptStartGameWhenReady()
               }
+            } else if (this.isCoordinator()) {
+              // Coordinator already started the game but a joiner may have
+              // missed the original game_started broadcast (subscribe race).
+              // Re-broadcast so late joiners sync without waiting for poll.
+              this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
             }
             // During active play, state is already current via broadcasts —
             // do not re-sync from DB (would race with un-awaited DB writes
@@ -386,6 +391,10 @@ export class OnlineGame {
               DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
               this.attemptStartGameWhenReady()
             }
+          } else if (playersOnline.length >= 2 && this._status === GameStatus.PLAYING && this.isCoordinator()) {
+            // Jet-lag join after the game already started: re-broadcast so the
+            // newly present player syncs from the persisted game row.
+            this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
           }
         })
         .on('presence', { event: 'leave' }, ({ leftPresences }) => {
@@ -587,8 +596,10 @@ export class OnlineGame {
     // Fallback polling: if presence events are delayed, poll room_players directly.
     // Only counts REAL human players (bots are never in room_players table).
     // Only the alphabetically-first present player triggers the start.
-    // Exponential backoff: 0.5s → 0.9s → 1.6s → 2.9s → 5.2s → 8s... (max 15s budget)
-    const MAX_BUDGET = 15000
+    // Exponential backoff: 0.5s → 0.9s → 1.6s → 2.9s → 5.2s → 8s... The budget
+    // must cover the lobby lifetime (60s) — a 15s budget let the lobby time out
+    // while the joiner's room_players row was still being committed.
+    const MAX_BUDGET = 55000
     let elapsed = 0
     let delay = 500
 
@@ -725,7 +736,27 @@ export class OnlineGame {
       this.gameState = new GameState(this._timeLimitSeconds)
       this._status = GameStatus.READY
 
-      // Query room_players to get all human players in the room
+      // Roster source: realtime PRESENCE is the authority for "who is live in
+      // the room right now". It carries player_id + team (tracked on join).
+      // room_players is the persistent truth but lags behind the channel — the
+      // joiner's upsert runs concurrently with subscription, so a DB-only read
+      // can miss them and defer the start forever (lobby timeout).
+      const presenceState = this._channel?.presenceState() || {}
+      const presenceRoster = new Map<string, { player_id: string; team: 'WHITE' | 'BLACK' }>()
+      for (const [key, val] of Object.entries(presenceState)) {
+        const meta = (val || {}) as { player_id?: string; team?: 'WHITE' | 'BLACK' }
+        const pid = meta.player_id || key
+        if (pid && !pid.startsWith('bot_')) {
+          // Team priority: presence metadata → self team → room host_team.
+          // The joiner inherits the host team, so this is safe for the Duo path
+          // (room_players rows that don't exist yet are the DB lag we bridge).
+          const team = meta.team || (pid === this._playerId ? this._team : (this._room?.host_team as 'WHITE' | 'BLACK' | undefined))
+          if (team) presenceRoster.set(pid, { player_id: pid, team })
+        }
+      }
+      DEBUG && console.log('[ONLINE] Presence roster:', Array.from(presenceRoster.entries()))
+
+      // Persistent roster from room_players (may lag behind presence).
       const { data: players } = await supabase
         .from('room_players')
         .select('*')
@@ -733,35 +764,51 @@ export class OnlineGame {
         .order('player_id', { ascending: true })
       DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
 
-      // Add human players to their respective teams
-      const whiteHumans = (players || []).filter(p => p.team === 'WHITE')
-      const blackHumans = (players || []).filter(p => p.team === 'BLACK')
-
-      // Guard: require minimum human players before starting
-      const allHumans = (players || []).filter(p => !p.player_id.startsWith('bot_'))
+      // Guard: require minimum live humans before starting. Presence is the
+      // source of truth — DB row visibility must never block a start that the
+      // channel already knows is ready.
       const requiredHumans = this.isFourPlayer() ? 4 : 2
-      if (allHumans.length < requiredHumans) {
-        DEBUG && console.log(`[ONLINE] Not enough humans: ${allHumans.length}/${requiredHumans} — deferring start`)
+      if (presenceRoster.size < requiredHumans) {
+        DEBUG && console.log(`[ONLINE] Not enough present humans: ${presenceRoster.size}/${requiredHumans} — deferring start`)
         this.starting = false
         return
       }
 
-      // Guard: every human must be present in the Supabase realtime channel.
-      // DB row existence is not enough — the player must actually be connected.
-      const presenceState = this._channel?.presenceState() || {}
-      const presentIds = Object.keys(presenceState)
-      DEBUG && console.log('[ONLINE] presenceState keys:', presentIds)
+      // Merge teams: DB rows win (persistent), presence backfills any human
+      // whose row is not yet committed.
+      const rosterTeams = new Map<string, 'WHITE' | 'BLACK'>()
+      for (const p of players || []) {
+        if (!p.player_id.startsWith('bot_')) rosterTeams.set(p.player_id, p.team as 'WHITE' | 'BLACK')
+      }
+      for (const [pid, meta] of presenceRoster) {
+        if (!rosterTeams.has(pid)) rosterTeams.set(pid, meta.team)
+      }
+      DEBUG && console.log('[ONLINE] Merged roster teams:', Array.from(rosterTeams.entries()))
+
+      const allHumans = Array.from(rosterTeams.keys())
+      if (allHumans.length < requiredHumans) {
+        DEBUG && console.log(`[ONLINE] Not enough humans with a known team: ${allHumans.length}/${requiredHumans} — deferring start`)
+        this.starting = false
+        return
+      }
+
+      // Guard: every human we seat must be live in the channel (row existence
+      // alone is not enough — the player must actually be connected).
+      const presentIds = Array.from(presenceRoster.keys())
       for (const h of allHumans) {
-        if (!presentIds.includes(h.player_id)) {
-          DEBUG && console.log(`[ONLINE] Human ${h.player_id} not present in channel — deferring start (present: ${presentIds.join(', ')})`)
+        if (!presentIds.includes(h)) {
+          DEBUG && console.log(`[ONLINE] Human ${h} not present in channel — deferring start (present: ${presentIds.join(', ')})`)
           this.starting = false
           return
         }
       }
 
+      const whiteHumans = allHumans.filter(p => rosterTeams.get(p) === 'WHITE')
+      const blackHumans = allHumans.filter(p => rosterTeams.get(p) === 'BLACK')
+
       for (const p of whiteHumans) {
         try {
-          this.gameState.addPlayer(p.player_id as Player, Team.WHITE)
+          this.gameState.addPlayer(p as Player, Team.WHITE)
         } catch (e) {
           DEBUG && console.log('[ONLINE] Player already exists or team full:', e)
         }
@@ -769,7 +816,7 @@ export class OnlineGame {
 
       for (const p of blackHumans) {
         try {
-          this.gameState.addPlayer(p.player_id as Player, Team.BLACK)
+          this.gameState.addPlayer(p as Player, Team.BLACK)
         } catch (e) {
           DEBUG && console.log('[ONLINE] Player already exists or team full:', e)
         }

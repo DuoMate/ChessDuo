@@ -105,6 +105,29 @@ describe('ProfileService', () => {
         { onConflict: 'id' },
       )
     })
+
+    it('regression (profiles 400): an INSERT path must always include a valid username', async () => {
+      // profiles.username is NOT NULL — a username-less upsert for a user
+      // without a profile row returns PostgREST 400. Callers that may INSERT
+      // must derive a format-valid username first (see useAuthSession).
+      mockUpsert.mockResolvedValue({ error: null })
+
+      const payload = {
+        id: 'orphan-user',
+        username: deriveUsername('no-email-guest', 'orphan-user'),
+        avatar_url: null,
+        display_name: 'Guest',
+      }
+      await upsertProfile(payload)
+
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'orphan-user',
+          username: expect.stringMatching(/^[a-zA-Z0-9_]{3,30}$/),
+        }),
+        { onConflict: 'id' },
+      )
+    })
   })
 
   describe('deriveUsername', () => {
