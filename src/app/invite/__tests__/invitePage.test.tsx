@@ -17,6 +17,9 @@ jest.mock('@/lib/supabase', () => ({
       getSession: jest.fn().mockResolvedValue({
         data: { session: { user: { id: 'current-user-id' } } },
       }),
+      onAuthStateChange: jest.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      }),
     },
     from: jest.fn().mockReturnValue({
       select: jest.fn().mockReturnValue({

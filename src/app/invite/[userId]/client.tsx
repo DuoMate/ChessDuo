@@ -54,10 +54,22 @@ export default function InvitePageClient() {
       setLoading(false)
     })
 
+    // React to session restoration / sign-in / sign-out. A cold-start deep link
+    // can land here before Supabase finishes restoring the session, in which
+    // case the one-shot getSession() above returns null and the page would stay
+    // stuck on the auth form without this subscription.
+    const unsubscribe = AuthService.onAuthChange((_event, session) => {
+      if (!mountedRef.current) return
+      setPlayerId(session?.user?.id || null)
+      setLoading(false)
+    })
+
     getProfileUsername(targetUserId).then((username) => {
         if (!mountedRef.current) return
         if (username) setTargetUsername(username)
       }).catch(() => {})
+
+    return () => { unsubscribe() }
   }, [targetUserId])
 
   useEffect(() => {

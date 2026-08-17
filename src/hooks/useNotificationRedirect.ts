@@ -2,7 +2,18 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { consumeNotificationRedirect, getNotificationRedirectRoute, storeNotificationRedirect } from '@/lib/notificationRedirect'
+import {
+  consumeNotificationRedirect,
+  getNotificationRedirectRoute,
+  storeNotificationRedirect,
+  FRIENDS_REFRESH_EVENT,
+} from '@/lib/notificationRedirect'
+
+function dispatchFriendsRefresh(type?: string): void {
+  if (type !== 'friend_request' && type !== 'invite_accepted') return
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(FRIENDS_REFRESH_EVENT))
+}
 
 export function useNotificationRedirect(): void {
   const router = useRouter()
@@ -14,6 +25,9 @@ export function useNotificationRedirect(): void {
       if (route !== '/') {
         router.replace(route)
       }
+      // A friend-request deep-link may land on /friends while the panel is
+      // already mounted (no remount → no refetch). Signal it to refetch.
+      dispatchFriendsRefresh(redirect.type)
     }
   }, [router])
 
@@ -38,6 +52,10 @@ export function useNotificationRedirect(): void {
       if (payload.url.startsWith('/')) {
         router.replace(payload.url)
       }
+      // Same as the mount-consume path: if a friend-request notification is
+      // tapped while /friends is already open, router.replace is a no-op, so
+      // explicitly tell the FriendsPanel to refetch.
+      dispatchFriendsRefresh(payload.data?.type)
     }
     navigator.serviceWorker.addEventListener('message', handler)
     return () => navigator.serviceWorker.removeEventListener('message', handler)
