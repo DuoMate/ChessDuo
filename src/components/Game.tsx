@@ -16,6 +16,7 @@ import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { getAppBaseUrl } from '@/lib/appUrl'
+import { emitTrace } from '@/features/shared/gameTrace'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
@@ -873,11 +874,43 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'currentTurn !== botColor', currentTurn: g.currentTurn, botColor: opponentTeam2 }))
           } else if (!bot) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'bot player not detected' }))
+            emitTrace('BOT_TURN_DETECTED', {
+              roomId: roomId || undefined,
+              playerId: currentPlayerId,
+              team: myTeam2,
+              color: myTeam2 === 'WHITE' ? 'white' : 'black',
+              coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+              extra: { botColor: opponentTeam2, skipped: true, reason: 'bot not detected' },
+            })
           } else if (!currentPlayerId) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'playerId not resolved (auth race)' }))
+            emitTrace('BOT_TURN_DETECTED', {
+              roomId: roomId || undefined,
+              playerId: currentPlayerId,
+              team: myTeam2,
+              color: myTeam2 === 'WHITE' ? 'white' : 'black',
+              coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+              extra: { botColor: opponentTeam2, skipped: true, reason: 'playerId not resolved' },
+            })
           } else if (!g.isCoordinator()) {
             DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'coordinator guard failed', coordinatorId: g.getCoordinatorId() }))
+            emitTrace('BOT_TURN_DETECTED', {
+              roomId: roomId || undefined,
+              playerId: currentPlayerId,
+              team: myTeam2,
+              color: myTeam2 === 'WHITE' ? 'white' : 'black',
+              coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+              extra: { botColor: opponentTeam2, skipped: true, reason: 'not coordinator' },
+            })
           } else {
+            emitTrace('BOT_TURN_DETECTED', {
+              roomId: roomId || undefined,
+              playerId: currentPlayerId,
+              team: myTeam2,
+              color: myTeam2 === 'WHITE' ? 'white' : 'black',
+              coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+              extra: { botColor: opponentTeam2, isCoordinator: g.isCoordinator() },
+            })
             const runInitialBotTurn = async () => {
               if (initialBotTurnTriggeredRef.current || initialBotTurnInProgressRef.current) return
               if (g.status !== GameStatus.PLAYING || g.currentTurn !== opponentTeam2) return
@@ -889,7 +922,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               const currentFen = g.board.fen()
               try {
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: currentFen }))
+                const sfStart = Date.now()
+                emitTrace('STOCKFISH_STARTED', {
+                  roomId: roomId || undefined,
+                  playerId: currentPlayerId,
+                  team: myTeam2,
+                  color: myTeam2 === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { fen: currentFen },
+                  stockfish: { evaluationStartTime: sfStart },
+                })
                 const botUciMove = await bot.selectBestMove(currentFen)
+                const sfEnd = Date.now()
+                emitTrace('STOCKFISH_COMPLETED', {
+                  roomId: roomId || undefined,
+                  playerId: currentPlayerId,
+                  team: myTeam2,
+                  color: myTeam2 === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { move: botUciMove || null },
+                  stockfish: {
+                    evaluationStartTime: sfStart,
+                    evaluationEndTime: sfEnd,
+                    durationMs: sfEnd - sfStart,
+                    fallbackUsed: !botUciMove,
+                  },
+                })
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: botUciMove }))
                 const opponentSlots = g.getPlayers(opponentTeam2)
 
@@ -914,6 +972,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 } else {
                   processBotMove(botUciMove)
                 }
+
+                emitTrace('MOVE_SELECTED', {
+                  roomId: roomId || undefined,
+                  playerId: currentPlayerId,
+                  team: myTeam2,
+                  color: myTeam2 === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { move: botUciMove || 'fallback-legal', slots: opponentSlots },
+                })
 
                 await g.resolvePendingMoves()
                 DEBUG && console.log(`[INITIAL-BOT] Resolve succeeded, new turn:`, g.currentTurn)
@@ -1595,6 +1662,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               isFourPlayer,
             }))
             if (!isFourPlayer && newTurn === opponentTeam && bot && playerId) {
+              emitTrace('BOT_TURN_DETECTED', {
+                roomId: roomId || undefined,
+                playerId,
+                team: myTeam,
+                color: myTeam === 'WHITE' ? 'white' : 'black',
+                coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                extra: { botColor: opponentTeam, isCoordinator: g.isCoordinator() },
+              })
               DEBUG && console.log(`[RESOLVE] Coordinator handling ${opponentTeam} bot moves...`)
               DEBUG && console.log(`[BOT-DIAG] Before bot handler: inputLocked=${inputLockedRef.current}, submissionTurn=${submissionTurnRef.current}, turnState=${g.getTurnState()}, phase=${g.gamePhase}`)
               DEBUG && console.log(`[BOT-DIAG] pendingMoves=[${Array.from(g.getAllPendingMoves().keys()).join(', ')}]`)
@@ -1610,7 +1685,32 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               
                ;(async () => {
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, fen: currentFen }))
+                const sfStart = Date.now()
+                emitTrace('STOCKFISH_STARTED', {
+                  roomId: roomId || undefined,
+                  playerId,
+                  team: myTeam,
+                  color: myTeam === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { fen: currentFen },
+                  stockfish: { evaluationStartTime: sfStart },
+                })
                 const botUciMove = await bot.selectBestMove(currentFen)
+                const sfEnd = Date.now()
+                emitTrace('STOCKFISH_COMPLETED', {
+                  roomId: roomId || undefined,
+                  playerId,
+                  team: myTeam,
+                  color: myTeam === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { move: botUciMove || null },
+                  stockfish: {
+                    evaluationStartTime: sfStart,
+                    evaluationEndTime: sfEnd,
+                    durationMs: sfEnd - sfStart,
+                    fallbackUsed: !botUciMove,
+                  },
+                })
                 DEBUG && console.log(`[RESOLVE] Bot selected move:`, botUciMove)
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, move: botUciMove }))
                 
@@ -1644,7 +1744,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, move: sanMove, slots: opponentSlots }))
                   }
                 }
-                
+
+                emitTrace('MOVE_SELECTED', {
+                  roomId: roomId || undefined,
+                  playerId,
+                  team: myTeam,
+                  color: myTeam === 'WHITE' ? 'white' : 'black',
+                  coordinatorId: (g as GameInterface).getCoordinatorId?.() || undefined,
+                  extra: { move: botUciMove || 'fallback-legal', slots: opponentSlots },
+                })
+
                 try {
                   await g.resolvePendingMoves()
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve succeeded, new turn:`, g.currentTurn)

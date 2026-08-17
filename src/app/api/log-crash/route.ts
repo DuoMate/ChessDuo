@@ -1,25 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { applyRateLimit } from '@/lib/rateLimit'
+import { recordAppError } from '@/lib/appErrorStore'
+import { recordGameTrace } from '@/lib/gameTraceStore'
+import { isAllowedOrigin, sanitizeCrashPayload } from '@/lib/crashReportPolicy'
 
-const ALLOWED_ORIGIN = 'https://chessduo.navron.org'
-
+/**
+ * Client error/crash ingestion (P0-2).
+ *
+ * Accepts reports from the web app AND the Capacitor Android WebView. The
+ * Capacitor origin is `https://localhost` (see capacitor.config.ts
+ * androidScheme), so the origin gate is an allowlist, not a single host.
+ */
 export async function POST(request: NextRequest) {
   const rateLimitResponse = applyRateLimit(request)
   if (rateLimitResponse) return rateLimitResponse
 
   const origin = request.headers.get('origin')
-  if (origin !== ALLOWED_ORIGIN) {
+  if (!isAllowedOrigin(origin)) {
     return NextResponse.json({ ok: false }, { status: 403 })
   }
 
+  let body: Record<string, unknown>
   try {
-    const body = await request.json()
-    if (!body.message || !body.stack) {
-      return NextResponse.json({ ok: false, error: 'missing required fields' }, { status: 400 })
-    }
-    console.error('[CrashReport]', JSON.stringify(body, null, 2))
-    return NextResponse.json({ ok: true })
+    body = await request.json()
   } catch {
-    return NextResponse.json({ ok: false }, { status: 400 })
+    return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 400 })
   }
+
+  // Game-lifecycle trace batches are routed to game_traces (append-only).
+  if (body?.error_type === 'game_trace' && Array.isArray(body.trace)) {
+    await recordGameTrace(body.trace)
+    return NextResponse.json({ ok: true })
+  }
+
+  const payload = sanitizeCrashPayload(body)
+  if (!payload) {
+    return NextResponse.json({ ok: false, error: 'missing required fields' }, { status: 400 })
+  }
+
+  // Always log a structured line (Cloudflare Worker logs remain a passive sink).
+  console.error('[CrashReport]', JSON.stringify(payload))
+
+  // Best-effort persistence into app_errors (append-only; see tables.sql).
+  await recordAppError(payload as unknown as Record<string, unknown>)
+
+  return NextResponse.json({ ok: true })
 }

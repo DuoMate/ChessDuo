@@ -1,5 +1,6 @@
 import { supabase, ChallengeLink } from './supabase'
 import { getAppBaseUrl } from './appUrl'
+import { emitTrace } from '@/features/shared/gameTrace'
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -55,6 +56,8 @@ export async function createChallenge(
         status: 'waiting',
         time_limit_seconds: timeSeconds,
       })
+
+    emitTrace('GAME_CREATED', { roomId, playerId: creatorId, team: 'WHITE', color: 'white' })
   }
 
   const { data, error } = await supabase

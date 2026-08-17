@@ -699,34 +699,106 @@ DROP POLICY IF EXISTS "Allow all" ON public.room_players;
 DROP POLICY IF EXISTS "Anyone can insert completed games" ON public.completed_games;
 
 -- ============================================================
--- RAID: Restore "Allow all" policies + fix INSERT
--- The security fix dropped dashboard-added "Allow all" policies.
--- PostgreSQL OR's permissive policies together, so "Allow all"
--- coexists safely with the specific policies below.
+-- P0-1 LAUNCH BLOCKER: Minimum-privilege RLS (production hardening)
+-- Replaces the "Allow all" policies on room_players, games, and
+-- turn_submissions that previously let ANY client read/modify any
+-- game's state, player roster, and move submissions.
 --
--- WARNING (2026-07-15): These "Allow all" policies make room_players and
--- games tables fully WORLD-READABLE AND WORLD-WRITABLE. Any client can
--- read/modify any game's FEN state, moves, and player rosters without
--- authentication. This exists because anonymous Quick Play users need
--- row access without a permanent auth session. The long-term fix is to
--- create anonymous users via signInAnonymously() and use is_room_member()
--- checks (which already pass for anon users since they have auth.uid()).
--- Remove these policies ONLY after verifying that anonymous room joins
--- work correctly in a staging environment with the tighter RLS in place.
+-- Policy model (only the operations the app legitimately performs):
+--   rooms:
+--     SELECT  -> everyone (public by design: room-code discovery / join state)
+--     INSERT  -> any authenticated user (they become created_by)
+--     UPDATE  -> room creator OR any room member (coordinator resignation)
+--     DELETE  -> room creator only (matchmaking-cancel cleanup)
+--   room_players:
+--     SELECT  -> room members only (via is_room_member)
+--     INSERT  -> the player themselves, room capacity < 4 (or re-join own row)
+--     UPDATE  -> the player themselves OR room creator (slot/team assignment)
+--     DELETE  -> the player themselves OR room creator (leave / matchmaking-cancel)
+--   games:
+--     SELECT/INSERT/UPDATE -> room members only (coordinator persists state)
+--   turn_submissions:
+--     SELECT  -> room members only
+--     INSERT  -> the player themselves + room member (submit own move)
+-- No UPDATE/DELETE on turn_submissions (rows die via FK ON DELETE CASCADE).
+--
+-- Bot players never touch these tables: bot moves are resolved client-side
+-- and persisted through the coordinator's games row.
 -- ============================================================
+
+-- Capacity helper: true when the room has space OR the player already has a
+-- row (re-join/reconnect after ON CONFLICT DO UPDATE still evaluates the
+-- INSERT check). SECURITY DEFINER so the count sees the real roster.
+CREATE OR REPLACE FUNCTION public.can_join_room(p_room_id UUID, p_player_id TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+  SELECT
+    (SELECT count(*) FROM room_players WHERE room_id = p_room_id) < 4
+    OR EXISTS (SELECT 1 FROM room_players WHERE room_id = p_room_id AND player_id = p_player_id)
+$$;
+
+-- ---- room_players: members-only reads, self/creator writes -------------
+DROP POLICY IF EXISTS "Allow all" ON public.room_players;
+DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
+DROP POLICY IF EXISTS "Room members can view players" ON public.room_players;
+DROP POLICY IF EXISTS "Players can leave rooms" ON public.room_players;
+DROP POLICY IF EXISTS "Players can update own record" ON public.room_players;
+
+CREATE POLICY "Room members can view players" ON public.room_players
+  FOR SELECT USING (auth.uid() IS NOT NULL AND is_room_member(room_id));
+
+CREATE POLICY "Players can join rooms" ON public.room_players
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::text = player_id
+    AND public.can_join_room(room_id, player_id)
+  );
+
+CREATE POLICY "Players can update own record" ON public.room_players
+  FOR UPDATE USING (auth.uid()::text = player_id);
+
+CREATE POLICY "Room creator can update room players" ON public.room_players
+  FOR UPDATE USING ((SELECT created_by FROM rooms WHERE id = room_id) = auth.uid()::text);
+
+CREATE POLICY "Players can leave rooms" ON public.room_players
+  FOR DELETE USING (auth.uid()::text = player_id);
+
+CREATE POLICY "Room creator can delete room players" ON public.room_players
+  FOR DELETE USING ((SELECT created_by FROM rooms WHERE id = room_id) = auth.uid()::text);
+
+-- ---- games: room-members only -----------------------------------------
+DROP POLICY IF EXISTS "Allow all" ON public.games;
+DROP POLICY IF EXISTS "Room members can view game" ON public.games;
+DROP POLICY IF EXISTS "Room members can insert game" ON public.games;
+DROP POLICY IF EXISTS "Room members can update game" ON public.games;
+DROP POLICY IF EXISTS "Anyone can view game state" ON public.games;
+DROP POLICY IF EXISTS "Anyone can insert game state" ON public.games;
+DROP POLICY IF EXISTS "Anyone can update game state" ON public.games;
+DROP POLICY IF EXISTS "Room participants can view game" ON public.games;
+
+CREATE POLICY "Room members can view game" ON public.games
+  FOR SELECT USING (is_room_member(room_id));
+CREATE POLICY "Room members can insert game" ON public.games
+  FOR INSERT WITH CHECK (is_room_member(room_id));
+CREATE POLICY "Room members can update game" ON public.games
+  FOR UPDATE USING (is_room_member(room_id));
+
+-- ---- rooms: complement for member resignation + creator cleanup --------
+DROP POLICY IF EXISTS "Room members can update room status" ON public.rooms;
+CREATE POLICY "Room members can update room status" ON public.rooms
+  FOR UPDATE USING (auth.uid() IS NOT NULL AND is_room_member(id));
+
+DROP POLICY IF EXISTS "Room creator can delete room" ON public.rooms;
+CREATE POLICY "Room creator can delete room" ON public.rooms
+  FOR DELETE USING (auth.uid()::text = created_by);
+
+-- Table-level privileges are unchanged: grants open the door, policies
+-- decide which rows/columns a role may touch.
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.room_players TO anon, authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.games TO anon, authenticated;
-
--- Re-create "Allow all" (the policy that worked for 3 months)
-DROP POLICY IF EXISTS "Allow all" ON public.room_players;
-CREATE POLICY "Allow all" ON public.room_players FOR ALL USING (true) WITH CHECK (true);
-DROP POLICY IF EXISTS "Allow all" ON public.games;
-CREATE POLICY "Allow all" ON public.games FOR ALL USING (true) WITH CHECK (true);
-
--- Fix INSERT policy back to proper auth check
-DROP POLICY IF EXISTS "Authenticated users can join rooms" ON public.room_players;
-CREATE POLICY "Authenticated users can join rooms" ON public.room_players
-  FOR INSERT WITH CHECK (auth.uid()::text = player_id);
 
 -- Push notification device tokens
 CREATE TABLE IF NOT EXISTS push_tokens (
@@ -777,8 +849,10 @@ CREATE TABLE IF NOT EXISTS turn_submissions (
 ALTER TABLE turn_submissions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Room members can access turn submissions" ON public.turn_submissions;
-CREATE POLICY "Room members can access turn submissions" ON public.turn_submissions
-  FOR ALL USING (
+DROP POLICY IF EXISTS "Allow all" ON public.turn_submissions;
+
+CREATE POLICY "Room members can view turn submissions" ON public.turn_submissions
+  FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM games g
       WHERE g.id = turn_submissions.game_id
@@ -786,14 +860,111 @@ CREATE POLICY "Room members can access turn submissions" ON public.turn_submissi
     )
   );
 
-DROP POLICY IF EXISTS "Allow all" ON public.turn_submissions;
-CREATE POLICY "Allow all" ON public.turn_submissions
-  FOR ALL USING (true) WITH CHECK (true);
+-- A player may only insert their OWN move, and only for a game whose room
+-- they are a member of. Blocks cross-game/impersonation submissions.
+CREATE POLICY "Players can submit their own moves" ON public.turn_submissions
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::text = player_id
+    AND EXISTS (
+      SELECT 1 FROM games g
+      WHERE g.id = turn_submissions.game_id
+      AND is_room_member(g.room_id)
+    )
+  );
 
 GRANT INSERT, SELECT, UPDATE, DELETE ON public.turn_submissions TO anon, authenticated;
 
 -- Index for querying submissions by game + turn (used to check if both teammates submitted)
 CREATE INDEX IF NOT EXISTS idx_turn_submissions_game ON public.turn_submissions(game_id, turn_number);
+
+-- ============================================
+-- P0-2: Application error ingestion (observability)
+-- Append-only. Clients (anon + authenticated) may INSERT crash reports so
+-- pre-login / anonymous crashes are captured too, but may NOT SELECT/UPDATE/
+-- DELETE. Admin reads use the service-role key (e.g. a dashboard/alert job).
+-- No PII by construction: user_id is a hashed identifier; see errorReporter.ts.
+-- ============================================
+CREATE TABLE IF NOT EXISTS app_errors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  message TEXT NOT NULL,
+  stack TEXT,
+  error_type TEXT,
+  source TEXT,
+  line INTEGER,
+  col INTEGER,
+  platform TEXT,
+  app_version TEXT,
+  session_id TEXT,
+  user_id TEXT,
+  route TEXT,
+  game_id TEXT,
+  room_id TEXT,
+  turn_number INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE app_errors ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clients can append error reports" ON public.app_errors;
+CREATE POLICY "Clients can append error reports" ON public.app_errors
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_app_errors_created ON app_errors(created_at DESC);
+GRANT INSERT ON public.app_errors TO anon, authenticated;
+
+-- ============================================
+-- P0-4: Push send audit log + daily-cap enforcement
+-- Inserted by /api/push/send (service-role server path) before each send so
+-- abuse can be counted and throttled. Clients have NO access (RLS on, no
+-- client policies) — only the service role may read/write.
+-- ============================================
+CREATE TABLE IF NOT EXISTS push_send_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id TEXT NOT NULL,
+  receiver_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE push_send_log ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_push_send_log_sender_type_time
+  ON push_send_log(sender_id, type, created_at DESC);
+
+-- ============================================
+-- P0-1/P1: Game lifecycle trace (black-bot investigation)
+-- Append-only event log written by /api/log-crash when error_type='game_trace'.
+-- Clients may INSERT; no SELECT/UPDATE/DELETE (admin reads via service role).
+-- ============================================
+CREATE TABLE IF NOT EXISTS game_traces (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_id TEXT,
+  stage TEXT,
+  game_id TEXT,
+  room_id TEXT,
+  turn_number INTEGER,
+  player_id TEXT,
+  team TEXT,
+  color TEXT,
+  coordinator_id TEXT,
+  duration_ms INTEGER,
+  timeout BOOLEAN,
+  fallback_used BOOLEAN,
+  extra JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE game_traces ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clients can append game traces" ON public.game_traces;
+CREATE POLICY "Clients can append game traces" ON public.game_traces
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_game_traces_room_turn ON game_traces(room_id, turn_number, created_at);
+GRANT INSERT ON public.game_traces TO anon, authenticated;
 
 -- ============================================
 

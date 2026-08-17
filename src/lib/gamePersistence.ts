@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { DEBUG } from './debug'
+import { emitTrace } from '@/features/shared/gameTrace'
 
 interface GameSaveData {
   room_id: string
@@ -61,6 +62,8 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
     await supabase
       .from('games')
       .upsert(upsertData, { onConflict: 'room_id' })
+
+    emitTrace('GAME_STATE_SAVED', { roomId, turnNumber: turnNumber ?? undefined, extra: { moves: moveHistory.length } })
 
     DEBUG && console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
   } catch (e) {
