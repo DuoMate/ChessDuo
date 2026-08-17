@@ -24,6 +24,7 @@ import { notifyInviteAccepted } from '@/features/push-notifications'
 import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
+import { FRIENDS_REFRESH_EVENT } from '@/lib/notificationRedirect'
 import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -127,6 +128,28 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
     loadData()
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => { mountedRef.current = false }
+  }, [loadData])
+
+  // Refetch when the app returns to the foreground (resume from background) or
+  // when a friend-related notification deep-link is consumed while this panel
+  // is already mounted. loadData() otherwise only runs on mount + Supabase
+  // realtime events, so resuming — or tapping a friend-request notification
+  // while already on /friends — would show stale friends/requests.
+  useEffect(() => {
+    const refresh = () => { if (mountedRef.current) loadData() }
+    const handleVisibility = () => { if (!document.hidden) refresh() }
+    const handlePageshow = (e: PageTransitionEvent) => { if (e.persisted) refresh() }
+    const handleFriendRefresh = () => { refresh() }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('pageshow', handlePageshow)
+    window.addEventListener(FRIENDS_REFRESH_EVENT, handleFriendRefresh)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('pageshow', handlePageshow)
+      window.removeEventListener(FRIENDS_REFRESH_EVENT, handleFriendRefresh)
+    }
   }, [loadData])
 
   useEffect(() => {

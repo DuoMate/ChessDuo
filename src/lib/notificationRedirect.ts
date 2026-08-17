@@ -1,5 +1,10 @@
 const REDIRECT_KEY = 'chessduo_notification_redirect'
 
+// Dispatched on `window` when a friend-related notification deep-link is
+// consumed, so an already-mounted FriendsPanel can refetch instead of showing
+// stale state (the router.replace to /friends is a no-op when already there).
+export const FRIENDS_REFRESH_EVENT = 'chessduo:refresh-friends'
+
 export interface NotificationRedirect {
   type: string
   senderId?: string

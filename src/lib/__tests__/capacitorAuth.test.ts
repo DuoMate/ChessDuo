@@ -68,3 +68,46 @@ describe('infinite-loop guard (currentPath === targetPath)', () => {
     // Guard does NOT match → replace IS called → normal cold-start navigation
   })
 })
+
+describe('registerCapacitorAuthListener — dynamic-route deep links (Bug: static-export 404)', () => {
+  const originalCapacitor = (window as unknown as { Capacitor?: unknown }).Capacitor
+
+  beforeEach(() => {
+    jest.resetModules()
+    // Simulate a native Capacitor environment.
+    ;(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor = {
+      isNativePlatform: () => true,
+    }
+  })
+
+  afterEach(() => {
+    ;(window as unknown as { Capacitor?: unknown }).Capacitor = originalCapacitor
+  })
+
+  it('routes /invite/:id via the client router on cold start (never full-reloads)', async () => {
+    const navigate = jest.fn()
+    const { App } = jest.requireMock('@capacitor/app')
+    App.getLaunchUrl.mockResolvedValueOnce({ url: 'https://chessduo.navron.org/invite/user-123' })
+
+    // Fresh module each test — the `listenerRegistered` guard otherwise blocks
+    // a second registerCapacitorAuthListener call within the same module.
+    const { registerCapacitorAuthListener } = await import('../capacitorAuth')
+    await registerCapacitorAuthListener({ navigate })
+
+    // The dynamic /invite route has no pre-rendered HTML in the static-export
+    // APK, so it must use the client router (opts.navigate), not a full
+    // window.location.replace, on cold start.
+    expect(navigate).toHaveBeenCalledWith('/invite/user-123')
+  })
+
+  it('routes /challenge/:code via the client router on cold start', async () => {
+    const navigate = jest.fn()
+    const { App } = jest.requireMock('@capacitor/app')
+    App.getLaunchUrl.mockResolvedValueOnce({ url: 'https://chessduo.navron.org/challenge/ABC12345' })
+
+    const { registerCapacitorAuthListener } = await import('../capacitorAuth')
+    await registerCapacitorAuthListener({ navigate })
+
+    expect(navigate).toHaveBeenCalledWith('/challenge/ABC12345')
+  })
+})

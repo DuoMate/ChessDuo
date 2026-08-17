@@ -804,6 +804,19 @@ export class OnlineGame {
       
       this.startPendingTurn()
       this.notifyStateChange()
+      DEBUG && console.log('[CHESSDUO-BOT-TRACE] GAME_START', JSON.stringify({
+        roomId: this._room?.id,
+        status: this._status,
+        currentTurn: this.gameState.currentTeam,
+        whitePlayers: this.gameState.getPlayers(Team.WHITE),
+        blackPlayers: this.gameState.getPlayers(Team.BLACK),
+        whiteIsBot: this.gameState.getPlayers(Team.WHITE).map(p => p.startsWith('bot_')),
+        blackIsBot: this.gameState.getPlayers(Team.BLACK).map(p => p.startsWith('bot_')),
+        coordinatorId: this._coordinatorId,
+        myId: this._playerId,
+        amCoordinator: this.isCoordinator(),
+        turnNumber: this._currentTurnNumber,
+      }))
       DEBUG && console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
       DEBUG && console.log('[COORDINATOR] Assigned:', { coordinatorId: this._coordinatorId, myId: this._playerId, amCoordinator: this.isCoordinator() })
       
@@ -1716,37 +1729,51 @@ export class OnlineGame {
     const allPendingMoves = this.gameState.getAllPendingMoves()
     const pendingMovesArray = Array.from(allPendingMoves.entries())
     
-    // For WHITE team: use player ID to identify my move vs teammate
-    // For BLACK team (opponent bots): just get any two moves
+    // Color-agnostic move-pair selection: the human team may be WHITE or BLACK
+    // (Duo lets the host pick). If the coordinator's own move is among the
+    // pending moves, it is move1 (preserves accuracy/player1 tracking). If the
+    // coordinator is not on the current team (bot team turn), fall back to the
+    // first two submitted moves so bot teams resolve on either color.
     let move1: PendingMoveInfo | null = null
     let move2: PendingMoveInfo | null = null
     let player1Id = ''
     let player2Id = ''
-    
-    if (currentTeam === Team.WHITE) {
-      // My move is for this player ID, teammate is the other
-      for (const [player, pending] of allPendingMoves) {
-        if (player === this._playerId) {
-          move1 = pending
-          player1Id = player
-          this._player1Id = player // Track player1 for this client
-          DEBUG && console.log('[PLAYER1-ID] Set player1Id to:', player)
-        } else {
-          move2 = pending
-          player2Id = player
-        }
-      }
-    } else {
-      // BLACK turn - just get any two pending moves (both are bot moves)
-      if (pendingMovesArray.length >= 2) {
-        move1 = pendingMovesArray[0][1]
-        player1Id = pendingMovesArray[0][0]
-        move2 = pendingMovesArray[1][1]
-        player2Id = pendingMovesArray[1][0]
+
+    for (const [player, pending] of allPendingMoves) {
+      if (player === this._playerId) {
+        move1 = pending
+        player1Id = player
+        this._player1Id = player // Track player1 for this client
+        DEBUG && console.log('[PLAYER1-ID] Set player1Id to:', player)
+      } else if (!move1) {
+        move1 = pending
+        player1Id = player
+      } else if (!move2) {
+        move2 = pending
+        player2Id = player
       }
     }
 
+    // Bot team turn (coordinator not on the current team): use any two moves.
+    if (!move1 && pendingMovesArray.length >= 1) {
+      move1 = pendingMovesArray[0][1]
+      player1Id = pendingMovesArray[0][0]
+    }
+    if (!move2 && pendingMovesArray.length >= 2) {
+      move2 = pendingMovesArray[1][1]
+      player2Id = pendingMovesArray[1][0]
+    }
+
     if (!move1 || !move2) {
+      DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVE_FAILED', JSON.stringify({
+        currentTeam,
+        turnNumber: this._currentTurnNumber,
+        allPlayers: Array.from(allPendingMoves.keys()),
+        myPlayerId: this._playerId,
+        move1,
+        move2,
+        reason: 'pending moves incomplete',
+      }))
       DEBUG && console.log('[RESOLVE] Pending moves debug:', {
         allPlayers: Array.from(allPendingMoves.keys()),
         currentTeam,
@@ -1756,6 +1783,15 @@ export class OnlineGame {
       })
       throw new Error('Both pending moves must be set')
     }
+
+    DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVE', JSON.stringify({
+      currentTeam,
+      turnNumber: this._currentTurnNumber,
+      player1Id,
+      player2Id,
+      player1Move: move1.move,
+      player2Move: move2.move,
+    }))
 
     const player1Move = move1.move
     const player2Move = move2.move

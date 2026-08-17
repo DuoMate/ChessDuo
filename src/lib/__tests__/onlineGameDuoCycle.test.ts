@@ -264,6 +264,74 @@ describe('Duo turn cycle — two real online clients (integration)', () => {
   })
 })
 
+describe('Duo BLACK humans — White bot team first turn (BUG: black-side bot freeze)', () => {
+  it('resolves the White bot team first turn when humans are on BLACK', async () => {
+    // Duo host picked BLACK → humans on BLACK, bots fill WHITE.
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'BLACK', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'BLACK', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'BLACK' },
+    ])
+    startTurn(coordinator)
+
+    // White moves first; the White side is entirely bots (bot_teammate_1/2).
+    const whiteSlots = coordinator.getPlayers(Team.WHITE)
+    expect(whiteSlots).toEqual(['bot_teammate_1', 'bot_teammate_2'])
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    // Simulate the initial bot turn: both White bots submit the same move.
+    for (const slot of whiteSlots) {
+      coordinator.setPendingMove(slot, 'e4', 'e2', 'e4', 'p')
+      coordinator.lockPendingMove(slot)
+    }
+
+    // Regression: this used to throw 'Both pending moves must be set' because
+    // the resolver assumed WHITE = human team and looked for the coordinator's
+    // own playerId among the White pending moves.
+    const result = await coordinator.resolvePendingMoves()
+
+    expect(result.winningMove).toBe('e4')
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+    expect(coordinator.board.fen()).toContain('b') // White moved, Black to move
+  })
+
+  it('resolves the human BLACK team turn with coordinator move as player1', async () => {
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'BLACK', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'BLACK', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'BLACK' },
+    ])
+    startTurn(coordinator)
+
+    // White bots move first (e4), resolving to Black's turn.
+    for (const slot of coordinator.getPlayers(Team.WHITE)) {
+      coordinator.setPendingMove(slot, 'e4', 'e2', 'e4', 'p')
+      coordinator.lockPendingMove(slot)
+    }
+    await coordinator.resolvePendingMoves()
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    // Black's turn: coordinator + teammate bot (bot_opponent_1) submit.
+    coordinator.setPendingMove('player1', 'e5', 'e7', 'e5', 'p')
+    coordinator.setPendingMove('bot_opponent_1', 'e5', 'e7', 'e5', 'p')
+    coordinator.lockPendingMove('player1')
+    coordinator.lockPendingMove('bot_opponent_1')
+
+    const result = await coordinator.resolvePendingMoves()
+
+    // Coordinator's own move is still player1 for accuracy mapping.
+    expect(result.winningMove).toBe('e5')
+    expect(result.winnerId).toBe('player1')
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+  })
+})
+
 describe('Four Player — coordinator assignment (Phase 2)', () => {
   it('assigns the alphabetically-first non-bot player as coordinator', () => {
     const game = new OnlineGame(600)

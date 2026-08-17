@@ -109,7 +109,13 @@ export async function registerCapacitorAuthListener(opts?: RegisterOptions) {
     }
 
     if (targetPath.startsWith('/invite/') || targetPath.startsWith('/challenge/') || targetPath.startsWith('/replay/')) {
-      navigate(targetPath)
+      // These dynamic routes have no pre-rendered HTML in the static-export
+      // APK (generateStaticParams only emits a `placeholder` entry), so a full
+      // window.location.replace would 404 on the local Capacitor server. Prefer
+      // the client router when available — getLaunchUrl() resolves after
+      // Providers has mounted it, so this is safe even on cold start.
+      if (opts?.navigate) opts.navigate(targetPath)
+      else window.location.replace(targetPath)
       return
     }
 

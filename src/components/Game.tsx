@@ -848,16 +848,43 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         DEBUG && console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
 
         // Trigger initial bot turn when game first enters PLAYING (online, human on non-first-turn team)
-        if (!initialBotTurnTriggeredRef.current && g.status === GameStatus.PLAYING) {
+        const traceGameId = roomId || (g as GameInterface).getCoordinatorId?.() || '?'
+        if (g.status === GameStatus.PLAYING) {
           const myTeam2 = currentTeam || (g as GameInterface).getTeam()
           const opponentTeam2 = myTeam2 === 'WHITE' ? Team.BLACK : Team.WHITE
-          if (!isFourPlayer && g.currentTurn === opponentTeam2 && bot && currentPlayerId && g.isCoordinator()) {
+          DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_CHECK', JSON.stringify({
+            gameId: traceGameId,
+            currentTurn: g.currentTurn,
+            botColor: opponentTeam2,
+            isBotTurn: g.currentTurn === opponentTeam2,
+            isCoordinator: g.isCoordinator(),
+            hasPlayerId: !!currentPlayerId,
+            hasBot: !!bot,
+            isFourPlayer,
+            alreadyTriggered: initialBotTurnTriggeredRef.current,
+          }))
+          if (initialBotTurnTriggeredRef.current) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'already triggered once' }))
+          } else if (isFourPlayer) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'four-player mode (all humans)' }))
+          } else if (g.currentTurn !== opponentTeam2) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'currentTurn !== botColor', currentTurn: g.currentTurn, botColor: opponentTeam2 }))
+          } else if (!bot) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'bot player not detected' }))
+          } else if (!currentPlayerId) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'playerId not resolved (auth race)' }))
+          } else if (!g.isCoordinator()) {
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({ gameId: traceGameId, reason: 'coordinator guard failed', coordinatorId: g.getCoordinatorId() }))
+          } else {
             initialBotTurnTriggeredRef.current = true
             DEBUG && console.log(`[INITIAL-BOT] Triggering initial ${opponentTeam2} bot turn from onStateChange`)
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_TRIGGERED', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: g.board.fen() }))
             setGameState(prev => ({ ...prev, isBotThinking: true }))
             const currentFen = g.board.fen()
             ;(async () => {
+              DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, fen: currentFen }))
               const botUciMove = await bot.selectBestMove(currentFen)
+              DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: botUciMove }))
               const opponentSlots = g.getPlayers(opponentTeam2)
 
               const processBotMove = (uciMove: string) => {
@@ -868,6 +895,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                     g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
                     g.lockPendingMove(slot)
                   }
+                  DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId, color: opponentTeam2, move: sanMove, slots: opponentSlots }))
                 }
               }
 
@@ -884,10 +912,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               try {
                 await g.resolvePendingMoves()
                 DEBUG && console.log(`[INITIAL-BOT] Resolve succeeded, new turn:`, g.currentTurn)
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, winningMove: g.lastMoveComparison?.winningMove || null, nextTurn: g.currentTurn }))
                 g.setTurnState('selecting')
                 updateStateRef.current()
               } catch (e) {
                 DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
                 // Recovery: reset turn state so humans can still play
                 initialBotTurnTriggeredRef.current = false
                 g.setTurnState('selecting')
@@ -1513,10 +1543,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
             // In 4-player mode, skip bot handling — humans manage the turn
             const myTeam = (g as GameInterface).getTeam()
             const opponentTeam = myTeam === 'WHITE' ? Team.BLACK : Team.WHITE
+            const traceGameId2 = roomId || (g as GameInterface).getCoordinatorId?.() || '?'
+            DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_CHECK', JSON.stringify({
+              gameId: traceGameId2,
+              currentTurn: newTurn,
+              botColor: opponentTeam,
+              isBotTurn: newTurn === opponentTeam,
+              isCoordinator: g.isCoordinator(),
+              hasPlayerId: !!playerId,
+              hasBot: !!bot,
+              isFourPlayer,
+            }))
             if (!isFourPlayer && newTurn === opponentTeam && bot && playerId) {
               DEBUG && console.log(`[RESOLVE] Coordinator handling ${opponentTeam} bot moves...`)
               DEBUG && console.log(`[BOT-DIAG] Before bot handler: inputLocked=${inputLockedRef.current}, submissionTurn=${submissionTurnRef.current}, turnState=${g.getTurnState()}, phase=${g.gamePhase}`)
               DEBUG && console.log(`[BOT-DIAG] pendingMoves=[${Array.from(g.getAllPendingMoves().keys()).join(', ')}]`)
+              DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_TRIGGERED', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, fen: g.board.fen() }))
 
               // Reset input locks from previous turn so humans can submit next turn
               inputLockedRef.current = false
@@ -1527,8 +1569,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               const currentFen = g.board.fen()
               
                ;(async () => {
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_START', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, fen: currentFen }))
                 const botUciMove = await bot.selectBestMove(currentFen)
                 DEBUG && console.log(`[RESOLVE] Bot selected move:`, botUciMove)
+                DEBUG && console.log('[CHESSDUO-BOT-TRACE] STOCKFISH_RESULT', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, move: botUciMove }))
                 
                 const opponentSlots = g.getPlayers(opponentTeam)
                 
@@ -1545,6 +1589,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                         g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
                         g.lockPendingMove(slot)
                       }
+                      DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, move: sanMove, slots: opponentSlots }))
                     }
                   }
                 } else if (botUciMove) {
@@ -1556,6 +1601,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                       g.setPendingMove(slot, sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
                       g.lockPendingMove(slot)
                     }
+                    DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_MOVE_SUBMIT', JSON.stringify({ gameId: traceGameId2, color: opponentTeam, move: sanMove, slots: opponentSlots }))
                   }
                 }
                 
@@ -1563,12 +1609,14 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                   await g.resolvePendingMoves()
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve succeeded, new turn:`, g.currentTurn)
                   DEBUG && console.log(`[BOT-DIAG] After resolve: turnState=${g.getTurnState()}, phase=${g.gamePhase}, pendingMoves=[${Array.from(g.getAllPendingMoves().keys()).join(', ')}]`)
+                  DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId2, winningMove: g.lastMoveComparison?.winningMove || null, nextTurn: g.currentTurn }))
                   g.setTurnState('selecting')
                   DEBUG && console.log(`[STATE] Coordinator ${opponentTeam} resolve complete, reset to selecting`)
                   setGameState(prev => ({ ...prev, isBotThinking: false }))
                   updateStateRef.current()
                 } catch (e) {
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
+                  DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId2, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
                   // Recovery: reset state so humans can continue playing
                   g.setTurnState('selecting')
                   inputLockedRef.current = false
@@ -1578,6 +1626,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 }
                 
               })()
+            } else {
+              DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_SKIPPED', JSON.stringify({
+                gameId: traceGameId2,
+                reason: isFourPlayer ? 'four-player mode (all humans)' : (newTurn !== opponentTeam ? 'currentTurn !== botColor' : (!bot ? 'bot player not detected' : (!playerId ? 'playerId missing' : 'non-coordinator path'))),
+              }))
             }
           }
         } else {

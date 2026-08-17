@@ -1,7 +1,7 @@
 # ChessDuo Implementation Progress
 
 > **Single source of truth.** Updated after every module completion.
-> **Last updated:** 2026-08-16
+> **Last updated:** 2026-08-17
 > **Active branch:** `architecture-refactor`
 > **Last commit:** (pending)
 
@@ -276,3 +276,39 @@ Selected bugs from the August 2026 production backlog, grouped by priority and i
 | `npm test` | ✅ 1036 passing; 4 pre-existing suite failures unchanged: `PremiumPage.test.tsx`, `ConfirmMoveBar.test.tsx`, `SidebarNav.test.tsx`, `server/__tests__/engine.test.ts` |
 
 **Next step:** Await approval to proceed to P1 bugs.
+
+---
+
+## Friend Invite + Friend Notification Deep-Link Fix (2026-08-17)
+
+Two related bugs in the Friends / Notifications deep-link lifecycle. Small, targeted fixes — no auth/routing redesign, no game-room/multiplayer/Stockfish changes.
+
+### Bug 1: Friend invite link does not open the invite flow
+
+**Root cause:**
+- **Mobile (primary):** the APK is a static export (`output: 'export'`, `webDir: 'out'`, no SPA fallback). `generateStaticParams()` in `invite/[userId]/page.tsx` emits only a `placeholder` entry, so there is no `/invite/{realId}.html`. `capacitorAuth.handleDeepLink` cold-start-navigated with `window.location.replace('/invite/{userId}')`, which the local Capacitor WebView server cannot resolve → 404.
+- **Session-restore gap:** `invite/[userId]/client.tsx` read the session once via `AuthService.getSession()` with no `onAuthChange` subscription, so a cold-start deep link that landed before Supabase restored the session left a signed-in user stuck on the sign-in form.
+
+**Fix:**
+- `capacitorAuth.ts` — the `/invite/`·`/challenge/`·`/replay/` branch now prefers the client router (`opts.navigate`) over `window.location.replace`, so dynamic routes resolve client-side on the static-export APK (the router is already wired in `providers.tsx`).
+- `invite/[userId]/client.tsx` — subscribe to `AuthService.onAuthChange` to update `playerId` when the session restores/signs in/out.
+
+**Files:** `src/lib/capacitorAuth.ts`, `src/app/invite/[userId]/client.tsx`
+
+**Tests:** `src/lib/__tests__/capacitorAuth.test.ts` (cold-start `/invite/:id` and `/challenge/:code` use `opts.navigate`), `src/app/invite/__tests__/invitePage.test.tsx` (updated supabase auth mock)
+
+**Result:** ✅ `tsc --noEmit` passes; `capacitorAuth` + `invitePage` tests green.
+
+### Bug 2: Friend-request notification deep link does not show the new request
+
+**Root cause:** Not a cache issue — friend-request data (`getPendingRequests`/`getFriendsList`/`getBlockedUsers`) is a direct Supabase read (no cache). The new `profileService`/`matchHistory` caches do not touch this path. The real cause is React state staleness: `FriendsPanel.loadData()` runs only on mount + Supabase realtime, with no refetch on resume-from-background, and a notification tap while already on `/friends` is a `router.replace` no-op (no remount → no refetch).
+
+**Fix:**
+- `FriendsPanel.tsx` — added `visibilitychange` + `pageshow` (bfcache) listeners that call `loadData()` when the app returns to the foreground, plus a `chessduo:refresh-friends` window-event listener.
+- `useNotificationRedirect.ts` — dispatches `chessduo:refresh-friends` when a `friend_request`/`invite_accepted` redirect is consumed (mount effect + service-worker `message` handler). Event name exported as `FRIENDS_REFRESH_EVENT` from `notificationRedirect.ts`.
+
+**Files:** `src/components/FriendsPanel.tsx`, `src/hooks/useNotificationRedirect.ts`, `src/lib/notificationRedirect.ts`
+
+**Tests:** `src/components/__tests__/FriendsPanel.test.tsx` (refetch on visibilitychange + refresh event), `src/hooks/__tests__/useNotificationRedirect.test.ts` (dispatches refresh event for friend redirects, not for game_invite)
+
+**Result:** ✅ `tsc --noEmit` passes; new tests green; pre-existing failures unchanged (`PremiumPage`, `ConfirmMoveBar`, `SidebarNav`, `server/engine`).
