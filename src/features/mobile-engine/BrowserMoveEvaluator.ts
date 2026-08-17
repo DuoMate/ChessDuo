@@ -1,5 +1,6 @@
 import { evaluationCache } from '../shared/evaluationCache'
 import { DEBUG } from '../../lib/debug'
+import { emitTrace } from '../shared/gameTrace'
 
 const WORKER_PATH = '/stockfish/stockfish.js'
 const EVAL_TIMEOUT_MS = 30000
@@ -39,6 +40,7 @@ export class BrowserMoveEvaluator {
 
       workerReady(this.worker).then(() => {
         this._ready = true
+        emitTrace('STOCKFISH_READY', {})
         DEBUG && console.log('[BROWSER-EVAL] Stockfish worker initialized')
       }).catch((err) => {
         this._initError = String(err?.message || err)

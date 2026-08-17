@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { subscriptionManager } from './subscriptionManager'
+import { realtimeMetrics } from './realtimeMetrics'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 let channelCounter = 0
@@ -14,9 +15,11 @@ export const RealtimeService = {
     const channelConfig: any = { event, schema: 'public', table }
     if (filter) channelConfig.filter = filter
 
-    const channel = supabase.channel(`${table}-${event}-${++channelCounter}`)
+    const topic = `${table}-${event}-${++channelCounter}`
+    realtimeMetrics.onChannelCreated(topic)
+    const channel = supabase.channel(topic)
       .on('postgres_changes', channelConfig, callback)
-      .subscribe()
+      .subscribe((status) => realtimeMetrics.onSubscribeStatus(topic, status))
 
     subscriptionManager.register(channel)
     return channel

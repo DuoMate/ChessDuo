@@ -3,6 +3,7 @@ import { applyRateLimit } from '@/lib/rateLimit'
 import { getAuthClient } from '@/lib/apiAuth'
 import { SignJWT, importPKCS8 } from 'jose'
 import { sendWebPush } from '@/lib/webPush'
+import { authorizePush } from '@/lib/pushAuthorization'
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null
 
@@ -160,10 +161,73 @@ export async function POST(request: Request) {
     console.log(`[${route}] ${requestId} - User: ${user.id}`)
 
     const { userId, title, body, data } = await request.json()
-    if (!userId || !title || !body) {
+    if (!userId || !title || !body || !data?.type || !data?.senderId) {
       console.warn(`[${route}] ${requestId} - Missing required fields`)
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // ---- P0-4 authorization (server-side) ----
+    const type: string = String(data.type)
+    const senderId: string = String(data.senderId)
+    const receiverId: string = String(userId)
+
+    // The client must identify as the authenticated caller (anti-impersonation).
+    if (senderId !== user.id) {
+      console.warn(`[${route}] ${requestId} - Sender impersonation rejected`)
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (receiverId === senderId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // Relationship facts, scoped by the caller's RLS (own friendships).
+    const factQuery =
+      `or(` +
+      `and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),` +
+      `and(sender_id.eq.${receiverId},receiver_id.eq.${senderId}))`
+    const { data: friendships } = await supabase
+      .from('friendships')
+      .select('status')
+      .or(factQuery)
+    const statuses = (friendships || []).map((f: { status: string }) => f.status)
+    const isAcceptedFriends = statuses.includes('accepted')
+    const isBlocked = statuses.includes('blocked')
+    const hasPendingRequest = statuses.includes('pending')
+
+    let isRoomMember = false
+    if (type === 'game_invite' && data.roomId) {
+      const { data: member } = await supabase.rpc('is_room_member', { check_room_id: String(data.roomId) })
+      isRoomMember = !!member
+    }
+
+    // Durable per-(sender,type) daily cap (server-side, service role).
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { count: dailySent } = await serviceSupabase
+      .from('push_send_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', senderId)
+      .eq('type', type)
+      .gte('created_at', since)
+
+    const decision = authorizePush({
+      type,
+      senderId,
+      receiverId,
+      isAcceptedFriends,
+      isBlocked,
+      hasPendingRequest,
+      isRoomMember,
+      dailySent: dailySent || 0,
+    })
+    if (!decision.allowed) {
+      console.warn(`[${route}] ${requestId} - Push denied (${decision.reason})`)
+      return NextResponse.json({ success: false, error: decision.reason }, { status: 403 })
+    }
+
+    // Record the send for the daily cap / audit (best-effort).
+    await serviceSupabase
+      .from('push_send_log')
+      .insert({ sender_id: senderId, receiver_id: receiverId, type })
 
     console.log(`[${route}] ${requestId} - Fetching tokens for user: ${userId}`)
 

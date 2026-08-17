@@ -1,8 +1,19 @@
 'use client'
 
 import { useEffect } from 'react'
-import { getAppBaseUrl } from '@/lib/appUrl'
+import { reportError } from '@/lib/errorReporter'
 
+/**
+ * Global client error capture (P0-2).
+ *
+ * Wires window.onerror + unhandledrejection into the centralized reporter,
+ * which captures platform/version/session/route context and posts to
+ * /api/log-crash (now accepting the Capacitor origin).
+ *
+ * `/?__crash_test=1` throws a single controlled error on mount so the full
+ * Web → log-crash → app_errors pipeline can be verified on web and on a
+ * physical Android device. Inert unless the query param is present.
+ */
 export function SplashHandler() {
   useEffect(() => {
     const hideSplash = async () => {
@@ -18,44 +29,38 @@ export function SplashHandler() {
     const original = window.onerror
     window.onerror = (msg, source, line, col, err) => {
       console.error('[Global]', msg, source, line, col, err)
-      try {
-        const errorData = {
-          message: String(msg),
-          source: String(source || ''),
-          line: line || 0,
-          col: col || 0,
-          stack: err?.stack || '',
-          url: window.location.href,
-          time: new Date().toISOString(),
-        }
-        fetch(`${getAppBaseUrl()}/api/log-crash`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(errorData),
-        }).catch(() => {
-          // crash-report delivery is best-effort; suppress network failures
-        })
-      } catch {
-        // Ignore crash-report fetch failures
-      }
+      reportError({
+        message: String(msg),
+        stack: err?.stack || '',
+        errorType: 'window_error',
+        source: String(source || ''),
+        line: line || 0,
+        col: col || 0,
+      })
       if (original) return original(msg, source, line, col, err)
       return false
     }
 
     window.addEventListener('unhandledrejection', (e) => {
       console.error('[Global Unhandled]', e.reason)
-      try {
-        fetch(`${getAppBaseUrl()}/api/log-crash`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: String(e.reason || 'Unhandled rejection'),
-            url: window.location.href,
-            time: new Date().toISOString(),
-          }),
-        }).catch(() => {})
-      } catch { /* suppress */ }
+      reportError({
+        message: String(e.reason || 'Unhandled rejection'),
+        stack: e.reason instanceof Error ? e.reason.stack || '' : '',
+        errorType: 'unhandled_rejection',
+      })
     })
+
+    // Optional intentional test error (verify the pipeline end-to-end).
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('__crash_test') === '1') {
+      const timeout = setTimeout(() => {
+        // Throw so the real window.onerror handler (above) is exercised.
+        throw new Error('CHESSDUO_CRASH_TEST ' + Date.now())
+      }, 50)
+      return () => clearTimeout(timeout)
+    }
+
+    return () => {}
   }, [])
 
   return null

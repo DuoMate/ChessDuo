@@ -11,6 +11,8 @@ import { CHECKMATE_SCORE } from '../../shared/gameConstants'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
 import { RealtimeService } from '@/lib/realtimeService'
+import { realtimeMetrics } from '@/lib/realtimeMetrics'
+import { emitTrace } from '@/features/shared/gameTrace'
 
 interface MovePayload {
   playerId: string
@@ -164,6 +166,18 @@ export class OnlineGame {
 
   getCoordinatorId(): string {
     return this._coordinatorId
+  }
+
+  private traceCtx() {
+    return {
+      roomId: this._room?.id,
+      gameId: this._gameId || undefined,
+      turnNumber: this._currentTurnNumber,
+      playerId: this._playerId || undefined,
+      team: this._team,
+      color: this._team === 'BLACK' ? 'black' : 'white',
+      coordinatorId: this._coordinatorId || undefined,
+    }
   }
 
   getTeam(): 'WHITE' | 'BLACK' {
@@ -349,6 +363,7 @@ export class OnlineGame {
 
     // Start channel setup concurrently with DB upsert below
     // (subscribe is callback-based/non-blocking — both run in parallel)
+    realtimeMetrics.onChannelCreated(`room:${room.id}`)
     this._channel = supabase.channel(`room:${room.id}`, {
       config: {
         presence: { key: playerId }
@@ -364,6 +379,7 @@ export class OnlineGame {
           DEBUG && console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status)
           
           if (playersOnline.length >= 2) {
+            emitTrace('ROOM_FILLED', { ...this.traceCtx(), extra: { present: playersOnline.length } })
             if (this._status !== GameStatus.PLAYING) {
               if (this._playerId === sortedIds[0]) {
                 DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE SYNC')
@@ -445,6 +461,7 @@ export class OnlineGame {
     setupListeners()
 
     this._channel!.subscribe(async (status: string) => {
+      realtimeMetrics.onSubscribeStatus(`room:${room.id}`, status)
       DEBUG && console.log('[ONLINE] Channel subscription status:', status)
       if (status === 'CHANNEL_ERROR') {
         DEBUG && console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
@@ -456,12 +473,15 @@ export class OnlineGame {
         // channel registered; re-creating the topic would reuse it and make the
         // `.on(...)` calls below throw.
         RealtimeService.forceRemoveStaleChannels(`room:${room.id}`)
+        realtimeMetrics.onChannelCreated(`room:${room.id}`)
         this._channel = supabase.channel(`room:${room.id}`, {
           config: { presence: { key: playerId } }
         })
         setupListeners()
         this._channel!.subscribe(async (s: string) => {
+          realtimeMetrics.onSubscribeStatus(`room:${room.id}`, s)
           if (s === 'SUBSCRIBED') {
+            realtimeMetrics.onReconnectSuccess(`room:${room.id}`)
             await this._channel?.track({ player_id: playerId, team, status: 'connected' })
             DEBUG && console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
             if (this._status === GameStatus.PLAYING) {
@@ -545,34 +565,32 @@ export class OnlineGame {
           }
 
           // Anonymous fetch test — proves if WITH CHECK (true) policy is working at all
-          const anonRes = await fetch(
-            `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': anonKey,
-                'Prefer': 'resolution=merge-duplicates',
-              },
-              body: JSON.stringify({
-                room_id: room.id,
-                player_id: 'anon-test-' + Date.now(),
-                team: 'WHITE',
-                slot: 0,
-                status: 'ready',
-              }),
-            }
-          )
-          DEBUG && console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
-            status: anonRes.status,
-            ok: anonRes.ok,
-            statusText: anonRes.statusText,
-          })
-          if (!anonRes.ok) {
-            const anonBody = await anonRes.text()
-            console.warn('[ONLINE][DIAG] Anon fetch body:', anonBody)
-          } else {
-            DEBUG && console.log('[ONLINE][DIAG] Anon fetch SUCCESS — policy works, auth token issue')
+          // (debug-only diagnostic; the strict P0-1 RLS policies now reject this,
+          // which is the intended production behavior)
+          if (DEBUG) {
+            const anonRes = await fetch(
+              `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': anonKey,
+                  'Prefer': 'resolution=merge-duplicates',
+                },
+                body: JSON.stringify({
+                  room_id: room.id,
+                  player_id: 'anon-test-' + Date.now(),
+                  team: 'WHITE',
+                  slot: 0,
+                  status: 'ready',
+                }),
+              }
+            )
+            DEBUG && console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
+              status: anonRes.status,
+              ok: anonRes.ok,
+              statusText: anonRes.statusText,
+            })
           }
         } catch (e2) {
           console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
@@ -848,7 +866,18 @@ export class OnlineGame {
       // Stored once at game creation, never recomputed
       const allPlayerIds = [...this.gameState.getPlayers(Team.WHITE), ...this.gameState.getPlayers(Team.BLACK)]
       this._coordinatorId = [...allPlayerIds].sort().find(p => !p.startsWith('bot_')) || ''
-      
+
+      emitTrace('SIDES_ASSIGNED', {
+        ...this.traceCtx(),
+        team: 'WHITE',
+        extra: {
+          white: this.gameState.getPlayers(Team.WHITE),
+          black: this.gameState.getPlayers(Team.BLACK),
+        },
+      })
+      emitTrace('COORDINATOR_ASSIGNED', { ...this.traceCtx(), coordinatorId: this._coordinatorId })
+      emitTrace('GAME_STARTED', { ...this.traceCtx(), turnNumber: this._currentTurnNumber })
+
       this.startPendingTurn()
       this.notifyStateChange()
       DEBUG && console.log('[CHESSDUO-BOT-TRACE] GAME_START', JSON.stringify({
@@ -872,6 +901,7 @@ export class OnlineGame {
         const startedAt = new Date().toISOString()
         await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
         // Broadcast game_started so non-coordinator clients sync without polling
+        emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'game_started' } })
         this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
 
         // Query the game UUID for turn_submissions FK and subscribe to submission changes
@@ -1235,6 +1265,7 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number; turnSequence?: number; turnNumber?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
+    emitTrace('CLIENT_RECEIVED', { ...this.traceCtx(), extra: { event: 'turn_resolved', winningTeam: payload.winningTeam } })
     // R1: reject stale turn_resolved from previous turns
     const incomingSeq = payload.turnSequence ?? 0
     if (incomingSeq < this._turnSequence) {
@@ -1347,6 +1378,7 @@ export class OnlineGame {
       this._status = GameStatus.GAME_OVER
     }
     this.turnState = 'selecting'
+    emitTrace('TURN_COMPLETED', { ...this.traceCtx() })
     this.notifyStateChange()
     DEBUG && console.log('[STATE] Turn resolved, reset to selecting')
   }
@@ -1438,6 +1470,7 @@ export class OnlineGame {
 
     const gameId = this._gameId
     const setup = () => {
+      realtimeMetrics.onChannelCreated(`submissions:${gameId}`)
       this._submissionChannel = supabase.channel(`submissions:${gameId}`)
         .on('postgres_changes', {
           event: 'INSERT',
@@ -1456,6 +1489,7 @@ export class OnlineGame {
           })
         })
         .subscribe(async (status: string) => {
+          realtimeMetrics.onSubscribeStatus(`submissions:${gameId}`, status)
           DEBUG && console.log('[SUBMIT] Submission channel status:', status)
           if (status === 'CHANNEL_ERROR') {
             DEBUG && console.warn('[SUBMIT] Channel error — re-creating subscription channel')
@@ -1478,6 +1512,7 @@ export class OnlineGame {
     if (!this._room) return
 
     const roomId = this._room.id
+    realtimeMetrics.onChannelCreated(`game-status:${roomId}`)
     this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -1495,6 +1530,7 @@ export class OnlineGame {
         }
       })
       .subscribe(async (status: string) => {
+        realtimeMetrics.onSubscribeStatus(`game-status:${roomId}`, status)
         DEBUG && console.log('[GAME-STATUS] Channel status:', status)
         if (status === 'CHANNEL_ERROR') {
           DEBUG && console.warn('[GAME-STATUS] Channel error — re-creating')
@@ -1502,6 +1538,7 @@ export class OnlineGame {
             await supabase.removeChannel(this._gameStatusChannel!)
           } catch (e) { DEBUG && console.error('[GAME-STATUS] Failed to remove errored channel:', e) }
           RealtimeService.forceRemoveStaleChannels(`game-status:${roomId}`)
+          realtimeMetrics.onChannelCreated(`game-status:${roomId}`)
           this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
             .on('postgres_changes', {
               event: 'UPDATE',
@@ -1516,7 +1553,9 @@ export class OnlineGame {
                 this.handleMatchAbandoned({ playerId: 'unknown', team: rt as 'WHITE' | 'BLACK' })
               }
             })
-            .subscribe()
+            .subscribe(async (s2: string) => {
+              realtimeMetrics.onSubscribeStatus(`game-status:${roomId}`, s2)
+            })
         }
       })
   }
@@ -1596,6 +1635,7 @@ export class OnlineGame {
       DEBUG && console.log('[STATE-SYNC] New BLACK turn: resetting BLACK comparison ref')
     }
     const fen = this.gameState.fen
+    emitTrace('TURN_STARTED', { ...this.traceCtx(), team: this.gameState.currentTeam, extra: { fen } })
     this.gameState.startPendingTurn(fen)
   }
 
@@ -1713,6 +1753,7 @@ export class OnlineGame {
     // Persist game state for recovery from refresh/OS kill
     const resolvedTurnNumber = this._currentTurnNumber
     this._currentTurnNumber++
+    emitTrace('TURN_RESOLVED', { ...this.traceCtx(), team: currentTeam, extra: { winningMove } })
 
     if (this._room) {
       const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
@@ -1727,6 +1768,7 @@ export class OnlineGame {
 
     // Broadcast turn_resolved to all non-coordinator clients
     this._turnSequence++
+    emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'turn_resolved', seq: this._turnSequence } })
     if (this._channel) {
       await this._channel.send({
         type: 'broadcast',
@@ -1770,6 +1812,7 @@ export class OnlineGame {
     const currentTeam = this.gameState.currentTeam
     
     this.turnState = 'resolving'
+    emitTrace('TURN_RESOLUTION_STARTED', { ...this.traceCtx(), team: this.gameState.currentTeam })
     DEBUG && console.log('[STATE] Resolving, set turnState to resolving')
     this.notifyStateChange()
     
@@ -2029,14 +2072,17 @@ export class OnlineGame {
     }
     this.stopMatchTimer()
     if (this._submissionChannel) {
+      realtimeMetrics.onChannelRemoved(`submissions:${this._gameId}`)
       await supabase.removeChannel(this._submissionChannel)
       this._submissionChannel = null
     }
     if (this._gameStatusChannel) {
+      realtimeMetrics.onChannelRemoved(`game-status:${this._room?.id || ''}`)
       await supabase.removeChannel(this._gameStatusChannel)
       this._gameStatusChannel = null
     }
     if (this._channel) {
+      realtimeMetrics.onChannelRemoved(`room:${this._room?.id || ''}`)
       await supabase.removeChannel(this._channel)
       this._channel = null
     }

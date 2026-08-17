@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { PlayerColor, resolvePlayerColor, ROOM_EXPIRY_MS } from '@/features/shared/gameConstants'
+import { emitTrace } from '@/features/shared/gameTrace'
 
 export function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -55,6 +56,8 @@ export async function createOnlineRoom(options: {
   if (playerError) {
     throw new Error(playerError.message)
   }
+
+  emitTrace('GAME_CREATED', { roomId: room.id, playerId, team: hostTeam, color: hostColor })
 
   return {
     roomId: room.id,

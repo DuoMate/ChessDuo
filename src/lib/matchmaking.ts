@@ -2,6 +2,7 @@ import { supabase, Room } from './supabase'
 import { RoomService } from './roomService'
 import { generateRoomCode } from './roomActions'
 import { QUICK_MATCH_ROOM_EXPIRY_MS } from '@/features/shared/gameConstants'
+import { emitTrace } from '@/features/shared/gameTrace'
 
 export interface QuickMatchResult {
   room: Room
@@ -12,10 +13,13 @@ export interface QuickMatchResult {
 export async function findAvailableRoom(playerId: string, timeSeconds?: number): Promise<QuickMatchResult | null> {
   const now = new Date().toISOString()
 
+  // Only online-mode waiting rooms are quick-match candidates (4-player
+  // lobbies share the rooms table and must not be auto-joined here).
   let query = supabase
     .from('rooms')
     .select('*')
     .eq('status', 'waiting')
+    .eq('mode', 'online')
     .or(`expires_at.is.null,expires_at.gt.${now}`)
 
   if (timeSeconds) {
@@ -23,29 +27,28 @@ export async function findAvailableRoom(playerId: string, timeSeconds?: number):
   }
 
   const { data: rooms, error } = await query
+    .order('created_at', { ascending: true })
+    .limit(5)
 
   if (error || !rooms || rooms.length === 0) return null
 
   for (const room of rooms) {
     if (room.created_by === playerId) continue
 
-    const { data: players } = await supabase
-      .from('room_players')
-      .select('*')
-      .eq('room_id', room.id)
+    // RLS restricts room_players to members, but a quick-match seeker is not
+    // a member of the rooms it inspects. The public get_room_join_state RPC
+    // (SECURITY DEFINER) reports team counts without requiring membership.
+    const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
+    const total = Number(joinState?.player_count ?? 0)
+    if (total >= 4) continue
 
-    if (!players || players.length >= 4) continue
+    const whiteSlots = Number(joinState?.white_count ?? 0)
+    const blackSlots = Number(joinState?.black_count ?? 0)
 
-    const whiteSlots = players.filter(p => p.team === 'WHITE')
-    const blackSlots = players.filter(p => p.team === 'BLACK')
-
-    const alreadyInRoom = players.some(p => p.player_id === playerId)
-    if (alreadyInRoom) continue
-
-    if (whiteSlots.length < 2) {
-      return { room: room as Room, team: 'WHITE', slot: whiteSlots.length }
-    } else if (blackSlots.length < 2) {
-      return { room: room as Room, team: 'BLACK', slot: blackSlots.length }
+    if (whiteSlots < 2) {
+      return { room: room as Room, team: 'WHITE', slot: whiteSlots }
+    } else if (blackSlots < 2) {
+      return { room: room as Room, team: 'BLACK', slot: blackSlots }
     }
   }
 
@@ -126,6 +129,7 @@ export async function createQuickMatchRoom(playerId: string, timeSeconds: number
       return null
     }
 
+    emitTrace('GAME_CREATED', { roomId: room.id, playerId, team: 'WHITE', color: 'white' })
     return room as Room
   }
 

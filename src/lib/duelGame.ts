@@ -7,6 +7,7 @@ import { calculateAccuracy } from '@/features/shared/accuracy'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { subscriptionManager } from './subscriptionManager'
 import { RealtimeService } from './realtimeService'
+import { realtimeMetrics } from './realtimeMetrics'
 
 export interface DuelPlayerState {
   id: string
@@ -215,6 +216,7 @@ export class DuelGame {
     setupListeners()
 
     this._channel!.subscribe(async (status) => {
+      realtimeMetrics.onSubscribeStatus(`room:${this._roomId}`, status)
       if (status === 'CHANNEL_ERROR') {
         console.warn('[DUEL] Channel error — reconnecting...')
         try { supabase.removeChannel(this._channel!) } catch (e) { console.error('[DuelGame] Failed to remove channel:', e) }
@@ -229,7 +231,9 @@ export class DuelGame {
         subscriptionManager.register(this._channel)
         setupListeners()
         this._channel.subscribe(async (s) => {
+          realtimeMetrics.onSubscribeStatus(`room:${roomId}`, s)
           if (s === 'SUBSCRIBED') {
+            realtimeMetrics.onReconnectSuccess(`room:${roomId}`)
             await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
             this._syncFromDB()
           }
