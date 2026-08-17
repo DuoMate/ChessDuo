@@ -1071,7 +1071,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     
     if (mode === 'online' && onlineGame && playerId && roomId && team) {
       DEBUG && console.log('[Game][DIAG] ✅ Calling joinRoom with:', { roomId, playerId, team })
-      onlineGame.joinRoom({ id: roomId } as Room, playerId, team)
+      onlineGame.joinRoom({ id: roomId, code: roomCode } as Room, playerId, team)
       const actualTeam = onlineGame.getTeam()
       if (actualTeam) myTeamRef.current = actualTeam as 'WHITE' | 'BLACK'
     } else {

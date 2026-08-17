@@ -378,7 +378,121 @@ AS $$
   WHERE room_id = p_room_id;
 $$;
 
-                                                                                                           -- room_players: must be room member to view players list
+-- ============================================================
+-- RPC: atomic Duo room-join (SECURITY DEFINER)
+-- Fixes the post-P0-1 join regression: a client-side room_players
+-- upsert is rejected because PostgREST upserts evaluate the member-only
+-- SELECT policy as a WITH-CHECK (false for a fresh joiner). This RPC locks
+-- the room row FOR UPDATE, computes capacity/team/slot server-side under the
+-- lock, inserts exactly once, and returns the authoritative room/team/slot/
+-- game state. Identity is always auth.uid(); no client-supplied team/slot/
+-- player_id is trusted. RLS table policies remain hardened.
+-- Error codes: 42501 UNAUTHORIZED | P0001 ROOM_NOT_FOUND/INVALID_CODE |
+-- P0002 ROOM_EXPIRED | P0003 ROOM_FULL | P0004 ROOM_NOT_JOINABLE | P0005 fourplayer.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.join_room_by_code(p_code text)
+RETURNS TABLE (
+  room_id      uuid,
+  code         text,
+  team         text,
+  slot         integer,
+  status       text,
+  mode         text,
+  host_team    text,
+  created_by   text,
+  time_seconds integer,
+  game_id      uuid,
+  game_status  text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+DECLARE
+  v_uid    text := auth.uid()::text;
+  v_room   public.rooms%ROWTYPE;
+  v_team   text;
+  v_slot   integer;
+  v_total  integer;
+  v_white  integer;
+  v_black  integer;
+  v_code   text := upper(btrim(p_code));
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'UNAUTHORIZED' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_code !~ '^[A-Z0-9]{6}$' THEN
+    RAISE EXCEPTION 'INVALID_CODE' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT * INTO v_room FROM public.rooms WHERE public.rooms.code = v_code FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'ROOM_NOT_FOUND' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF v_room.mode = 'fourplayer' THEN
+    RAISE EXCEPTION 'ROOM_NOT_JOINABLE' USING ERRCODE = 'P0005';
+  END IF;
+  IF v_room.status <> 'waiting' THEN
+    RAISE EXCEPTION 'ROOM_NOT_JOINABLE' USING ERRCODE = 'P0004';
+  END IF;
+  IF v_room.expires_at IS NOT NULL AND v_room.expires_at < now() THEN
+    RAISE EXCEPTION 'ROOM_EXPIRED' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT rp.team, rp.slot INTO v_team, v_slot
+    FROM public.room_players rp
+   WHERE rp.room_id = v_room.id AND rp.player_id = v_uid;
+  IF FOUND THEN
+    RETURN QUERY
+      SELECT v_room.id, v_room.code, v_team, v_slot, v_room.status, v_room.mode,
+             v_room.host_team, v_room.created_by, v_room.time_seconds,
+             g.id, g.status::text
+      FROM (SELECT 1) x LEFT JOIN public.games g ON g.room_id = v_room.id;
+    RETURN;
+  END IF;
+
+  SELECT count(*) FILTER (WHERE rp.team = 'WHITE'),
+         count(*) FILTER (WHERE rp.team = 'BLACK'),
+         count(*)
+    INTO v_white, v_black, v_total
+   FROM public.room_players rp WHERE rp.room_id = v_room.id;
+
+  IF v_total >= 4 THEN
+    RAISE EXCEPTION 'ROOM_FULL' USING ERRCODE = 'P0003';
+  END IF;
+
+  IF v_white < 2 AND v_black < 2 THEN
+    v_team := COALESCE(v_room.host_team, 'WHITE');
+  ELSIF v_white < 2 THEN
+    v_team := 'WHITE';
+  ELSIF v_black < 2 THEN
+    v_team := 'BLACK';
+  ELSE
+    RAISE EXCEPTION 'ROOM_FULL' USING ERRCODE = 'P0003';
+  END IF;
+
+  v_slot := (SELECT count(*) FROM public.room_players rp
+              WHERE rp.room_id = v_room.id AND rp.team = v_team);
+
+  INSERT INTO public.room_players (room_id, player_id, team, slot, status)
+  VALUES (v_room.id, v_uid, v_team, v_slot, 'ready')
+  ON CONFLICT DO NOTHING;
+
+  RETURN QUERY
+    SELECT v_room.id, v_room.code, v_team, v_slot, v_room.status, v_room.mode,
+           v_room.host_team, v_room.created_by, v_room.time_seconds,
+           g.id, g.status::text
+    FROM (SELECT 1) x LEFT JOIN public.games g ON g.room_id = v_room.id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.join_room_by_code(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.join_room_by_code(text) FROM anon;
+GRANT  EXECUTE ON FUNCTION public.join_room_by_code(text) TO authenticated;
+
+                                                                                                            -- room_players: must be room member to view players list
                                                                                                           CREATE POLICY "Room members can view players" ON public.room_players
                                                                                                             FOR SELECT USING (
                                                                                                                 auth.uid() IS NOT NULL

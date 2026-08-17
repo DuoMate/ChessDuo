@@ -1,7 +1,6 @@
 import { Chess } from 'chess.js'
 import { supabase, Room, RoomPlayer } from '../../../lib/supabase'
-import { AuthService } from '@/lib/authService'
-import { RoomService } from '@/lib/roomService'
+import { joinRoomByCode } from '@/lib/roomActions'
 import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } from '../../game-engine/gameState'
 import { GameStatus, MoveComparison } from '../../shared/gameTypes'
 import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
@@ -482,7 +481,7 @@ export class OnlineGame {
           realtimeMetrics.onSubscribeStatus(`room:${room.id}`, s)
           if (s === 'SUBSCRIBED') {
             realtimeMetrics.onReconnectSuccess(`room:${room.id}`)
-            await this._channel?.track({ player_id: playerId, team, status: 'connected' })
+            await this._channel?.track({ player_id: playerId, team: this._team, status: 'connected' })
             DEBUG && console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
             if (this._status === GameStatus.PLAYING) {
               await this.syncGameState()
@@ -494,110 +493,36 @@ export class OnlineGame {
       if (status === 'SUBSCRIBED') {
         await this._channel?.track({
           player_id: playerId,
-          team: team,
+          team: this._team,
           status: 'connected'
         })
         DEBUG && console.log('[ONLINE] Player tracked:', playerId)
       }
     })
 
-    // DB upsert runs concurrently with channel subscription (non-blocking above)
+    // Register/refresh membership via the atomic join RPC. The RPC identifies
+    // the caller via auth.uid(), locks the room, and returns the authoritative
+    // team/slot — the client-supplied team argument is never trusted for
+    // assignment. It is idempotent: the caller is already a member when it
+    // reaches the game (host create, home-page join, or deep-link join all
+    // establish membership), so this returns the existing assignment.
     try {
-      const session = await AuthService.getSession()
-      DEBUG && console.log('[ONLINE][DIAG] joinRoom upsert:', {
-        playerId,
-        team,
-        roomId: room.id,
-        authUserId: session?.user?.id,
-        authUserIdMatches: session?.user?.id === playerId,
-        hasSession: !!session,
-        sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none',
-      })
-
-      try {
-        await RoomService.upsertRoomPlayer({
-          room_id: room.id,
-          player_id: playerId,
-          team,
-          slot: 0,
-        })
-        DEBUG && console.log('[ONLINE] Registered in room_players —', playerId, 'team:', team, 'room:', room.id)
-      } catch (upsertError) {
-        console.warn('[ONLINE] Failed to register in room_players:', upsertError)
-
-        // Raw fetch fallback — isolates whether @supabase/ssr client is the culprit
-        try {
-          const rawSession = await AuthService.getSession()
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-          const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-          const token = rawSession?.access_token || ''
-
-          const res = await fetch(
-            `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': anonKey,
-                'Authorization': token ? `Bearer ${token}` : '',
-                'Prefer': 'resolution=merge-duplicates',
-              },
-              body: JSON.stringify({
-                room_id: room.id,
-                player_id: playerId,
-                team,
-                slot: 0,
-                status: 'ready',
-              }),
-            }
-          )
-          DEBUG && console.log('[ONLINE][DIAG] Raw fetch fallback result:', {
-            status: res.status,
-            ok: res.ok,
-            statusText: res.statusText,
-            hasToken: !!token,
-          })
-          if (!res.ok) {
-            const body = await res.text()
-            console.warn('[ONLINE][DIAG] Raw fetch fallback body:', body)
-          } else {
-            DEBUG && console.log('[ONLINE][DIAG] Raw fetch fallback SUCCESS — supabase client is broken for this call')
-          }
-
-          // Anonymous fetch test — proves if WITH CHECK (true) policy is working at all
-          // (debug-only diagnostic; the strict P0-1 RLS policies now reject this,
-          // which is the intended production behavior)
-          if (DEBUG) {
-            const anonRes = await fetch(
-              `${supabaseUrl}/rest/v1/room_players?on_conflict=room_id,player_id`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'apikey': anonKey,
-                  'Prefer': 'resolution=merge-duplicates',
-                },
-                body: JSON.stringify({
-                  room_id: room.id,
-                  player_id: 'anon-test-' + Date.now(),
-                  team: 'WHITE',
-                  slot: 0,
-                  status: 'ready',
-                }),
-              }
-            )
-            DEBUG && console.log('[ONLINE][DIAG] Anon fetch (no auth) result:', {
-              status: anonRes.status,
-              ok: anonRes.ok,
-              statusText: anonRes.statusText,
-            })
-          }
-        } catch (e2) {
-          console.warn('[ONLINE][DIAG] Raw fetch fallback threw:', e2)
+      if (this._room?.code) {
+        const joined = await joinRoomByCode(this._room.code)
+        const authoritativeTeam = joined.team
+        if (authoritativeTeam && authoritativeTeam !== this._team) {
+          this._team = authoritativeTeam
+          // Re-track presence so the authoritative team is visible to peers.
+          this._channel?.track({ player_id: playerId, team: this._team, status: 'connected' })
         }
+        DEBUG && console.log('[ONLINE] Registered via join RPC —', playerId, 'team:', this._team, 'slot:', joined.slot, 'room:', this._room.id)
+      } else {
+        console.warn('[ONLINE] No room code available for join RPC — skipping DB registration')
       }
     } catch (e) {
-      console.warn('[ONLINE] Could not register in room_players:', e)
+      // Non-fatal: the caller is already a member (join established upstream)
+      // and presence carries the team, so a failure here must not block entry.
+      console.warn('[ONLINE] Join RPC registration failed (non-fatal):', e)
     }
 
     // After our own DB row is written, immediately attempt to start. In the

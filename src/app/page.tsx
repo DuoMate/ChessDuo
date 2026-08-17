@@ -12,7 +12,7 @@ import { ChooseUsername } from '@/components/ChooseUsername'
 import { HomeBottomNav } from '@/components/HomeBottomNav'
 import { Room } from '@/lib/supabase'
 import { sendMessage } from '@/lib/messages'
-import { createOnlineRoom } from '@/lib/roomActions'
+import { createOnlineRoom, joinRoomByCode, messageForDuoJoinError, type JoinRoomResult } from '@/lib/roomActions'
 import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActions'
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { BackButton } from '@/components/BackButton'
@@ -358,6 +358,8 @@ export default function SetupPage() {
         setJoinLoading(true)
         const now = new Date().toISOString()
 
+        // Resolve code-or-id to a room for four-player routing and UUID links.
+        // The atomic join RPC is the authority for join-ability/team/slot.
         let room = null
         const { data: byCode, error: byCodeError } = await supabase
           .from('rooms')
@@ -382,20 +384,25 @@ export default function SetupPage() {
         }
 
         if (room) {
-          const roomTime = room.time_seconds || 600
           if (room.mode === 'fourplayer') {
-            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${roomTime}`)
-          } else {
-            // Host color is stored on the room row so the joiner can join the
-            // SAME team BEFORE joining (room_players is RLS-locked to members).
-            // Duo mode is "You + Friend vs Bots" — both humans on the same team.
-            const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-            const joinerTeam: 'WHITE' | 'BLACK' = hostTeam
-            router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${joinerTeam}&playerId=${playerId}&time=${roomTime}`)
+            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${room.time_seconds || 600}`)
+            const url = new URL(window.location.href)
+            url.searchParams.delete('code')
+            window.history.replaceState(null, '', url.toString())
+            setJoinLoading(false)
+            return
           }
-          const url = new URL(window.location.href)
-          url.searchParams.delete('code')
-          window.history.replaceState(null, '', url.toString())
+
+          try {
+            const joined = await joinRoomByCode(room.code)
+            router.push(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${playerId}&time=${joined.timeSeconds}`)
+            const url = new URL(window.location.href)
+            url.searchParams.delete('code')
+            window.history.replaceState(null, '', url.toString())
+          } catch (err) {
+            setJoinError(messageForDuoJoinError(err))
+            setJoinCode('')
+          }
         } else {
           setJoinError('Room not found or already started')
           setJoinCode('')
@@ -501,71 +508,28 @@ export default function SetupPage() {
         setJoinLoading(true)
         setJoinError(null)
         try {
-          let room: Room | null = null
-          const { data: byCode } = await supabase
+          // Cheap public read ONLY to route four-player lobbies vs online/Duo
+          // games. The atomic join RPC is the authority for join-ability,
+          // team and slot — no client-side capacity/count logic here.
+          const { data: room } = await supabase
             .from('rooms')
-            .select('*')
+            .select('id, code, mode, time_seconds')
             .eq('code', code)
             .maybeSingle()
-          if (byCode) {
-            room = byCode
-          } else {
-            const { data: byId } = await supabase
-              .from('rooms')
-              .select('*')
-              .eq('id', code)
-              .maybeSingle()
-            if (byId) room = byId
-          }
 
-          if (!room) { setJoinError('Room not found — check the code'); setJoinLoading(false); return }
-          if (room.status !== 'waiting') { setJoinError('Room is no longer available'); setJoinLoading(false); return }
-
-          if (room.mode === 'fourplayer') {
+          if (room?.mode === 'fourplayer') {
             setJoinLoading(false)
             router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
             return
           }
 
-          // room_players is RLS-locked to members, so a joiner cannot read it
-          // before joining. The host color is stored on the room row and the
-          // public join-state RPC reports counts for team/fullness decisions.
-          // Duo mode: both humans join the HOST'S team ("You + Friend vs Bots").
-          const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
-          const whiteCount = Number(joinState?.white_count ?? 0)
-          const blackCount = Number(joinState?.black_count ?? 0)
-
-          const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-          const preferredTeam: 'WHITE' | 'BLACK' = hostTeam
-
-          let team: 'WHITE' | 'BLACK'
-          if (whiteCount < 2 && blackCount < 2) {
-            team = preferredTeam
-          } else if (whiteCount < 2) {
-            team = 'WHITE'
-          } else if (blackCount < 2) {
-            team = 'BLACK'
-          } else {
-            setJoinError('Room is full')
-            setJoinLoading(false)
-            return
-          }
-
-          const { error: joinError } = await supabase
-            .from('room_players')
-            .upsert({ room_id: room.id, player_id: pid, team, slot: 0 }, { onConflict: 'room_id,player_id' })
-          if (joinError) {
-            setJoinError('Could not join room')
-            setJoinLoading(false)
-            return
-          }
-
+          const joined = await joinRoomByCode(code)
           setJoinLoading(false)
           setJoinCode('')
-          const roomTime = room.time_seconds || DEFAULT_TEAM_TIMER_SECONDS
-          router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${pid}&time=${roomTime}`)
-        } catch {
-          setJoinError('Something went wrong — try again')
+          const roomTime = joined.timeSeconds || DEFAULT_TEAM_TIMER_SECONDS
+          router.push(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${pid}&time=${roomTime}`)
+        } catch (err) {
+          setJoinError(messageForDuoJoinError(err))
           setJoinLoading(false)
         }
         return
@@ -664,89 +628,37 @@ export default function SetupPage() {
     setJoinError(null)
 
     try {
-      let room = null
-      const { data: byCode } = await supabase
-        .from('rooms')
-        .select('*')
-        .eq('code', code)
-        .maybeSingle()
-      if (byCode) {
-        room = byCode
-      } else {
-        const { data: byId } = await supabase
-          .from('rooms')
-          .select('*')
-          .eq('id', code)
-          .maybeSingle()
-        if (byId) {
-          room = byId
-        }
-      }
-
-      if (!room) {
-        setJoinError('Room not found — check the code')
-        setJoinLoading(false)
-        return
-      }
-
-      if (room.status !== 'waiting') {
-        setJoinError('Room is no longer available')
-        setJoinLoading(false)
-        return
-      }
-
       const pid = playerId as string
 
-      if (room.mode === 'fourplayer') {
+      // Cheap public read ONLY to route four-player lobbies vs online/Duo
+      // games. The atomic join RPC is the authority for join-ability, team
+      // and slot — no client-side capacity/count logic here.
+      const { data: room } = await supabase
+        .from('rooms')
+        .select('id, code, mode, time_seconds')
+        .eq('code', code)
+        .maybeSingle()
+
+      if (room?.mode === 'fourplayer') {
         setJoinLoading(false)
         router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
         return
       }
 
-      // room_players is RLS-locked to members, so a joiner cannot read it
-      // before joining. The host color is stored on the room row and the
-      // public join-state RPC reports counts for team/fullness decisions.
-      const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
-      const whiteCount = Number(joinState?.white_count ?? 0)
-      const blackCount = Number(joinState?.black_count ?? 0)
-
-      const hostTeam: 'WHITE' | 'BLACK' = room.host_team === 'BLACK' ? 'BLACK' : 'WHITE'
-      const preferredTeam: 'WHITE' | 'BLACK' = hostTeam
-
-      let team: 'WHITE' | 'BLACK'
-      if (whiteCount < 2 && blackCount < 2) {
-        team = preferredTeam
-      } else if (whiteCount < 2) {
-        team = 'WHITE'
-      } else if (blackCount < 2) {
-        team = 'BLACK'
-      } else {
-        setJoinError('Room is full')
-        setJoinLoading(false)
-        return
-      }
-
-      const { error: joinError } = await supabase
-        .from('room_players')
-        .upsert({ room_id: room.id, player_id: pid, team, slot: 0 }, { onConflict: 'room_id,player_id' })
-      if (joinError) {
-        setJoinError('Could not join room')
-        setJoinLoading(false)
-        return
-      }
-
+      const joined = await joinRoomByCode(code)
       setJoinLoading(false)
-      handleRoomJoined(room, team, pid)
-    } catch {
-      setJoinError('Something went wrong — try again')
+      handleRoomJoined(joined, joined.team, pid)
+    } catch (err) {
+      setJoinError(messageForDuoJoinError(err))
       setJoinLoading(false)
     }
   }
 
-  const handleRoomJoined = (room: Room, team: 'WHITE' | 'BLACK', playerId: string) => {
+  const handleRoomJoined = (room: Room | JoinRoomResult, team: 'WHITE' | 'BLACK', playerId: string) => {
     setJoinCode('')
+    const roomId = (room as JoinRoomResult).roomId ?? (room as Room).id
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-    router.push(`/game?mode=online&room=${room.id}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
+    router.push(`/game?mode=online&room=${roomId}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
   }
 
   const handleStartOnline = async (timeSeconds: number) => {
