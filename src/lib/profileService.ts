@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { DEBUG } from './debug'
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,30}$/
 
@@ -39,6 +40,26 @@ export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ succ
       .upsert(payload, { onConflict: 'id' })
     if (error) {
       const isUniqueConflict = error.message?.includes('unique') || error.code === '23505'
+      // A username-less upsert for a user WITHOUT a profiles row is a NOT NULL
+      // INSERT violation (23502) — indicate the contract was broken so a single
+      // prod run surfaces the exact request that 400s instead of a bare network error.
+      if (!isUniqueConflict && error.code === '23502' && fields.username === undefined) {
+        console.warn('[profileService] username-less upsert hit NOT NULL violation — caller must deriveUsername():', {
+          id: fields.id,
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        })
+      }
+      DEBUG && console.warn('[profileService] upsertProfile failed:', {
+        id: fields.id,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        hadUsername: fields.username !== undefined,
+      })
       return { success: false, isUniqueConflict }
     }
     invalidateProfileCache(fields.id)
@@ -94,7 +115,17 @@ export async function updateProfile(userId: string, fields: { username?: string;
     const { error } = await supabase
       .from('profiles')
       .upsert({ id: userId, ...fields }, { onConflict: 'id' })
-    if (!error) invalidateProfileCache(userId)
+    if (error) {
+      DEBUG && console.warn('[profileService] updateProfile failed:', {
+        id: userId,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      })
+    } else {
+      invalidateProfileCache(userId)
+    }
     return !error
   } catch {
     return false
