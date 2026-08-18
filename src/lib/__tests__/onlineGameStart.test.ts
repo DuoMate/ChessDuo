@@ -192,17 +192,45 @@ describe('startGameWhenReady — presence-authoritative human count', () => {
     expect(game.getPlayers(Team.BLACK)).toEqual(['host-uuid', 'joiner-uuid'])
   })
 
-  it('defers when fewer humans are present than required (joiner not connected yet)', async () => {
-    // Both rows exist but only the host is live in the channel.
+  it('starts when both members are committed in room_players even if the joiner presence has not propagated (authoritative DB roster)', async () => {
+    // Both rows exist (atomic join RPC guarantees commits before /game) but
+    // only the host is live in the channel. Presence must NOT be the sole
+    // source of truth — the DB roster is authoritative.
     shared.roomPlayers = [
       { room_id: 'room-1', player_id: 'host-uuid', team: 'BLACK', slot: 0 },
-      { room_id: 'room-1', player_id: 'joiner-uuid', team: 'BLACK', slot: 0 },
+      { room_id: 'room-1', player_id: 'joiner-uuid', team: 'BLACK', slot: 1 },
     ]
     shared.presence = {
       'host-uuid': { player_id: 'host-uuid', team: 'BLACK' },
     }
+    gameRow = {
+      id: 'game-1',
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      current_turn: 'WHITE',
+      move_history: [],
+      status: 'PLAYING',
+      turn_number: 0,
+      coordinator_id: 'host-uuid',
+    }
 
     const game = makeGame({ playerId: 'host-uuid', team: 'BLACK' })
+    await game.startGameWhenReady()
+
+    expect(game.status).toBe(GameStatus.PLAYING)
+    expect(game.getPlayers(Team.BLACK)).toEqual(['host-uuid', 'joiner-uuid'])
+    const sends = channelSendMocks.flatMap((m) => m.mock.calls)
+    expect(sends.some((args) => args[0]?.event === 'game_started')).toBe(true)
+  })
+
+  it('defers when the caller is not the authoritative DB coordinator (non-coordinator syncs via broadcast)', async () => {
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'a-uuid', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'z-uuid', team: 'WHITE', slot: 1 },
+    ]
+    shared.presence = { 'z-uuid': { player_id: 'z-uuid', team: 'WHITE' } }
+
+    // z-uuid is present but a-uuid is the alphabetically-first member = coordinator.
+    const game = makeGame({ playerId: 'z-uuid', team: 'WHITE' })
     await game.startGameWhenReady()
 
     expect(game.status).toBe(GameStatus.READY)
