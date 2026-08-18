@@ -109,7 +109,11 @@ cd server && npm run dev
 
 ### 1. Supabase Database
 
-Run `supabase/tables.sql` in Supabase SQL Editor:
+Run `supabase/supabase.sql` (single-file, idempotent setup — schema + RLS
+policies + RPCs + cron cleanup + realtime publication) in Supabase SQL Editor.
+If you prefer the original per-area files, `supabase/tables.sql` remains the
+core schema, with `supabase/migrations/join_room_by_code.sql` and
+`supabase/migrations/db_cleanup.sql` as follow-ups.
 
 ```sql
 -- Enable UUID extension
@@ -177,7 +181,10 @@ ChessDuo/
 ├── wrangler.jsonc          # Cloudflare Workers config
 ├── server/Dockerfile       # Stockfish server Dockerfile
 └── supabase/
-    └── tables.sql       # DB setup
+    ├── supabase.sql    # DB setup (one-shot, idempotent)
+    ├── tables.sql      # Core schema + RLS + functions
+    ├── security_regression.sql  # Post-deploy RLS verification (run separately)
+    └── migrations/     # Incremental migrations (join RPC, cron/realtime)
 ```
 
 ## License
