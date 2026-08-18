@@ -75,6 +75,24 @@ const BOT_AVATAR = '/avatars/bot.webp'
 const SELECTED_TIME_KEY = 'chessduo_selected_time'
 const SELECTED_LEVEL_KEY = 'chessduo_selected_level'
 
+// Preserve the ?debug=1 diagnostics flag across client-side navigation. The
+// diagnostics (src/lib/debug.ts) are read once at module load, so a flag that
+// is dropped when building the /game URL silently disables the
+// [ONLINE]/[DUO_JOIN] traces that the Duo lobby-timeout investigation relies
+// on. Appends `debug=1` when the current page was loaded with it.
+function withDebugParam(url: string): string {
+  if (typeof window === 'undefined') return url
+  try {
+    const isDebug = new URL(window.location.href).searchParams.get('debug') === '1'
+    if (!isDebug) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}debug=1`
+  } catch {
+    // Malformed URL — leave unchanged.
+    return url
+  }
+}
+
 function getInitialTime(): number {
   try {
     const saved = localStorage.getItem(SELECTED_TIME_KEY)
@@ -231,9 +249,9 @@ export default function SetupPage() {
     try {
       const { level, time, color } = JSON.parse(pendingOffline)
       const colorParam = color ? `&color=${color}` : ''
-      router.replace(`/game?level=${level || selectedLevel}&time=${time || DEFAULT_TEAM_TIMER_SECONDS}${colorParam}`)
+      router.replace(withDebugParam(`/game?level=${level || selectedLevel}&time=${time || DEFAULT_TEAM_TIMER_SECONDS}${colorParam}`))
     } catch {
-      router.replace(`/game?level=${selectedLevel}&time=${selectedTime || DEFAULT_TEAM_TIMER_SECONDS}`)
+      router.replace(withDebugParam(`/game?level=${selectedLevel}&time=${selectedTime || DEFAULT_TEAM_TIMER_SECONDS}`))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -385,7 +403,7 @@ export default function SetupPage() {
 
         if (room) {
           if (room.mode === 'fourplayer') {
-            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${room.time_seconds || 600}`)
+            router.push(withDebugParam(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${room.time_seconds || 600}`))
             const url = new URL(window.location.href)
             url.searchParams.delete('code')
             window.history.replaceState(null, '', url.toString())
@@ -395,7 +413,7 @@ export default function SetupPage() {
 
           try {
             const joined = await joinRoomByCode(room.code)
-            router.push(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${playerId}&time=${joined.timeSeconds}`)
+            router.push(withDebugParam(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${playerId}&time=${joined.timeSeconds}`))
             const url = new URL(window.location.href)
             url.searchParams.delete('code')
             window.history.replaceState(null, '', url.toString())
@@ -446,7 +464,7 @@ export default function SetupPage() {
           localStorage.setItem('chessduo_pending_offline_game', JSON.stringify({ level, time, color }))
           router.push('/welcome?mode=offline')
         } else {
-          router.push(`/game?level=${level}&time=${time}&color=${color}`)
+          router.push(withDebugParam(`/game?level=${level}&time=${time}&color=${color}`))
         }
         return
       }
@@ -461,7 +479,7 @@ export default function SetupPage() {
         setJoinError(null)
         try {
           const result = await createOnlineRoom({ playerId: pid, timeSeconds: time, hostColor: color })
-          router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color}`)
+          router.push(withDebugParam(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${color}`))
         } catch (err) {
           setCreatingTime(null)
           setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -474,7 +492,7 @@ export default function SetupPage() {
         setJoinError(null)
         try {
           const result = await createFourPlayerRoom({ playerId: pid, timeSeconds: time })
-          router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`)
+          router.push(withDebugParam(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`))
         } catch (err) {
           setCreatingTime(null)
           setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -491,7 +509,7 @@ export default function SetupPage() {
           if (error) throw new Error(error)
           if (roomId && roomCode) {
             await sendMessage(pid, friendId, JSON.stringify({ type: 'challenge', roomId, roomCode, time }), 'challenge')
-            router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${time}`)
+            router.push(withDebugParam(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${time}`))
           } else {
             throw new Error('Failed to create challenge')
           }
@@ -519,7 +537,7 @@ export default function SetupPage() {
 
           if (room?.mode === 'fourplayer') {
             setJoinLoading(false)
-            router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
+            router.push(withDebugParam(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`))
             return
           }
 
@@ -527,7 +545,7 @@ export default function SetupPage() {
           setJoinLoading(false)
           setJoinCode('')
           const roomTime = joined.timeSeconds || DEFAULT_TEAM_TIMER_SECONDS
-          router.push(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${pid}&time=${roomTime}`)
+          router.push(withDebugParam(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${pid}&time=${roomTime}`))
         } catch (err) {
           setJoinError(messageForDuoJoinError(err))
           setJoinLoading(false)
@@ -564,7 +582,7 @@ export default function SetupPage() {
       currentUrl.searchParams.delete('redirect')
       currentUrl.searchParams.delete('signup')
       window.history.replaceState(null, '', currentUrl.toString())
-      router.replace(url)
+      router.replace(withDebugParam(url))
     } catch {
       // Malformed URL — ignore.
     }
@@ -641,7 +659,7 @@ export default function SetupPage() {
 
       if (room?.mode === 'fourplayer') {
         setJoinLoading(false)
-        router.push(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`)
+        router.push(withDebugParam(`/four-player?room=${room.id}&code=${room.code}&playerId=${pid}&time=${room.time_seconds || 600}`))
         return
       }
 
@@ -658,7 +676,7 @@ export default function SetupPage() {
     setJoinCode('')
     const roomId = (room as JoinRoomResult).roomId ?? (room as Room).id
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-    router.push(`/game?mode=online&room=${roomId}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`)
+    router.push(withDebugParam(`/game?mode=online&room=${roomId}&code=${room.code}&team=${team}&playerId=${playerId}&time=${time}`))
   }
 
   const handleStartOnline = async (timeSeconds: number) => {
@@ -668,7 +686,7 @@ export default function SetupPage() {
     try {
       const pid = playerId as string
       const result = await createOnlineRoom({ playerId: pid, timeSeconds, hostColor: selectedColor })
-      router.push(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${selectedColor}`)
+      router.push(withDebugParam(`/game?mode=online&room=${result.roomId}&code=${result.roomCode}&team=${result.team}&playerId=${result.playerId}&time=${result.time}&color=${selectedColor}`))
     } catch (err) {
       setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -684,7 +702,7 @@ export default function SetupPage() {
       return
     }
     const time = selectedTime || DEFAULT_TEAM_TIMER_SECONDS
-    router.push(`/game?level=${selectedLevel}&time=${time}&color=${selectedColor}`)
+    router.push(withDebugParam(`/game?level=${selectedLevel}&time=${time}&color=${selectedColor}`))
   }
 
   const handleTwoPlayerClick = () => {
@@ -709,7 +727,7 @@ export default function SetupPage() {
     try {
       const pid = playerId as string
       const result = await createFourPlayerRoom({ playerId: pid, timeSeconds })
-      router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`)
+      router.push(withDebugParam(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${pid}&time=${result.timeSeconds}`))
     } catch (err) {
       setCreatingTime(null)
       setJoinError(err instanceof Error ? err.message : 'Failed to create room')
@@ -730,7 +748,7 @@ export default function SetupPage() {
         return
       }
       setJoinCode('')
-      router.push(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${playerId}&time=${result.timeSeconds}`)
+      router.push(withDebugParam(`/four-player?room=${result.roomId}&code=${result.roomCode}&playerId=${playerId}&time=${result.timeSeconds}`))
     } catch {
       setJoinError('Something went wrong — try again')
       setJoinLoading(false)
@@ -754,7 +772,7 @@ export default function SetupPage() {
       if (error) throw new Error(error)
       if (roomId && roomCode) {
         await sendMessage(pid, duelFriend.id, JSON.stringify({ type: 'challenge', roomId, roomCode, time: timeSeconds }), 'challenge')
-        router.push(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${timeSeconds}`)
+        router.push(withDebugParam(`/duel?room=${roomId}&code=${roomCode}&team=WHITE&playerId=${pid}&time=${timeSeconds}`))
       } else {
         throw new Error('Failed to create challenge')
       }

@@ -128,6 +128,24 @@ describe('ProfileService', () => {
         { onConflict: 'id' },
       )
     })
+
+    it('logs a loud warning when a username-less upsert hits the NOT NULL violation (23502)', async () => {
+      // Surfaces the exact request that 400s in prod instead of a bare network
+      // error, so the Duo/auth profile-400 investigation can identify the caller.
+      mockUpsert.mockResolvedValue({
+        error: { code: '23502', message: 'null value in column "username"', details: 'Failing row contains (orphan-user, null, ...)', hint: null },
+      })
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = await upsertProfile({ id: 'orphan-user', display_name: 'Guest' })
+
+      expect(result).toEqual({ success: false, isUniqueConflict: false })
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('username-less upsert hit NOT NULL violation'),
+        expect.objectContaining({ code: '23502' }),
+      )
+      warnSpy.mockRestore()
+    })
   })
 
   describe('deriveUsername', () => {
