@@ -32,6 +32,76 @@ function pieceChar(piece?: string, color?: 'white' | 'black'): string {
   return PIECE_CHARS[key] || piece
 }
 
+function SubmittedBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-green-500/30 bg-green-500/20 px-2 py-0.5 text-[11px] font-semibold leading-4 text-green-300">
+      <Check size={10} className="shrink-0" strokeWidth={3} aria-hidden />
+      <span>Submitted</span>
+    </span>
+  )
+}
+
+/**
+ * "Your Move" / "Teammate" status cards.
+ *
+ * Layout per card (robust at narrow widths — never relies on absolute
+ * positioning for the Submitted badge):
+ *
+ *   [icon] [title row: label · name (truncate)]
+ *          [move text (truncate)]
+ *          [Submitted badge (shrink-0, own space)]
+ *
+ * Player names and moves truncate with ellipsis inside `min-w-0` containers so
+ * a long username (e.g. VeryLongPlayerName123456789) can never overlap or push
+ * the Submitted badge off the card.
+ */
+function MoveCard({
+  icon,
+  label,
+  name,
+  status,
+  submitted,
+  accentSubmitted,
+  delay,
+}: {
+  icon: React.ReactNode
+  label: string
+  name?: string
+  status: string
+  submitted: boolean
+  accentSubmitted: boolean
+  delay?: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay }}
+      className={`flex h-full min-h-[64px] items-center gap-2 rounded-xl border px-3 py-2 ${
+        submitted
+          ? 'border-green-500/40 bg-green-500/10'
+          : accentSubmitted
+            ? 'border-amber-500/40 bg-amber-500/10'
+            : 'border-slate-700/60 bg-slate-800/50'
+      }`}
+    >
+      <div className="flex w-7 shrink-0 items-center justify-center self-center">{icon}</div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className={`min-w-0 truncate text-xs font-bold uppercase tracking-wider ${submitted ? 'text-green-400' : 'text-slate-400'}`}>
+          {label}
+        </p>
+        {name ? (
+          <p className="min-w-0 truncate text-[11px] leading-4 text-slate-300">{name}</p>
+        ) : null}
+        <p className="min-w-0 truncate text-sm font-bold text-slate-100">{status}</p>
+      </div>
+
+      {submitted && <SubmittedBadge />}
+    </motion.div>
+  )
+}
+
 export function PendingMovesRow({
   yourMove,
   teammateMove,
@@ -45,70 +115,30 @@ export function PendingMovesRow({
 
   return (
     <div className="w-full px-3">
-      <div className="grid grid-cols-2 gap-2 max-w-3xl mx-auto">
-        {/* Your Move */}
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className={`relative flex items-center gap-2 rounded-xl border px-3 py-2 ${
-            youSubmitted
-              ? 'border-green-500/40 bg-green-500/10'
-              : 'border-slate-700/60 bg-slate-800/50'
-          }`}
-        >
-          <div className="flex flex-col items-center justify-center min-w-[28px]">
-            <span className="text-2xl leading-none">{pieceChar(yourMove?.piece, yourMove?.color)}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold uppercase tracking-wider ${youSubmitted ? 'text-green-400' : 'text-slate-400'}`}>
-              {yourLabel}{yourName ? <> · <span className="text-slate-300 normal-case tracking-normal inline-block max-w-[120px] truncate">{yourName}</span></> : null}
-            </p>
-            <p className="text-sm font-bold text-slate-100 truncate">
-              {yourMove?.san || 'Selecting...'}
-            </p>
-          </div>
-          {youSubmitted && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/20 text-green-300 border border-green-500/30">
-              <Check size={10} />
-              Submitted
-            </span>
-          )}
-        </motion.div>
-
-        {/* Teammate */}
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          className={`relative flex items-center gap-2 rounded-xl border px-3 py-2 ${
-            teammateSubmitted
-              ? 'border-green-500/40 bg-green-500/10'
-              : 'border-amber-500/40 bg-amber-500/10'
-          }`}
-        >
-          <div className="flex flex-col items-center justify-center min-w-[28px]">
-            {teammateSubmitted ? (
+      <div className="mx-auto grid max-w-3xl grid-cols-2 items-stretch gap-2">
+        <MoveCard
+          icon={<span className="text-2xl leading-none">{pieceChar(yourMove?.piece, yourMove?.color)}</span>}
+          label={yourLabel}
+          name={yourName}
+          status={yourMove?.san || 'Selecting...'}
+          submitted={youSubmitted}
+          accentSubmitted={false}
+        />
+        <MoveCard
+          icon={
+            teammateSubmitted ? (
               <span className="text-2xl leading-none">{pieceChar(teammateMove?.piece, teammateMove?.color)}</span>
             ) : (
               <Clock size={20} className="text-amber-400 animate-pulse" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold uppercase tracking-wider ${teammateSubmitted ? 'text-green-400' : 'text-amber-400'}`}>
-              {teammateLabel}{teammateName ? <> · <span className="text-slate-300 normal-case tracking-normal inline-block max-w-[120px] truncate">{teammateName}</span></> : null}
-            </p>
-            <p className="text-sm font-bold text-slate-100 truncate">
-              {teammateSubmitted ? teammateMove?.san : 'Waiting...'}
-            </p>
-          </div>
-          {teammateSubmitted && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/20 text-green-300 border border-green-500/30">
-              <Check size={10} />
-              Submitted
-            </span>
-          )}
-        </motion.div>
+            )
+          }
+          label={teammateLabel}
+          name={teammateName}
+          status={teammateSubmitted ? teammateMove?.san || 'Submitted' : 'Waiting...'}
+          submitted={teammateSubmitted}
+          accentSubmitted
+          delay={0.05}
+        />
       </div>
     </div>
   )

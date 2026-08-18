@@ -9,7 +9,7 @@ import { LocalGame } from '@/features/offline/game/localGame'
 import { GameStatus, MoveComparison } from '@/features/shared/gameTypes'
 import { OnlineGame } from '@/features/online/game/onlineGame'
 import type { GameInterface } from '@/features/shared/GameInterface'
-import { Team, Player } from '@/features/game-engine/gameState'
+import { Team, Player, PendingMoveInfo } from '@/features/game-engine/gameState'
 import { Chess } from 'chess.js'
 import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
@@ -17,6 +17,7 @@ import { supabase, Room } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { emitTrace } from '@/features/shared/gameTrace'
+import { traceDuo } from '@/lib/duoGameTrace'
 import { normalizeUci, uciToSan, getMoveFromUci } from '@/lib/chessUtils'
 import { MoveComparisonPanel } from './MoveComparison'
 import { GameOverModal } from './GameOverModal'
@@ -366,6 +367,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const inputLockedRef = useRef(false)
   const submissionTurnRef = useRef(false)
+  // When the input lock has been held while the engine is idle-ready, the
+  // watchdog clears it after STALE_INPUT_LOCK_MS so the board can never be
+  // permanently disabled by a missed reset.
+  const lastInputLockedAtRef = useRef<number | null>(null)
+  const STALE_INPUT_LOCK_MS = 45000
 
   useEffect(() => {
     if (!showInsights || !playerId) return
@@ -1555,7 +1561,20 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         DEBUG && console.log(`[HUMAN] SAN: ${sanMove}, moveInfo:`, moveInfo)
 
         if (moveInfo) {
-          g.submitMoveToDB(sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+          const submitted = await g.submitMoveToDB(sanMove, moveInfo.from, moveInfo.to, moveInfo.piece)
+          if (!submitted) {
+            // Persistence failed — submitMoveToDB rolled back the pending move
+            // and turnState. Re-enable input so the player can retry instead of
+            // leaving the board permanently disabled.
+            DEBUG && console.warn(`[HUMAN] Move submission failed — resetting input for retry`)
+            traceDuo('MOVE', { roomId, gameId: undefined, userId: playerId, event: 'SUBMIT_UI_FAILURE', next: 'retry' })
+            g.setTurnState('selecting')
+            inputLockedRef.current = false
+            submissionTurnRef.current = false
+            updateStateRef.current()
+            toast.error('Move submission failed — please try again')
+            return
+          }
 
           setGameState(prev => ({
             ...prev,
@@ -1582,8 +1601,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
         // Check if handleTurnResolved already processed this turn
         // (resolution applied out-of-band while we were waiting).
-        // turnState is 'selecting' after startPendingTurn() ran.
-        if (g.getTurnState() === 'selecting') {
+        // turnState is 'selecting' after startPendingTurn() ran, which also
+        // clears the pending-move map. Verify BOTH so a reverted turnState
+        // (e.g. an earlier submission failure) can never masquerade as
+        // "already resolved" and leave the board locked.
+        const myMoveStillPending = (g as GameInterface).getAllPendingMoves().has(playerId)
+        if (g.getTurnState() === 'selecting' && !myMoveStillPending) {
           DEBUG && console.log(`[STATE] Turn already resolved via broadcast — returning cleanly`)
           return
         }
@@ -1593,9 +1616,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           if (g.isBothPendingLocked()) {
             DEBUG && console.log(`[RESOLVE] Coordinator resolving...`)
             
-            await g.resolvePendingMoves()
-            updateStateRef.current()
-            DEBUG && console.log(`[RESOLVE] Resolve succeeded`)
+            try {
+              await g.resolvePendingMoves()
+              updateStateRef.current()
+              DEBUG && console.log(`[RESOLVE] Resolve succeeded`)
+            } catch (e) {
+              // NEVER leave the board locked after a failed resolution.
+              // Roll back the local turn state so both players can retry;
+              // the fallback poll / next submission will re-derive from DB.
+              DEBUG && console.warn(`[RESOLVE] Coordinator resolve failed — recovering turn state:`, e)
+              console.error('[RESOLVE] Resolve failed — recovering:', e)
+              g.setTurnState('selecting')
+              g.clearPendingMove?.(playerId)
+              inputLockedRef.current = false
+              submissionTurnRef.current = false
+              setGameState(prev => ({ ...prev, isBotThinking: false }))
+              updateStateRef.current()
+              toast.warning('Move resolution failed — please try again')
+              return
+            }
             
             // Set highlight squares after resolve (comparison now available)
             const comparison = g.lastMoveComparison
@@ -1781,6 +1820,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 reason: isFourPlayer ? 'four-player mode (all humans)' : (newTurn !== opponentTeam ? 'currentTurn !== botColor' : (!bot ? 'bot player not detected' : (!playerId ? 'playerId missing' : 'non-coordinator path'))),
               }))
             }
+          } else {
+            // Teammate never locked (submission missed / never arrived) even
+            // after waitForTeammateLock's timeout + DB re-fetch. Recovery: reset
+            // my pending move + input locks so the board is never permanently
+            // disabled and the player can re-submit.
+            DEBUG && console.warn(`[RESOLVE] Coordinator timeout — teammate move never locked, resetting my turn state`)
+            g.setTurnState('selecting')
+            g.clearPendingMove?.(playerId)
+            inputLockedRef.current = false
+            submissionTurnRef.current = false
+            updateStateRef.current()
           }
         } else {
           // Non-coordinator: wait for coordinator's turn_resolved broadcast
@@ -1789,10 +1839,35 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           await g.waitForTurnChange()
           playResolutionSound()
           DEBUG && console.log(`[RESOLVE] Non-coordinator received turn_resolved`)
+          // If the broadcast was lost (waitForTurnChange timed out) the engine
+          // already re-synced from the authoritative DB. Verify the turn
+          // actually advanced; if we're still on our turn and not selecting,
+          // recover input + turn state so the board can never stay disabled.
+          if (g.currentTurn === myTeam && g.getTurnState() !== 'selecting') {
+            DEBUG && console.warn(`[RESOLVE] Non-coordinator still on my turn after turn-change wait — recovering`)
+            g.setTurnState('selecting')
+            g.clearPendingMove?.(playerId)
+            inputLockedRef.current = false
+            submissionTurnRef.current = false
+            updateStateRef.current()
+          }
         }
 
       } catch (e) {
         DEBUG && console.warn('[HUMAN] Invalid move:', uciMove, e)
+        // Safety net: any unexpected error in the online move flow must not
+        // leave the board locked. Reset input + turn state so the player can
+        // retry (the engine re-syncs from the authoritative DB as needed).
+        if (isOnline && onlineGameRef.current) {
+          const og = onlineGameRef.current
+          if (og.status === GameStatus.PLAYING) {
+            og.setTurnState('selecting')
+            inputLockedRef.current = false
+            submissionTurnRef.current = false
+            setGameState(prev => ({ ...prev, isBotThinking: false }))
+            updateStateRef.current()
+          }
+        }
       }
     } else if (!isOnline && gameRef.current && teammateBot) {
       // Offline mode - existing logic with bots as teammates and opponents
@@ -1999,9 +2074,40 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (gameState.turnStatus === 'your_turn' && gameState.isMyTurn) {
       inputLockedRef.current = false
       submissionTurnRef.current = false
+      lastInputLockedAtRef.current = null
       DEBUG && console.log(`[INPUT-LOCK-RESET] Lock reset successfully`)
     }
   }, [gameState.turnStatus, gameState.isMyTurn])
+
+  // Watchdog: if the input lock remains set while the engine reports a ready
+  // state (my turn + selecting + no pending move) for a sustained period, some
+  // path failed to reset it. Clear it so the board can never be permanently
+  // disabled — the player can then re-submit and the engine re-derives state.
+  useEffect(() => {
+    if (!isOnline || gameState.status !== GameStatus.PLAYING) return
+    const g = onlineGameRef.current
+    if (!g) return
+    const myTeam = teamRef.current || (g as GameInterface).getTeam?.()
+    const ready = gameState.currentTurn === myTeam &&
+      (g as GameInterface).getTurnState() === 'selecting' &&
+      !(g as GameInterface).getAllPendingMoves().has(playerId ?? '')
+    if (ready) {
+      if (inputLockedRef.current) {
+        if (lastInputLockedAtRef.current === null) {
+          lastInputLockedAtRef.current = Date.now()
+        } else if (Date.now() - lastInputLockedAtRef.current > STALE_INPUT_LOCK_MS) {
+          DEBUG && console.warn('[INPUT-LOCK-RESET] Watchdog cleared stale input lock')
+          inputLockedRef.current = false
+          submissionTurnRef.current = false
+          lastInputLockedAtRef.current = null
+        }
+      } else {
+        lastInputLockedAtRef.current = null
+      }
+    } else {
+      lastInputLockedAtRef.current = null
+    }
+  }, [gameState.status, gameState.currentTurn, gameState.turnStatus, isOnline, playerId])
 
   useEffect(() => {
     if (gameState.status !== GameStatus.PLAYING) return
@@ -2141,6 +2247,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Quick Play layout: one user tile + one bot tile per side, with the
   // bots labelled WhiteBot / BlackBot. Other bot placeholders are collapsed
   // (not shown) to keep the top bar uncluttered.
+  // Submitted indicator source of truth: the engine pending-moves map (covers
+  // locked moves too, unlike myPendingOverlay which clears once a move locks).
+  const hasPendingMoveFor = (id: string | undefined): boolean => {
+    if (!id) return false
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    if (!g) return false
+    return (g as GameInterface).getAllPendingMoves().has(id)
+  }
+
   const whitePlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     const ids = g?.getPlayers(Team.WHITE) || []
@@ -2161,7 +2276,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           profileImageUrl: userProfile.avatarUrl,
           isYou: true,
           online: true,
-          submitted: !!gameState.myPendingOverlay,
+          submitted: isOnline ? hasPendingMoveFor(playerId) : !!gameState.myPendingOverlay,
         })
         hasYou = true
       } else if (isBot) {
@@ -2187,12 +2302,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           profileImageUrl: null,
           isYou: false,
           online: true,
-          submitted: !!gameState.myPendingOverlay,
+          submitted: isOnline ? hasPendingMoveFor(id) : !!gameState.pendingOverlay,
         })
       }
     })
     return out
-  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, isOnline, gameState.status])
+  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, gameState.pendingOverlay, gameState.fen, isOnline, gameState.status])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -2214,7 +2329,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           profileImageUrl: userProfile.avatarUrl,
           isYou: true,
           online: true,
-          submitted: !!gameState.myPendingOverlay,
+          submitted: isOnline ? hasPendingMoveFor(playerId) : !!gameState.myPendingOverlay,
         })
         hasYou = true
       } else if (isBot) {
@@ -2240,12 +2355,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           profileImageUrl: null,
           isYou: false,
           online: true,
-          submitted: !!gameState.pendingOverlay,
+          submitted: isOnline ? hasPendingMoveFor(id) : !!gameState.pendingOverlay,
         })
       }
     })
     return out
-  }, [teamLabels.black, playerId, userProfile, gameState.pendingOverlay, gameState.myPendingOverlay, isOnline, gameState.status])
+  }, [teamLabels.black, playerId, userProfile, gameState.pendingOverlay, gameState.myPendingOverlay, gameState.fen, isOnline, gameState.status])
 
   const yourMoveForRow: PendingMove | null = (() => {
     const humanColor = myTeamRef.current === 'WHITE' ? 'white' as const : 'black' as const
@@ -2284,9 +2399,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     return null
   })()
 
-  const teammateMoveForRow: PendingMove | null = gameState.pendingOverlay
-    ? { san: gameState.pendingOverlay.from + gameState.pendingOverlay.to, piece: gameState.pendingOverlay.piece, color: gameState.pendingOverlay.color }
-    : null
+  const teammateMoveForRow: PendingMove | null = (() => {
+    if (!gameState.pendingOverlay) return null
+    const base: PendingMove = {
+      san: gameState.pendingOverlay.from + gameState.pendingOverlay.to,
+      piece: gameState.pendingOverlay.piece,
+      color: gameState.pendingOverlay.color,
+    }
+    // Prefer the engine's SAN (e.g. "e4") over the concatenated from/to
+    // squares so the move text stays readable ("e4" not "e2e4").
+    if (isOnline && playerId) {
+      const g = onlineGameRef.current
+      const allMoves = g?.getAllPendingMoves() as Map<string, PendingMoveInfo> | undefined
+      if (allMoves) {
+        const myTeam = myTeamRef.current
+        const entries = Array.from(allMoves.entries()) as [string, PendingMoveInfo][]
+        const mate = entries.find(([p]) => p !== playerId && (g as GameInterface).getPlayerTeam(p) === myTeam)
+        if (mate?.[1]?.move) base.san = mate[1].move
+      }
+    }
+    return base
+  })()
 
   const resolutionData: MoveResolutionData | null = accuracyComparison
     ? {
