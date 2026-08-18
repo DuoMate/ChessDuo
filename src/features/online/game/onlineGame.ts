@@ -567,9 +567,11 @@ export class OnlineGame {
       }
 
       let humanCount = 0
+      let roster: Array<{ player_id: string; team: string }> = []
       const { data, error } = await supabase.rpc('get_room_players', { p_room_id: this._room!.id })
       if (!error && data) {
         const players = data as Array<{ player_id: string; team: string }>
+        roster = players
         humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
         DEBUG && console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
       } else {
@@ -586,7 +588,10 @@ export class OnlineGame {
           const fbPlayers = fallbackData as Array<{ player_id: string; team: string }>
           const fbCount = fbPlayers.filter(p => !p.player_id.startsWith('bot_')).length
           DEBUG && console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
-          if (fbCount > humanCount) humanCount = fbCount
+          if (fbCount > humanCount) {
+            humanCount = fbCount
+            roster = fbPlayers
+          }
         } else {
           console.warn('[ONLINE] Poll direct query fallback failed:', fallbackErr?.message)
         }
@@ -594,10 +599,16 @@ export class OnlineGame {
 
       const minHumans = this.isFourPlayer() ? 4 : 2
       if (humanCount >= minHumans) {
-        // Only the alphabetically-first present player starts the game
-        const sortedIds = Object.keys(this._channel?.presenceState() || {}).sort()
-        DEBUG && console.log('[ONLINE][DIAG] poll ready — humanCount:', humanCount, 'presenceIds:', sortedIds, 'selfId:', this._playerId, 'isFirstPresent:', this._playerId === sortedIds[0])
-        if (this._playerId === sortedIds[0]) {
+        // Only the authoritative coordinator (alphabetically-first non-bot DB
+        // member) starts the game. DB-based so it is identical on both clients
+        // even when presence has not fully propagated (presence is a supplement,
+        // not the source of truth).
+        const dbCoordinatorId = roster
+          .filter(p => !p.player_id.startsWith('bot_'))
+          .map(p => p.player_id)
+          .sort()[0] || ''
+        DEBUG && console.log('[ONLINE][DIAG] poll ready — humanCount:', humanCount, 'dbCoordinatorId:', dbCoordinatorId, 'selfId:', this._playerId, 'isCoordinator:', this._playerId === dbCoordinatorId)
+        if (this._playerId === dbCoordinatorId) {
           DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
           await this.attemptStartGameWhenReady()
         }
@@ -680,11 +691,10 @@ export class OnlineGame {
       this.gameState = new GameState(this._timeLimitSeconds)
       this._status = GameStatus.READY
 
-      // Roster source: realtime PRESENCE is the authority for "who is live in
-      // the room right now". It carries player_id + team (tracked on join).
-      // room_players is the persistent truth but lags behind the channel — the
-      // joiner's upsert runs concurrently with subscription, so a DB-only read
-      // can miss them and defer the start forever (lobby timeout).
+      // Roster: authoritative DB members (the atomic join RPC guarantees both
+      // players are committed room_players rows before a client reaches /game)
+      // merged with realtime presence (team backfill + liveness signal). The DB
+      // is the source of truth for membership; presence must not gate the start.
       const presenceState = this._channel?.presenceState() || {}
       const presenceRoster = new Map<string, { player_id: string; team: 'WHITE' | 'BLACK' }>()
       for (const [key, val] of Object.entries(presenceState)) {
@@ -692,15 +702,14 @@ export class OnlineGame {
         const pid = meta.player_id || key
         if (pid && !pid.startsWith('bot_')) {
           // Team priority: presence metadata → self team → room host_team.
-          // The joiner inherits the host team, so this is safe for the Duo path
-          // (room_players rows that don't exist yet are the DB lag we bridge).
           const team = meta.team || (pid === this._playerId ? this._team : (this._room?.host_team as 'WHITE' | 'BLACK' | undefined))
           if (team) presenceRoster.set(pid, { player_id: pid, team })
         }
       }
       DEBUG && console.log('[ONLINE] Presence roster:', Array.from(presenceRoster.entries()))
 
-      // Persistent roster from room_players (may lag behind presence).
+      // Authoritative roster from room_players (membership is guaranteed by the
+      // atomic join RPC before a client enters /game).
       const { data: players } = await supabase
         .from('room_players')
         .select('*')
@@ -708,23 +717,8 @@ export class OnlineGame {
         .order('player_id', { ascending: true })
       DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team, status: p.status }))))
 
-      // Diagnostic: surface the exact reason the start would defer so a single
-      // debug run identifies whether presence, roster, or a missing member is
-      // the blocker (presence is realtime; roster/team come from room_players).
-      DEBUG && console.log('[ONLINE][DIAG] start readiness — presenceIds:', Array.from(presenceRoster.keys()), 'dbRows:', players?.map((p: { player_id: string }) => p.player_id), 'selfId:', this._playerId)
-
-      // Guard: require minimum live humans before starting. Presence is the
-      // source of truth — DB row visibility must never block a start that the
-      // channel already knows is ready.
-      const requiredHumans = this.isFourPlayer() ? 4 : 2
-      if (presenceRoster.size < requiredHumans) {
-        DEBUG && console.log(`[ONLINE] Not enough present humans: ${presenceRoster.size}/${requiredHumans} — deferring start`)
-        this.starting = false
-        return
-      }
-
-      // Merge teams: DB rows win (persistent), presence backfills any human
-      // whose row is not yet committed.
+      // Merge teams: DB rows win (persistent + authoritative), presence
+      // backfills any human whose row is not yet committed.
       const rosterTeams = new Map<string, 'WHITE' | 'BLACK'>()
       for (const p of players || []) {
         if (!p.player_id.startsWith('bot_')) rosterTeams.set(p.player_id, p.team as 'WHITE' | 'BLACK')
@@ -734,6 +728,15 @@ export class OnlineGame {
       }
       DEBUG && console.log('[ONLINE] Merged roster teams:', Array.from(rosterTeams.entries()))
 
+      // Diagnostic: surface the exact readiness state so a single debug run
+      // identifies whether presence or the authoritative DB roster is short.
+      DEBUG && console.log('[ONLINE][DIAG] start readiness — presenceIds:', Array.from(presenceRoster.keys()), 'dbRows:', players?.map((p: { player_id: string }) => p.player_id), 'selfId:', this._playerId)
+
+      // Readiness: authoritative DB membership. Presence is a supplement, NOT
+      // the sole source of truth — a DB-confirmed member who is still arriving
+      // in /game will sync via the game_started broadcast, so we must not
+      // defer forever just because presence metadata has not propagated.
+      const requiredHumans = this.isFourPlayer() ? 4 : 2
       const allHumans = Array.from(rosterTeams.keys())
       if (allHumans.length < requiredHumans) {
         DEBUG && console.log(`[ONLINE] Not enough humans with a known team: ${allHumans.length}/${requiredHumans} — deferring start`)
@@ -741,15 +744,15 @@ export class OnlineGame {
         return
       }
 
-      // Guard: every human we seat must be live in the channel (row existence
-      // alone is not enough — the player must actually be connected).
-      const presentIds = Array.from(presenceRoster.keys())
-      for (const h of allHumans) {
-        if (!presentIds.includes(h)) {
-          DEBUG && console.log(`[ONLINE] Human ${h} not present in channel — deferring start (present: ${presentIds.join(', ')})`)
-          this.starting = false
-          return
-        }
+      // Only the authoritative coordinator (alphabetically-first non-bot member
+      // of the room) creates the game. DB-based so it is identical on both
+      // clients even when presence shows only self; the non-coordinator defers
+      // and syncs via the game_started broadcast.
+      const dbCoordinatorId = [...allHumans].sort()[0] || ''
+      if (this._playerId !== dbCoordinatorId) {
+        DEBUG && console.log(`[ONLINE] Not coordinator (coordinator: ${dbCoordinatorId}, self: ${this._playerId}) — deferring start`)
+        this.starting = false
+        return
       }
 
       const whiteHumans = allHumans.filter(p => rosterTeams.get(p) === 'WHITE')
