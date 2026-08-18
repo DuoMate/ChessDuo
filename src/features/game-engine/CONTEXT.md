@@ -14,6 +14,7 @@ Core chess game state management — board position, phase tracking, timers, pen
 - Team enum: `WHITE` / `BLACK`, each team has 2 players.
 - Timer: configurable match time limit (default 600s), starts when match begins.
 - Pending moves tracked per-player with lock status.
+- `clearPendingMove(player)` removes a single player's pending move + lock + selection (recovery primitive — lets a failed submission or missed teammate event be rolled back without clearing the whole turn, so the board can always be re-enabled).
 
 ## Dependencies
 - `chess.js` for board state and move validation

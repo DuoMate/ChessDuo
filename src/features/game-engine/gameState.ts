@@ -172,6 +172,17 @@ export class GameState {
     }
   }
 
+  /**
+   * Removes a single player's pending move, lock and selection without touching
+   * any other player's state. Used for recovery when a submission fails or a
+   * teammate never locks — guarantees the board can always be re-enabled.
+   */
+  clearPendingMove(player: Player): void {
+    this.pendingMoves.delete(player)
+    this.locked.delete(player)
+    this.selections.delete(player)
+  }
+
   isPendingMoveLocked(player: Player): boolean {
     const pending = this.pendingMoves.get(player)
     return pending ? pending.locked : false

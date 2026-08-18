@@ -12,6 +12,7 @@ import { DEBUG } from '../../../lib/debug'
 import { RealtimeService } from '@/lib/realtimeService'
 import { realtimeMetrics } from '@/lib/realtimeMetrics'
 import { emitTrace } from '@/features/shared/gameTrace'
+import { traceDuo } from '@/lib/duoGameTrace'
 
 interface MovePayload {
   playerId: string
@@ -179,6 +180,17 @@ export class OnlineGame {
     }
   }
 
+  /**
+   * Structured [DUO:*] diagnostics (dev-gated, hashed user id — never secrets).
+   */
+  private duoLog(stage: Parameters<typeof traceDuo>[0], event: string, meta: Parameters<typeof traceDuo>[1] = {}) {
+    traceDuo(stage, {
+      ...this.traceCtx(),
+      event,
+      ...meta,
+    })
+  }
+
   getTeam(): 'WHITE' | 'BLACK' {
     return this._team
   }
@@ -285,9 +297,21 @@ export class OnlineGame {
       }
       // Set up the event-based resolution
       this.resolveTeammateLocked = resolve
-      // Engine-level timeout: if broadcast is lost, don't hang forever (R3)
-      this._teammateLockTimeout = setTimeout(() => {
+      // Engine-level timeout: if the teammate's lock signal is lost (missed
+      // postgres_changes INSERT or dead channel), don't hang forever (R3).
+      // On timeout we re-fetch the current turn's submissions from the
+      // authoritative DB before resolving the waiter — if the teammate's row
+      // landed but the realtime event was missed, the turn proceeds normally.
+      this._teammateLockTimeout = setTimeout(async () => {
         DEBUG && console.warn('[STATE] Teammate lock timeout — checking state: turnState=', this.turnState, 'currentTeam=', this.gameState.currentTeam)
+        this.duoLog('MOVE', 'TEAMMATE_LOCK_TIMEOUT', { turnState: this.turnState })
+
+        try {
+          await this.restoreCurrentTurnSubmissions()
+        } catch (e) {
+          console.error('[ONLINE] Teammate lock timeout recovery failed:', e)
+        }
+
         // If handleTurnResolved already processed the resolution out-of-band,
         // turnState would be 'selecting' and currentTeam would have changed.
         // In that case, resolve cleanly without further state transitions —
@@ -309,10 +333,17 @@ export class OnlineGame {
     DEBUG && console.log('[STATE] waitForTurnChange called')
     return new Promise((resolve) => {
       this.resolveTurnChange = resolve
-      // Timeout: if coordinator never broadcasts turn_resolved, auto-recover
-      this._turnChangeTimeout = setTimeout(() => {
+      // Timeout: if the coordinator's turn_resolved broadcast is lost, recover
+      // from the authoritative DB instead of leaving the client locked forever.
+      this._turnChangeTimeout = setTimeout(async () => {
         if (this.resolveTurnChange) {
           DEBUG && console.warn('[STATE] Turn change timeout — forcing recovery')
+          this.duoLog('MOVE', 'TURN_CHANGE_TIMEOUT', { turnState: this.turnState })
+          try {
+            await this.syncGameState()
+          } catch (e) {
+            console.error('[ONLINE] Turn change timeout recovery failed:', e)
+          }
           this.resolveTurnChange()
           this.resolveTurnChange = null
         }
@@ -337,6 +368,7 @@ export class OnlineGame {
 
   async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
     DEBUG && console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
+    this.duoLog('ROOM', 'JOIN_STARTED', { playerId, team })
     
     if (this._channel) {
       await supabase.removeChannel(this._channel)
@@ -376,7 +408,8 @@ export class OnlineGame {
           const playersOnline = Object.keys(state)
           const sortedIds = [...playersOnline].sort()
           DEBUG && console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status, 'detail:', JSON.stringify(state))
-          
+          this.duoLog('REALTIME', 'PRESENCE_SYNC', { present: playersOnline.length, status: this._status })
+
           if (playersOnline.length >= 2) {
             emitTrace('ROOM_FILLED', { ...this.traceCtx(), extra: { present: playersOnline.length } })
             if (this._status !== GameStatus.PLAYING) {
@@ -388,6 +421,7 @@ export class OnlineGame {
               // Coordinator already started the game but a joiner may have
               // missed the original game_started broadcast (subscribe race).
               // Re-broadcast so late joiners sync without waiting for poll.
+              this.duoLog('REALTIME', 'REBROADCAST_GAME_STARTED', { reason: 'presence_sync' })
               this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
             }
             // During active play, state is already current via broadcasts —
@@ -401,6 +435,7 @@ export class OnlineGame {
           const playersOnline = Object.keys(state)
           const sortedIds = [...playersOnline].sort()
           DEBUG && console.log('[ONLINE] Presence join — players online:', playersOnline.length, 'status:', this._status)
+          this.duoLog('REALTIME', 'PRESENCE_JOIN', { present: playersOnline.length, status: this._status })
           if (playersOnline.length >= 2 && this._status !== GameStatus.PLAYING) {
             if (this._playerId === sortedIds[0]) {
               DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via PRESENCE JOIN')
@@ -409,11 +444,13 @@ export class OnlineGame {
           } else if (playersOnline.length >= 2 && this._status === GameStatus.PLAYING && this.isCoordinator()) {
             // Jet-lag join after the game already started: re-broadcast so the
             // newly present player syncs from the persisted game row.
+            this.duoLog('REALTIME', 'REBROADCAST_GAME_STARTED', { reason: 'presence_join' })
             this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
           }
         })
         .on('presence', { event: 'leave' }, ({ leftPresences }) => {
           DEBUG && console.log('[ONLINE] Presence leave —', leftPresences?.length, 'players left:', leftPresences?.map((p: { presence_ref?: string; player_id?: string }) => p.player_id || p.presence_ref))
+          this.duoLog('REALTIME', 'PRESENCE_LEAVE', { left: leftPresences?.length })
           if (this._status !== GameStatus.PLAYING) return
           if (!this._disconnectedSince) {
             this._disconnectedSince = Date.now()
@@ -449,9 +486,12 @@ export class OnlineGame {
         })
         .on('broadcast', { event: 'game_started' }, () => {
           DEBUG && console.log('[ONLINE] Received game_started broadcast — syncing...')
+          this.duoLog('REALTIME', 'GAME_STARTED_RECEIVED', { status: this._status })
           if (this._status !== GameStatus.PLAYING) {
             this.syncGameState().catch(e => {
               console.error('[ONLINE] game_started syncGameState failed:', e)
+              // The fallback poll continues to re-check the games row, so a
+              // transient failure here is recovered by the next poll.
             })
           }
         })
@@ -462,8 +502,10 @@ export class OnlineGame {
     this._channel!.subscribe(async (status: string) => {
       realtimeMetrics.onSubscribeStatus(`room:${room.id}`, status)
       DEBUG && console.log('[ONLINE] Channel subscription status:', status)
+      this.duoLog('REALTIME', 'CHANNEL_STATUS', { status })
       if (status === 'CHANNEL_ERROR') {
         DEBUG && console.warn('[ONLINE] Channel error — removing channel and reconnecting...')
+        this.duoLog('REALTIME', 'CHANNEL_ERROR_RECONNECTING', {})
         try {
           await supabase.removeChannel(this._channel!)
         } catch (e) { DEBUG && console.error('[OnlineGame] Failed to remove channel:', e) }
@@ -479,12 +521,13 @@ export class OnlineGame {
         setupListeners()
         this._channel!.subscribe(async (s: string) => {
           realtimeMetrics.onSubscribeStatus(`room:${room.id}`, s)
+          this.duoLog('REALTIME', 'CHANNEL_RECONNECT_STATUS', { status: s })
           if (s === 'SUBSCRIBED') {
             realtimeMetrics.onReconnectSuccess(`room:${room.id}`)
             await this._channel?.track({ player_id: playerId, team: this._team, status: 'connected' })
             DEBUG && console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
             if (this._status === GameStatus.PLAYING) {
-              await this.syncGameState()
+              await this.syncGameState().catch((e) => console.error('[ONLINE] Reconnect sync failed:', e))
             }
           }
         })
@@ -547,73 +590,85 @@ export class OnlineGame {
     let delay = 500
 
     const runPoll = async () => {
-      if (this._status === GameStatus.PLAYING) {
+      if (this._status === GameStatus.PLAYING || this._status === GameStatus.GAME_OVER) {
         this._pollingInterval = null
         return
       }
 
       DEBUG && console.log('[ONLINE] Fallback poll running — elapsed:', elapsed, 'ms, status:', this._status)
 
-      const existing = await loadGameState(this._room!.id)
-      if (existing) {
-        DEBUG && console.log('[ONLINE] Polling fallback: game already exists, syncing...')
-        try {
+      // A missed `game_started` broadcast must not strand the joiner in the
+      // lobby: the poll re-checks the authoritative games row until PLAYING.
+      // On any transient failure we keep polling instead of dying silently.
+      try {
+        const existing = await loadGameState(this._room!.id)
+        if (existing) {
+          DEBUG && console.log('[ONLINE] Polling fallback: game already exists, syncing...')
           await this.syncGameState()
-        } catch (e) {
-          console.error('[ONLINE] Polling fallback syncGameState failed:', e)
-        }
-        this._pollingInterval = null
-        return
-      }
-
-      let humanCount = 0
-      let roster: Array<{ player_id: string; team: string }> = []
-      const { data, error } = await supabase.rpc('get_room_players', { p_room_id: this._room!.id })
-      if (!error && data) {
-        const players = data as Array<{ player_id: string; team: string }>
-        roster = players
-        humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
-        DEBUG && console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
-      } else {
-        console.warn('[ONLINE] Poll RPC failed:', error?.message || error)
-      }
-
-      // If RPC only found 1, fall back to direct query (may also hit RLS but worth trying)
-      if (humanCount < 2) {
-        const { data: fallbackData, error: fallbackErr } = await supabase
-          .from('room_players')
-          .select('player_id, team')
-          .eq('room_id', this._room!.id)
-        if (!fallbackErr && fallbackData) {
-          const fbPlayers = fallbackData as Array<{ player_id: string; team: string }>
-          const fbCount = fbPlayers.filter(p => !p.player_id.startsWith('bot_')).length
-          DEBUG && console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
-          if (fbCount > humanCount) {
-            humanCount = fbCount
-            roster = fbPlayers
+          const statusNow = this._status as GameStatus
+          if (statusNow === GameStatus.PLAYING || statusNow === GameStatus.GAME_OVER) {
+            this._pollingInterval = null
+            return
           }
-        } else {
-          console.warn('[ONLINE] Poll direct query fallback failed:', fallbackErr?.message)
         }
-      }
 
-      const minHumans = this.isFourPlayer() ? 4 : 2
-      if (humanCount >= minHumans) {
-        // Only the authoritative coordinator (alphabetically-first non-bot DB
-        // member) starts the game. DB-based so it is identical on both clients
-        // even when presence has not fully propagated (presence is a supplement,
-        // not the source of truth).
-        const dbCoordinatorId = roster
-          .filter(p => !p.player_id.startsWith('bot_'))
-          .map(p => p.player_id)
-          .sort()[0] || ''
-        DEBUG && console.log('[ONLINE][DIAG] poll ready — humanCount:', humanCount, 'dbCoordinatorId:', dbCoordinatorId, 'selfId:', this._playerId, 'isCoordinator:', this._playerId === dbCoordinatorId)
-        if (this._playerId === dbCoordinatorId) {
-          DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
-          await this.attemptStartGameWhenReady()
+        let humanCount = 0
+        let roster: Array<{ player_id: string; team: string }> = []
+        const { data, error } = await supabase.rpc('get_room_players', { p_room_id: this._room!.id })
+        if (!error && data) {
+          const players = data as Array<{ player_id: string; team: string }>
+          roster = players
+          humanCount = players.filter(p => !p.player_id.startsWith('bot_')).length
+          DEBUG && console.log(`[ONLINE] Poll found ${humanCount} human(s) via RPC`, JSON.stringify(players))
+        } else {
+          console.warn('[ONLINE] Poll RPC failed:', error?.message || error)
         }
-        this._pollingInterval = null
-        return
+
+        // If RPC only found 1, fall back to direct query (may also hit RLS but worth trying)
+        if (humanCount < 2) {
+          const { data: fallbackData, error: fallbackErr } = await supabase
+            .from('room_players')
+            .select('player_id, team')
+            .eq('room_id', this._room!.id)
+          if (!fallbackErr && fallbackData) {
+            const fbPlayers = fallbackData as Array<{ player_id: string; team: string }>
+            const fbCount = fbPlayers.filter(p => !p.player_id.startsWith('bot_')).length
+            DEBUG && console.log(`[ONLINE] Poll fallback direct query found ${fbCount} human(s)`, JSON.stringify(fbPlayers))
+            if (fbCount > humanCount) {
+              humanCount = fbCount
+              roster = fbPlayers
+            }
+          } else {
+            console.warn('[ONLINE] Poll direct query fallback failed:', fallbackErr?.message)
+          }
+        }
+
+        const minHumans = this.isFourPlayer() ? 4 : 2
+        if (humanCount >= minHumans) {
+          // Only the authoritative coordinator (alphabetically-first non-bot DB
+          // member) starts the game. DB-based so it is identical on both clients
+          // even when presence has not fully propagated (presence is a supplement,
+          // not the source of truth).
+          const dbCoordinatorId = roster
+            .filter(p => !p.player_id.startsWith('bot_'))
+            .map(p => p.player_id)
+            .sort()[0] || ''
+          DEBUG && console.log('[ONLINE][DIAG] poll ready — humanCount:', humanCount, 'dbCoordinatorId:', dbCoordinatorId, 'selfId:', this._playerId, 'isCoordinator:', this._playerId === dbCoordinatorId)
+          if (this._playerId === dbCoordinatorId) {
+            DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
+            await this.attemptStartGameWhenReady()
+          }
+          // Do NOT stop polling on the non-coordinator: the only signal that the
+          // game started is the game_started broadcast (fallible). If it was
+          // missed, the next poll re-reads the games row and syncs.
+          const statusAfterStart = this._status as GameStatus
+          if (statusAfterStart === GameStatus.PLAYING || statusAfterStart === GameStatus.GAME_OVER) {
+            this._pollingInterval = null
+            return
+          }
+        }
+      } catch (e) {
+        console.error('[ONLINE] Fallback poll iteration failed — will retry:', e)
       }
 
       elapsed += delay
@@ -621,6 +676,8 @@ export class OnlineGame {
         delay = Math.min(Math.floor(delay * 1.8), 8000)
         const timerId = setTimeout(runPoll, delay)
         this._pollingInterval = timerId as unknown as ReturnType<typeof setInterval>
+      } else {
+        this._pollingInterval = null
       }
     }
 
@@ -630,6 +687,7 @@ export class OnlineGame {
     this._status = GameStatus.READY
     this.notifyStateChange()
     DEBUG && console.log('[ONLINE] joinRoom completed, status:', this._status)
+    this.duoLog('ROOM', 'JOIN_COMPLETE', { status: this._status })
   }
 
   /**
@@ -740,6 +798,7 @@ export class OnlineGame {
       const allHumans = Array.from(rosterTeams.keys())
       if (allHumans.length < requiredHumans) {
         DEBUG && console.log(`[ONLINE] Not enough humans with a known team: ${allHumans.length}/${requiredHumans} — deferring start`)
+        this.duoLog('GAME', 'START_DEFERRED', { humans: allHumans.length, required: requiredHumans })
         this.starting = false
         return
       }
@@ -751,6 +810,7 @@ export class OnlineGame {
       const dbCoordinatorId = [...allHumans].sort()[0] || ''
       if (this._playerId !== dbCoordinatorId) {
         DEBUG && console.log(`[ONLINE] Not coordinator (coordinator: ${dbCoordinatorId}, self: ${this._playerId}) — deferring start`)
+        this.duoLog('GAME', 'START_DEFERRED', { reason: 'not_coordinator', coordinatorId: dbCoordinatorId })
         this.starting = false
         return
       }
@@ -829,6 +889,7 @@ export class OnlineGame {
       }))
       DEBUG && console.log('[ONLINE] ✅ Game started successfully — status:', this._status)
       DEBUG && console.log('[COORDINATOR] Assigned:', { coordinatorId: this._coordinatorId, myId: this._playerId, amCoordinator: this.isCoordinator() })
+      this.duoLog('GAME', 'STARTED', { coordinatorId: this._coordinatorId })
       
       // Persist initial game state with timer
       if (this._room) {
@@ -837,15 +898,29 @@ export class OnlineGame {
         // Broadcast game_started so non-coordinator clients sync without polling
         emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'game_started' } })
         this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
+        this.duoLog('REALTIME', 'GAME_STARTED_SENT', {})
 
-        // Query the game UUID for turn_submissions FK and subscribe to submission changes
-        const saved = await loadGameState(this._room.id)
+        // Query the game UUID for turn_submissions FK and subscribe to submission changes.
+        // Bounded read-back retry: the save above committed, but a slow read must not
+        // leave _gameId empty (which would silently degrade submissions to broadcasts).
+        let saved: Awaited<ReturnType<typeof loadGameState>> = null
+        for (let attempt = 0; attempt < 5 && !saved?.gameId; attempt++) {
+          saved = await loadGameState(this._room.id)
+          if (!saved?.gameId && attempt < 4) {
+            await new Promise(resolve => setTimeout(resolve, 200))
+          }
+        }
         if (saved?.gameId) {
           this._gameId = saved.gameId
           this._currentTurnNumber = 1
           this.subscribeToSubmissions()
           this.subscribeToGameStatus()
           DEBUG && console.log('[ONLINE] Game ID stored:', this._gameId)
+        } else {
+          // The game row is required for move submission (FK to turn_submissions).
+          // Do not silently continue — log loudly so a ?debug=1 run isolates it.
+          console.warn('[ONLINE] ❌ Could not read back game row after creation — _gameId is empty, submissions will use broadcast fallback')
+          this.duoLog('GAME', 'GAME_ID_READBACK_FAILED', {})
         }
       }
       
@@ -859,13 +934,19 @@ export class OnlineGame {
       }, 1000)
     } catch (e) {
       console.error('[ONLINE] ❌ Failed to start game:', e)
+      this.duoLog('GAME', 'START_FAILED', { errorMessage: String((e as Error)?.message || e) })
+      // Roll back to READY so the fast-retry loop / fallback poll can re-attempt.
+      // Without this, a failed initial persist leaves _status = PLAYING and the
+      // retry guards (`if (status === PLAYING) return`) would never re-run.
+      this._status = GameStatus.READY
     } finally {
       this.starting = false
     }
   }
 
-  private async syncGameState(): Promise<void> {
+  private async syncGameState(): Promise<boolean> {
     DEBUG && console.log('[ONLINE] Syncing game state (late joiner)...')
+    this.duoLog('GAME', 'SYNC_STARTED', {})
     try {
       // Query room_players to get all human players
       const { data: players } = await supabase
@@ -1047,29 +1128,47 @@ export class OnlineGame {
             await this.restoreCurrentTurnSubmissions()
           }
           this.notifyStateChange()
+          this.duoLog('GAME', 'SYNC_COMPLETE', { status: this._status, turnNumber: this._currentTurnNumber })
+          return true
         } else {
           DEBUG && console.warn('[ONLINE] syncGameState: no saved game found, keeping current state')
           // Don't start a fresh game — the DB write may not have completed yet.
           // The next presence sync or polling interval will retry.
+          this.duoLog('GAME', 'SYNC_NO_GAME', {})
+          return false
         }
       }
+      return false
     } catch (e) {
-      DEBUG && console.error('[ONLINE] Failed to sync game state:', e)
+      // Never swallow a sync failure: callers (poll, reconnect, timeout
+      // recovery) must be able to retry instead of leaving the client stuck.
+      console.error('[ONLINE] Failed to sync game state:', e)
+      this.duoLog('GAME', 'SYNC_FAILED', { errorMessage: String((e as Error)?.message || e) })
+      return false
     }
   }
 
   /**
    * Queries turn_submissions for the current turn to restore the submission
-   * state after a reconnect. The gameState.startPendingTurn() call clears
-   * pending moves — we repopulate them from the authoritative DB source.
+   * state after a reconnect or a missed realtime event. The
+   * gameState.startPendingTurn() call clears pending moves — we repopulate
+   * them from the authoritative DB source. Returns true when any teammate
+   * submission was re-applied.
    */
-  private async restoreCurrentTurnSubmissions(): Promise<void> {
+  private async restoreCurrentTurnSubmissions(): Promise<boolean> {
+    if (!this._gameId) return false
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('turn_submissions')
         .select('*')
         .eq('game_id', this._gameId)
         .eq('turn_number', this._currentTurnNumber)
+
+      if (error) {
+        console.warn('[ONLINE] restoreCurrentTurnSubmissions query failed:', error.message)
+        this.duoLog('MOVE', 'RESTORE_SUBMISSIONS_FAILED', { errorCode: error.code, errorMessage: error.message })
+        return false
+      }
 
       if (data && data.length > 0) {
         for (const sub of data) {
@@ -1079,10 +1178,14 @@ export class OnlineGame {
           })
         }
         DEBUG && console.log('[ONLINE] Restored', data.length, 'submissions for turn', this._currentTurnNumber)
+        this.duoLog('MOVE', 'RESTORE_SUBMISSIONS', { restored: data.length, turnNumber: this._currentTurnNumber })
+        return true
       }
     } catch (e) {
       DEBUG && console.warn('[ONLINE] Failed to restore turn submissions:', e)
+      this.duoLog('MOVE', 'RESTORE_SUBMISSIONS_FAILED', { errorMessage: String((e as Error)?.message || e) })
     }
+    return false
   }
 
   private broadcastTimerSync(): void {
@@ -1107,6 +1210,7 @@ export class OnlineGame {
 
   private startMatchTimer(): void {
     this.gameState.setMatchTimerActive(true)
+    this.duoLog('CLOCK', 'TIMER_STARTED', { remaining: this.gameState.getMatchTimeRemaining() })
     if (this._timerCountdownInterval) {
       clearInterval(this._timerCountdownInterval)
     }
@@ -1118,6 +1222,7 @@ export class OnlineGame {
 
       const remaining = this.gameState.getMatchTimeRemaining()
       if (remaining <= 0) {
+        this.duoLog('CLOCK', 'TIMER_EXPIRED', {})
         const captured = this.gameState.capturedPieces
         const whiteCaptured = captured.white.length
         const blackCaptured = captured.black.length
@@ -1199,6 +1304,7 @@ export class OnlineGame {
 
   private handleTurnResolved(payload: { winningTeam: string; winningMove: string; comparison?: MoveComparison | null; coordinatorId?: string; matchTimeRemaining?: number; turnSequence?: number; turnNumber?: number }) {
     if (this._status === GameStatus.GAME_OVER) return
+    this.duoLog('MOVE', 'TURN_RESOLVED_RECEIVED', { winningTeam: payload.winningTeam, turnNumber: payload.turnNumber, turnSequence: payload.turnSequence })
     emitTrace('CLIENT_RECEIVED', { ...this.traceCtx(), extra: { event: 'turn_resolved', winningTeam: payload.winningTeam } })
     // R1: reject stale turn_resolved from previous turns
     const incomingSeq = payload.turnSequence ?? 0
@@ -1341,10 +1447,16 @@ export class OnlineGame {
    * Writes the player's move to the turn_submissions table.
    * The composite PK (game_id, turn_number, player_id) enforces
    * exactly one submission per player per turn.
+   *
+   * Returns true when the submission was persisted (and local pending state
+   * was applied). On failure the local pending move is fully rolled back and
+   * turnState returns to 'selecting' so the player can retry — a failed write
+   * must never leave the board locked.
    */
-  async submitMoveToDB(move: string, from: string, to: string, piece: string): Promise<void> {
+  async submitMoveToDB(move: string, from: string, to: string, piece: string): Promise<boolean> {
     if (!this._gameId) {
       DEBUG && console.warn('[SUBMIT] No gameId — falling back to broadcast')
+      this.duoLog('MOVE', 'SUBMIT_NO_GAME_ID', { move })
       if (this._channel) {
         await this._channel.send({
           type: 'broadcast',
@@ -1352,19 +1464,19 @@ export class OnlineGame {
           payload: { playerId: this._playerId, move, from, to }
         })
       }
-      return
+      return false
     }
 
     // Set local state BEFORE DB write — the board and inputLockedRef are
     // already locked by the UI layer; eager local state keeps them in sync.
     this.gameState.setPendingMove(this._playerId as Player, move, from, to, piece)
     this.gameState.lockPendingMove(this._playerId as Player)
-    const prevTurnState = this.turnState
     if (this.turnState === 'selecting') {
       this.turnState = 'waiting_for_teammate'
     }
     this.notifyStateChange()
     DEBUG && console.log('[SUBMIT] Move set locally, writing to DB:', { turn: this._currentTurnNumber, player: this._playerId, move })
+    this.duoLog('MOVE', 'SUBMIT_STARTED', { turnNumber: this._currentTurnNumber, move })
 
     try {
       const { error } = await supabase
@@ -1381,17 +1493,47 @@ export class OnlineGame {
 
       if (error) {
         DEBUG && console.warn('[SUBMIT] DB insert failed:', error.message)
-        this.turnState = prevTurnState
-        this.notifyStateChange()
-        return
+        this.duoLog('MOVE', 'SUBMIT_FAILED', { errorCode: error.code, errorMessage: error.message, move })
+        this.rollbackSubmission(move, from, to)
+        return false
       }
 
       DEBUG && console.log('[SUBMIT] DB write confirmed:', { turn: this._currentTurnNumber, player: this._playerId, move })
+      this.duoLog('MOVE', 'SUBMIT_SUCCESS', { turnNumber: this._currentTurnNumber, move })
+      return true
     } catch (e) {
       DEBUG && console.error('[SUBMIT] DB write failed:', e)
-      this.turnState = prevTurnState
-      this.notifyStateChange()
+      this.duoLog('MOVE', 'SUBMIT_FAILED', { errorMessage: String((e as Error)?.message || e), move })
+      this.rollbackSubmission(move, from, to)
+      return false
     }
+  }
+
+  /**
+   * Undoes a failed local submission so the board can be re-enabled and the
+   * player can retry. Best-effort broadcast of the intended move lets the
+   * teammate see it even if persistence is temporarily unavailable.
+   */
+  private async rollbackSubmission(move: string, from: string, to: string): Promise<void> {
+    this.gameState.clearPendingMove(this._playerId as Player)
+    this.turnState = 'selecting'
+    this.notifyStateChange()
+    // Best-effort: surface the intended move to the teammate via broadcast.
+    if (this._channel) {
+      try {
+        await this._channel.send({
+          type: 'broadcast',
+          event: 'player_move',
+          payload: { playerId: this._playerId, move, from, to }
+        })
+      } catch (e) {
+        DEBUG && console.error('[SUBMIT] Failed to broadcast rollback move:', e)
+      }
+    }
+  }
+
+  clearPendingMove(player: Player): void {
+    this.gameState.clearPendingMove(player)
   }
 
   /**
@@ -1520,6 +1662,7 @@ export class OnlineGame {
 
     DEBUG && console.log('[SUBMIT] Received teammate submission from DB:', submission)
     this._lastActivityAt = Date.now()
+    this.duoLog('MOVE', 'TEAMMATE_SUBMISSION', { turnNumber: submission.turn_number, playerId: submission.player_id })
 
     this.gameState.setPendingMove(
       submission.player_id as Player,
@@ -1688,16 +1831,25 @@ export class OnlineGame {
     const resolvedTurnNumber = this._currentTurnNumber
     this._currentTurnNumber++
     emitTrace('TURN_RESOLVED', { ...this.traceCtx(), team: currentTeam, extra: { winningMove } })
+    this.duoLog('MOVE', 'RESOLUTION_FINISH', { currentTeam, winningMove, resolvedTurnNumber })
 
     if (this._room) {
       const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
-      await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
-        team: currentTeam,
-        move: winningMove,
-        fen_before: fenBefore,
-        fen_after: this.gameState.fen,
-        timestamp: new Date().toISOString()
-      }, this._status, undefined, undefined, resolvedTurnNumber, this._coordinatorId, winningMove)
+      try {
+        await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, {
+          team: currentTeam,
+          move: winningMove,
+          fen_before: fenBefore,
+          fen_after: this.gameState.fen,
+          timestamp: new Date().toISOString()
+        }, this._status, undefined, undefined, resolvedTurnNumber, this._coordinatorId, winningMove)
+      } catch (e) {
+        // Persistence failure must NOT abort the in-session resolution (that
+        // would strand the non-coordinator waiting for turn_resolved). Surface
+        // loudly; the next successful save will correct the games row.
+        console.error('[ONLINE] ❌ Failed to persist resolved game state:', e)
+        this.duoLog('GAME', 'RESOLVE_PERSIST_FAILED', { errorMessage: String((e as Error)?.message || e) })
+      }
     }
 
     // Broadcast turn_resolved to all non-coordinator clients
@@ -1748,6 +1900,7 @@ export class OnlineGame {
     this.turnState = 'resolving'
     emitTrace('TURN_RESOLUTION_STARTED', { ...this.traceCtx(), team: this.gameState.currentTeam })
     DEBUG && console.log('[STATE] Resolving, set turnState to resolving')
+    this.duoLog('MOVE', 'RESOLVE_STARTED', { currentTeam })
     this.notifyStateChange()
     
     const allPendingMoves = this.gameState.getAllPendingMoves()
@@ -2035,17 +2188,23 @@ export class OnlineGame {
     // Persist GAME_OVER to the games table BEFORE cleanup so the non-resigning
     // client can detect it via postgres_changes even if the broadcast is lost.
     if (this._room) {
-      await saveGameState(
-        this._room.id,
-        this.gameState.fen,
-        this.gameState.currentTeam === Team.WHITE ? 'WHITE' : 'BLACK',
-        null,
-        GameStatus.GAME_OVER,
-        undefined,
-        undefined,
-        this._currentTurnNumber,
-        this._coordinatorId
-      )
+      try {
+        await saveGameState(
+          this._room.id,
+          this.gameState.fen,
+          this.gameState.currentTeam === Team.WHITE ? 'WHITE' : 'BLACK',
+          null,
+          GameStatus.GAME_OVER,
+          undefined,
+          undefined,
+          this._currentTurnNumber,
+          this._coordinatorId
+        )
+      } catch (e) {
+        // A failed resignation persist must not block the local GAME_OVER
+        // transition or the match_abandoned broadcast to the peer.
+        console.error('[ONLINE] ❌ Failed to persist resignation:', e)
+      }
     }
 
     if (this._room) {

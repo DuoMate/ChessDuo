@@ -59,15 +59,30 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
       upsertData.last_resolved_move = lastResolvedMove
     }
 
-    await supabase
+    const { error } = await supabase
       .from('games')
       .upsert(upsertData, { onConflict: 'room_id' })
+
+    if (error) {
+      // NEVER swallow a persistence failure: an unpersisted games row strands
+      // _gameId (empty) which silently degrades move submission and prevents
+      // the joiner from ever finding the game (lobby timeout / board freeze).
+      console.error(`[PERSIST] Game upsert failed for room ${roomId}:`, error.code, error.message)
+      emitTrace('GAME_STATE_SAVE_FAILED', { roomId, turnNumber: turnNumber ?? undefined, extra: { errorCode: error.code, errorMessage: error.message } })
+      throw new Error(`Game upsert failed: ${error.message}`)
+    }
 
     emitTrace('GAME_STATE_SAVED', { roomId, turnNumber: turnNumber ?? undefined, extra: { moves: moveHistory.length } })
 
     DEBUG && console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
   } catch (e) {
+    // Re-throw so callers can react (retry / roll back the turn) — but only
+    // after logging the full error chain, never silently swallowing it.
+    if (e instanceof Error && e.message.startsWith('Game upsert failed')) {
+      throw e
+    }
     console.warn('[PERSIST] Failed to save game state:', e)
+    throw e
   }
 }
 

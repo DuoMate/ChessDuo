@@ -131,16 +131,18 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     expect(testG(game).turnState).toBe('waiting_for_teammate')
   })
 
-  it('rolls back turnState but keeps local pending on DB error', async () => {
+  it('fully rolls back the local submission on DB error (board can be re-enabled)', async () => {
     upsertError = { message: 'network down' }
     const game = setupPlayingGame('player1', 'WHITE')
 
-    await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
+    const result = await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
 
-    // Local pending state is set eagerly before DB write (P0 fix).
-    // The pending move stays so the board stays locked in sync with inputLockedRef.
-    expect(game.isPendingMoveLocked('player1' as any)).toBe(true)
-    // turnState is rolled back on DB error so the engine knows the move isn't persisted.
+    // Regression (board freeze): a failed submission must clear the local
+    // pending move + lock AND reset turnState to 'selecting' so the board is
+    // never permanently disabled and the player can retry.
+    expect(result).toBe(false)
+    expect(game.isPendingMoveLocked('player1' as any)).toBe(false)
+    expect(game.getAllPendingMoves().has('player1')).toBe(false)
     expect(testG(game).turnState).toBe('selecting')
   })
 
@@ -158,11 +160,23 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     expect(upsertMock).not.toHaveBeenCalled()
   })
 
-  it('does not throw when the DB write rejects', async () => {
-    upsertMock.mockRejectedValueOnce(new Error('boom'))
+  it('does not throw when the DB write rejects (returns false, rolls back)', async () => {
     const game = setupPlayingGame('player1', 'WHITE')
 
-    await expect(game.submitMoveToDB('e4', 'e2', 'e4', 'p')).resolves.toBeUndefined()
+    const origFrom = jest.requireMock('../supabase').supabase.from
+    jest.requireMock('../supabase').supabase.from = jest.fn(() => ({
+      select: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      upsert: jest.fn(() => Promise.reject(new Error('boom'))),
+    }))
+
+    try {
+      await expect(game.submitMoveToDB('e4', 'e2', 'e4', 'p')).resolves.toBe(false)
+      expect(game.isPendingMoveLocked('player1' as any)).toBe(false)
+      expect(game.getAllPendingMoves().has('player1')).toBe(false)
+      expect(testG(game).turnState).toBe('selecting')
+    } finally {
+      jest.requireMock('../supabase').supabase.from = origFrom
+    }
   })
 
   it('M05: second submission in same turn — DB upsert overwrites with ON CONFLICT', async () => {
@@ -382,7 +396,7 @@ describe('restoreCurrentTurnSubmissions (Phase 5 reconnect recovery)', () => {
       select: jest.fn(() => Promise.reject(new Error('query failed'))),
     }))
 
-    await expect((game as any).restoreCurrentTurnSubmissions()).resolves.toBeUndefined()
+    await expect((game as any).restoreCurrentTurnSubmissions()).resolves.toBe(false)
 
     orig.from = origFrom
     spy.mockRestore()
