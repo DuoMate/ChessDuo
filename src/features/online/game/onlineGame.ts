@@ -375,7 +375,7 @@ export class OnlineGame {
           const state = this._channel?.presenceState() || {}
           const playersOnline = Object.keys(state)
           const sortedIds = [...playersOnline].sort()
-          DEBUG && console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status)
+          DEBUG && console.log('[ONLINE] Presence sync — players online:', playersOnline.length, playersOnline, 'status:', this._status, 'detail:', JSON.stringify(state))
           
           if (playersOnline.length >= 2) {
             emitTrace('ROOM_FILLED', { ...this.traceCtx(), extra: { present: playersOnline.length } })
@@ -596,6 +596,7 @@ export class OnlineGame {
       if (humanCount >= minHumans) {
         // Only the alphabetically-first present player starts the game
         const sortedIds = Object.keys(this._channel?.presenceState() || {}).sort()
+        DEBUG && console.log('[ONLINE][DIAG] poll ready — humanCount:', humanCount, 'presenceIds:', sortedIds, 'selfId:', this._playerId, 'isFirstPresent:', this._playerId === sortedIds[0])
         if (this._playerId === sortedIds[0]) {
           DEBUG && console.log('[ONLINE] 🔥 Triggering startGameWhenReady via FALLBACK POLL')
           await this.attemptStartGameWhenReady()
@@ -705,7 +706,12 @@ export class OnlineGame {
         .select('*')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
-      DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
+      DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team, status: p.status }))))
+
+      // Diagnostic: surface the exact reason the start would defer so a single
+      // debug run identifies whether presence, roster, or a missing member is
+      // the blocker (presence is realtime; roster/team come from room_players).
+      DEBUG && console.log('[ONLINE][DIAG] start readiness — presenceIds:', Array.from(presenceRoster.keys()), 'dbRows:', players?.map((p: { player_id: string }) => p.player_id), 'selfId:', this._playerId)
 
       // Guard: require minimum live humans before starting. Presence is the
       // source of truth — DB row visibility must never block a start that the
