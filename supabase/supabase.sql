@@ -346,6 +346,13 @@ BEGIN
     ALTER TABLE games DROP CONSTRAINT IF EXISTS games_room_fk;
     ALTER TABLE games ADD CONSTRAINT games_room_fk FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE;
   END IF;
+
+  -- One completed_games row per room (idempotent history upsert). NULL room_id
+  -- (offline games) is treated as distinct, so those keep inserting fresh rows.
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'completed_games') THEN
+    ALTER TABLE completed_games DROP CONSTRAINT IF EXISTS completed_games_room_id_key;
+    ALTER TABLE completed_games ADD CONSTRAINT completed_games_room_id_key UNIQUE (room_id);
+  END IF;
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'Migration block error (safe to ignore): %', SQLERRM;
 END $$;

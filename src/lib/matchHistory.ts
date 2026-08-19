@@ -102,7 +102,11 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
 
   if (userId) {
     try {
-      await supabase.from('completed_games').insert({
+      // Upsert on room_id so both participants' clients converge on a single
+      // completed_games row (no duplicates). room_id is NULL for offline games,
+      // which the UNIQUE(room_id) constraint treats as distinct (always insert).
+      await supabase.from('completed_games').upsert({
+        room_id: data.roomId || null,
         winner: data.winner,
         game_result: data.gameResult,
         game_over_reason: data.gameOverReason,
@@ -116,9 +120,9 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
         move_comparisons: data.moveComparisons || [],
         challenge_id: data.challengeId || null,
         played_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'room_id' })
     } catch {
-      // Supabase insert is best-effort — history still saved locally
+      // Supabase upsert is best-effort — history still saved locally
     }
   }
 }

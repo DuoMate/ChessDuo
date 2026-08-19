@@ -635,6 +635,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         totalMoves: movesPlayed,
       },
       isOnline: !!isOnline,
+      roomId: isOnline ? (roomId || undefined) : undefined,
       moveComparisons: moveHistoryRef.current,
       playerLabels: {
         white: teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim()),
@@ -645,7 +646,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     toast.gameOver(result)
 
     if (playerId) gameSavedRef.current = true
-  }, [gameState.status, isOnline, game, toast, playerId])
+  }, [gameState.status, isOnline, game, toast, playerId, roomId])
 
   // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
   const abandonNotifiedRef = useRef(false)
@@ -2194,8 +2195,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } catch {
       // Channel may be dead during refresh; navigation still proceeds
     }
-    // Wait for the save effect to run before navigating away
-    await new Promise(r => setTimeout(r, 200))
+    if (isOnline) {
+      // Wait for the save effect (which sets gameSavedRef) to run before
+      // navigating away, so the resigner's history record is persisted rather
+      // than lost to an immediate unmount. Bounded to 2s in case the effect
+      // never fires (e.g. abandoned game-over path).
+      const saveDeadline = Date.now() + 2000
+      while (!gameSavedRef.current && Date.now() < saveDeadline) {
+        await new Promise(r => setTimeout(r, 50))
+      }
+    } else {
+      // Offline: keep the short delay so the save effect can flush.
+      await new Promise(r => setTimeout(r, 200))
+    }
     setShowGameOverDismissed(false)
     router.replace('/')
   }, [isOnline])
