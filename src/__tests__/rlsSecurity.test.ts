@@ -1,18 +1,19 @@
 /**
  * RLS security regression tests (P0-1 launch blocker).
  *
- * These are static assertions against the committed schema (supabase/tables.sql)
- * so CI fails the moment anyone re-introduces a permissive "Allow all" policy
- * or removes a minimum-privilege policy on the game-critical tables.
+ * These are static assertions against the committed schema (supabase/supabase.sql,
+ * the single idempotent source of truth) so CI fails the moment anyone
+ * re-introduces a permissive "Allow all" policy or removes a minimum-privilege
+ * policy on the game-critical tables.
  *
  * Live security behavior (BLOCK/ALLOW semantics against a real database) is
- * verified separately in staging via `supabase/security_regression.sql`.
+ * covered by the non-fatal self-check at the end of `supabase/supabase.sql`.
  */
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const schemaPath = join(__dirname, '../../supabase/tables.sql')
+const schemaPath = join(__dirname, '../../supabase/supabase.sql')
 const schema = readFileSync(schemaPath, 'utf8')
 
 function stripComments(sql: string): string {

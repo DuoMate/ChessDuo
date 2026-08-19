@@ -14,7 +14,7 @@ browser procedure below.
    dashboard — this is the number the test validates against).
 2. Seeded accounts: usernames `player1..playerN`, emails
    `player1@example.com..`, all with the same known password.
-3. Apply `supabase/tables.sql` + `supabase/migrations/db_cleanup.sql` to
+3. Apply `supabase/supabase.sql` to
    staging first (the P0-1 RLS policies are required — the harness exercises
    the authenticated paths).
 

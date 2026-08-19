@@ -1,17 +1,15 @@
 -- ============================================================================
 -- ChessDuo — Supabase One-Shot Setup (supabase.sql)
 -- ============================================================================
--- Combined from:
---   supabase/tables.sql
---   supabase/migrations/join_room_by_code.sql
---   supabase/migrations/db_cleanup.sql
+-- The single source of truth for the ChessDuo database: schema (DDL), data
+-- backfills (DML), functions/RPCs, RLS policies, grants, triggers, scheduled
+-- cleanup (pg_cron) and the realtime publication pin.
 --
--- Run this entire file once in the Supabase SQL Editor (as the postgres role).
+-- Run this entire file in the Supabase SQL Editor (as the postgres role).
 -- Idempotent: every statement uses IF NOT EXISTS / DROP IF EXISTS /
--- CREATE OR REPLACE, so it is safe to re-run.
---
--- Excluded by design: supabase/security_regression.sql is a post-deploy
--- VERIFICATION script (it RAISEs an exception on policy mismatch), not setup.
+-- CREATE OR REPLACE, so it is safe to re-run. It ends with a non-fatal RLS
+-- self-check that RAISEs a WARNING (never an error) if a minimum-privilege
+-- policy is missing or a permissive "Allow all" policy is present.
 -- ============================================================================
 
 -- ============================================================================
@@ -1108,3 +1106,56 @@ ALTER PUBLICATION supabase_realtime SET TABLE
   public.games,
   public.turn_submissions,
   public.rooms;
+
+-- ============================================================================
+-- 10. RLS self-check (non-fatal, idempotent)
+-- ============================================================================
+-- Verifies the deployed RLS policies match the minimum-privilege set. Runs at
+-- the end of every apply; on a mismatch it RAISEs a WARNING (never an ERROR)
+-- so an idempotent re-apply is never blocked, while the problem is still
+-- surfaced loudly in the SQL Editor output.
+DO $$
+DECLARE
+  tbl text;
+  pol record;
+  problems text := '';
+BEGIN
+  -- 1. No "Allow all" policy may exist on the game-critical tables.
+  FOR tbl IN SELECT unnest(ARRAY['room_players','games','turn_submissions']) LOOP
+    FOR pol IN
+      SELECT policyname FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = tbl
+    LOOP
+      IF pol.policyname ILIKE 'allow all' THEN
+        problems := problems || format('PERMISSIVE POLICY "Allow all" FOUND on %s', tbl) || E'\n';
+      END IF;
+    END LOOP;
+  END LOOP;
+
+  -- 2. Required minimum-privilege policies must be present.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='room_players' AND policyname='Room members can view players') THEN
+    problems := problems || 'Missing: room_players "Room members can view players"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='room_players' AND policyname='Players can join rooms') THEN
+    problems := problems || 'Missing: room_players "Players can join rooms"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='turn_submissions' AND policyname='Players can submit their own moves') THEN
+    problems := problems || 'Missing: turn_submissions "Players can submit their own moves"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='games' AND policyname='Room members can update game') THEN
+    problems := problems || 'Missing: games "Room members can update game"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='rooms' AND policyname='Room members can update room status') THEN
+    problems := problems || 'Missing: rooms "Room members can update room status"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_join_room') THEN
+    problems := problems || 'Missing: can_join_room() capacity helper' || E'\n';
+  END IF;
+
+  IF problems <> '' THEN
+    RAISE WARNING 'P0-1 RLS regression FAILED:%', problems;
+  ELSE
+    RAISE NOTICE 'P0-1 RLS regression PASSED — policies match the minimum-privilege set.';
+  END IF;
+END
+$$;

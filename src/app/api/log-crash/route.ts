@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   // Always log a structured line (Cloudflare Worker logs remain a passive sink).
   console.error('[CrashReport]', JSON.stringify(payload))
 
-  // Best-effort persistence into app_errors (append-only; see tables.sql).
+  // Best-effort persistence into app_errors (append-only; see supabase.sql).
   await recordAppError(payload as unknown as Record<string, unknown>)
 
   return NextResponse.json({ ok: true })
