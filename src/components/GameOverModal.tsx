@@ -52,7 +52,7 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={MODAL_SPRING}
-            className="relative w-full max-w-sm overflow-hidden rounded-[30px] border border-white/70 bg-white/90 p-6 text-center shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            className="relative w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-[30px] border border-white/70 bg-white/90 p-6 text-center shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
           >
             {onClose && (
               <button onClick={onClose} className="absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700" aria-label="Close">

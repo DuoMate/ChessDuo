@@ -52,7 +52,7 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/95 shadow-[0_16px_60px_rgba(2,6,23,0.2)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            className="absolute right-0 top-full z-50 mt-2 w-44 max-h-[70vh] overflow-y-auto rounded-[22px] border border-slate-200/80 bg-white/95 shadow-[0_16px_60px_rgba(2,6,23,0.2)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/90"
           >
             {onToggleSound && (
               <>

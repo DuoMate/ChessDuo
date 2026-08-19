@@ -80,8 +80,8 @@ export function ChatPanel({ currentUserId, friendId, friendName, currentUserName
   return (
     <div className={`flex flex-col bg-gray-50 dark:bg-[var(--color-page-bg)] border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden ${isMobile ? 'fixed inset-0 z-[70] rounded-none' : ''}`} style={isMobile ? { paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : { minHeight: '320px', maxHeight: '60vh' }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/8 bg-gray-100 dark:bg-white/[0.03]">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{friendName}</h3>
-        <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-base min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <h3 className="min-w-0 flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate" title={friendName}>{friendName}</h3>
+        <button onClick={onClose} className="shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-base min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close chat">
           ✕
         </button>
       </div>

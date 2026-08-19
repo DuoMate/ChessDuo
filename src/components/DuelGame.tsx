@@ -461,7 +461,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
-      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
+      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3 pb-24">
         <div className="w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
@@ -547,22 +547,22 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-slate-900 p-6 rounded-lg border border-slate-700"
+              className="bg-slate-900 p-4 sm:p-6 rounded-lg border border-slate-700 max-w-[calc(100vw-2rem)]"
             >
               <h3 className="text-xl font-bold text-slate-100 mb-4 text-center">Promote Pawn</h3>
-              <div className="flex gap-3 md:gap-4">
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4">
                 {(['q', 'r', 'b', 'n'] as PromotionPiece[]).map((piece) => (
                   <button
                     key={piece}
                     onClick={() => handlePromotionSelect(piece)}
-                    className="flex flex-col items-center p-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors min-h-[44px] min-w-[44px]"
+                    className="flex flex-col items-center px-2 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors min-h-[44px] min-w-[44px]"
                   >
                     <span className="text-3xl md:text-4xl text-slate-100 mb-1">
                       {{ q: '♛', r: '♜', b: '♝', n: '♞' }[piece]}

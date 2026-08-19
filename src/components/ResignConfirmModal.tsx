@@ -31,7 +31,7 @@ export function ResignConfirmModal({ open, onConfirm, onCancel }: ResignConfirmM
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={MODAL_SPRING}
-            className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center shadow-xl"
+            className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl w-full max-w-sm max-h-[90svh] overflow-y-auto p-6 text-center shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-center mb-3">

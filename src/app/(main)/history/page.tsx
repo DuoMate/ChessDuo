@@ -151,13 +151,13 @@ function HistoryContent({ playerId }: { playerId: string }) {
                   transition={{ delay: i * 0.05 }}
                   className="bg-slate-800/50 border border-white/5 p-4 rounded-2xl hover:bg-slate-800/70 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${resultBg}`}>
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${resultBg}`}>
                         {icon}
                       </div>
-                      <div>
-                        <span className={`text-base font-semibold ${resultColor}`}>
+                      <div className="min-w-0">
+                        <span className={`text-base font-semibold truncate block ${resultColor}`}>
                           {resultText}
                         </span>
                         <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -172,7 +172,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
                         e.stopPropagation()
                         router.push(`/replay/${game.id}`)
                       }}
-                      className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1"
+                      className="shrink-0 px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
                     >
                       Replay
                       <ChevronRight size={12} />

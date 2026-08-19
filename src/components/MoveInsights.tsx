@@ -64,13 +64,13 @@ export function MoveInsights({
       className="mt-3 pt-3 border-t border-slate-700/50 space-y-2"
     >
       {bestEngineMove && (
-        <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Engine best:</span>
-            <span className="text-slate-100 text-sm font-bold">{bestEngineMove}</span>
+        <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-slate-400 shrink-0">Engine best:</span>
+            <span className="min-w-0 truncate text-slate-100 text-sm font-bold">{bestEngineMove}</span>
           </div>
           {bestEngineScore != null && (
-            <span className="text-xs text-blue-400">+{Math.round(bestEngineScore)}cp</span>
+            <span className="shrink-0 text-xs text-blue-400">+{Math.round(bestEngineScore)}cp</span>
           )}
         </div>
       )}
@@ -115,8 +115,8 @@ function InsightCard({
   return (
     <div className={`p-2 rounded-lg border text-sm ${isWinner ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
       <div className="flex items-center gap-1 mb-1">
-        <span className="text-slate-100 font-bold">{move}</span>
-        <span className="text-xs">{classification.icon}</span>
+        <span className="min-w-0 truncate text-slate-100 font-bold">{move}</span>
+        <span className="shrink-0 text-xs">{classification.icon}</span>
       </div>
       <p className="text-xs text-slate-400 leading-tight">{classification.description}</p>
       <div className="mt-1 flex items-center justify-between">

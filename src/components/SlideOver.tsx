@@ -48,7 +48,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
               {title && (
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/80">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/80">
                   <div>
                     <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">{title}</h2>
                   </div>

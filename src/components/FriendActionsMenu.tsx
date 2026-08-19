@@ -50,7 +50,7 @@ export function FriendActionsMenu({ onDelete, onMessage, onChallenge, onBlock }:
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 bg-gray-800 border border-white/10 rounded-2xl shadow-2xl py-2"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 max-h-[80svh] overflow-y-auto bg-gray-800 border border-white/10 rounded-2xl shadow-2xl py-2"
               onClick={(e) => e.stopPropagation()}
             >
               <button

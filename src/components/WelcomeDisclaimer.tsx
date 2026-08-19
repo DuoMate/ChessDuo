@@ -114,12 +114,12 @@ export function WelcomeDisclaimer({ open, onDismiss, storageKey = 'chessduo_welc
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.92, opacity: 0 }}
             transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-            className="relative w-full max-w-md overflow-y-auto rounded-[24px] border border-slate-700/50 bg-[var(--color-page-bg)] p-4 shadow-2xl max-h-[calc(100vh-2rem)] dark:border-slate-700/50 dark:bg-[var(--color-page-bg)] sm:p-5"
+            className="relative w-full max-w-md overflow-y-auto rounded-[24px] border border-slate-700/50 bg-[var(--color-page-bg)] p-4 shadow-2xl max-h-[calc(100dvh-2rem)] dark:border-slate-700/50 dark:bg-[var(--color-page-bg)] sm:p-5"
           >
             <button
               type="button"
               onClick={handleDismiss}
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+              className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
               aria-label="Close"
             >
               <X size={18} />

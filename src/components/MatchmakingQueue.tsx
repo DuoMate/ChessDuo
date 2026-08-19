@@ -185,7 +185,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
             <p className="text-red-400 text-sm">{error || 'Something went wrong'}</p>
             <button
               onClick={() => setRetries(r => r + 1)}
-              className="px-6 py-2 bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/10 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
+              className="min-h-[44px] px-6 py-2 bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/10 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"
             >
               Try Again
             </button>
@@ -194,7 +194,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
 
         <button
           onClick={onCancel}
-          className="mt-8 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 text-sm transition-colors"
+          className="mt-8 inline-flex min-h-[44px] items-center justify-center px-4 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 text-sm transition-colors"
         >
           {"\u2190"} Cancel
         </button>

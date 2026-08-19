@@ -91,14 +91,14 @@ export function ConfigurationPanel({
         </h3>
         <div className="flex flex-col gap-3">
           {/* Confirm Moves */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {confirmMove ? (
-                <ShieldCheck size={20} className="text-blue-500 dark:text-blue-400" />
+                <ShieldCheck size={20} className="shrink-0 text-blue-500 dark:text-blue-400" />
               ) : (
-                <Shield size={20} className="text-slate-400 dark:text-slate-500" />
+                <Shield size={20} className="shrink-0 text-slate-400 dark:text-slate-500" />
               )}
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Confirm Moves</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Add confirmation before final move</p>
               </div>
@@ -108,7 +108,7 @@ export function ConfigurationPanel({
               role="switch"
               aria-checked={confirmMove}
               onClick={() => setConfirmMove(!confirmMove)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                 confirmMove
                   ? 'bg-blue-500'
                   : 'bg-slate-300 dark:bg-slate-600'
@@ -123,14 +123,14 @@ export function ConfigurationPanel({
           </div>
 
           {/* Sound Effects */}
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               {soundEnabled ? (
-                <Volume2 size={20} className="text-blue-500 dark:text-blue-400" />
+                <Volume2 size={20} className="shrink-0 text-blue-500 dark:text-blue-400" />
               ) : (
-                <VolumeX size={20} className="text-slate-400 dark:text-slate-500" />
+                <VolumeX size={20} className="shrink-0 text-slate-400 dark:text-slate-500" />
               )}
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">Sound Effects</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Play sounds for moves</p>
               </div>
@@ -140,7 +140,7 @@ export function ConfigurationPanel({
               role="switch"
               aria-checked={soundEnabled}
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                 soundEnabled
                   ? 'bg-blue-500'
                   : 'bg-slate-300 dark:bg-slate-600'

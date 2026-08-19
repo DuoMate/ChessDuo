@@ -37,7 +37,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <ErrorBoundary>
       {isMobile ? (
         <>
-          <div className="pb-20">{children}</div>
+          <div className="pb-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>{children}</div>
           <HomeBottomNav unreadMessages={unreadMessages} />
         </>
       ) : (

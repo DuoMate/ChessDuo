@@ -72,16 +72,16 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.98 }}
-          className={`w-full ${isMobile ? 'max-w-full rounded-t-[28px]' : 'max-w-sm rounded-[28px]'} border border-white/70 bg-white/90 p-6 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90`}
+          className={`w-full ${isMobile ? 'max-w-full rounded-t-[28px] max-h-[92svh] overflow-y-auto' : 'max-w-sm rounded-[28px] max-h-[90vh] overflow-y-auto'} border border-white/70 bg-white/90 p-6 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90`}
           onClick={(e) => e.stopPropagation()}
           style={isMobile ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
         >
           <div className="mb-4 flex items-center gap-2">
-            <div className="rounded-full border border-amber-500/20 bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+            <div className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
               <Sparkles size={16} />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Challenge {friendName}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-lg font-bold text-slate-900 dark:text-white" title={`Challenge ${friendName}`}>Challenge {friendName}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">Select game duration</p>
             </div>
           </div>

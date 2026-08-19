@@ -144,22 +144,22 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-xl"
+        className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border-2 border-yellow-500 shadow-xl max-w-[calc(100vw-2rem)]"
       >
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
               key={piece}
               onClick={() => onSelect(piece)}
-              className="flex flex-col items-center p-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
+              className="flex flex-col items-center px-2 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
             >
               <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-500 dark:text-gray-300">{label}</span>
@@ -2531,7 +2531,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pb-24">
         {/* Compact top bar — header + team avatars + timer + controls */}
         <div className="w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">

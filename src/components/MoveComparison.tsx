@@ -77,7 +77,7 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                     : 'bg-slate-800/40 border-slate-700/40'
                 }`}
               >
-                <div className="flex flex-col gap-1.5 min-w-0">
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-slate-100 font-bold text-sm">You</span>
                     {isSync ? null : humanWon ? (
@@ -132,7 +132,7 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                     : 'bg-slate-800/40 border-slate-700/40'
                 }`}
               >
-                <div className="flex flex-col gap-1.5 min-w-0">
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-slate-300 font-bold text-sm">Teammate</span>
                     {isSync ? null : !humanWon ? (

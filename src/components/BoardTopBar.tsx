@@ -168,7 +168,7 @@ export function BoardTopBar({
               White
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
             {whitePlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="WHITE" />
             ))}
@@ -177,7 +177,7 @@ export function BoardTopBar({
 
         {/* Center: timer */}
         <div className="flex items-center gap-1 shrink-0">
-          <div className="flex flex-col items-center justify-center px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[72px]">
+          <div className="flex flex-col items-center justify-center px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[60px]">
             <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9" />
@@ -198,7 +198,7 @@ export function BoardTopBar({
             </span>
             <Crown size={11} className="text-slate-700 dark:text-slate-200 shrink-0" />
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
             {blackPlayers.slice(0, 2).map((p) => (
               <AvatarTile key={p.id} player={p} team="BLACK" />
             ))}
@@ -209,7 +209,7 @@ export function BoardTopBar({
       {hasCaptures && (
         <div className="flex items-center justify-between gap-1 max-w-3xl mx-auto mt-1">
           <div className="flex items-center gap-1 min-w-0 flex-1 justify-start">
-            <div className="flex items-center gap-0">
+            <div className="flex min-w-0 items-center gap-0 flex-wrap overflow-hidden">
               {sortedWhite.map((p, i) => (
                 <span key={i} className="text-[11px] leading-none text-slate-500 dark:text-slate-400">
                   {PIECE_UNICODE[p] || p}
@@ -229,7 +229,7 @@ export function BoardTopBar({
                 +{Math.abs(advantage)}
               </span>
             )}
-            <div className="flex items-center gap-0">
+            <div className="flex min-w-0 items-center gap-0 flex-wrap justify-end overflow-hidden">
               {sortedBlack.map((p, i) => (
                 <span key={i} className="text-[11px] leading-none text-slate-500 dark:text-slate-400">
                   {PIECE_UNICODE[p] || p}

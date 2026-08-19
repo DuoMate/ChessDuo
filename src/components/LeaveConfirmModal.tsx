@@ -23,7 +23,7 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
           onClick={onCancel}
         >
           <motion.div
@@ -32,7 +32,7 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-xs w-full mx-4 border border-gray-200 dark:border-slate-700 shadow-2xl"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-xs w-full mx-4 max-h-[90svh] overflow-y-auto border border-gray-200 dark:border-slate-700 shadow-2xl"
           >
             <div className="text-center mb-5">
               <div className="text-3xl mb-3">⚠</div>

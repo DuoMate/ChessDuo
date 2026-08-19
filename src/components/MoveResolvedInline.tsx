@@ -93,9 +93,9 @@ function MoveColumn({
   return (
     <div className={`flex-1 rounded-xl border ${borderClass} ${bgClass} px-3 py-3 flex flex-col items-center gap-1 min-w-0`}>
       <span className={`text-xs font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
-      <div className="flex items-center gap-1.5">
-        <span className="text-2xl leading-none">{pieceChar(move.piece, move.color)}</span>
-        <span className="text-lg font-extrabold text-slate-100">{move.san}</span>
+      <div className="flex min-w-0 max-w-full items-center gap-1.5">
+        <span className="shrink-0 text-2xl leading-none">{pieceChar(move.piece, move.color)}</span>
+        <span className="min-w-0 truncate text-lg font-extrabold text-slate-100" title={move.san}>{move.san}</span>
       </div>
       <span className={`text-xs font-semibold uppercase tracking-wider text-slate-400`}>Accuracy</span>
       <span className={`text-2xl font-extrabold ${accClass}`}>{accuracy.toFixed(1)}</span>
@@ -135,10 +135,10 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
           outcome={data.result === 'you_won' ? 'won' : data.result === 'teammate_won' ? 'lost' : 'tied'}
           tone="blue"
         />
-        <div className="flex flex-col items-center justify-center gap-2 px-2 py-3 min-w-[100px] rounded-xl border border-blue-500/40 bg-blue-500/5">
+        <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-3 min-w-[64px] rounded-xl border border-blue-500/40 bg-blue-500/5">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-300">Engine Chose</span>
           <Trophy size={22} className="text-amber-400" />
-          <span className="text-2xl font-extrabold text-blue-300">
+          <span className="max-w-full truncate text-2xl font-extrabold text-blue-300" title={data.engineChoseMove.san}>
             {data.engineChoseMove.san}
           </span>
           <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
@@ -191,7 +191,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
         return (
           <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50 space-y-1.5">
             {headline && (
-              <div className="flex items-center justify-center gap-1.5 text-[12px] font-medium">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-medium">
                 <HeadlineIcon size={14} className={headlineColor} />
                 <span className={headlineColor}>{headline}</span>
               </div>
