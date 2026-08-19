@@ -1906,39 +1906,43 @@ export class OnlineGame {
     const allPendingMoves = this.gameState.getAllPendingMoves()
     const pendingMovesArray = Array.from(allPendingMoves.entries())
     
-    // Color-agnostic move-pair selection: the human team may be WHITE or BLACK
-    // (Duo lets the host pick). If the coordinator's own move is among the
-    // pending moves, it is move1 (preserves accuracy/player1 tracking). If the
+    // Color-agnostic, ORDER-INDEPENDENT move-pair selection: the human team may
+    // be WHITE or BLACK (Duo lets the host pick). The coordinator's own move is
+    // always "player1" (preserves accuracy/player1 tracking and the broadcast
+    // `coordinatorId` invariant); the other submitted move is "player2". If the
     // coordinator is not on the current team (bot team turn), fall back to the
     // first two submitted moves so bot teams resolve on either color.
+    //
+    // NOTE: the previous Map-iteration loop was order-dependent — when the
+    // teammate's entry was iterated before the coordinator's own entry, the
+    // coordinator branch overwrote `move1` and the teammate's move was lost,
+    // collapsing both submissions to the coordinator's move (isSync = true).
     let move1: PendingMoveInfo | null = null
     let move2: PendingMoveInfo | null = null
     let player1Id = ''
     let player2Id = ''
 
-    for (const [player, pending] of allPendingMoves) {
-      if (player === this._playerId) {
-        move1 = pending
-        player1Id = player
-        this._player1Id = player // Track player1 for this client
-        DEBUG && console.log('[PLAYER1-ID] Set player1Id to:', player)
-      } else if (!move1) {
-        move1 = pending
-        player1Id = player
-      } else if (!move2) {
-        move2 = pending
-        player2Id = player
+    const ownEntry = pendingMovesArray.find(([player]) => player === this._playerId)
+    if (ownEntry) {
+      move1 = ownEntry[1]
+      player1Id = ownEntry[0]
+      this._player1Id = ownEntry[0] // Track player1 for this client
+      DEBUG && console.log('[PLAYER1-ID] Set player1Id to:', ownEntry[0])
+      const otherEntry = pendingMovesArray.find(([player]) => player !== this._playerId)
+      if (otherEntry) {
+        move2 = otherEntry[1]
+        player2Id = otherEntry[0]
       }
-    }
-
-    // Bot team turn (coordinator not on the current team): use any two moves.
-    if (!move1 && pendingMovesArray.length >= 1) {
-      move1 = pendingMovesArray[0][1]
-      player1Id = pendingMovesArray[0][0]
-    }
-    if (!move2 && pendingMovesArray.length >= 2) {
-      move2 = pendingMovesArray[1][1]
-      player2Id = pendingMovesArray[1][0]
+    } else {
+      // Bot team turn (coordinator not on the current team): use any two moves.
+      if (pendingMovesArray.length >= 1) {
+        move1 = pendingMovesArray[0][1]
+        player1Id = pendingMovesArray[0][0]
+      }
+      if (pendingMovesArray.length >= 2) {
+        move2 = pendingMovesArray[1][1]
+        player2Id = pendingMovesArray[1][0]
+      }
     }
 
     if (!move1 || !move2) {

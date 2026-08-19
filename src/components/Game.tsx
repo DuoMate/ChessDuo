@@ -40,7 +40,7 @@ import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
-import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
+import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from './MoveResolvedInline'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
@@ -2434,22 +2434,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })()
 
   const resolutionData: MoveResolutionData | null = accuracyComparison
-    ? {
-        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
-        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
-        engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
-        yourAccuracy: accuracyComparison.player1Accuracy || 0,
-        teammateAccuracy: accuracyComparison.player2Accuracy || 0,
-        yourLoss: accuracyComparison.player1Loss || 0,
-        teammateLoss: accuracyComparison.player2Loss || 0,
-        isSync: !!accuracyComparison.isSync,
-        youMatchedEngine: !!accuracyComparison.youMatchedEngine,
-        teammateMatchedEngine: !!accuracyComparison.teammateMatchedEngine,
-        result: accuracyComparison.winnerId === 'player1' ? 'you_won' : accuracyComparison.winnerId === 'player2' ? 'teammate_won' : 'draw',
-        scoreDelta: (accuracyComparison.winningScore - accuracyComparison.bestEngineScore) || 0,
-        evaluationAfter: accuracyComparison.winningScore || 0,
-        evaluationImproved: (accuracyComparison.winningScore || 0) > (accuracyComparison.bestEngineScore || 0),
-      }
+    ? (() => {
+        const p1Id = isOnline ? onlineGameRef.current?.player1Id : undefined
+        const isPlayer1 = !isOnline || !playerId || !p1Id || playerId === p1Id
+        DEBUG && console.log('[RESOLVE-DATA]', { isOnline, isPlayer1, myId: playerId, p1Id, p1Move: accuracyComparison.player1Move, p2Move: accuracyComparison.player2Move })
+        return buildResolutionData(accuracyComparison, isPlayer1, myTeamRef.current)
+      })()
     : null
 
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {

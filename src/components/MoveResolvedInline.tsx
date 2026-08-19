@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Zap, Trophy, X, Check, ChevronRight, Sparkles, Target, Lightbulb, AlertTriangle, XCircle } from 'lucide-react'
 import { classifyMove } from '@/lib/moveClassifier'
 import { getAccuracyCategory } from '@/features/shared/accuracy'
+import type { MoveComparison } from '@/features/shared/gameTypes'
 
 function getMoveImpact(san: string): string {
   if (!san) return ''
@@ -38,6 +39,43 @@ export interface MoveResolutionData {
   scoreDelta: number
   evaluationAfter: number
   evaluationImproved: boolean
+}
+
+/**
+ * Maps an engine `MoveComparison` (which tracks submissions as `player1` /
+ * `player2`, where `player1` is the coordinator in online mode) into the
+ * viewer-relative `MoveResolutionData` used by the resolution card.
+ *
+ * `player1`/`player2` are independent submissions and MUST never be derived
+ * from one another — `isPlayer1` only flips which column each one renders in,
+ * never which move is shown.
+ */
+export function buildResolutionData(
+  comparison: MoveComparison,
+  isPlayer1: boolean,
+  teamColor: 'WHITE' | 'BLACK',
+): MoveResolutionData {
+  const color = teamColor === 'WHITE' ? 'white' as const : 'black' as const
+  return {
+    yourMove: { san: (isPlayer1 ? comparison.player1Move : comparison.player2Move) || '?', piece: 'P', color },
+    teammateMove: { san: (isPlayer1 ? comparison.player2Move : comparison.player1Move) || '?', piece: 'P', color },
+    engineChoseMove: { san: comparison.bestEngineMove || comparison.winningMove || '?' },
+    yourAccuracy: (isPlayer1 ? comparison.player1Accuracy : comparison.player2Accuracy) || 0,
+    teammateAccuracy: (isPlayer1 ? comparison.player2Accuracy : comparison.player1Accuracy) || 0,
+    yourLoss: (isPlayer1 ? comparison.player1Loss : comparison.player2Loss) || 0,
+    teammateLoss: (isPlayer1 ? comparison.player2Loss : comparison.player1Loss) || 0,
+    isSync: !!comparison.isSync,
+    youMatchedEngine: !!(isPlayer1 ? comparison.youMatchedEngine : comparison.teammateMatchedEngine),
+    teammateMatchedEngine: !!(isPlayer1 ? comparison.teammateMatchedEngine : comparison.youMatchedEngine),
+    result: comparison.winnerId === 'player1'
+      ? (isPlayer1 ? 'you_won' : 'teammate_won')
+      : comparison.winnerId === 'player2'
+        ? (isPlayer1 ? 'teammate_won' : 'you_won')
+        : 'draw',
+    scoreDelta: (comparison.winningScore - comparison.bestEngineScore) || 0,
+    evaluationAfter: comparison.winningScore || 0,
+    evaluationImproved: (comparison.winningScore || 0) > (comparison.bestEngineScore || 0),
+  }
 }
 
 interface MoveResolvedInlineProps {
