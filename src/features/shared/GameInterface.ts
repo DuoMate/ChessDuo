@@ -10,6 +10,8 @@ export interface GameInterface {
   readonly board: Chess
   readonly lastMove: { from: string; to: string } | null
   readonly lastMoveComparison: MoveComparison | null
+  /** Latest human-team-owned resolution — panel consumes this, board consumes lastMoveComparison */
+  readonly lastHumanResolution: MoveComparison | null
   readonly player1Id: string
 
   start(): void

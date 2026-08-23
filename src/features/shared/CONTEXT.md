@@ -20,6 +20,7 @@ Interfaces, constants, and utility functions shared across all game modes (onlin
 - Avatars: `getAvatarUrl(type, avatar?)` returns a path under `/avatars/`. Humans use named WebPs (`human-ace.webp` etc.); bots use the single `bot.webp`. The webps are near-square so they composite cleanly inside circular `rounded-full` containers.
 
 ## Recent Changes
+- **2026-08-23**: **ADR-005 Resolution Ownership** — `GameInterface` adds `lastHumanResolution` (panel) alongside `lastMoveComparison` (board). Implemented in both `LocalGame` (`currentTeam===getTeam()`) and `OnlineGame` (`currentTeam===_team` + `games.last_human_resolution` persistence). `Game.tsx` gates panel on `myTeam` only.
 - **2026-07-18**: `GameInterface` extended with `getPlayerColor()`, `getHumanSlot()`, `getTeammateSlot()` so the new color-picker feature can swap bot teams and the `MoveComparison` consumer can correctly identify which slot is the human. Also added `PlayerColor` type, `ResolvedColor` type, `DEFAULT_PLAYER_COLOR`, `BROWSER_BOT_LEVEL = 3`, `SELECTED_COLOR_KEY` localStorage key, and `resolvePlayerColor()` helper. Used by the new `ColorPicker` component and `LocalGame` to support the choose-your-color feature.
 - **2026-07-12**: Added `avatars.ts` shared module — extracted from the duplicated constants in `src/app/page.tsx` and used by the new `BoardTopBar` component.
 

@@ -19,9 +19,10 @@ interface GameSaveData {
   turn_number?: number
   coordinator_id?: string
   last_resolved_move?: string
+  last_human_resolution?: unknown
 }
 
-export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number, turnNumber?: number, coordinatorId?: string, lastResolvedMove?: string): Promise<void> {
+export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number, turnNumber?: number, coordinatorId?: string, lastResolvedMove?: string, lastHumanResolution?: unknown): Promise<void> {
   try {
     const { data: existing } = await supabase
       .from('games')
@@ -57,6 +58,9 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
     }
     if (lastResolvedMove !== undefined) {
       upsertData.last_resolved_move = lastResolvedMove
+    }
+    if (lastHumanResolution !== undefined) {
+      upsertData.last_human_resolution = lastHumanResolution
     }
 
     const { error } = await supabase
@@ -98,11 +102,12 @@ export async function loadGameState(roomId: string): Promise<{
   coordinatorId?: string | null
   turnPhase?: string
   lastResolvedMove?: string | null
+  lastHumanResolution?: unknown | null
 } | null> {
   try {
     const { data, error } = await supabase
       .from('games')
-      .select('id, fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds, turn_number, coordinator_id, turn_phase, last_resolved_move')
+      .select('id, fen, current_turn, move_history, status, match_started_at, match_time_limit_seconds, turn_number, coordinator_id, turn_phase, last_resolved_move, last_human_resolution')
       .eq('room_id', roomId)
       .maybeSingle()
 
@@ -124,6 +129,7 @@ export async function loadGameState(roomId: string): Promise<{
       coordinatorId: data.coordinator_id ?? null,
       turnPhase: data.turn_phase ?? 'SUBMITTING',
       lastResolvedMove: data.last_resolved_move ?? null,
+      lastHumanResolution: (data as any).last_human_resolution ?? null,
     }
   } catch (e) {
     console.warn('[PERSIST] Failed to load game state:', e)

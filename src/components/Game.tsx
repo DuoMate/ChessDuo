@@ -813,25 +813,35 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }
         }
 
-        // Set the current accuracy comparison for inline display
+        // Set the current accuracy comparison for inline display — human-team-owned.
+        // Board consumes latestGameResolution (any team); panel consumes lastHumanResolution.
         if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
           if (comp) {
-            if (!isFourPlayer || myTeam === 'WHITE') {
+            if (myTeam === 'WHITE') {
               setAccuracyComparison(comp)
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for WHITE→BLACK')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for WHITE→BLACK (human-owned)')
+            } else {
+              DEBUG && console.log('[ACCURACY-TRANSITION] SKIP panel update — opponent team resolved WHITE→BLACK')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
           if (comp) {
-            if (!isFourPlayer || myTeam === 'BLACK') {
+            if (myTeam === 'BLACK') {
               setAccuracyComparison(comp)
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for BLACK→WHITE')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for BLACK→WHITE (human-owned)')
+            } else {
+              DEBUG && console.log('[ACCURACY-TRANSITION] SKIP panel update — opponent team resolved BLACK→WHITE')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
+        }
+        // Rehydrate after refresh/reconnect: if panel empty, seed from persisted human resolution
+        const hr = (g as GameInterface).lastHumanResolution as MoveComparison | null
+        if (hr) {
+          setAccuracyComparison(prev => prev ?? hr)
         }
     prevTurnRef.current = currentTurn
 

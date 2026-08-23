@@ -160,6 +160,10 @@ const moves = (g as any).getAllPendingMoves()
 - `OnlineGame`: `joinRoom()`, `broadcastMove()`, `broadcastLocked()`, `getCoordinatorId()`, `setTurnState()`, `waitForTeammateLock()`, `isCoordinator()`
 - `LocalGame`: `addPlayer()`, `selectMove()`, `lockMove()`, `resolveLegacy()`
 
+> **Note**: `lastMoveComparison` and `lastHumanResolution` ARE on the interface
+> (see ADR-005). Do not duplicate them as class-specific getters — use the
+> interface types (`(g as GameInterface).lastHumanResolution`).
+
 ### 2. Page-Level Code Splitting
 
 **RULE**: All large game components MUST be lazy-loaded with `next/dynamic`. Pages are client components using `useSearchParams()`, wrapped in `<Suspense>`.
@@ -423,6 +427,23 @@ if (!data.length) return <EmptyState />
 
 **Status**: Established (pre-existing)
 
+### ADR-005: Resolution Ownership Model (Move Resolved panel)
+
+**Decision**: Split engine resolution state into two interface members on `GameInterface`:
+`lastMoveComparison` (board — latest resolution, any team) and `lastHumanResolution`
+(panel — latest **human-team-owned** `MoveComparison`). Ownership is derived from the
+existing team identity (`prevTurn === myTeam` live in `Game.tsx:817` and
+`currentTeam === getTeam()/this._team` for persistence) and perspective via
+`comparison.player1Id` vs `currentUserId` in `MoveResolvedInline:buildResolutionData`.
+`Game.tsx` gates `setAccuracyComparison` on `myTeam === WHITE/BLACK` only
+(no `!isFourPlayer || …`) so opponent/bot resolutions advance the board but never
+overwrite the panel; the panel replaces only on the next own-team resolution and
+is rehydrated from `games.last_human_resolution` JSONB on refresh/reconnect
+(`gamePersistence.ts`, `onlineGame.ts:_finishResolution` + `handleTurnResolved` +
+`syncGameState`, `Game.tsx` rehydration).
+
+**Status**: IMPLEMENTED (2026-08-23)
+
 ---
 
 ## Pre-commit Checklist
@@ -442,4 +463,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-07-31 — Bug 39/40 fixes: RLS-safe room join model (host_team + get_room_join_state RPC) and webhook metadata fallback via checkouts.retrieve*
+*Last Updated: 2026-08-23 — ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*

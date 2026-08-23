@@ -49,6 +49,7 @@ export class OnlineGame {
   private _whiteComparison: MoveComparison | null = null
   private _blackComparison: MoveComparison | null = null
   private _lastMoveComparison: MoveComparison | null = null // Keep for backward compatibility
+  private _lastHumanResolution: MoveComparison | null = null
   private _room: Room | null = null
   private _playerId: string = ''
   private _player1Id: string = '' // Track which player ID is player1 for this client
@@ -126,6 +127,10 @@ export class OnlineGame {
       return this._blackComparison
     }
     return this._whiteComparison
+  }
+
+  get lastHumanResolution(): MoveComparison | null {
+    return this._lastHumanResolution
   }
 
   getStats() {
@@ -1014,6 +1019,11 @@ export class OnlineGame {
             this._coordinatorId = saved.coordinatorId
             DEBUG && console.log('[ONLINE] Restored coordinator_id:', this._coordinatorId)
           }
+          // Restore last human resolution for panel rehydration (refresh/reconnect)
+          if ((saved as any).lastHumanResolution) {
+            this._lastHumanResolution = (saved as any).lastHumanResolution as MoveComparison
+            DEBUG && console.log('[ONLINE] Restored lastHumanResolution for panel')
+          }
           // Restore game_id and subscribe to submission changes
           if (saved.gameId) {
             this._gameId = saved.gameId
@@ -1346,6 +1356,10 @@ export class OnlineGame {
         this._whiteComparison = payload.comparison
       } else {
         this._blackComparison = payload.comparison
+      }
+      // Track human-owned resolution for panel ownership (viewer-team only)
+      if (payload.winningTeam === this._team && payload.comparison) {
+        this._lastHumanResolution = payload.comparison
       }
     }
     
@@ -1833,6 +1847,12 @@ export class OnlineGame {
     emitTrace('TURN_RESOLVED', { ...this.traceCtx(), team: currentTeam, extra: { winningMove } })
     this.duoLog('MOVE', 'RESOLUTION_FINISH', { currentTeam, winningMove, resolvedTurnNumber })
 
+    // Human-owned resolution tracking: panel persists last human-team MoveComparison
+    const isHumanTeamResolution = currentTeam === this._team
+    if (isHumanTeamResolution && this._lastMoveComparison) {
+      this._lastHumanResolution = this._lastMoveComparison
+    }
+
     if (this._room) {
       const fenBefore = this.gameState.getTurnStartFen() || this.gameState.fen
       try {
@@ -1842,7 +1862,7 @@ export class OnlineGame {
           fen_before: fenBefore,
           fen_after: this.gameState.fen,
           timestamp: new Date().toISOString()
-        }, this._status, undefined, undefined, resolvedTurnNumber, this._coordinatorId, winningMove)
+        }, this._status, undefined, undefined, resolvedTurnNumber, this._coordinatorId, winningMove, isHumanTeamResolution ? this._lastMoveComparison : undefined)
       } catch (e) {
         // Persistence failure must NOT abort the in-session resolution (that
         // would strand the non-coordinator waiting for turn_resolved). Surface

@@ -31,6 +31,7 @@ export class LocalGame {
   private stats: GameStats
   private _lastMove: { from: string; to: string } | null = null
   private _lastMoveComparison: MoveComparison | null = null
+  private _lastHumanResolution: MoveComparison | null = null
   private initialized = false
   private _playerColor: ResolvedColor
 
@@ -76,6 +77,10 @@ export class LocalGame {
 
   get lastMoveComparison(): MoveComparison | null {
     return this._lastMoveComparison
+  }
+
+  get lastHumanResolution(): MoveComparison | null {
+    return this._lastHumanResolution
   }
 
   get savedMoveHistory(): Array<{ team: string; move: string }> {
@@ -389,6 +394,12 @@ export class LocalGame {
       alternatives: evalResults.slice(0, 5).filter(r => r.move !== bestMoveUci),
       youMatchedEngine: player1Uci === bestMoveUci,
       teammateMatchedEngine: player2Uci === bestMoveUci,
+    }
+    // Human-owned resolution: panel consumes only human-team turns. Keep
+    // _lastHumanResolution stable through opponent turns (board still advances
+    // via lastMoveComparison). In offline mode human team is getTeam().
+    if (currentTeam === this.getTeam() as unknown as Team) {
+      this._lastHumanResolution = this._lastMoveComparison
     }
 
     if (!skipStatsUpdate) {

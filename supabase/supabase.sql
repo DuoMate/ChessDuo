@@ -244,6 +244,7 @@ ALTER TABLE games ADD COLUMN IF NOT EXISTS turn_number INTEGER DEFAULT 0;
 ALTER TABLE games ADD COLUMN IF NOT EXISTS coordinator_id TEXT;
 ALTER TABLE games ADD COLUMN IF NOT EXISTS turn_phase TEXT DEFAULT 'SUBMITTING';
 ALTER TABLE games ADD COLUMN IF NOT EXISTS last_resolved_move TEXT;
+ALTER TABLE games ADD COLUMN IF NOT EXISTS last_human_resolution JSONB;
 
 -- Backfill turn_number from existing move_history JSONB array length
 UPDATE games

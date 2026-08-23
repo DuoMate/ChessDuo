@@ -122,6 +122,7 @@ All React components — co-located by feature, not by type. Components handle r
 - **2026-07-14**: `GameMenu` now accepts optional `soundEnabled`/`onToggleSound`/`onOpenProfile` props. Sound toggle and Profile buttons moved into the hamburger dropdown. Standalone sound/profile buttons removed from `Game.tsx` and `DuelGame.tsx`.
 - **2026-07-13**: Fixed RoundHistorySidebar close button to 44×44px touch target. Replaced hardcoded rgba shadows in `ConfirmMoveButton` and `MoveResolvedInline` with CSS variable references (`--shadow-glow-emerald`, `--shadow-glow-emerald-strong`).
 - **2026-08-03**: **M01 Auth BV1 fix** — `AuthGate` moved from `features/auth/` to `components/` (was a thin re-export wrapper; now contains the full component). Internal hook import changed to `@/hooks/useAuthSession`. `useAuthSession` moved to `hooks/`. `features/auth/` directory deleted.
+- **2026-08-23**: **ADR-005 Resolution Ownership** — `Game.tsx` now gates `MoveResolvedInline` on `myTeam === WHITE/BLACK` only (removed stale `!isFourPlayer ||` that always passed in Duo). Board consumes `lastMoveComparison` (any team), panel consumes human-owned `lastHumanResolution` via `(g as GameInterface).lastHumanResolution` with `last_human_resolution` JSONB persistence; seeded after refresh/reconnect (`prev ?? hr`).
 
 ## Dependencies
 - `features/` for game logic, `hooks/` for React hooks, `lib/` for utilities
