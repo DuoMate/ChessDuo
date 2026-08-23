@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
-import { normalizeOtpType } from '@/lib/authError'
+import { normalizeOtpType, isPkceVerifierMissing } from '@/lib/authError'
 import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import { logAuthDebug, correlationId } from '@/lib/authDebug'
 
-type Status = 'processing' | 'error'
+type Status = 'processing' | 'error' | 'recovery'
 
 interface CallbackError {
   code: string | null
@@ -58,8 +58,24 @@ export default function AuthCallbackPage() {
           })
         }
 
-        // PKCE flow — OAuth/confirmation code in the query string.
+        // Capture the one-time values, then strip them from the address bar
+        // BEFORE the async exchange. A refresh mid-exchange then re-enters
+        // with a clean URL instead of replaying a consumed PKCE code.
         const code = query.get('code')
+        const tokenHash = query.get('token_hash') || hash.get('token_hash')
+        if (code || tokenHash) {
+          query.delete('code')
+          query.delete('token_hash')
+          query.delete('type')
+          hash.delete('token_hash')
+          hash.delete('type')
+          const remainingQuery = query.toString()
+          const remainingHash = hash.toString()
+          const cleanedUrl = `${url.origin}${url.pathname}${remainingQuery ? `?${remainingQuery}` : ''}${remainingHash ? `#${remainingHash}` : ''}`
+          window.history.replaceState(null, '', cleanedUrl)
+        }
+
+        // PKCE flow — OAuth/confirmation code in the query string.
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
           logAuthDebug({
@@ -74,7 +90,6 @@ export default function AuthCallbackPage() {
         }
 
         // Server-side auth (PKCE token_hash) — verify the email token directly.
-        const tokenHash = query.get('token_hash') || hash.get('token_hash')
         if (tokenHash) {
           const type = normalizeOtpType(query.get('type') || hash.get('type'))
           const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
@@ -112,12 +127,40 @@ export default function AuthCallbackPage() {
           code: (err as { code?: string })?.code ?? null,
           message: err instanceof Error ? err.message : 'Authentication failed',
         })
+        // PKCE verifier missing ⇒ the link was completed in a different
+        // browser/device than the one that signed up (or the code was
+        // replayed). The email is already confirmed server-side at this
+        // point — recover via normal sign-in instead of a raw SDK error.
+        if (isPkceVerifierMissing(err)) {
+          setStatus('recovery')
+          return
+        }
         setStatus('error')
       }
     }
 
     handle()
   }, [router])
+
+  if (status === 'recovery') {
+    return (
+      <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="text-5xl mb-3">✅</div>
+        <h1 className="text-xl font-bold mb-2">Email confirmed</h1>
+        <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">
+          Your email address has been confirmed. For security, this sign-in link only works in the browser where you
+          signed up. Please sign in with your email and password.
+        </p>
+        <button
+          onClick={() => router.replace('/')}
+          className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+        >
+          Go to Sign In
+        </button>
+        <BackButton label="Go Home" onClick={() => router.replace('/')} />
+      </div>
+    )
+  }
 
   if (status === 'error') {
     return (

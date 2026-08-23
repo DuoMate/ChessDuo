@@ -1,4 +1,4 @@
-import { classifyAuthError, normalizeOtpType, buildAuthCallbackUrl } from '../authError'
+import { classifyAuthError, normalizeOtpType, buildAuthCallbackUrl, isPkceVerifierMissing } from '../authError'
 
 describe('classifyAuthError', () => {
   it('maps email_not_confirmed code to an "Email not confirmed" message', () => {
@@ -92,5 +92,26 @@ describe('buildAuthCallbackUrl', () => {
 
   it('falls back to a relative path when base is empty', () => {
     expect(buildAuthCallbackUrl('')).toBe('/auth/callback')
+  })
+})
+
+describe('isPkceVerifierMissing', () => {
+  it('detects the @supabase/ssr "PKCE code verifier not found in storage" error (cross-device link)', () => {
+    const err = new Error(
+      'PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser or device, or if the storage was cleared.',
+    )
+    expect(isPkceVerifierMissing(err)).toBe(true)
+  })
+
+  it('detects the replayed-code "both auth code and code verifier" error', () => {
+    expect(isPkceVerifierMissing(new Error('invalid request: both auth code and code verifier should be non-empty'))).toBe(true)
+  })
+
+  it('does not misclassify unrelated auth errors', () => {
+    expect(isPkceVerifierMissing(new Error('Email not confirmed'))).toBe(false)
+    expect(isPkceVerifierMissing(new Error('Failed to fetch'))).toBe(false)
+    expect(isPkceVerifierMissing({ code: 'over_email_send_rate_limit' })).toBe(false)
+    expect(isPkceVerifierMissing(null)).toBe(false)
+    expect(isPkceVerifierMissing(undefined)).toBe(false)
   })
 })

@@ -68,6 +68,48 @@ describe('useNavigationGuard', () => {
     renderHook(() => useNavigationGuard({ enabled: true, onAttemptLeave: jest.fn() }))
     expect(pushState).toHaveBeenCalled()
   })
+
+  it('tags the blocker history entry so it can be recognized later', () => {
+    const pushState = jest.spyOn(window.history, 'pushState')
+    renderHook(() => useNavigationGuard({ enabled: true, onAttemptLeave: jest.fn() }))
+    const stateArg = pushState.mock.calls[0][0] as Record<string, unknown>
+    expect(stateArg.__chessduoNavGuard).toBe(true)
+  })
+
+  it('consumes the blocker entry when the guard deactivates (game over)', () => {
+    jest.spyOn(window.history, 'pushState')
+    // Simulate that our tagged sentinel is the live history entry.
+    const stateSpy = jest.spyOn(window.history, 'state', 'get').mockReturnValue({ __chessduoNavGuard: true })
+    const backSpy = jest.spyOn(window.history, 'back').mockImplementation(() => {})
+
+    const { rerender } = renderHook(
+      ({ enabled }) => useNavigationGuard({ enabled, onAttemptLeave: jest.fn() }),
+      { initialProps: { enabled: true } },
+    )
+
+    expect(backSpy).not.toHaveBeenCalled()
+    rerender({ enabled: false })
+    expect(backSpy).toHaveBeenCalledTimes(1)
+
+    stateSpy.mockRestore()
+    backSpy.mockRestore()
+  })
+
+  it('does not consume history when the live entry is not our sentinel', () => {
+    jest.spyOn(window.history, 'pushState')
+    const stateSpy = jest.spyOn(window.history, 'state', 'get').mockReturnValue(null)
+    const backSpy = jest.spyOn(window.history, 'back').mockImplementation(() => {})
+
+    const { rerender } = renderHook(
+      ({ enabled }) => useNavigationGuard({ enabled, onAttemptLeave: jest.fn() }),
+      { initialProps: { enabled: true } },
+    )
+    rerender({ enabled: false })
+    expect(backSpy).not.toHaveBeenCalled()
+
+    stateSpy.mockRestore()
+    backSpy.mockRestore()
+  })
 })
 
   describe('onOverlayBack', () => {

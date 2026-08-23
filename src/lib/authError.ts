@@ -64,6 +64,22 @@ export function classifyAuthError(err: unknown): ClassifiedAuthError {
   return { code, message: rawMessage || 'Authentication failed.' }
 }
 
+/**
+ * Detect the PKCE "code verifier missing / unusable" class of auth-callback
+ * failures. Fired by `exchangeCodeForSession` when the one-time verifier
+ * stored at signup is not present in THIS browser's storage — i.e. the
+ * confirmation/OAuth link was completed in a different browser or device
+ * (inherent to the secure PKCE flow), or the single-use code is being
+ * replayed after a refresh. The email itself is already confirmed
+ * server-side at that point (GoTrue's /verify endpoint confirms before
+ * redirecting with `?code=`), so the correct recovery is normal sign-in.
+ */
+export function isPkceVerifierMissing(err: unknown): boolean {
+  const e = (err ?? {}) as AuthErrorLike
+  const rawMessage = `${e.message || ''} ${e.name || ''}`
+  return /code\s+verifier/i.test(rawMessage)
+}
+
 export type OtpType = 'signup' | 'email' | 'recovery' | 'invite' | 'email_change' | 'phone_change' | 'sms' | 'magiclink'
 
 /**
