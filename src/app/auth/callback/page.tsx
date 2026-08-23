@@ -41,6 +41,13 @@ export default function AuthCallbackPage() {
         const query = url.searchParams
         const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
 
+        // AUTH-JOIN FIX: optional original-destination continuation. Google
+        // OAuth now returns here with `?redirect=<path>`; forward it to the
+        // home page's existing (param-stripping, player-validating) redirect
+        // handler instead of dropping the user's intent.
+        const nextParam = query.get('redirect')
+        const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null
+
         // Auth providers surface errors directly in the redirect URL.
         const urlError = query.get('error') || hash.get('error')
         const urlErrorDescription = query.get('error_description') || hash.get('error_description')
@@ -62,7 +69,7 @@ export default function AuthCallbackPage() {
             authErrorMessage: exchangeError?.message ?? null,
           })
           if (exchangeError) throw exchangeError
-          router.replace('/')
+          router.replace(safeNext ? `/?redirect=${encodeURIComponent(safeNext)}` : '/')
           return
         }
 
@@ -78,7 +85,7 @@ export default function AuthCallbackPage() {
             authErrorMessage: verifyError?.message ?? null,
           })
           if (verifyError) throw verifyError
-          router.replace('/')
+          router.replace(safeNext ? `/?redirect=${encodeURIComponent(safeNext)}` : '/')
           return
         }
 
@@ -93,7 +100,7 @@ export default function AuthCallbackPage() {
           emailConfirmedAt: session?.user?.email_confirmed_at ?? null,
         })
 
-        router.replace('/')
+        router.replace(safeNext ? `/?redirect=${encodeURIComponent(safeNext)}` : '/')
       } catch (err) {
         logAuthDebug({
           stage: 'callback:error',

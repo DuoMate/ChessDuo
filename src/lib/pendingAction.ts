@@ -2,7 +2,11 @@ import type { PlayerColor } from '@/features/shared/gameConstants'
 
 const PENDING_ACTION_KEY = 'chessduo_pending_action'
 
-const TTL_MS = 5 * 60 * 1000
+// AUTH-JOIN FIX: 5 minutes was too short to survive a Google OAuth round-trip
+// plus first-time signup/email verification — the stored JOIN_ROOM intent
+// silently expired and the user's original room code was lost. 30 minutes
+// covers slow auth flows while still bounding stale actions.
+const TTL_MS = 30 * 60 * 1000
 
 export type PendingAction =
   | { type: 'start_offline'; level: number; time: number; color: PlayerColor }

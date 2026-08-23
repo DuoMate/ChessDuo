@@ -1,4 +1,5 @@
-import { isCancellationError } from '../supabaseAuthUtils'
+import { isCancellationError, authenticateWithGoogle } from '../supabaseAuthUtils'
+import { supabase } from '../supabase'
 
 describe('supabaseAuthUtils', () => {
   describe('cancellation detection', () => {
@@ -25,5 +26,37 @@ describe('supabaseAuthUtils', () => {
     it('returns false for empty error', () => {
       expect(isCancellationError({ code: '', message: '' })).toBe(false)
     })
+  })
+})
+
+// ============================================================
+// AUTH-JOIN FIX: Google OAuth must return through /auth/callback so
+// GoTrue's one-time `?code=<uuid>` never lands on `/` and gets mistaken
+// for a ROOM code by the home page's auto-join effect.
+// ============================================================
+describe('authenticateWithGoogle redirect target', () => {
+  let oauthSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    oauthSpy = jest.spyOn(supabase.auth, 'signInWithOAuth').mockResolvedValue({
+      data: { url: 'https://providers.example' }, error: null,
+    } as any)
+  })
+
+  afterEach(() => oauthSpy.mockRestore())
+
+  it('default sign-in returns through /auth/callback (never bare "/")', async () => {
+    await authenticateWithGoogle()
+    expect(oauthSpy).toHaveBeenCalledTimes(1)
+    const opts = oauthSpy.mock.calls[0][0] as { options: { redirectTo: string } }
+    expect(opts.options.redirectTo).toBe(`${window.location.origin}/auth/callback`)
+  })
+
+  it('preserves the original destination via an encoded redirect param on the callback URL', async () => {
+    await authenticateWithGoogle({ redirectUrl: '/duel?room=abc&time=600' })
+    const opts = oauthSpy.mock.calls[0][0] as { options: { redirectTo: string } }
+    expect(opts.options.redirectTo).toBe(
+      `${window.location.origin}/auth/callback?redirect=${encodeURIComponent('/duel?room=abc&time=600')}`,
+    )
   })
 })

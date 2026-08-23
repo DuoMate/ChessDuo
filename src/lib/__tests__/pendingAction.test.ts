@@ -70,7 +70,7 @@ describe('pendingAction', () => {
 
     test('returns null when TTL has expired', () => {
       storePendingAction({ type: 'navigate', route: '/friends' })
-      jest.advanceTimersByTime(5 * 60 * 1000 + 1)
+      jest.advanceTimersByTime(30 * 60 * 1000 + 1) // AUTH-JOIN FIX: TTL extended
       expect(consumePendingAction()).toBeNull()
       expect(hasPendingAction()).toBe(false)
     })
@@ -114,7 +114,7 @@ describe('pendingAction', () => {
 
     test('returns false after TTL expires', () => {
       storePendingAction({ type: 'navigate', route: '/' })
-      jest.advanceTimersByTime(5 * 60 * 1000 + 1)
+      jest.advanceTimersByTime(30 * 60 * 1000 + 1) // AUTH-JOIN FIX: TTL extended
       expect(hasPendingAction()).toBe(false)
     })
 

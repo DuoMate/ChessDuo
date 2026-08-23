@@ -184,14 +184,16 @@ async function authenticateWithGoogleWeb(redirectUrl?: string): Promise<{
 }> {
   try {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    // Encode the original destination in a `redirect` query param so it survives
-    // the OAuth round-trip. Supabase appends its own `code` param; without this,
-    // an invite `?code=` on the original URL is overwritten by the OAuth code.
-    let redirectTo = origin
-    if (redirectUrl) {
-      redirectTo = `${origin}/?redirect=${encodeURIComponent(redirectUrl)}`
-    } else if (typeof window !== 'undefined') {
-      redirectTo = `${origin}${window.location.pathname}`
+    // AUTH-JOIN FIX: Google must ALWAYS return through /auth/callback.
+    // GoTrue appends its one-time PKCE authorization code to redirectTo as
+    // `?code=<uuid>`; landing on `/` previously made the home page mistake
+    // that auth code for a ROOM code (auto-join whitelists UUIDs) — filling
+    // the room-code input with a UUID and failing with "Room not found".
+    // /auth/callback consumes the auth code and then routes onward cleanly,
+    // preserving any original destination via an encoded `redirect` param.
+    let redirectTo = `${origin}/auth/callback`
+    if (redirectUrl && redirectUrl.startsWith('/')) {
+      redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}`
     }
 
     const { error } = await supabase.auth.signInWithOAuth({

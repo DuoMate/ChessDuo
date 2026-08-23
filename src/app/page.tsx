@@ -155,6 +155,10 @@ export default function SetupPage() {
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null; displayName?: string | null } | null>(null)
   const redirectUrlRef = useRef<string | null>(null)
   const autoJoinAttemptedRef = useRef<string | null>(null)
+  // AUTH-JOIN FIX: single in-flight lock so StrictMode remounts / racing
+  // effects can never execute the room-join intent twice (spec: join exactly
+  // once, navigate once).
+  const joinIntentInFlightRef = useRef(false)
   const [duelFriends, setDuelFriends] = useState<FriendWithProfile[]>([])
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
@@ -371,9 +375,14 @@ export default function SetupPage() {
         return
       }
       autoJoinAttemptedRef.current = codeParam
-      setJoinCode(codeParam)
+      // AUTH-JOIN FIX: do NOT pre-fill the input from the URL param. A failed
+      // lookup must never replace a user-entered code with e.g. a stray auth
+      // identifier — the field only receives a verified, real room code below.
       const doAutoJoin = async () => {
+        if (joinIntentInFlightRef.current) return
+        joinIntentInFlightRef.current = true
         setJoinLoading(true)
+        console.log('[ROOM_JOIN][AUTO]', JSON.stringify({ codeParamShape: isValidRoomCode ? 'code6' : 'uuid' }))
         const now = new Date().toISOString()
 
         // Resolve code-or-id to a room for four-player routing and UUID links.
@@ -403,15 +412,18 @@ export default function SetupPage() {
 
         if (room) {
           if (room.mode === 'fourplayer') {
+            setJoinCode(room.code)
             router.push(withDebugParam(`/four-player?room=${room.id}&code=${room.code}&playerId=${playerId}&time=${room.time_seconds || 600}`))
             const url = new URL(window.location.href)
             url.searchParams.delete('code')
             window.history.replaceState(null, '', url.toString())
             setJoinLoading(false)
+            joinIntentInFlightRef.current = false
             return
           }
 
           try {
+            setJoinCode(room.code)
             const joined = await joinRoomByCode(room.code)
             router.push(withDebugParam(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${playerId}&time=${joined.timeSeconds}`))
             const url = new URL(window.location.href)
@@ -420,12 +432,12 @@ export default function SetupPage() {
           } catch (err) {
             setJoinError(messageForDuoJoinError(err))
             setJoinCode('')
-          }
-        } else {
+          }        } else {
+          console.log('[ROOM_JOIN][AUTO] Room not resolvable:', JSON.stringify({ codeParamShape: isValidRoomCode ? 'code6' : 'uuid' }))
           setJoinError('Room not found or already started')
-          setJoinCode('')
         }
         setJoinLoading(false)
+        joinIntentInFlightRef.current = false
       }
       doAutoJoin()
     }
@@ -522,6 +534,14 @@ export default function SetupPage() {
       case 'join_by_code': {
         const code = action.code.trim().toUpperCase()
         if (!code) return
+        // AUTH-JOIN FIX: exactly-once execution across StrictMode remounts and
+        // racing auth effects.
+        if (joinIntentInFlightRef.current) {
+          console.log('[ROOM_JOIN][JOIN] Duplicate intent suppressed:', JSON.stringify({ code }))
+          return
+        }
+        joinIntentInFlightRef.current = true
+        console.log('[ROOM_JOIN][JOIN] Executing pending join:', JSON.stringify({ codeShape: /^[A-Z0-9]{6}$/.test(code) ? 'code6' : 'other', length: code.length }))
         setJoinCode(code)
         setJoinLoading(true)
         setJoinError(null)
@@ -544,11 +564,13 @@ export default function SetupPage() {
           const joined = await joinRoomByCode(code)
           setJoinLoading(false)
           setJoinCode('')
+          joinIntentInFlightRef.current = false
           const roomTime = joined.timeSeconds || DEFAULT_TEAM_TIMER_SECONDS
           router.push(withDebugParam(`/game?mode=online&room=${joined.roomId}&code=${joined.code}&team=${joined.team}&playerId=${pid}&time=${roomTime}`))
         } catch (err) {
           setJoinError(messageForDuoJoinError(err))
           setJoinLoading(false)
+          joinIntentInFlightRef.current = false
         }
         return
       }
