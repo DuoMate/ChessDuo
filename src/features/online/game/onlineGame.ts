@@ -106,8 +106,76 @@ export class OnlineGame {
   private readonly MAX_FAST_START_ATTEMPTS = 12
   private readonly FAST_START_RETRY_MS = 250
 
+  // H7: bounded exponential-backoff retries for realtime channels. Replaces
+  // the previous asymmetric patterns (room/game-status single-shot reconnects,
+  // unbounded submissions recursion). First retry is immediate; subsequent
+  // attempts back off; budget exhaustion is loud and traced.
+  private _channelRetryAttempts = new Map<string, number>()
+  private _channelRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  private static readonly MAX_CHANNEL_RETRIES = 5
+  private static readonly CHANNEL_RETRY_BASE_MS = 500
+  private static readonly CHANNEL_RETRY_MAX_MS = 8000
+
+  private scheduleChannelRetry(kind: string, setup: () => void): boolean {
+    const attempts = (this._channelRetryAttempts.get(kind) ?? 0) + 1
+    this._channelRetryAttempts.set(kind, attempts)
+    if (attempts > OnlineGame.MAX_CHANNEL_RETRIES) {
+      console.error(`[ONLINE] Realtime channel '${kind}' retry budget exhausted — giving up`, JSON.stringify({
+        roomId: this._room?.id || undefined,
+        gameId: this._gameId || undefined,
+        attempts: attempts - 1,
+      }))
+      emitTrace('REALTIME_RETRY_EXHAUSTED', { ...this.traceCtx(), extra: { kind } })
+      return false
+    }
+    if (attempts === 1) {
+      // Immediate first reconnect preserves today's snappy recovery; only
+      // repeated failures back off (prevents retry storms).
+      setup()
+      return true
+    }
+    const delay = Math.min(OnlineGame.CHANNEL_RETRY_BASE_MS * 2 ** (attempts - 2), OnlineGame.CHANNEL_RETRY_MAX_MS)
+    const timer = setTimeout(() => {
+      this._channelRetryTimers.delete(kind)
+      setup()
+    }, delay)
+    this._channelRetryTimers.set(kind, timer)
+    DEBUG && console.warn(`[ONLINE] Channel '${kind}' reconnect scheduled in ${delay}ms (attempt ${attempts}/${OnlineGame.MAX_CHANNEL_RETRIES})`)
+    return true
+  }
+
+  private resetChannelRetries(kind: string): void {
+    this._channelRetryAttempts.delete(kind)
+    const timer = this._channelRetryTimers.get(kind)
+    if (timer) {
+      clearTimeout(timer)
+      this._channelRetryTimers.delete(kind)
+    }
+  }
+
+  // C1: authoritative wall-clock anchor for the match timer. Set from the
+  // persisted games.match_started_at (creation + every sync). setInterval is
+  // ONLY a refresh/timeout-detector — elapsed time is always derived from
+  // Date.now() so throttled/backgrounded tabs cannot freeze or drift the clock.
+  private _matchStartedAtMs: number | null = null
+  // C1: bound visibilitychange handler for foreground recompute (detached in stopMatchTimer).
+  private _visibilityRecompute: (() => void) | null = null
+
   get savedMoveHistory(): Array<{ team: string; move: string }> {
     return this._savedMoveHistory
+  }
+
+  /**
+   * C1: remaining match time derived from the authoritative start timestamp.
+   * Falls back to the last stored value only when no anchor exists (legacy
+   * rows created before the timer columns existed).
+   */
+  private computeMatchRemaining(): number {
+    if (this._matchStartedAtMs !== null && this._timeLimitSeconds > 0) {
+      const elapsedSec = Math.floor((Date.now() - this._matchStartedAtMs) / 1000)
+      return Math.max(0, this._timeLimitSeconds - elapsedSec)
+    }
+    return this.gameState.getMatchTimeRemaining()
   }
 
   get disconnectedAgeMs(): number {
@@ -376,36 +444,22 @@ export class OnlineGame {
     return allPlayers.find(p => p !== this._playerId) || ''
   }
 
-  async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
-    DEBUG && console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
-    this.duoLog('ROOM', 'JOIN_STARTED', { playerId, team })
-    
-    if (this._channel) {
-      await supabase.removeChannel(this._channel)
-      this._channel = null
-    }
-    if (this._pollingInterval) {
-      clearInterval(this._pollingInterval)
-      this._pollingInterval = null
-    }
-    if (this._timerSyncInterval) {
-      clearInterval(this._timerSyncInterval)
-      this._timerSyncInterval = null
-    }
-    if (this._fastStartTimer) {
-      clearTimeout(this._fastStartTimer)
-      this._fastStartTimer = null
-    }
-    this._fastStartAttempts = 0
+  /**
+   * Creates the room channel, attaches all listeners, and subscribes.
+   * Single source of truth used by joinRoom (initial) and by the H7 bounded
+   * retry path (reconnects) — guarantees reconnects carry identical behavior.
+   */
+  private connectRoomChannel(playerId: string): void {
+    if (!this._room) return
+    const roomId = this._room.id
 
-    this._room = room
-    this._playerId = playerId
-    this._team = team
-
-    // Start channel setup concurrently with DB upsert below
-    // (subscribe is callback-based/non-blocking — both run in parallel)
-    realtimeMetrics.onChannelCreated(`room:${room.id}`)
-    this._channel = supabase.channel(`room:${room.id}`, {
+    // Force-tear-down any stale channel with the same topic. When the socket
+    // is dead, removeChannel's unsubscribe() can time out and leave the old
+    // channel registered; re-creating the topic would reuse it and make the
+    // `.on(...)` calls below throw.
+    RealtimeService.forceRemoveStaleChannels(`room:${roomId}`)
+    realtimeMetrics.onChannelCreated(`room:${roomId}`)
+    this._channel = supabase.channel(`room:${roomId}`, {
       config: {
         presence: { key: playerId }
       }
@@ -474,11 +528,11 @@ export class OnlineGame {
         })
         .on('broadcast', { event: 'player_move' }, ({ payload }) => {
           this._lastActivityAt = Date.now()
-          this.handleTeammateMove(payload as MovePayload)
+          this.handleTeammateMove(payload as MovePayload & { turnNumber?: number })
         })
         .on('broadcast', { event: 'player_locked' }, ({ payload }) => {
           this._lastActivityAt = Date.now()
-          this.handleTeammateLocked(payload as LockedPayload)
+          this.handleTeammateLocked(payload as LockedPayload & { turnNumber?: number })
         })
         .on('broadcast', { event: 'turn_resolved' }, ({ payload }) => {
           this._lastActivityAt = Date.now()
@@ -509,8 +563,8 @@ export class OnlineGame {
 
     setupListeners()
 
-    this._channel!.subscribe(async (status: string) => {
-      realtimeMetrics.onSubscribeStatus(`room:${room.id}`, status)
+    this._channel.subscribe(async (status: string) => {
+      realtimeMetrics.onSubscribeStatus(`room:${roomId}`, status)
       DEBUG && console.log('[ONLINE] Channel subscription status:', status)
       this.duoLog('REALTIME', 'CHANNEL_STATUS', { status })
       if (status === 'CHANNEL_ERROR') {
@@ -519,40 +573,58 @@ export class OnlineGame {
         try {
           await supabase.removeChannel(this._channel!)
         } catch (e) { DEBUG && console.error('[OnlineGame] Failed to remove channel:', e) }
-        // Force-tear-down any stale channel with the same topic. When the socket
-        // is dead, removeChannel's unsubscribe() can time out and leave the old
-        // channel registered; re-creating the topic would reuse it and make the
-        // `.on(...)` calls below throw.
-        RealtimeService.forceRemoveStaleChannels(`room:${room.id}`)
-        realtimeMetrics.onChannelCreated(`room:${room.id}`)
-        this._channel = supabase.channel(`room:${room.id}`, {
-          config: { presence: { key: playerId } }
-        })
-        setupListeners()
-        this._channel!.subscribe(async (s: string) => {
-          realtimeMetrics.onSubscribeStatus(`room:${room.id}`, s)
-          this.duoLog('REALTIME', 'CHANNEL_RECONNECT_STATUS', { status: s })
-          if (s === 'SUBSCRIBED') {
-            realtimeMetrics.onReconnectSuccess(`room:${room.id}`)
-            await this._channel?.track({ player_id: playerId, team: this._team, status: 'connected' })
-            DEBUG && console.log('[ONLINE] Player re-tracked after reconnect:', playerId)
-            if (this._status === GameStatus.PLAYING) {
-              await this.syncGameState().catch((e) => console.error('[ONLINE] Reconnect sync failed:', e))
-            }
-          }
-        })
+        // H7: bounded exponential backoff replaces the previous single-shot
+        // reconnect (which died permanently on a second consecutive failure).
+        this.scheduleChannelRetry('room', () => this.connectRoomChannel(playerId))
         return
       }
       if (status === 'SUBSCRIBED') {
+        realtimeMetrics.onReconnectSuccess(`room:${roomId}`)
+        this.resetChannelRetries('room')
         await this._channel?.track({
           player_id: playerId,
           team: this._team,
           status: 'connected'
         })
         DEBUG && console.log('[ONLINE] Player tracked:', playerId)
+        if (this._status === GameStatus.PLAYING) {
+          await this.syncGameState().catch((e) => console.error('[ONLINE] Reconnect sync failed:', e))
+        }
       }
     })
+  }
 
+  async joinRoom(room: Room, playerId: string, team: 'WHITE' | 'BLACK'): Promise<void> {
+    DEBUG && console.log('[ONLINE] joinRoom called:', { roomId: room.id, playerId, team })
+    this.duoLog('ROOM', 'JOIN_STARTED', { playerId, team })
+    
+    if (this._channel) {
+      await supabase.removeChannel(this._channel)
+      this._channel = null
+    }
+    if (this._pollingInterval) {
+      clearInterval(this._pollingInterval)
+      this._pollingInterval = null
+    }
+    if (this._timerSyncInterval) {
+      clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = null
+    }
+    if (this._fastStartTimer) {
+      clearTimeout(this._fastStartTimer)
+      this._fastStartTimer = null
+    }
+    this._fastStartAttempts = 0
+
+    this._room = room
+    this._playerId = playerId
+    this._team = team
+
+    // Start channel setup concurrently with DB upsert below
+    // (subscribe is callback-based/non-blocking — both run in parallel).
+    // H7: creation + listeners + subscribe live in connectRoomChannel so the
+    // bounded-backoff retry path reuses the IDENTICAL wiring.
+    this.connectRoomChannel(playerId)
     // Register/refresh membership via the atomic join RPC. The RPC identifies
     // the caller via auth.uid(), locks the room, and returns the authoritative
     // team/slot — the client-supplied team argument is never trusted for
@@ -905,6 +977,9 @@ export class OnlineGame {
       // as authoritative gameId (avoids separate SELECT visibility race).
       if (this._room) {
         const startedAt = new Date().toISOString()
+        // C1: anchor the wall-clock timer to the SAME timestamp that is
+        // persisted — refresh/reconnect restores the identical anchor.
+        this._matchStartedAtMs = Date.parse(startedAt)
         const createdGameId = await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
         if (createdGameId) {
           this._gameId = createdGameId
@@ -1072,17 +1147,23 @@ export class OnlineGame {
             this.gameState.setCurrentTeam(saved.currentTurn === 'WHITE' ? Team.WHITE : Team.BLACK)
           }
 
-          // Restore match timer from persisted timestamps
-          if (saved.matchStartedAt && saved.matchTimeLimitSeconds) {
+          // Restore match timer from persisted timestamps.
+          // C2: never restart a live clock for an already-terminal game — the
+          // restored coordinator countdown could otherwise expire and fire
+          // setGameOverTimeup on top of a finished result (or resurrect a
+          // finished match's clock after refresh).
+          if (saved.matchStartedAt && saved.matchTimeLimitSeconds && saved.status !== GameStatus.GAME_OVER) {
             const startedAt = new Date(saved.matchStartedAt).getTime()
+            // C1: adopt the persisted start timestamp as the wall-clock anchor
+            // so this client's clock converges with the coordinator's.
+            this._matchStartedAtMs = startedAt
             const elapsed = Math.max(0, (Date.now() - startedAt) / 1000)
             const remaining = Math.max(0, saved.matchTimeLimitSeconds - elapsed)
             this.gameState.setMatchTimeRemaining(Math.floor(remaining))
             this.gameState.setMatchTimerActive(true)
             if (this.isCoordinator()) {
               if (this._timerSyncInterval) clearInterval(this._timerSyncInterval)
-      if (this._timerSyncInterval) clearInterval(this._timerSyncInterval)
-      this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
+              this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
             }
             this.startMatchTimer()
             DEBUG && console.log('[ONLINE] Restored match timer:', {
@@ -1227,7 +1308,9 @@ export class OnlineGame {
 
   private broadcastTimerSync(): void {
     if (!this._channel || !this.isCoordinator()) return
-    const remaining = this.gameState.getMatchTimeRemaining()
+    // C1: broadcast the wall-clock-derived remaining so peers converge even
+    // when this (coordinator) device was just backgrounded.
+    const remaining = this.computeMatchRemaining()
     this._channel.send({
       type: 'broadcast',
       event: 'timer_sync',
@@ -1249,18 +1332,36 @@ export class OnlineGame {
 
   private startMatchTimer(): void {
     this.gameState.setMatchTimerActive(true)
-    this.duoLog('CLOCK', 'TIMER_STARTED', { remaining: this.gameState.getMatchTimeRemaining() })
+    this.duoLog('CLOCK', 'TIMER_STARTED', { remaining: this.computeMatchRemaining() })
     if (this._timerCountdownInterval) {
       clearInterval(this._timerCountdownInterval)
+    }
+    // C1: instant recompute when the app returns to the foreground. The 1s
+    // interval self-corrects anyway (remaining is derived, not accumulated),
+    // this only removes the visible lag until the next tick.
+    if (typeof document !== 'undefined' && !this._visibilityRecompute) {
+      this._visibilityRecompute = () => {
+        if (document.visibilityState === 'visible' && this.gameState.isMatchTimerActive()) {
+          this.gameState.setMatchTimeRemaining(this.computeMatchRemaining())
+          this.notifyStateChange()
+        }
+      }
+      document.addEventListener('visibilitychange', this._visibilityRecompute)
     }
     this._timerCountdownInterval = setInterval(() => {
       // Only coordinator runs the authoritative countdown.
       // Non-coordinators receive time via timer_sync broadcasts
       // (corrected every 5s) and smooth-count via tickMatchTimer.
       if (!this.isCoordinator()) return
+      // C2: terminal games must not process timer ticks at all — no result
+      // overwrite, no further decrements after GAME_OVER.
+      if (this._status === GameStatus.GAME_OVER) return
 
-      const remaining = this.gameState.getMatchTimeRemaining()
+      // C1: remaining is derived from the wall clock — a tick that fires late
+      // (throttling) reports the CORRECT elapsed time instead of pausing.
+      const remaining = this.computeMatchRemaining()
       if (remaining <= 0) {
+        this.gameState.setMatchTimeRemaining(0)
         this.duoLog('CLOCK', 'TIMER_EXPIRED', {})
         const captured = this.gameState.capturedPieces
         const whiteCaptured = captured.white.length
@@ -1275,7 +1376,7 @@ export class OnlineGame {
         this.notifyStateChange()
         return
       }
-      this.gameState.setMatchTimeRemaining(Math.max(0, remaining - 1))
+      this.gameState.setMatchTimeRemaining(remaining)
       this.notifyStateChange()
     }, 1000)
   }
@@ -1292,11 +1393,24 @@ export class OnlineGame {
       clearInterval(this._timerCountdownInterval)
       this._timerCountdownInterval = null
     }
+    // C1: detach the foreground-recompute listener with the clock.
+    if (this._visibilityRecompute && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this._visibilityRecompute)
+      this._visibilityRecompute = null
+    }
     this.gameState.setMatchTimerActive(false)
   }
 
-  private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string }) {
+  private handleTeammateMove(payload: { playerId: string; move: string; from: string; to: string; turnNumber?: number }) {
     DEBUG && console.log('[ONLINE] Teammate moved:', payload)
+    // H6: drop stale/delayed broadcasts replayed onto a newer turn (absent
+    // turnNumber = legacy sender — process, preserving mixed-version play).
+    if (payload.turnNumber !== undefined && payload.turnNumber !== this._currentTurnNumber) {
+      DEBUG && console.warn('[ONLINE] Stale player_move ignored (turn', payload.turnNumber, '≠', this._currentTurnNumber, ')')
+      return
+    }
+    // Rule 7: a terminal game accepts no moves.
+    if (this._status === GameStatus.GAME_OVER) return
     if (payload.playerId !== this._playerId) {
       // Only react if the player is on our team (all modes)
       if (this.getPlayerTeam(payload.playerId) !== this._team) {
@@ -1315,8 +1429,14 @@ export class OnlineGame {
     }
   }
 
-  private handleTeammateLocked(payload: { playerId: string }) {
+  private handleTeammateLocked(payload: { playerId: string; turnNumber?: number }) {
     DEBUG && console.log('[ONLINE] Teammate locked:', payload)
+    // H6: drop stale lock replays (absent turnNumber = legacy sender — process).
+    if (payload.turnNumber !== undefined && payload.turnNumber !== this._currentTurnNumber) {
+      DEBUG && console.warn('[ONLINE] Stale player_locked ignored (turn', payload.turnNumber, '≠', this._currentTurnNumber, ')')
+      return
+    }
+    if (this._status === GameStatus.GAME_OVER) return
     if (payload.playerId !== this._playerId) {
       // Only react if the player is on our team (all modes)
       if (this.getPlayerTeam(payload.playerId) !== this._team) {
@@ -1545,17 +1665,51 @@ export class OnlineGame {
    * must never leave the board locked.
    */
   async submitMoveToDB(move: string, from: string, to: string, piece: string): Promise<boolean> {
-    if (!this._gameId) {
-      DEBUG && console.warn('[SUBMIT] No gameId — falling back to broadcast')
-      this.duoLog('MOVE', 'SUBMIT_NO_GAME_ID', { move })
-      if (this._channel) {
-        await this._channel.send({
-          type: 'broadcast',
-          event: 'player_move',
-          payload: { playerId: this._playerId, move, from, to }
-        })
-      }
+    // C2: a terminal game accepts no moves — no resurrection via submission.
+    if (this._status === GameStatus.GAME_OVER) {
+      if (DEBUG) console.warn('[SUBMIT] Rejected — game is GAME_OVER')
       return false
+    }
+    if (!this._gameId) {
+      // H1: NEVER silently downgrade to broadcast-only submission — a move that
+      // never reaches turn_submissions can never resolve (the teammate's lock
+      // wait would always time out). Attempt authoritative recovery first: the
+      // games row may exist even though our readback at creation failed
+      // (replica lag / concurrent-coordinator race).
+      let recoveredId: string | null = null
+      if (this._room) {
+        try {
+          const saved = await loadGameState(this._room.id)
+          recoveredId = saved?.gameId ?? null
+        } catch (e) {
+          console.warn('[SUBMIT] gameId recovery read failed:', e)
+        }
+      }
+      if (!recoveredId) {
+        // Explicit, observable failure — executeMove unlocks the input and
+        // shows the retry toast. No silent gameplay desynchronization.
+        console.error('[SUBMIT] No gameId and recovery failed — move NOT submitted', JSON.stringify({
+          roomId: this._room?.id || undefined,
+          playerId: this._playerId,
+          turnNumber: this._currentTurnNumber,
+          move,
+        }))
+        emitTrace('MOVE_SUBMIT_NO_GAME_ID', { ...this.traceCtx(), extra: { move } })
+        this.duoLog('MOVE', 'SUBMIT_NO_GAME_ID', { move })
+        await this.rollbackSubmission(move, from, to)
+        return false
+      }
+      // Recovery succeeded — adopt the authoritative gameId and continue the
+      // normal DB submission flow below.
+      DEBUG && console.log('[SUBMIT] Recovered gameId:', recoveredId)
+      this.duoLog('MOVE', 'SUBMIT_GAME_ID_RECOVERED', {})
+      this._gameId = recoveredId
+      if (!this._submissionChannel) {
+        this.subscribeToSubmissions()
+      }
+      if (!this._gameStatusChannel) {
+        this.subscribeToGameStatus()
+      }
     }
 
     // Set local state BEFORE DB write — the board and inputLockedRef are
@@ -1615,7 +1769,8 @@ export class OnlineGame {
         await this._channel.send({
           type: 'broadcast',
           event: 'player_move',
-          payload: { playerId: this._playerId, move, from, to }
+          // H6: turn identity so receivers can drop stale replays.
+          payload: { playerId: this._playerId, move, from, to, turnNumber: this._currentTurnNumber }
         })
       } catch (e) {
         DEBUG && console.error('[SUBMIT] Failed to broadcast rollback move:', e)
@@ -1658,13 +1813,17 @@ export class OnlineGame {
         .subscribe(async (status: string) => {
           realtimeMetrics.onSubscribeStatus(`submissions:${gameId}`, status)
           DEBUG && console.log('[SUBMIT] Submission channel status:', status)
+          if (status === 'SUBSCRIBED') {
+            this.resetChannelRetries('submissions')
+          }
           if (status === 'CHANNEL_ERROR') {
             DEBUG && console.warn('[SUBMIT] Channel error — re-creating subscription channel')
             try {
               await supabase.removeChannel(this._submissionChannel!)
             } catch (e) { DEBUG && console.error('[SUBMIT] Failed to remove errored channel:', e) }
             RealtimeService.forceRemoveStaleChannels(`submissions:${gameId}`)
-            setup()
+            // H7: bounded backoff replaces the previous unbounded recursion.
+            this.scheduleChannelRetry('submissions', setup)
           }
         })
     }
@@ -1679,52 +1838,36 @@ export class OnlineGame {
     if (!this._room) return
 
     const roomId = this._room.id
-    realtimeMetrics.onChannelCreated(`game-status:${roomId}`)
-    this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'games',
-        filter: `room_id=eq.${roomId}`,
-      }, (payload) => {
-        const newStatus = (payload.new as any)?.status
-        if (newStatus === 'GAME_OVER' && this._status !== GameStatus.GAME_OVER) {
-          DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update')
-          // Determine resigning team from the broadcast payload if available,
-          // otherwise use the opposite of our team as fallback
-          const resigningTeam = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
-          this.handleMatchAbandoned({ playerId: 'unknown', team: resigningTeam as 'WHITE' | 'BLACK' })
-        }
-      })
-      .subscribe(async (status: string) => {
-        realtimeMetrics.onSubscribeStatus(`game-status:${roomId}`, status)
-        DEBUG && console.log('[GAME-STATUS] Channel status:', status)
-        if (status === 'CHANNEL_ERROR') {
-          DEBUG && console.warn('[GAME-STATUS] Channel error — re-creating')
-          try {
-            await supabase.removeChannel(this._gameStatusChannel!)
-          } catch (e) { DEBUG && console.error('[GAME-STATUS] Failed to remove errored channel:', e) }
-          RealtimeService.forceRemoveStaleChannels(`game-status:${roomId}`)
-          realtimeMetrics.onChannelCreated(`game-status:${roomId}`)
-          this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
-            .on('postgres_changes', {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'games',
-              filter: `room_id=eq.${roomId}`,
-            }, (p) => {
-              const ns = (p.new as any)?.status
-              if (ns === 'GAME_OVER' && this._status !== GameStatus.GAME_OVER) {
-                DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update (reconnect)')
-                const rt = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
-                this.handleMatchAbandoned({ playerId: 'unknown', team: rt as 'WHITE' | 'BLACK' })
-              }
-            })
-            .subscribe(async (s2: string) => {
-              realtimeMetrics.onSubscribeStatus(`game-status:${roomId}`, s2)
-            })
-        }
-      })
+    const setup = () => {
+      realtimeMetrics.onChannelCreated(`game-status:${roomId}`)
+      this._gameStatusChannel = supabase.channel(`game-status:${roomId}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'games',
+          filter: `room_id=eq.${roomId}`,
+        }, (payload) => {
+          this.handleGameStatusUpdate((payload.new as any)?.status)
+        })
+        .subscribe(async (status: string) => {
+          realtimeMetrics.onSubscribeStatus(`game-status:${roomId}`, status)
+          DEBUG && console.log('[GAME-STATUS] Channel status:', status)
+          if (status === 'SUBSCRIBED') {
+            this.resetChannelRetries('game-status')
+          }
+          if (status === 'CHANNEL_ERROR') {
+            DEBUG && console.warn('[GAME-STATUS] Channel error — re-creating')
+            try {
+              await supabase.removeChannel(this._gameStatusChannel!)
+            } catch (e) { DEBUG && console.error('[GAME-STATUS] Failed to remove errored channel:', e) }
+            RealtimeService.forceRemoveStaleChannels(`game-status:${roomId}`)
+            // H7: bounded backoff; also fixes the duplicated-handler rebuild
+            // that previously had NO error handling on its own subscribe.
+            this.scheduleChannelRetry('game-status', setup)
+          }
+        })
+    }
+    setup()
   }
 
   private handleSubmissionFromDB(submission: {
@@ -1836,7 +1979,10 @@ export class OnlineGame {
   }
 
   getMatchTimeRemaining(): number {
-    return this.gameState.getMatchTimeRemaining()
+    // C1: clock-derived while an anchor exists — every consumer (IsolatedMatchTimer
+    // poll, React snapshots, broadcasts) reads truthful wall-clock time even
+    // after the tab/app was throttled or backgrounded.
+    return this.computeMatchRemaining()
   }
 
   setMatchTimeRemaining(seconds: number): void {
@@ -1856,6 +2002,10 @@ export class OnlineGame {
   }
 
   setGameOverTimeup(result: string, reason: string): void {
+    // C2: GAME_OVER is terminal — a late/stale timer tick (restored clock after
+    // reconnect, throttled interval catching up) must never overwrite an
+    // already-recorded result.
+    if (this._status === GameStatus.GAME_OVER) return
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason
@@ -1872,11 +2022,37 @@ export class OnlineGame {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
     }
+    if (this._disconnectCheckInterval) {
+      clearInterval(this._disconnectCheckInterval)
+      this._disconnectCheckInterval = null
+    }
+
+    // Notify peers FIRST with the true timeout payload (their GAME_OVER guard
+    // makes any subsequent games-row UPDATE echo a no-op), then persist the
+    // authoritative status so a refresh cannot resurrect the match. Persistence
+    // failure must not break the local terminal transition (same policy as
+    // abandonMatch); it is logged loudly for diagnostics.
     if (this._channel) {
       this._channel.send({
         type: 'broadcast',
         event: 'match_timeout',
         payload: { result, reason }
+      })
+    }
+    if (this._room) {
+      saveGameState(
+        this._room.id,
+        this.gameState.fen,
+        this.gameState.currentTeam === Team.WHITE ? 'WHITE' : 'BLACK',
+        null,
+        GameStatus.GAME_OVER,
+        undefined,
+        undefined,
+        this._currentTurnNumber,
+        this._coordinatorId
+      ).catch((e) => {
+        console.error('[ONLINE] ❌ Failed to persist timeout GAME_OVER:', e)
+        emitTrace('GAME_STATE_SAVE_FAILED', { ...this.traceCtx(), extra: { reason: 'timeout', errorMessage: String((e as Error)?.message || e) } })
       })
     }
     this.resolvePendingWaiter()
@@ -2349,6 +2525,23 @@ export class OnlineGame {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
     }
+    // Lifecycle hygiene for every exit path (resign / lobby leave): the
+    // disconnect watchdog and any pending fast-start retry must not outlive
+    // the room.
+    if (this._disconnectCheckInterval) {
+      clearInterval(this._disconnectCheckInterval)
+      this._disconnectCheckInterval = null
+    }
+    if (this._fastStartTimer) {
+      clearTimeout(this._fastStartTimer)
+      this._fastStartTimer = null
+    }
+    // H7: pending channel reconnect retries must not outlive the room.
+    for (const timer of this._channelRetryTimers.values()) {
+      clearTimeout(timer)
+    }
+    this._channelRetryTimers.clear()
+    this._channelRetryAttempts.clear()
     this.stopMatchTimer()
     if (this._submissionChannel) {
       realtimeMetrics.onChannelRemoved(`submissions:${this._gameId}`)
@@ -2368,7 +2561,60 @@ export class OnlineGame {
     this._room = null
   }
 
+  // H4: set while THIS client's resignation is being persisted — the
+  // games-table UPDATE echo must not be misread as "the opponent resigned"
+  // during the window before our local status flips to GAME_OVER. Never
+  // cleared afterwards is intentional: a resigned game object is terminal and
+  // a new match always gets a fresh instance.
+  private _resignInProgress = false
+
+  /**
+   * H4: single gate for games-table UPDATE events (postgres_changes).
+   * Terminal-state safe + ignores our own resignation echo.
+   */
+  private handleGameStatusUpdate(nextStatus: string | undefined): void {
+    if (nextStatus !== 'GAME_OVER') return
+    if (this._status === GameStatus.GAME_OVER) return
+    if (this._resignInProgress) {
+      if (DEBUG) console.warn('[GAME-STATUS] Own resignation echo ignored')
+      return
+    }
+    DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update')
+    // Determine resigning team from the broadcast payload if available,
+    // otherwise use the opposite of our team as fallback
+    const resigningTeam = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
+    this.handleMatchAbandoned({ playerId: 'unknown', team: resigningTeam as 'WHITE' | 'BLACK' })
+  }
+
   async abandonMatch(): Promise<void> {
+    // C4: LOBBY != MATCH. Departing during WAITING/READY is a lobby leave —
+    // never a resignation. No games-row write (none exists yet; creating one
+    // would fabricate a finished game), no completed history, no winner,
+    // no match_abandoned broadcast for the peer to misread as a resignation.
+    // Peers still see the presence drop via the channel unsubscribe below.
+    if (this._status === GameStatus.WAITING || this._status === GameStatus.READY) {
+      // Best-effort room disband so stale invite links fail fast (the join RPC
+      // rejects rooms whose status is no longer 'waiting').
+      if (this._room) {
+        try {
+          await supabase
+            .from('rooms')
+            .update({ status: 'finished' })
+            .eq('id', this._room.id)
+        } catch (e) {
+          console.warn('[ONLINE] Failed to disband room on lobby leave:', e)
+        }
+      }
+      await this.leaveRoom()
+      return
+    }
+    // Terminal or unknown state — nothing left to resign.
+    if (this._status !== GameStatus.PLAYING) return
+
+    // H4: from here until the local terminal transition completes, our own
+    // games-row UPDATE must not be mistaken for an opponent resignation.
+    this._resignInProgress = true
+
     if (this._channel) {
       await this._channel.send({
         type: 'broadcast',
@@ -2379,19 +2625,17 @@ export class OnlineGame {
 
     // Persist GAME_OVER to the games table BEFORE cleanup so the non-resigning
     // client can detect it via postgres_changes even if the broadcast is lost.
+    // C3: TARGETED update — a resigning client may hold a stale board (missed
+    // turn_resolved), so it must never overwrite the authoritative fen /
+    // move_history / current_turn columns owned by the coordinator's
+    // resolution saves. Only the terminal status flips here.
     if (this._room) {
       try {
-        await saveGameState(
-          this._room.id,
-          this.gameState.fen,
-          this.gameState.currentTeam === Team.WHITE ? 'WHITE' : 'BLACK',
-          null,
-          GameStatus.GAME_OVER,
-          undefined,
-          undefined,
-          this._currentTurnNumber,
-          this._coordinatorId
-        )
+        const { error } = await supabase
+          .from('games')
+          .update({ status: GameStatus.GAME_OVER, updated_at: new Date().toISOString() })
+          .eq('room_id', this._room.id)
+        if (error) throw error
       } catch (e) {
         // A failed resignation persist must not block the local GAME_OVER
         // transition or the match_abandoned broadcast to the peer.
@@ -2437,10 +2681,17 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     const winnerTeam = payload.team === 'WHITE' ? 'Black' : payload.team === 'BLACK' ? 'White' : 'Opponent'
     this._gameOverResult = `Resigned - ${winnerTeam} wins`
-    this._gameOverReason = 'resignation'
+    // C4 reason-string consistency: this handler fires when the PEER left/was
+    // lost — the 'abandoned' consumers (abandon toast, GameOverModal variant)
+    // were built for exactly this flow. Self-resignation keeps 'resignation'.
+    this._gameOverReason = 'abandoned'
     if (this._timerSyncInterval) {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
+    }
+    if (this._disconnectCheckInterval) {
+      clearInterval(this._disconnectCheckInterval)
+      this._disconnectCheckInterval = null
     }
     if (this._pollingInterval) {
       clearInterval(this._pollingInterval)
@@ -2459,6 +2710,10 @@ export class OnlineGame {
     if (this._timerSyncInterval) {
       clearInterval(this._timerSyncInterval)
       this._timerSyncInterval = null
+    }
+    if (this._disconnectCheckInterval) {
+      clearInterval(this._disconnectCheckInterval)
+      this._disconnectCheckInterval = null
     }
     this.stopMatchTimer()
     this.resolvePendingWaiter()

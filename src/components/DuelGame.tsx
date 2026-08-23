@@ -19,7 +19,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useSettings } from '@/hooks/useSettings'
-import { saveCompletedGame } from '@/lib/matchHistory'
+import { saveCompletedGame, hasLocalHistoryForRoom } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
@@ -312,37 +312,44 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     gameSavedRef.current = true
     setShowGameOverDismissed(false)
 
-    const winningSide = winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'
-    saveCompletedGame({
-      winner: winningSide,
-      gameResult: gameResult || 'Game Over',
-      gameOverReason: gameOverReason || null,
-      stats: {
-        whiteMovesPlayed: moveHistory.length,
-        whiteSyncRate: 1.0,
-        whiteConflicts: 0,
-        player1Accuracy: moveAccuracyRef.current ?? 0,
-        player2Accuracy: opponentAccuracyRef.current ?? 0,
-        totalMoves: moveHistory.length,
-      },
-      isOnline: true,
-      roomId,
-      moveComparisons: moveHistory.map((move, i) => {
-        const entry = moveEntriesRef.current[i]
-        return {
-          turn: i + 1,
-          team: i % 2 === 0 ? 'WHITE' : 'BLACK',
-          winningMove: move,
-          winningMoveUci: move,
-          isSync: true,
-          player1Accuracy: entry?.accuracy ?? 0,
-          player2Accuracy: 0,
-          fenAfter: entry?.fenAfter ?? '',
-        }
-      }),
-    }, playerId)
+    // C5: a refresh after game-over remounts and re-fires this effect — skip
+    // when this device already recorded the room (prevents duplicate local
+    // entries; the Supabase side is idempotent via UNIQUE(room_id)).
+    if (!hasLocalHistoryForRoom(roomId, playerId)) {
+      const winningSide = winner === 'white' ? 'WHITE' : winner === 'black' ? 'BLACK' : 'DRAW'
+      saveCompletedGame({
+        winner: winningSide,
+        gameResult: gameResult || 'Game Over',
+        gameOverReason: gameOverReason || null,
+        stats: {
+          whiteMovesPlayed: moveHistory.length,
+          whiteSyncRate: 1.0,
+          whiteConflicts: 0,
+          player1Accuracy: moveAccuracyRef.current ?? 0,
+          player2Accuracy: opponentAccuracyRef.current ?? 0,
+          totalMoves: moveHistory.length,
+        },
+        isOnline: true,
+        roomId,
+        moveComparisons: moveHistory.map((move, i) => {
+          const entry = moveEntriesRef.current[i]
+          return {
+            turn: i + 1,
+            team: i % 2 === 0 ? 'WHITE' : 'BLACK',
+            winningMove: move,
+            winningMoveUci: move,
+            isSync: true,
+            player1Accuracy: entry?.accuracy ?? 0,
+            player2Accuracy: 0,
+            fenAfter: entry?.fenAfter ?? '',
+          }
+        }),
+      }, playerId)
+    } else {
+      console.log('[DUEL] History entry already exists locally — skipping duplicate save:', JSON.stringify({ roomId }))
+    }
     toast.gameOver(gameResult || 'Game Over')
-  }, [status, winner, gameResult, moveHistory, moveAccuracy, opponentAccuracy, roomId])
+  }, [status, winner, gameResult, gameOverReason, moveHistory, moveAccuracy, opponentAccuracy, roomId, playerId, toast])
 
   const captureMoveEntry = useCallback((accuracy: number) => {
     const fenAfter = gameRef.current?.fen
@@ -363,7 +370,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (promotion) {
       if (settings.autoQueen) {
         const result = await game.makeMove(uci.replace('-', '') + 'q')
-        if (result.success && result.accuracy !== undefined) {
+        if (!result.success) toast.warning('Move failed — please retry')
+        else if (result.accuracy !== undefined) {
           setMoveAccuracy(result.accuracy)
           captureMoveEntry(result.accuracy)
         }
@@ -375,11 +383,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
 
     const result = await game.makeMove(uci.replace('-', ''))
-    if (result.success && result.accuracy !== undefined) {
+    if (!result.success) toast.warning('Move failed — please retry')
+    else if (result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
       captureMoveEntry(result.accuracy)
     }
-  }, [settings.autoQueen, settings.confirmMove, captureMoveEntry])
+  }, [settings.autoQueen, settings.confirmMove, captureMoveEntry, toast])
 
   const handleConfirmHeldMove = useCallback(async () => {
     if (!heldMove) return
@@ -391,7 +400,8 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (promotion) {
       if (settings.autoQueen) {
         const result = await game.makeMove(move.replace('-', '') + 'q')
-        if (result.success && result.accuracy !== undefined) {
+        if (!result.success) toast.warning('Move failed — please retry')
+        else if (result.accuracy !== undefined) {
           setMoveAccuracy(result.accuracy)
           captureMoveEntry(result.accuracy)
         }
@@ -403,11 +413,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
 
     const result = await game.makeMove(move.replace('-', ''))
-    if (result.success && result.accuracy !== undefined) {
+    if (!result.success) toast.warning('Move failed — please retry')
+    else if (result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
       captureMoveEntry(result.accuracy)
     }
-  }, [heldMove, settings.autoQueen, captureMoveEntry])
+  }, [heldMove, settings.autoQueen, captureMoveEntry, toast])
 
   const handleCancelHeldMove = useCallback(() => {
     setHeldMove(null)
@@ -422,11 +433,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     const game = gameRef.current
     if (!game) return
     const result = await game.makeMove(uci)
-    if (result.success && result.accuracy !== undefined) {
+    if (!result.success) toast.warning('Move failed — please retry')
+    else if (result.accuracy !== undefined) {
       setMoveAccuracy(result.accuracy)
       captureMoveEntry(result.accuracy)
     }
-  }, [pendingPromotion, captureMoveEntry])
+  }, [pendingPromotion, captureMoveEntry, toast])
 
   const isMyTurn = status === 'playing' && ((currentTurn === 'w' && team === 'WHITE') || (currentTurn === 'b' && team === 'BLACK'))
 

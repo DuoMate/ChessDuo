@@ -174,7 +174,7 @@ async function authenticateWithGoogleCapacitorBrowser(): Promise<{
   }
 }
 
-async function authenticateWithGoogleWeb(redirectUrl?: string): Promise<{
+async function authenticateWithGoogleWeb(redirectUrl?: string, navigate?: (url: string) => void): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -184,34 +184,54 @@ async function authenticateWithGoogleWeb(redirectUrl?: string): Promise<{
 }> {
   try {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    // Encode the original destination in a `redirect` query param so it survives
-    // the OAuth round-trip. Supabase appends its own `code` param; without this,
-    // an invite `?code=` on the original URL is overwritten by the OAuth code.
-    let redirectTo = origin
-    if (redirectUrl) {
-      redirectTo = `${origin}/?redirect=${encodeURIComponent(redirectUrl)}`
-    } else if (typeof window !== 'undefined') {
-      redirectTo = `${origin}${window.location.pathname}`
+    // AUTH-JOIN FIX: Google must ALWAYS return through /auth/callback.
+    // GoTrue appends its one-time PKCE authorization code to redirectTo as
+    // `?code=<uuid>`; landing on `/` previously made the home page mistake
+    // that auth code for a ROOM code (auto-join whitelists UUIDs) — filling
+    // the room-code input with a UUID and failing with "Room not found".
+    // /auth/callback consumes the auth code and then routes onward cleanly,
+    // preserving any original destination via an encoded `redirect` param.
+    let redirectTo = `${origin}/auth/callback`
+    if (redirectUrl && redirectUrl.startsWith('/')) {
+      redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}`
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        // HISTORY HYGIENE: navigate ourselves via location.replace instead of
+        // letting the SDK do a plain top-level redirect. A pushed entry leaves
+        // the Google consent pages permanently in the back stack, so pressing
+        // Back after signing in could land on accounts.google.com and re-run
+        // the OAuth flow. With replace(), a silent (non-interactive) OAuth
+        // chain collapses into the current entry and nothing is left behind.
+        skipBrowserRedirect: true,
         redirectTo,
         queryParams: {
           access_type: 'offline',
-          prompt: 'select_account consent',
+          // 'select_account' without 'consent': no forced re-consent wall if a
+          // stale back-stack entry is ever revisited; offline access is still
+          // granted via access_type.
+          prompt: 'select_account',
         },
       },
     })
     if (error) return { success: false, error: error.message }
+    if (!data?.url) return { success: false, error: 'No OAuth URL returned' }
+
+    // Injectable navigation (same convention as capacitorAuth.ts opts.navigate)
+    // so tests can observe the jump; jsdom makes location.replace unforgeable.
+    const jump = navigate ?? ((url: string) => window.location.replace(url))
+    jump(data.url)
+
+    // Navigation is happening; keep the shape consistent for callers.
     return { success: true }
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Google sign-in failed' }
   }
 }
 
-export async function authenticateWithGoogle(opts?: { redirectUrl?: string }): Promise<{
+export async function authenticateWithGoogle(opts?: { redirectUrl?: string; navigate?: (url: string) => void }): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -240,5 +260,5 @@ export async function authenticateWithGoogle(opts?: { redirectUrl?: string }): P
   }
   
   DEBUG && console.log('[Auth] Running on web platform')
-  return authenticateWithGoogleWeb(opts?.redirectUrl)
+  return authenticateWithGoogleWeb(opts?.redirectUrl, opts?.navigate)
 }

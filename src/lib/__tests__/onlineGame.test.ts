@@ -708,7 +708,8 @@ describe('OnlineGame', () => {
 
       expect((game as any)._status).toBe(GameStatus.GAME_OVER)
       expect((game as any)._gameOverResult).toBe('Resigned - Black wins')
-      expect((game as any)._gameOverReason).toBe('resignation')
+      // C4: handleMatchAbandoned is the peer-left flow -> reason is 'abandoned'
+      expect((game as any)._gameOverReason).toBe('abandoned')
     })
 
     it('handleMatchAbandoned sets correct winner when BLACK resigns', () => {
@@ -719,7 +720,7 @@ describe('OnlineGame', () => {
 
       expect((game as any)._status).toBe(GameStatus.GAME_OVER)
       expect((game as any)._gameOverResult).toBe('Resigned - White wins')
-      expect((game as any)._gameOverReason).toBe('resignation')
+      expect((game as any)._gameOverReason).toBe('abandoned')
     })
 
     it('handleMatchAbandoned falls back to Opponent wins when team is missing', () => {
@@ -729,7 +730,7 @@ describe('OnlineGame', () => {
 
       expect((game as any)._status).toBe(GameStatus.GAME_OVER)
       expect((game as any)._gameOverResult).toBe('Resigned - Opponent wins')
-      expect((game as any)._gameOverReason).toBe('resignation')
+      expect((game as any)._gameOverReason).toBe('abandoned')
     })
 
     it('handleMatchTimeoutBroadcast does not overwrite result when game already over', () => {
