@@ -784,6 +784,7 @@ DROP POLICY IF EXISTS "Users can manage their own tokens" ON public.push_tokens;
 DROP POLICY IF EXISTS "Room members can access turn submissions" ON public.turn_submissions;
 DROP POLICY IF EXISTS "Room members can view turn submissions" ON public.turn_submissions;
 DROP POLICY IF EXISTS "Players can submit their own moves" ON public.turn_submissions;
+DROP POLICY IF EXISTS "Players can update their own moves" ON public.turn_submissions;
 
 -- app_errors / game_traces
 DROP POLICY IF EXISTS "Clients can append error reports" ON public.app_errors;
@@ -946,6 +947,34 @@ CREATE POLICY "Room members can view turn submissions" ON public.turn_submission
 
 CREATE POLICY "Players can submit their own moves" ON public.turn_submissions
   FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::text = player_id
+    AND EXISTS (
+      SELECT 1 FROM games g
+      WHERE g.id = turn_submissions.game_id
+      AND is_room_member(g.room_id)
+    )
+  );
+
+-- Idempotent re-submission: the client submits moves via PostgREST UPSERT
+-- (merge-duplicates → INSERT ... ON CONFLICT (game_id, turn_number, player_id
+-- DO UPDATE). PostgreSQL authorizes the conflicting-row branch under the
+-- UPDATE policy — without it every legitimate retry of an already-persisted
+-- move (lost response, resubmission after refresh) failed with 42501/403 and
+-- the turn never resolved. Least privilege: own row, own room membership,
+-- player_id immutable (WITH CHECK re-applies the predicate to the new row).
+CREATE POLICY "Players can update their own moves" ON public.turn_submissions
+  FOR UPDATE
+  USING (
+    auth.uid() IS NOT NULL
+    AND auth.uid()::text = player_id
+    AND EXISTS (
+      SELECT 1 FROM games g
+      WHERE g.id = turn_submissions.game_id
+      AND is_room_member(g.room_id)
+    )
+  )
+  WITH CHECK (
     auth.uid() IS NOT NULL
     AND auth.uid()::text = player_id
     AND EXISTS (
@@ -1142,6 +1171,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='turn_submissions' AND policyname='Players can submit their own moves') THEN
     problems := problems || 'Missing: turn_submissions "Players can submit their own moves"' || E'\n';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='turn_submissions' AND policyname='Players can update their own moves') THEN
+    problems := problems || 'Missing: turn_submissions "Players can update their own moves"' || E'\n';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='games' AND policyname='Room members can update game') THEN
     problems := problems || 'Missing: games "Room members can update game"' || E'\n';

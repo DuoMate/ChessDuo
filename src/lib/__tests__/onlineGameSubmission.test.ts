@@ -1,6 +1,6 @@
 import { OnlineGame } from '../../features/online/game/onlineGame'
 import { GameStatus } from '../../features/shared/gameTypes'
-import { Team, GameState } from '../../features/game-engine/gameState'
+import { Team, GameState, Player } from '../../features/game-engine/gameState'
 
 // --- Configurable mock state -------------------------------------------------
 let saveGameStateMock = jest.fn().mockResolvedValue(undefined)
@@ -141,7 +141,7 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     // pending move + lock AND reset turnState to 'selecting' so the board is
     // never permanently disabled and the player can retry.
     expect(result).toBe(false)
-    expect(game.isPendingMoveLocked('player1' as any)).toBe(false)
+    expect(game.isPendingMoveLocked('player1' as Player)).toBe(false)
     expect(game.getAllPendingMoves().has('player1')).toBe(false)
     expect(testG(game).turnState).toBe('selecting')
   })
@@ -184,6 +184,54 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     } finally {
       jest.requireMock('../supabase').supabase.from = origFrom
     }
+  })
+
+  it('RLS-403 REGRESSION: retry of an already-persisted move succeeds idempotently', async () => {
+    // Production regression: PostgREST UPSERT executes ON CONFLICT DO UPDATE,
+    // which PostgreSQL authorizes under the UPDATE policy. While that policy
+    // was missing, a legitimate retry (lost response / resubmission after
+    // refresh) returned 403 and the move never resolved. The engine must now
+    // recognize an authoritative row holding THIS exact move as success.
+    upsertError = { code: '42501', message: 'new row violates row-level security policy' }
+    // Read-back finds our submission already persisted by the earlier attempt.
+    submissionsData = [{ move_san: 'e4' }]
+    const game = setupPlayingGame('player1', 'WHITE')
+
+    const result = await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
+
+    expect(result).toBe(true)
+    // Local pending/locked state survives — the turn proceeds normally.
+    expect(game.isPendingMoveLocked('player1' as Player)).toBe(true)
+    expect(game.getAllPendingMoves().get('player1')).toMatchObject({ move: 'e4' })
+  })
+
+  it('does NOT treat a conflicting row holding a DIFFERENT move as success', async () => {
+    // The player cannot silently override a prior locked submission: the
+    // persisted row differs from the attempted move → visible failure.
+    upsertError = { code: '42501', message: 'new row violates row-level security policy' }
+    submissionsData = [{ move_san: 'd4' }]
+    const game = setupPlayingGame('player1', 'WHITE')
+
+    const result = await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
+
+    expect(result).toBe(false)
+    expect(game.isPendingMoveLocked('player1' as Player)).toBe(false)
+    expect(game.getAllPendingMoves().has('player1')).toBe(false)
+    expect(testG(game).turnState).toBe('selecting')
+  })
+
+  it('fails visibly when a rejected write left no persisted row', async () => {
+    // True rejection (e.g. unauthenticated): read-back finds nothing — must
+    // roll back and surface the failure, never pretend the move was stored.
+    upsertError = { code: '42501', message: 'new row violates row-level security policy' }
+    submissionsData = []
+    const game = setupPlayingGame('player1', 'WHITE')
+
+    const result = await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
+
+    expect(result).toBe(false)
+    expect(game.getAllPendingMoves().has('player1')).toBe(false)
+    expect(testG(game).turnState).toBe('selecting')
   })
 
   it('M05: second submission in same turn — DB upsert overwrites with ON CONFLICT', async () => {
