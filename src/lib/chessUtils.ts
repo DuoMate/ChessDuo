@@ -39,3 +39,20 @@ export function getMoveFromUci(uciMove: string, fen: string): { from: string; to
   }
   return null
 }
+
+/**
+ * Probe whether a SAN move is legal in the given position WITHOUT mutating any
+ * shared game state (uses a throwaway Chess instance). This is the divergence
+ * detector for the resolution pipeline: a pending submission that is illegal at
+ * the current turn-start FEN proves client state has diverged and must trigger
+ * an authoritative re-sync instead of an engine-level throw.
+ */
+export function isMoveLegalAt(fen: string, san: string): boolean {
+  try {
+    new Chess(fen).move(san)
+    return true
+  } catch {
+    // Illegal SAN for this position is a valid probe result, not an error.
+    return false
+  }
+}

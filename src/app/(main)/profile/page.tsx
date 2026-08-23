@@ -166,11 +166,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                 <Share2 size={20} className="text-amber-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-amber-400">{profileCopied ? 'Link copied!' : 'Share Profile'}</p>
                 <p className="text-xs text-slate-400">Share your profile with friends</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Upgrade to Premium */}
@@ -186,11 +186,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
                 <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
                   <Crown size={20} className="text-purple-400" />
                 </div>
-                <div className="flex-1 text-left">
+                <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-purple-400">Upgrade to Premium</p>
                   <p className="text-xs text-slate-400">Unlock powerful features</p>
                 </div>
-                <span className="text-slate-500">&rsaquo;</span>
+                <span className="text-slate-500 shrink-0">&rsaquo;</span>
               </button>
             ) : (
               <button
@@ -200,7 +200,7 @@ function ProfileContent({ playerId }: { playerId: string }) {
                 <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
                   <Crown size={20} className="text-amber-400" />
                 </div>
-                <div className="flex-1 text-left">
+                <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-amber-400">Premium Active</p>
                   <p className="text-xs text-slate-400">
                     {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'}
@@ -210,7 +210,7 @@ function ProfileContent({ playerId }: { playerId: string }) {
                     · View premium features
                   </p>
                 </div>
-                <span className="text-slate-500">&rsaquo;</span>
+                <span className="text-slate-500 shrink-0">&rsaquo;</span>
               </button>
             )}
 
@@ -222,11 +222,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                 <History size={20} className="text-blue-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-blue-400">View All Match History</p>
                 <p className="text-xs text-slate-400">Check your past games</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Settings */}
@@ -237,11 +237,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck size={20} className="text-blue-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-blue-400">Settings</p>
                 <p className="text-xs text-slate-400">Sound, theme &amp; preferences</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Manage Account */}
@@ -252,11 +252,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck size={20} className="text-blue-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-blue-400">Manage Account</p>
                 <p className="text-xs text-slate-400">Security, privacy &amp; delete</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Legal */}
@@ -267,11 +267,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck size={20} className="text-blue-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-blue-400">Legal</p>
                 <p className="text-xs text-slate-400">Privacy policy &amp; terms of service</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Sign Out */}
@@ -282,11 +282,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
               <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center flex-shrink-0">
                 <LogOut size={20} className="text-rose-400" />
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-left min-w-0">
                 <p className="text-sm font-semibold text-rose-400">Sign Out</p>
                 <p className="text-xs text-slate-400">Log out from your account</p>
               </div>
-              <span className="text-slate-500">&rsaquo;</span>
+              <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
           </motion.div>
         </div>

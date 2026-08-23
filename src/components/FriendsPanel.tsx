@@ -568,7 +568,7 @@ function FriendList({
           key={friend.friend_id}
           className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl hover:bg-slate-800/70 transition-colors"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <InitialsAvatar
               username={friend.friend_username}
               size="md"
@@ -577,14 +577,14 @@ function FriendList({
             />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-white text-sm font-medium truncate">{friend.friend_username}</span>
+                <span className="text-white text-sm font-medium truncate" title={friend.friend_username}>{friend.friend_username}</span>
               </div>
               {onlineFriends.has(friend.friend_id) && (
                 <span className="text-emerald-400 text-xs">Online</span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {pendingChallenges?.has(friend.friend_id) && onAcceptChallenge && (
               <button
                 onClick={(e) => { e.stopPropagation(); onAcceptChallenge(friend) }}
@@ -636,17 +636,17 @@ function RequestsTab({
         <div>
           <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Incoming</p>
           {pending.incoming.map((req) => (
-            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
-              <div className="flex items-center gap-3">
+            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between gap-2 p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
-                <div>
-                  <span className="text-white text-sm font-medium">{req.friend_username}</span>
+                <div className="min-w-0">
+                  <span className="text-white text-sm font-medium truncate block" title={req.friend_username}>{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Wants to be your friend</p>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => onAccept(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors">Accept</button>
-                <button onClick={() => onReject(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors">Reject</button>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => onAccept(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-500 transition-colors whitespace-nowrap">Accept</button>
+                <button onClick={() => onReject(req.sender_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors whitespace-nowrap">Reject</button>
               </div>
             </div>
           ))}
@@ -657,17 +657,17 @@ function RequestsTab({
         <div>
           <p className="text-xs font-bold tracking-widest text-slate-400 uppercase mb-2">Outgoing Requests</p>
           {pending.outgoing.map((req) => (
-            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
-              <div className="flex items-center gap-3">
+            <div key={req.sender_id + req.receiver_id} className="flex items-center justify-between gap-2 p-3 bg-slate-800/50 border border-white/5 rounded-2xl mb-2">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <InitialsAvatar username={req.friend_username} size="md" src={req.friend_avatar_url || null} />
-                <div>
-                  <span className="text-white text-sm font-medium">{req.friend_username}</span>
+                <div className="min-w-0">
+                  <span className="text-white text-sm font-medium truncate block" title={req.friend_username}>{req.friend_username}</span>
                   <p className="text-slate-400 text-xs">Request sent</p>
                 </div>
               </div>
               <button
                 onClick={() => onCancel(req.receiver_id || req.sender_id)}
-                className="px-3 py-1 min-h-[44px] min-w-[44px] bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs font-medium rounded-full transition-colors border border-slate-600/50 hover:border-red-500/30"
+                className="shrink-0 px-3 py-1 min-h-[44px] min-w-[44px] bg-slate-700/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs font-medium rounded-full transition-colors border border-slate-600/50 hover:border-red-500/30 whitespace-nowrap"
               >
                 Cancel
               </button>
@@ -712,12 +712,12 @@ function BlockedTab({
   return (
     <div className="space-y-2">
       {blocked.map((b) => (
-        <div key={b.receiver_id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/5 rounded-2xl">
-          <div className="flex items-center gap-3">
+        <div key={b.receiver_id} className="flex items-center justify-between gap-2 p-3 bg-slate-800/50 border border-white/5 rounded-2xl">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <InitialsAvatar username={b.friend_username} size="md" src={b.friend_avatar_url || null} />
-            <span className="text-white text-sm font-medium">{b.friend_username}</span>
+            <span className="text-white text-sm font-medium truncate" title={b.friend_username}>{b.friend_username}</span>
           </div>
-          <button onClick={() => onUnblock(b.receiver_id)} className="min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors">Unblock</button>
+          <button onClick={() => onUnblock(b.receiver_id)} className="shrink-0 min-h-[44px] px-4 py-2 bg-slate-700 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600 transition-colors whitespace-nowrap">Unblock</button>
         </div>
       ))}
     </div>

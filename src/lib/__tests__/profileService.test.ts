@@ -146,6 +146,47 @@ describe('ProfileService', () => {
       )
       warnSpy.mockRestore()
     })
+
+    it('repairs a vanished-row 23502 ONCE with a derived username when derivation material is supplied', async () => {
+      // First attempt (implicit INSERT, no row) → 23502; repair retry must
+      // include a valid derived username and succeed.
+      mockUpsert
+        .mockResolvedValueOnce({
+          error: { code: '23502', message: 'null value in column "username"', details: null, hint: null },
+        })
+        .mockResolvedValueOnce({ error: null })
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = await upsertProfile(
+        { id: 'user-1', avatar_url: 'a.png', display_name: 'Alice' },
+        { deriveUsernameFrom: { candidate: 'alice@gmail.com', seed: 'user-1' } },
+      )
+
+      expect(result).toEqual({ success: true, isUniqueConflict: false })
+      expect(mockUpsert).toHaveBeenCalledTimes(2)
+      const repairPayload = mockUpsert.mock.calls[1][0]
+      expect(repairPayload).toEqual(expect.objectContaining({
+        id: 'user-1',
+        avatar_url: 'a.png',
+        display_name: 'Alice',
+      }))
+      expect(typeof repairPayload.username).toBe('string')
+      expect(repairPayload.username).toMatch(/^[a-zA-Z0-9_]{3,30}$/)
+      warnSpy.mockRestore()
+    })
+
+    it('does NOT retry when derivation material is absent (caller contract violation)', async () => {
+      mockUpsert.mockResolvedValue({
+        error: { code: '23502', message: 'null value in column "username"', details: null, hint: null },
+      })
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const result = await upsertProfile({ id: 'orphan-user', display_name: 'Guest' })
+
+      expect(result.success).toBe(false)
+      expect(mockUpsert).toHaveBeenCalledTimes(1)
+      warnSpy.mockRestore()
+    })
   })
 
   describe('deriveUsername', () => {

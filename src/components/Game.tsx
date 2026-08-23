@@ -40,7 +40,7 @@ import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
 import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
-import { MoveResolvedInline, type MoveResolutionData } from './MoveResolvedInline'
+import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from './MoveResolvedInline'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
@@ -51,6 +51,7 @@ import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
+import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Lock, BarChart3 } from 'lucide-react'
 
@@ -144,22 +145,22 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-yellow-500 shadow-xl"
+        className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border-2 border-yellow-500 shadow-xl max-w-[calc(100vw-2rem)]"
       >
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
           {PROMOTION_PIECES.map(({ piece, symbol, label }) => (
             <button
               key={piece}
               onClick={() => onSelect(piece)}
-              className="flex flex-col items-center p-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
+              className="flex flex-col items-center px-2 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
             >
               <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-500 dark:text-gray-300">{label}</span>
@@ -635,6 +636,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         totalMoves: movesPlayed,
       },
       isOnline: !!isOnline,
+      roomId: isOnline ? (roomId || undefined) : undefined,
       moveComparisons: moveHistoryRef.current,
       playerLabels: {
         white: teamLabels.white.split(',').map(s => s.trim().replace(/[()]/g, '').trim()),
@@ -645,7 +647,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     toast.gameOver(result)
 
     if (playerId) gameSavedRef.current = true
-  }, [gameState.status, isOnline, game, toast, playerId])
+  }, [gameState.status, isOnline, game, toast, playerId, roomId])
 
   // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
   const abandonNotifiedRef = useRef(false)
@@ -812,25 +814,35 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           }
         }
 
-        // Set the current accuracy comparison for inline display
+        // Set the current accuracy comparison for inline display — human-team-owned.
+        // Board consumes latestGameResolution (any team); panel consumes lastHumanResolution.
         if (prevTurn === Team.WHITE && currentTurn === Team.BLACK) {
           if (comp) {
-            if (!isFourPlayer || myTeam === 'WHITE') {
+            if (myTeam === 'WHITE') {
               setAccuracyComparison(comp)
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for WHITE→BLACK')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for WHITE→BLACK (human-owned)')
+            } else {
+              DEBUG && console.log('[ACCURACY-TRANSITION] SKIP panel update — opponent team resolved WHITE→BLACK')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
         } else if (prevTurn === Team.BLACK && currentTurn === Team.WHITE) {
           if (comp) {
-            if (!isFourPlayer || myTeam === 'BLACK') {
+            if (myTeam === 'BLACK') {
               setAccuracyComparison(comp)
-              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for BLACK→WHITE')
+              DEBUG && console.log('[ACCURACY-TRANSITION] SET accuracyComparison for BLACK→WHITE (human-owned)')
+            } else {
+              DEBUG && console.log('[ACCURACY-TRANSITION] SKIP panel update — opponent team resolved BLACK→WHITE')
             }
           } else {
             DEBUG && console.log('[ACCURACY-TRANSITION] No comparison available, accuracy NOT set')
           }
+        }
+        // Rehydrate after refresh/reconnect: if panel empty, seed from persisted human resolution
+        const hr = (g as GameInterface).lastHumanResolution as MoveComparison | null
+        if (hr) {
+          setAccuracyComparison(prev => prev ?? hr)
         }
     prevTurnRef.current = currentTurn
 
@@ -1001,6 +1013,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               } catch (e) {
                 DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
+                // ADR-006 single-writer: another trigger owns the in-flight
+                // resolution — do not reset its state or schedule a retry.
+                if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                  DEBUG && console.warn('[INITIAL-BOT] Resolution already in flight — skipping duplicate trigger')
+                  return
+                }
                 // Recovery: reset turn state so humans can still play, then
                 // retry if we are still on the bot's turn.
                 g.setTurnState('selecting')
@@ -1104,6 +1122,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameRef.current = game
   }, [game])
 
+  // Timer tick — updates engine's remaining but does NOT call setGameState
+  // per tick. Only the IsolatedMatchTimer polls the engine and rerenders
+  // itself; ChessBoard/PendingMovesRow/etc stay memoized and never rerender
+  // on timer ticks. Only timeout (≤0) triggers a real Game state update.
   const tickMatchTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
@@ -1144,8 +1166,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return
     }
 
+    // Normal tick: decrement engine silently; IsolatedMatchTimer will poll
+    // the new value on its own 1 Hz interval and rerender only itself.
+    // Online: coordinator owns countdown via OnlineGame.startMatchTimer, so
+    // do NOT double-decrement (otherwise 2 s/s on coordinator).
+    if (isOnline) return
     g.setMatchTimeRemaining(remaining - 1)
-    setGameState(prev => ({ ...prev, matchTimeRemaining: remaining - 1 }))
   }, [isOnline])
 
   const updateState = useCallback(() => {
@@ -1621,9 +1647,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               updateStateRef.current()
               DEBUG && console.log(`[RESOLVE] Resolve succeeded`)
             } catch (e) {
+              // ADR-006 single-writer: a concurrent trigger already owns this
+              // resolution end-to-end (including its own error recovery) —
+              // touching lock/turn state here would fight the in-flight call.
+              if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                DEBUG && console.warn('[RESOLVE] Resolution already in flight — skipping duplicate trigger')
+                return
+              }
               // NEVER leave the board locked after a failed resolution.
               // Roll back the local turn state so both players can retry;
               // the fallback poll / next submission will re-derive from DB.
+              // (STATE_DIVERGENCE has already re-synced from the authoritative
+              // row inside _recoverFromDivergence before landing here.)
               DEBUG && console.warn(`[RESOLVE] Coordinator resolve failed — recovering turn state:`, e)
               console.error('[RESOLVE] Resolve failed — recovering:', e)
               g.setTurnState('selecting')
@@ -1805,6 +1840,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 } catch (e) {
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
                   DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId2, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
+                  // ADR-006 single-writer: another trigger owns the in-flight
+                  // resolution — leave its state transition alone.
+                  if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                    DEBUG && console.warn(`[RESOLVE] ${opponentTeam} resolution already in flight — skipping duplicate trigger`)
+                    return
+                  }
                   // Recovery: reset state so humans can continue playing
                   g.setTurnState('selecting')
                   inputLockedRef.current = false
@@ -2113,6 +2154,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (gameState.status !== GameStatus.PLAYING) return
     if (matchTimerRef.current) return
     if (!matchTimerStarted) return
+    // Online: coordinator owns countdown via OnlineGame.startMatchTimer
+    // (IsolatedMatchTimer displays). Do not create duplicate 1Hz tick.
+    if (isOnline) return
 
     matchTimerRef.current = setInterval(tickMatchTimer, 1000)
 
@@ -2122,7 +2166,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         matchTimerRef.current = null
       }
     }
-  }, [gameState.status, tickMatchTimer, matchTimerStarted])
+  }, [gameState.status, tickMatchTimer, matchTimerStarted, isOnline])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (settings.confirmMove) {
@@ -2194,8 +2238,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } catch {
       // Channel may be dead during refresh; navigation still proceeds
     }
-    // Wait for the save effect to run before navigating away
-    await new Promise(r => setTimeout(r, 200))
+    if (isOnline) {
+      // Wait for the save effect (which sets gameSavedRef) to run before
+      // navigating away, so the resigner's history record is persisted rather
+      // than lost to an immediate unmount. Bounded to 2s in case the effect
+      // never fires (e.g. abandoned game-over path).
+      const saveDeadline = Date.now() + 2000
+      while (!gameSavedRef.current && Date.now() < saveDeadline) {
+        await new Promise(r => setTimeout(r, 50))
+      }
+    } else {
+      // Offline: keep the short delay so the save effect can flush.
+      await new Promise(r => setTimeout(r, 200))
+    }
     setShowGameOverDismissed(false)
     router.replace('/')
   }, [isOnline])
@@ -2263,7 +2318,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const out: BoardTopBarPlayer[] = []
     let hasYou = false
     let hasBot = false
-    ids.slice(0, 2).forEach((id, idx) => {
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
       const isYou = id === playerId || (!isOnline && id === humanSlot)
@@ -2307,7 +2362,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, gameState.pendingOverlay, gameState.fen, isOnline, gameState.status])
+  }, [teamLabels.white, playerId, userProfile.username, userProfile.avatarUrl, gameState.myPendingOverlay, gameState.pendingOverlay, isOnline])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -2316,7 +2371,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const out: BoardTopBarPlayer[] = []
     let hasYou = false
     let hasBot = false
-    ids.slice(0, 2).forEach((id, idx) => {
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
       const isYou = id === playerId || (!isOnline && id === humanSlot)
@@ -2360,9 +2415,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.black, playerId, userProfile, gameState.pendingOverlay, gameState.myPendingOverlay, gameState.fen, isOnline, gameState.status])
+  }, [teamLabels.black, playerId, userProfile.username, userProfile.avatarUrl, gameState.pendingOverlay, gameState.myPendingOverlay, isOnline])
 
-  const yourMoveForRow: PendingMove | null = (() => {
+  // Memoize row derivations — these do Array.from + board lookups; without
+  // memo they would rerun on every parent render (including timer ticks).
+  const yourMoveForRow: PendingMove | null = useMemo(() => {
     const humanColor = myTeamRef.current === 'WHITE' ? 'white' as const : 'black' as const
     if (heldMove) {
       return { san: heldMove.move.split('-').join(' '), piece: 'P', color: humanColor }
@@ -2397,9 +2454,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return { san: gameState.selectedMove, piece: 'P', color: humanColor }
     }
     return null
-  })()
+  }, [heldMove, playerId, gameState.selectedMove, gameState.myPendingOverlay, isOnline])
 
-  const teammateMoveForRow: PendingMove | null = (() => {
+  const teammateMoveForRow: PendingMove | null = useMemo(() => {
     if (!gameState.pendingOverlay) return null
     const base: PendingMove = {
       san: gameState.pendingOverlay.from + gameState.pendingOverlay.to,
@@ -2419,26 +2476,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     }
     return base
-  })()
+  }, [gameState.pendingOverlay, isOnline, playerId])
 
-  const resolutionData: MoveResolutionData | null = accuracyComparison
-    ? {
-        yourMove: { san: accuracyComparison.player1Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
-        teammateMove: { san: accuracyComparison.player2Move || '?', piece: 'P', color: myTeamRef.current === 'WHITE' ? 'white' : 'black' },
-        engineChoseMove: { san: accuracyComparison.bestEngineMove || accuracyComparison.winningMove || '?' },
-        yourAccuracy: accuracyComparison.player1Accuracy || 0,
-        teammateAccuracy: accuracyComparison.player2Accuracy || 0,
-        yourLoss: accuracyComparison.player1Loss || 0,
-        teammateLoss: accuracyComparison.player2Loss || 0,
-        isSync: !!accuracyComparison.isSync,
-        youMatchedEngine: !!accuracyComparison.youMatchedEngine,
-        teammateMatchedEngine: !!accuracyComparison.teammateMatchedEngine,
-        result: accuracyComparison.winnerId === 'player1' ? 'you_won' : accuracyComparison.winnerId === 'player2' ? 'teammate_won' : 'draw',
-        scoreDelta: (accuracyComparison.winningScore - accuracyComparison.bestEngineScore) || 0,
-        evaluationAfter: accuracyComparison.winningScore || 0,
-        evaluationImproved: (accuracyComparison.winningScore || 0) > (accuracyComparison.bestEngineScore || 0),
-      }
-    : null
+  const resolutionData: MoveResolutionData | null = useMemo(() => {
+    if (!accuracyComparison) return null
+    const p1Id = isOnline ? onlineGameRef.current?.player1Id : undefined
+    const isPlayer1 = !isOnline || !playerId || !p1Id || playerId === p1Id
+    DEBUG && console.log('[RESOLVE-DATA]', { isOnline, isPlayer1, myId: playerId, p1Id, p1Move: accuracyComparison.player1Move, p2Move: accuracyComparison.player2Move })
+    return buildResolutionData(accuracyComparison, isPlayer1, myTeamRef.current)
+  }, [accuracyComparison, isOnline, playerId])
+
+  // Isolated timer — 1 Hz poll of engine, does NOT trigger Game rerenders on
+  // normal ticks (only timeout does). ChessBoard stays memoized.
+  const getTimeRemaining = useCallback(() => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    return g ? g.getMatchTimeRemaining() : (timeLimitSeconds || 600)
+  }, [isOnline, timeLimitSeconds])
+  const isTimerActive = gameState.matchTimerActive && gameState.status === GameStatus.PLAYING && matchTimerStarted
 
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
     const moves = moveHistoryRef.current
@@ -2531,7 +2585,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col">
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pb-24">
         {/* Compact top bar — header + team avatars + timer + controls */}
         <div className="w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2">
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
@@ -2546,6 +2600,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 totalMatchSeconds={timeLimitSeconds || 600}
                 roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
                 currentTurn={gameState.currentTurn}
+                timerNode={<IsolatedMatchTimer getTimeRemaining={getTimeRemaining} isActive={isTimerActive} totalSeconds={timeLimitSeconds || 600} />}
               />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">

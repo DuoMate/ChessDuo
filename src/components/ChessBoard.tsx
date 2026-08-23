@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useLayoutEffect } from 'react'
+import { useEffect, useRef, useState, useLayoutEffect, useCallback, memo } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess, Square } from 'chess.js'
@@ -45,7 +45,21 @@ const PIECE_CHARS: Record<string, string> = {
   'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
 }
 
-export function ChessBoard({ 
+function getSquarePercentInternal(square: string, orientation: string): { left: string; top: string } {
+  const file = square.charCodeAt(0) - 'a'.charCodeAt(0)
+  const rank = 8 - parseInt(square[1])
+  const isFlipped = orientation === 'black'
+  const l = `${(isFlipped ? (7 - file) : file) * 12.5}%`
+  const t = `${(isFlipped ? (7 - rank) : rank) * 12.5}%`
+  return { left: l, top: t }
+}
+
+function getPieceCharInternal(piece: string, color: 'white' | 'black'): string {
+  const key = color === 'white' ? piece.toUpperCase() : piece.toLowerCase()
+  return PIECE_CHARS[key] || piece
+}
+
+function ChessBoardInner({ 
   fen, 
   onMove, 
   enabled = true, 
@@ -300,34 +314,19 @@ export function ChessBoard({
     }
   }, [enabled, orientation])
 
-  const getSquarePercent = (square: string, orientation: string): { left: string; top: string } => {
-    const file = square.charCodeAt(0) - 'a'.charCodeAt(0)
-    const rank = 8 - parseInt(square[1])
-    const isFlipped = orientation === 'black'
-    const l = `${(isFlipped ? (7 - file) : file) * 12.5}%`
-    const t = `${(isFlipped ? (7 - rank) : rank) * 12.5}%`
-    return { left: l, top: t }
-  }
-
-  const getSquarePosition = (square: string): { x: number; y: number } => {
+  // Stable callbacks — avoid recreating helpers every render (perf). Helpers
+  // themselves are pure and defined at module scope; these closures only bind
+  // overlayWidth which is the only dynamic input for getSquarePosition.
+  const getSquarePosition = useCallback((square: string): { x: number; y: number } => {
     if (overlayWidth <= 0) return { x: 0, y: 0 }
-    
     const squareSize = overlayWidth / 8
-    
     const file = square.charCodeAt(0) - 'a'.charCodeAt(0)
     const rank = parseInt(square[1]) - 1
-    
     const isFlipped = orientation === 'black'
     const x = isFlipped ? (7 - file) * squareSize : file * squareSize
     const y = isFlipped ? rank * squareSize : (7 - rank) * squareSize
-    
     return { x, y }
-  }
-
-  const getPieceChar = (piece: string, color: 'white' | 'black'): string => {
-    const key = color === 'white' ? piece.toUpperCase() : piece.toLowerCase()
-    return PIECE_CHARS[key] || piece
-  }
+  }, [overlayWidth, orientation])
 
   useEffect(() => {
     if (highlightSquares?.loserFrom && highlightSquares?.loserTo && pendingOverlay) {
@@ -349,11 +348,11 @@ export function ChessBoard({
     }
   }, [pendingOverlay])
 
-  const handleRetractionComplete = () => {
+  const handleRetractionComplete = useCallback(() => {
     setShowRetraction(false)
     setRetractionData(null)
     onAnimationComplete?.()
-  }
+  }, [onAnimationComplete])
 
   return (
     <div className="relative w-full pt-[100%]">
@@ -370,14 +369,14 @@ export function ChessBoard({
         {overlayWidth > 0 && (
           <>
         {pendingOverlay && !showRetraction && (() => {
-          const toPos = getSquarePercent(pendingOverlay.to, orientation)
+          const toPos = getSquarePercentInternal(pendingOverlay.to, orientation)
           return (
           <motion.div
             key={`pending-${pendingOverlay.from}-${pendingOverlay.to}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="absolute flex items-center justify-center font-bold select-none"
+            className="absolute flex items-center justify-center font-bold select-none will-change-transform"
             style={{ 
               left: toPos.left,
               top: toPos.top,
@@ -387,26 +386,26 @@ export function ChessBoard({
               textShadow: pendingOverlay.color === 'white' 
                 ? '0 0 2px #000' 
                 : '0 0 2px #fff',
-              filter: 'drop-shadow(0 0 6px rgba(96, 165, 250, 0.6))',
               fontSize: overlayWidth > 0
                 ? `${(overlayWidth / 8) * 0.65}px`
                 : '28px',
+              willChange: 'opacity',
             }}
           >
-            {getPieceChar(pendingOverlay.piece, pendingOverlay.color)}
+            {getPieceCharInternal(pendingOverlay.piece, pendingOverlay.color)}
           </motion.div>
           )
         })()}
 
         {myPendingOverlay && !showRetraction && (() => {
-          const myPos = getSquarePercent(myPendingOverlay.to, orientation)
+          const myPos = getSquarePercentInternal(myPendingOverlay.to, orientation)
           return (
           <motion.div
             key={`my-pending-${myPendingOverlay.from}-${myPendingOverlay.to}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="absolute flex items-center justify-center font-bold select-none"
+            className="absolute flex items-center justify-center font-bold select-none will-change-transform"
             style={{ 
               left: myPos.left,
               top: myPos.top,
@@ -416,13 +415,13 @@ export function ChessBoard({
               textShadow: myPendingOverlay.color === 'white' 
                 ? '0 0 2px #000' 
                 : '0 0 2px #fff',
-              filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.6))',
               fontSize: overlayWidth > 0
                 ? `${(overlayWidth / 8) * 0.65}px`
                 : '28px',
+              willChange: 'opacity',
             }}
           >
-            {getPieceChar(myPendingOverlay.piece, myPendingOverlay.color)}
+            {getPieceCharInternal(myPendingOverlay.piece, myPendingOverlay.color)}
           </motion.div>
           )
         })()}
@@ -430,7 +429,7 @@ export function ChessBoard({
         {pendingOverlay && (
           <AnimatePresence>
             {teammateLabelVisible && pendingOverlay && (() => {
-              const labelPos = getSquarePercent(pendingOverlay.to, orientation)
+              const labelPos = getSquarePercentInternal(pendingOverlay.to, orientation)
               const centerLeft = `${parseFloat(labelPos.left) + 6.25}%`
               return (
               <motion.div
@@ -450,10 +449,11 @@ export function ChessBoard({
                   scale: 0.7
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 18 }}
-                className="absolute pointer-events-none select-none z-20"
+                className="absolute pointer-events-none select-none z-20 will-change-transform"
                 style={{
                   left: centerLeft,
                   top: labelPos.top,
+                  willChange: 'transform, opacity',
                 }}
               >
                 <div style={{ transform: 'translateX(-50%)' }}>
@@ -479,28 +479,31 @@ export function ChessBoard({
                 const angle = (i / 8) * Math.PI * 2
                 const dx = Math.cos(angle) * 40
                 const dy = Math.sin(angle) * 40
+                const fromX = getSquarePosition(retractionData.to).x
+                const fromY = getSquarePosition(retractionData.to).y
                 return (
                   <motion.div
                     key={`particle-${i}-${retractionData.from}-${retractionData.to}`}
                     initial={{ 
-                      x: getSquarePosition(retractionData.to).x,
-                      y: getSquarePosition(retractionData.to).y,
+                      x: fromX,
+                      y: fromY,
                       opacity: 0.8,
                       scale: 0.6,
                     }}
                     animate={{ 
-                      x: getSquarePosition(retractionData.to).x + dx,
-                      y: getSquarePosition(retractionData.to).y + dy,
+                      x: fromX + dx,
+                      y: fromY + dy,
                       opacity: 0,
                       scale: 0,
                     }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.4, ease: "easeOut" }}
-                    className="absolute rounded-full pointer-events-none"
+                    className="absolute rounded-full pointer-events-none will-change-transform"
                     style={{ 
                       width: '6px',
                       height: '6px',
-                      backgroundColor: retractionData.color === 'white' ? '#ff4444' : '#cc0000'
+                      backgroundColor: retractionData.color === 'white' ? '#ff4444' : '#cc0000',
+                      willChange: 'transform, opacity',
                     }}
                   />
                 )
@@ -511,7 +514,6 @@ export function ChessBoard({
                   x: getSquarePosition(retractionData.to).x,
                   y: getSquarePosition(retractionData.to).y,
                   opacity: 0.6,
-                  backgroundColor: 'rgba(255, 0, 0, 0.3)'
                 }}
                 animate={{ 
                   x: getSquarePosition(retractionData.from).x,
@@ -520,11 +522,12 @@ export function ChessBoard({
                 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5, ease: "easeIn" }}
-                className="absolute flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold select-none"
+                className="absolute flex items-center justify-center text-4xl md:text-5xl lg:text-6xl font-bold select-none will-change-transform"
                 style={{ 
                   width: '12.5%', 
                   height: '12.5%',
-                  borderRadius: '0'
+                  borderRadius: '0',
+                  willChange: 'transform, opacity',
                 }}
                 onAnimationComplete={handleRetractionComplete}
               >
@@ -537,7 +540,7 @@ export function ChessBoard({
                       : '0 0 3px #fff'
                   }}
                 >
-                  {getPieceChar(retractionData.piece, retractionData.color as 'white' | 'black')}
+                  {getPieceCharInternal(retractionData.piece, retractionData.color as 'white' | 'black')}
                 </span>
               </motion.div>
             </>
@@ -552,13 +555,14 @@ export function ChessBoard({
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="absolute border-4 border-green-500 rounded-lg"
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute border-4 border-green-500 rounded-lg will-change-transform"
             style={{
               width: '12.5%',
               height: '12.5%',
               left: `${((highlightSquares.winnerTo.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
               top: `${((parseInt(highlightSquares.winnerTo[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
-              boxShadow: '0 0 20px rgba(34, 197, 94, 0.8)'
+              willChange: 'transform, opacity',
             }}
           />
         </div>
@@ -566,3 +570,29 @@ export function ChessBoard({
     </div>
   )
 }
+
+// Memoized — timer/presence/chat updates must NOT rerender the board.
+// Props are shallow-compared; pendingOverlay/highlightSquares are stable
+// object refs (Game.tsx retains same ref when unchanged via ...prev spread).
+export const ChessBoard = memo(ChessBoardInner, (prev, next) => {
+  return (
+    prev.fen === next.fen &&
+    prev.enabled === next.enabled &&
+    prev.orientation === next.orientation &&
+    prev.lastMove?.from === next.lastMove?.from &&
+    prev.lastMove?.to === next.lastMove?.to &&
+    prev.pendingOverlay?.from === next.pendingOverlay?.from &&
+    prev.pendingOverlay?.to === next.pendingOverlay?.to &&
+    prev.pendingOverlay?.piece === next.pendingOverlay?.piece &&
+    prev.pendingOverlay?.showTeammateLabel === next.pendingOverlay?.showTeammateLabel &&
+    prev.myPendingOverlay?.from === next.myPendingOverlay?.from &&
+    prev.myPendingOverlay?.to === next.myPendingOverlay?.to &&
+    prev.myPendingOverlay?.piece === next.myPendingOverlay?.piece &&
+    prev.highlightSquares?.winnerFrom === next.highlightSquares?.winnerFrom &&
+    prev.highlightSquares?.winnerTo === next.highlightSquares?.winnerTo &&
+    prev.highlightSquares?.loserFrom === next.highlightSquares?.loserFrom &&
+    prev.highlightSquares?.loserTo === next.highlightSquares?.loserTo &&
+    prev.onAnimationComplete === next.onAnimationComplete &&
+    prev.onMove === next.onMove
+  )
+})

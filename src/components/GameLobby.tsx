@@ -154,12 +154,12 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
               </div>
 
               {/* Player status row */}
-              <div className="mb-5 flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
+              <div className="mb-5 flex flex-wrap items-center justify-center gap-3">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
                     <User size={12} className="text-amber-400" />
                   </div>
-                  <span className="text-sm font-medium text-white">{username || 'You'}</span>
+                  <span className="min-w-0 truncate text-sm font-medium text-white" title={username || 'You'}>{username || 'You'}</span>
                 </div>
                 <span className="text-sm text-slate-500">{'\u2192'}</span>
                 <div className="flex items-center gap-1.5">
@@ -214,13 +214,13 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
               </p>
 
               <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-[#151c2e] p-4">
-                <div className="flex items-center justify-between min-h-[44px]">
-                  <p className="select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
+                <div className="flex items-center justify-between gap-2 min-h-[44px]">
+                  <p className="min-w-0 select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
                     {roomCode}
                   </p>
                   <button
                     onClick={handleCopyCode}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-xl border border-slate-700/60 bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-amber-500/30 hover:bg-slate-700/60 hover:text-amber-400"
+                    className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-xl border border-slate-700/60 bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-amber-500/30 hover:bg-slate-700/60 hover:text-amber-400"
                   >
                     {copied ? (
                       <>
@@ -286,7 +286,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-200">Your friend can join using</p>
                 <p className="text-xs text-slate-400">the code or the invite link</p>
               </div>

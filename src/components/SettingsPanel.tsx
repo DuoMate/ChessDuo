@@ -48,7 +48,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={MODAL_SPRING}
-            className="w-full max-w-sm overflow-hidden rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            className="w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200/70 p-4 dark:border-slate-700/70">
@@ -62,7 +62,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
 
             <div className="space-y-4 p-4">
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Theme</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
                 </div>
@@ -74,7 +74,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Auto-Queen</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Automatically promote pawns to queen</p>
                 </div>
@@ -83,7 +83,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={autoQueen}
                   onClick={() => setAutoQueen(!autoQueen)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoQueen ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoQueen ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -92,7 +92,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Low Time Warning</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Sound alert when time is running low</p>
                 </div>
@@ -101,7 +101,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={lowTimeWarning}
                   onClick={() => setLowTimeWarning(!lowTimeWarning)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${lowTimeWarning ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${lowTimeWarning ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -110,7 +110,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Confirm Moves</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Add confirmation before final move</p>
                 </div>
@@ -119,7 +119,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={confirmMove}
                   onClick={() => setConfirmMove(!confirmMove)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${confirmMove ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -128,7 +128,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Sound Effects</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Play sounds for moves and events</p>
                 </div>
@@ -137,7 +137,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={soundEnabled}
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${soundEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${soundEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -146,7 +146,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
               <div className="flex items-center justify-between min-h-[44px]">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Push Notifications</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Receive game invites and chat alerts</p>
                 </div>
@@ -166,7 +166,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                       localStorage.setItem('chessduo_push_disabled', 'true')
                     }
                   }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>

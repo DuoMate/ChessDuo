@@ -152,13 +152,13 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 transition={{ delay: i * 0.03 }}
                 className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl hover:bg-slate-800/70 transition-colors"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${resultBg}`}>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${resultBg}`}>
                       {icon}
                     </div>
-                    <div>
-                      <span className={`text-sm font-semibold ${resultColor}`}>
+                    <div className="min-w-0">
+                      <span className={`text-sm font-semibold truncate block ${resultColor}`}>
                         {resultText}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -173,7 +173,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                       e.stopPropagation()
                       router.push(`/replay/${game.id}`)
                     }}
-                    className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1"
+                    className="shrink-0 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
                   >
                     Replay
                     <ChevronRight size={12} />

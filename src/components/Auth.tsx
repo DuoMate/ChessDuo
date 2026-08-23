@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { authenticateWithGoogle } from '@/lib/supabaseAuthUtils'
 import { upsertProfile, fetchProfile } from '@/lib/profileService'
+import { classifyAuthError, buildAuthCallbackUrl } from '@/lib/authError'
+import { logAuthDebug, correlationId } from '@/lib/authDebug'
+import { getAppBaseUrl } from '@/lib/appUrl'
 import { Spinner } from '@/components/Spinner'
 
 const RESERVED_USERNAMES = new Set([
@@ -79,7 +82,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     const profile = await fetchProfile(userId)
     if (profile.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
+        // Derivation material lets profileService repair the rare vanished-row
+        // race (implicit INSERT → 23502) with a derived username.
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName }, { deriveUsernameFrom: { candidate: googleDisplayName || email, seed: userId } })
       }
       onAuthComplete(userId, profile.username)
       if (googleAuthInProgressRef.current) {
@@ -172,12 +177,38 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
 
     try {
       if (isLogin) {
+        const cid = correlationId()
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password
         })
 
-        if (authError) throw authError
+        logAuthDebug({
+          stage: 'signInWithPassword',
+          correlationId: cid,
+          authErrorCode: authError?.code ?? null,
+          authErrorMessage: authError?.message ?? null,
+          hasUser: !!authData.user,
+          hasSession: !!authData.session,
+          userId: authData.user?.id ?? null,
+          emailConfirmedAt: authData.user?.email_confirmed_at ?? null,
+        })
+
+        if (authError) {
+          setError(classifyAuthError(authError).message)
+          return
+        }
+
+        const { data: userData } = await supabase.auth.getUser()
+        const session = await AuthService.getSession()
+        logAuthDebug({
+          stage: 'signInPostCheck',
+          correlationId: cid,
+          hasUser: !!userData.user,
+          hasSession: !!session,
+          userId: userData.user?.id ?? null,
+          emailConfirmedAt: userData.user?.email_confirmed_at ?? null,
+        })
 
         if (authData.user) {
           await fetchAndCompleteAuth(authData.user.id, email)
@@ -203,26 +234,40 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
           return
         }
 
+        const cid = correlationId()
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { username: desiredUsername },
+            emailRedirectTo: buildAuthCallbackUrl(getAppBaseUrl()),
           }
         })
 
-        if (authError) throw authError
+        logAuthDebug({
+          stage: 'signUp',
+          correlationId: cid,
+          authErrorCode: authError?.code ?? null,
+          authErrorMessage: authError?.message ?? null,
+          hasUser: !!authData.user,
+          hasSession: !!authData.session,
+          userId: authData.user?.id ?? null,
+          emailConfirmedAt: authData.user?.email_confirmed_at ?? null,
+        })
+
+        if (authError) {
+          setError(classifyAuthError(authError).message)
+          return
+        }
 
         if (authData.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              username: desiredUsername
-            }, { onConflict: 'id' })
+          const profileResult = await upsertProfile({
+            id: authData.user.id,
+            username: desiredUsername,
+          })
 
-          if (profileError) {
-            if (profileError.message?.includes('unique') || profileError.code === '23505') {
+          if (!profileResult.success) {
+            if (profileResult.isUniqueConflict) {
               setError(`Username "${desiredUsername}" is already taken. Choose another.`)
             } else {
               setError('Failed to create profile. Please try again.')
@@ -231,10 +276,13 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             return
           }
 
-          if (authData.user.identities?.length === 0) {
-            setError('This email is already registered. Try signing in instead.')
-          } else {
+          if (authData.session) {
             await fetchAndCompleteAuth(authData.user.id, email)
+          } else {
+            // Email confirmation is required — Supabase does not issue a session
+            // until the confirmation link is clicked, so the account cannot be
+            // auto-completed yet.
+            setError('Account created. Check your email to confirm your address, then sign in.')
           }
         }
       }

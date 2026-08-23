@@ -89,7 +89,9 @@ export function useAuthSession(): UseAuthSessionResult {
 
     if (profile.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
+        // Derivation material lets profileService repair the vanished-row race
+        // (implicit INSERT → 23502 NOT NULL) with a derived username.
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName }, { deriveUsernameFrom: { candidate: googleDisplayName || email, seed: userId } })
       }
       setPlayerId(userId)
       setUsername(profile.username)

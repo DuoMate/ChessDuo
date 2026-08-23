@@ -79,7 +79,7 @@ interface ToastContainerProps {
 
 function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed right-4 z-50 flex flex-col gap-2 max-w-sm" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+    <div className="fixed right-4 z-50 flex max-w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
       <AnimatePresence>
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
@@ -111,11 +111,11 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       exit={{ opacity: 0, x: 100, scale: 0.9 }}
       className={`${bg} ${border} ${text} flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-[0_12px_40px_rgba(2,6,23,0.16)] backdrop-blur-xl`}
     >
-      <Icon size={18} className={iconClass} />
-      <p className="flex-1 text-sm">{toast.message}</p>
+      <Icon size={18} className={`${iconClass} shrink-0`} />
+      <p className="min-w-0 flex-1 break-words text-sm">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="text-xl leading-none text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+        className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-xl leading-none text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         aria-label="Dismiss"
       >
         ×

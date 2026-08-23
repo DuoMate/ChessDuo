@@ -3,7 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TeamHexagon } from '../TeamHexagon'
 import { BoardTopBar } from '../BoardTopBar'
 import { PendingMovesRow } from '../PendingMovesRow'
-import { MoveResolvedInline, type MoveResolutionData } from '../MoveResolvedInline'
+import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from '../MoveResolvedInline'
+import type { MoveComparison } from '@/features/shared/gameTypes'
 import { RoundHistorySidebar } from '../RoundHistorySidebar'
 import { BoardBottomNav } from '../BoardBottomNav'
 
@@ -103,6 +104,92 @@ describe('MoveResolvedInline', () => {
     )
     fireEvent.click(screen.getByText('Continue'))
     expect(onNext).toHaveBeenCalled()
+  })
+
+  it('shows "Both played exactly the same move!" only when isSync', () => {
+    const comparison: MoveComparison = {
+      player1Move: 'e4',
+      player2Move: 'd4',
+      player1Score: 50,
+      player2Score: 30,
+      player1Accuracy: 100,
+      player2Accuracy: 85,
+      player1Loss: 0,
+      player2Loss: 20,
+      player1Category: { label: 'Perfect', color: '#22c55e', emoji: '' },
+      player2Category: { label: 'Great', color: '#84cc16', emoji: '' },
+      winningMove: 'e4',
+      winningScore: 50,
+      isSync: false,
+      bestEngineMove: 'e2e4',
+      bestEngineScore: 50,
+      turnStartFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      winnerId: 'player1',
+      loserId: 'player2',
+      loserFrom: 'd2',
+      loserTo: 'd4',
+      alternatives: [],
+      youMatchedEngine: true,
+      teammateMatchedEngine: false,
+    }
+    const syncData = buildResolutionData({ ...comparison, player1Move: 'e4', player2Move: 'e4', isSync: true }, true, 'WHITE')
+    const { rerender } = render(<MoveResolvedInline data={syncData} onNext={jest.fn()} />)
+    expect(screen.getByText('Both played exactly the same move!')).toBeInTheDocument()
+
+    rerender(<MoveResolvedInline data={buildResolutionData(comparison, true, 'WHITE')} onNext={jest.fn()} />)
+    expect(screen.queryByText('Both played exactly the same move!')).not.toBeInTheDocument()
+  })
+})
+
+describe('buildResolutionData', () => {
+  const comparison: MoveComparison = {
+    player1Move: 'e4',
+    player2Move: 'd4',
+    player1Score: 50,
+    player2Score: 30,
+    player1Accuracy: 100,
+    player2Accuracy: 85,
+    player1Loss: 0,
+    player2Loss: 20,
+    player1Category: { label: 'Perfect', color: '#22c55e', emoji: '' },
+    player2Category: { label: 'Great', color: '#84cc16', emoji: '' },
+    winningMove: 'e4',
+    winningScore: 50,
+    isSync: false,
+    bestEngineMove: 'e2e4',
+    bestEngineScore: 50,
+    turnStartFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    winnerId: 'player1',
+    loserId: 'player2',
+    loserFrom: 'd2',
+    loserTo: 'd4',
+    alternatives: [],
+    youMatchedEngine: true,
+    teammateMatchedEngine: false,
+  }
+
+  it('maps player1 (coordinator) as the viewer', () => {
+    const data = buildResolutionData(comparison, true, 'WHITE')
+    expect(data.yourMove.san).toBe('e4')
+    expect(data.teammateMove.san).toBe('d4')
+    expect(data.result).toBe('you_won')
+    expect(data.yourAccuracy).toBe(100)
+    expect(data.teammateAccuracy).toBe(85)
+  })
+
+  it('maps player2 (non-coordinator) as the viewer — reverse perspective', () => {
+    const data = buildResolutionData(comparison, false, 'WHITE')
+    expect(data.yourMove.san).toBe('d4')
+    expect(data.teammateMove.san).toBe('e4')
+    expect(data.result).toBe('teammate_won')
+    expect(data.yourAccuracy).toBe(85)
+    expect(data.teammateAccuracy).toBe(100)
+  })
+
+  it('keeps isSync true only when both original submissions are identical', () => {
+    const sameMove = { ...comparison, player1Move: 'e4', player2Move: 'e4', isSync: true, loserId: null }
+    expect(buildResolutionData(sameMove as MoveComparison, true, 'WHITE').isSync).toBe(true)
+    expect(buildResolutionData(comparison, true, 'WHITE').isSync).toBe(false)
   })
 })
 

@@ -262,6 +262,78 @@ describe('Duo turn cycle — two real online clients (integration)', () => {
 
     expect(teammate.board.fen()).toBe(coordinator.board.fen())
   })
+
+  it('keeps both distinct submissions when the teammate moves first (regression: move collapse)', async () => {
+    // Duo WHITE humans: player1 (coordinator), player2 (teammate). BLACK: bots.
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'WHITE', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'WHITE', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'WHITE' },
+      { id: 'player2', team: 'WHITE' },
+    ])
+    startTurn(coordinator)
+
+    // Teammate (player2) moves FIRST — their submission arrives at the
+    // coordinator before the coordinator submits their own move.
+    ;(coordinator as any).handleSubmissionFromDB({
+      game_id: 'game-1', turn_number: 1, player_id: 'player2',
+      move_san: 'd4', move_from: 'd2', move_to: 'd4', piece: 'p',
+    })
+    // Coordinator moves SECOND.
+    await coordinator.submitMoveToDB('e4', 'e2', 'e4', 'p')
+
+    const result = await coordinator.resolvePendingMoves()
+
+    // Both original submissions must survive independently into the comparison.
+    const comp = coordinator.lastMoveComparison
+    expect(comp?.player1Move).toBe('e4')
+    expect(comp?.player2Move).toBe('d4')
+    expect(comp?.isSync).toBe(false)
+    expect(comp?.winnerId).toBe('player1')
+    expect(result.winningMove).toBe('e4')
+  })
+
+  it('assigns winner/loser correctly when the teammate\u2019s move is the engine pick', async () => {
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'WHITE', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'WHITE', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'WHITE' },
+      { id: 'player2', team: 'WHITE' },
+    ])
+    startTurn(coordinator)
+    // d4 scores higher so the engine picks the teammate's move.
+    testG(coordinator).evaluator = {
+      evaluateMoves: jest.fn().mockResolvedValue([
+        { move: 'e2e4', score: 30 },
+        { move: 'd2d4', score: 50 },
+      ]),
+    }
+
+    ;(coordinator as any).handleSubmissionFromDB({
+      game_id: 'game-1', turn_number: 1, player_id: 'player2',
+      move_san: 'd4', move_from: 'd2', move_to: 'd4', piece: 'p',
+    })
+    await coordinator.submitMoveToDB('e4', 'e2', 'e4', 'p')
+
+    const result = await coordinator.resolvePendingMoves()
+
+    const comp = coordinator.lastMoveComparison
+    expect(comp?.player1Move).toBe('e4')
+    expect(comp?.player2Move).toBe('d4')
+    expect(comp?.isSync).toBe(false)
+    expect(comp?.winnerId).toBe('player2')
+    expect(comp?.loserId).toBe('player1')
+    expect(comp?.player1Accuracy).toBeLessThan(comp?.player2Accuracy ?? 0)
+    expect(result.winningMove).toBe('d4')
+  })
 })
 
 describe('Duo BLACK humans — White bot team first turn (BUG: black-side bot freeze)', () => {
@@ -316,6 +388,10 @@ describe('Duo BLACK humans — White bot team first turn (BUG: black-side bot fr
     }
     await coordinator.resolvePendingMoves()
     expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    // ADR-006 single-writer: resolution owns 'resolving'; the caller
+    // (Game.tsx) reopens selection after each completed resolution.
+    ;(coordinator as any).turnState = 'selecting'
 
     // Black's turn: coordinator + teammate bot (bot_opponent_1) submit.
     coordinator.setPendingMove('player1', 'e5', 'e7', 'e5', 'p')

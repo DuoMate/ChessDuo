@@ -41,7 +41,7 @@ export function GameLoading({
   }, [])
 
   return (
-    <div className="flex min-h-[600px] flex-col items-center justify-center rounded-[32px] border border-white/70 bg-white/80 p-8 shadow-[0_24px_90px_rgba(2,6,23,0.14)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/80">
+    <div className="flex min-h-[min(600px,85vh)] flex-col items-center justify-center rounded-[32px] border border-white/70 bg-white/80 p-6 sm:p-8 shadow-[0_24px_90px_rgba(2,6,23,0.14)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/80">
       {showChessIcon && (
         <div className="relative mb-8">
           <div ref={iconRef} className="inline-block">
@@ -81,7 +81,7 @@ export function GameLoading({
                   url: inviteUrl,
                 })
               }}
-              className="flex-1 min-h-[44px] rounded-2xl bg-amber-500/10 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
+              className="flex flex-1 min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-amber-500/10 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
             >
               <Share2 size={14} /> Share link
             </button>

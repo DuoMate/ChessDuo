@@ -205,8 +205,8 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[var(--color-page-bg)]">
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[var(--color-page-bg)] p-4">
+      <div className="bg-white dark:bg-slate-800 p-4 sm:p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-500 dark:text-blue-400">
           ♟️ ChessDuo
         </h1>
@@ -218,7 +218,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           <button
             onClick={createRoom}
             disabled={loading}
-            className="w-full p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
+            className="w-full min-h-[44px] p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create New Room'}
           </button>
@@ -236,12 +236,12 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
                value={joinCode}
                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                maxLength={36}
-               className="flex-1 p-2 md:p-3 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-slate-600 focus:border-yellow-400 focus:outline-none text-center text-base md:text-lg tracking-wide md:tracking-widest font-mono"
+               className="min-h-[44px] flex-1 min-w-0 p-2 md:p-3 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-slate-600 focus:border-yellow-400 focus:outline-none text-center text-base md:text-lg tracking-wide md:tracking-widest font-mono"
              />
             <button
               onClick={joinRoom}
               disabled={loading || joinCode.length < 6}
-              className="p-2 md:p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50 text-sm md:text-base"
+              className="min-h-[44px] p-2 md:p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50 text-sm md:text-base"
             >
               Join
             </button>

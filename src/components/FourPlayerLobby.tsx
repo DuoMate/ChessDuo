@@ -300,7 +300,7 @@ export function FourPlayerLobby({
           } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
           title={isCreator ? 'Drag to other team or click to unassign' : ''}
         >
-          <span className="font-medium text-slate-900 dark:text-white truncate">
+          <span className="min-w-0 flex-1 font-medium text-slate-900 dark:text-white truncate">
             {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
           </span>
           {isCreator && (
@@ -318,12 +318,12 @@ export function FourPlayerLobby({
   )
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4 overflow-y-auto">
+    <div className="flex min-h-screen justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-lg overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+        className="my-auto w-full max-w-lg overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
       >
         {view === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">
@@ -380,7 +380,7 @@ export function FourPlayerLobby({
               <p className="mt-1 select-all font-mono text-xl font-bold tracking-[0.2em] text-amber-600 dark:text-amber-400">
                 {roomCode}
               </p>
-              <div className="mt-2 flex justify-center gap-2">
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
                 <button
                   onClick={handleCopyCode}
                   className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-amber-400"
@@ -412,7 +412,7 @@ export function FourPlayerLobby({
               </p>
             )}
 
-            <div className="mb-4 flex w-full gap-3">
+            <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row">
               {renderDropZone('WHITE')}
               {renderDropZone('BLACK')}
             </div>
@@ -447,7 +447,7 @@ export function FourPlayerLobby({
                     } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
                   >
                     <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                    <span className="font-medium text-slate-900 dark:text-white truncate">
+                    <span className="min-w-0 flex-1 font-medium text-slate-900 dark:text-white truncate">
                       {p.playerId === playerId ? (username || 'You') : (p.username || 'Player')}
                     </span>
                     {isCreator && p.playerId !== playerId && (
@@ -472,7 +472,7 @@ export function FourPlayerLobby({
               <p className="mb-3 text-xs font-medium text-rose-600 dark:text-rose-400">{error}</p>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
               <button
                 onClick={handleLeave}
                 className="min-h-[44px] rounded-2xl px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"

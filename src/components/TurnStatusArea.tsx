@@ -85,8 +85,8 @@ function SelectedMoveBadge({ move }: { move: string }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
-      <span className="text-base">{pieceChar}</span>
-      <span className="font-mono text-sm font-bold text-amber-800 dark:text-amber-300">
+      <span className="shrink-0 text-base">{pieceChar}</span>
+      <span className="max-w-[140px] truncate font-mono text-sm font-bold text-amber-800 dark:text-amber-300" title={move}>
         {move}
       </span>
       <span className="hidden text-xs tracking-wide text-amber-700/70 dark:text-amber-400/70 sm:inline">
