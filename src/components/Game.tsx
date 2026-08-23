@@ -1162,6 +1162,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
     // Normal tick: decrement engine silently; IsolatedMatchTimer will poll
     // the new value on its own 1 Hz interval and rerender only itself.
+    // Online: coordinator owns countdown via OnlineGame.startMatchTimer, so
+    // do NOT double-decrement (otherwise 2 s/s on coordinator).
+    if (isOnline) return
     g.setMatchTimeRemaining(remaining - 1)
   }, [isOnline])
 
@@ -2130,6 +2133,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (gameState.status !== GameStatus.PLAYING) return
     if (matchTimerRef.current) return
     if (!matchTimerStarted) return
+    // Online: coordinator owns countdown via OnlineGame.startMatchTimer
+    // (IsolatedMatchTimer displays). Do not create duplicate 1Hz tick.
+    if (isOnline) return
 
     matchTimerRef.current = setInterval(tickMatchTimer, 1000)
 
@@ -2139,7 +2145,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         matchTimerRef.current = null
       }
     }
-  }, [gameState.status, tickMatchTimer, matchTimerStarted])
+  }, [gameState.status, tickMatchTimer, matchTimerStarted, isOnline])
 
   const handleMove = useCallback((uciMove: string, promotion?: PromotionPiece) => {
     if (settings.confirmMove) {

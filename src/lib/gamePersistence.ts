@@ -22,7 +22,7 @@ interface GameSaveData {
   last_human_resolution?: unknown
 }
 
-export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number, turnNumber?: number, coordinatorId?: string, lastResolvedMove?: string, lastHumanResolution?: unknown): Promise<void> {
+export async function saveGameState(roomId: string, fen: string, currentTurn: string, moveEntry: GameSaveData['move_history'][number] | null, status: string, matchStartedAt?: string, matchTimeLimit?: number, turnNumber?: number, coordinatorId?: string, lastResolvedMove?: string, lastHumanResolution?: unknown): Promise<string | null> {
   try {
     const { data: existing } = await supabase
       .from('games')
@@ -63,9 +63,11 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
       upsertData.last_human_resolution = lastHumanResolution
     }
 
-    const { error } = await supabase
+    const { data: upserted, error } = await supabase
       .from('games')
       .upsert(upsertData, { onConflict: 'room_id' })
+      .select('id')
+      .single()
 
     if (error) {
       // NEVER swallow a persistence failure: an unpersisted games row strands
@@ -76,9 +78,16 @@ export async function saveGameState(roomId: string, fen: string, currentTurn: st
       throw new Error(`Game upsert failed: ${error.message}`)
     }
 
-    emitTrace('GAME_STATE_SAVED', { roomId, turnNumber: turnNumber ?? undefined, extra: { moves: moveHistory.length } })
+    // Use INSERT ... RETURNING id as authoritative gameId source — avoids
+    // separate SELECT that can fail due to RLS visibility window / replica
+    // lag (previously 5×200ms retry that still could return null).
+    const gameId = (upserted as { id?: string } | null)?.id ?? null
 
-    DEBUG && console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length })
+    emitTrace('GAME_STATE_SAVED', { roomId, turnNumber: turnNumber ?? undefined, extra: { moves: moveHistory.length, gameId: gameId ?? undefined } })
+
+    DEBUG && console.log('[PERSIST] Game state saved:', { roomId, fen: fen.substring(0, 30), turn: currentTurn, moves: moveHistory.length, gameId: gameId ?? undefined })
+
+    return gameId
   } catch (e) {
     // Re-throw so callers can react (retry / roll back the turn) — but only
     // after logging the full error chain, never silently swallowing it.

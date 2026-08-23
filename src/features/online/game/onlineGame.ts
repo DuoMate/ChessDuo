@@ -896,37 +896,44 @@ export class OnlineGame {
       DEBUG && console.log('[COORDINATOR] Assigned:', { coordinatorId: this._coordinatorId, myId: this._playerId, amCoordinator: this.isCoordinator() })
       this.duoLog('GAME', 'STARTED', { coordinatorId: this._coordinatorId })
       
-      // Persist initial game state with timer
+      // Persist initial game state with timer — use INSERT ... RETURNING id
+      // as authoritative gameId (avoids separate SELECT visibility race).
       if (this._room) {
         const startedAt = new Date().toISOString()
-        await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
-        // Broadcast game_started so non-coordinator clients sync without polling
-        emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'game_started' } })
-        this._channel?.send({ type: 'broadcast', event: 'game_started', payload: {} })
-        this.duoLog('REALTIME', 'GAME_STARTED_SENT', {})
-
-        // Query the game UUID for turn_submissions FK and subscribe to submission changes.
-        // Bounded read-back retry: the save above committed, but a slow read must not
-        // leave _gameId empty (which would silently degrade submissions to broadcasts).
-        let saved: Awaited<ReturnType<typeof loadGameState>> = null
-        for (let attempt = 0; attempt < 5 && !saved?.gameId; attempt++) {
-          saved = await loadGameState(this._room.id)
-          if (!saved?.gameId && attempt < 4) {
-            await new Promise(resolve => setTimeout(resolve, 200))
-          }
-        }
-        if (saved?.gameId) {
-          this._gameId = saved.gameId
+        const createdGameId = await saveGameState(this._room.id, this.gameState.fen, this.gameState.currentTeam, null, this._status, startedAt, this._timeLimitSeconds, 0, this._coordinatorId)
+        if (createdGameId) {
+          this._gameId = createdGameId
           this._currentTurnNumber = 1
           this.subscribeToSubmissions()
           this.subscribeToGameStatus()
-          DEBUG && console.log('[ONLINE] Game ID stored:', this._gameId)
+          this.duoLog('GAME', 'GAME_CREATED', { gameId: this._gameId })
+          DEBUG && console.log('[ONLINE] Game ID stored from RETURNING:', this._gameId)
         } else {
-          // The game row is required for move submission (FK to turn_submissions).
-          // Do not silently continue — log loudly so a ?debug=1 run isolates it.
-          console.warn('[ONLINE] ❌ Could not read back game row after creation — _gameId is empty, submissions will use broadcast fallback')
-          this.duoLog('GAME', 'GAME_ID_READBACK_FAILED', {})
+          // Fallback: loadGameState retry (handles case where upsert did not
+          // return id due to row already existing from concurrent coordinator).
+          let saved: Awaited<ReturnType<typeof loadGameState>> = null
+          for (let attempt = 0; attempt < 3 && !saved?.gameId; attempt++) {
+            saved = await loadGameState(this._room.id)
+            if (!saved?.gameId && attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 200))
+            }
+          }
+          if (saved?.gameId) {
+            this._gameId = saved.gameId
+            this._currentTurnNumber = saved.turnNumber ? saved.turnNumber + 1 : 1
+            this.subscribeToSubmissions()
+            this.subscribeToGameStatus()
+            DEBUG && console.log('[ONLINE] Game ID stored via fallback read:', this._gameId)
+          } else {
+            console.warn('[ONLINE] ❌ Could not read back game row after creation — _gameId is empty, submissions will use broadcast fallback')
+            this.duoLog('GAME', 'GAME_ID_READBACK_FAILED', {})
+          }
         }
+        // Broadcast game_started AFTER _gameId is known so non-coordinator can
+        // sync without polling and submissions are immediately valid.
+        emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'game_started', gameId: this._gameId || undefined } })
+        this._channel?.send({ type: 'broadcast', event: 'game_started', payload: { gameId: this._gameId || undefined } })
+        this.duoLog('REALTIME', 'GAME_STARTED_SENT', {})
       }
       
       this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
@@ -1068,7 +1075,9 @@ export class OnlineGame {
             this.gameState.setMatchTimeRemaining(Math.floor(remaining))
             this.gameState.setMatchTimerActive(true)
             if (this.isCoordinator()) {
-              this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 15000)
+              if (this._timerSyncInterval) clearInterval(this._timerSyncInterval)
+      if (this._timerSyncInterval) clearInterval(this._timerSyncInterval)
+      this._timerSyncInterval = setInterval(() => this.broadcastTimerSync(), 5000)
             }
             this.startMatchTimer()
             DEBUG && console.log('[ONLINE] Restored match timer:', {

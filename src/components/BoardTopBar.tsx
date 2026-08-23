@@ -281,6 +281,7 @@ export const BoardTopBar = memo(BoardTopBarInner, (prev, next) => {
     prev.capturedWhite === next.capturedWhite &&
     prev.capturedBlack === next.capturedBlack &&
     prev.whitePlayers === next.whitePlayers &&
-    prev.blackPlayers === next.blackPlayers
+    prev.blackPlayers === next.blackPlayers &&
+    prev.timerNode === next.timerNode
   )
 })

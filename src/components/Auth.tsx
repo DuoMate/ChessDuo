@@ -259,15 +259,13 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         }
 
         if (authData.user) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: authData.user.id,
-              username: desiredUsername
-            }, { onConflict: 'id' })
+          const profileResult = await upsertProfile({
+            id: authData.user.id,
+            username: desiredUsername,
+          })
 
-          if (profileError) {
-            if (profileError.message?.includes('unique') || profileError.code === '23505') {
+          if (!profileResult.success) {
+            if (profileResult.isUniqueConflict) {
               setError(`Username "${desiredUsername}" is already taken. Choose another.`)
             } else {
               setError('Failed to create profile. Please try again.')
