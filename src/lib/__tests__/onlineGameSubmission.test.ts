@@ -146,18 +146,25 @@ describe('submitMoveToDB (Phase 3 — server-authoritative submission)', () => {
     expect(testG(game).turnState).toBe('selecting')
   })
 
-  it('falls back to player_move broadcast when no gameId is set', async () => {
+  it('fails explicitly when no gameId exists and recovery is impossible (H1: no silent broadcast fallback)', async () => {
     const game = setupPlayingGame('player1', 'WHITE', '')
     testG(game)._channel = { send: channelSendMock }
 
-    await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
+    const ok = await game.submitMoveToDB('e4', 'e2', 'e4', 'p')
 
+    // H1: the move must NOT be accepted — a broadcast-only submission can
+    // never resolve (the teammate lock would always time out). The submission
+    // fails visibly and local state rolls back for retry.
+    expect(ok).toBe(false)
+    expect(upsertMock).not.toHaveBeenCalled()
+    // Rollback still emits a best-effort visibility broadcast (with turn identity).
     expect(channelSendMock).toHaveBeenCalledWith({
       type: 'broadcast',
       event: 'player_move',
-      payload: { playerId: 'player1', move: 'e4', from: 'e2', to: 'e4' },
+      payload: { playerId: 'player1', move: 'e4', from: 'e2', to: 'e4', turnNumber: 1 },
     })
-    expect(upsertMock).not.toHaveBeenCalled()
+    expect(game.getAllPendingMoves().has('player1')).toBe(false)
+    expect(testG(game).turnState).toBe('selecting')
   })
 
   it('does not throw when the DB write rejects (returns false, rolls back)', async () => {

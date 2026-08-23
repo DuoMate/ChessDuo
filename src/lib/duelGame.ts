@@ -66,6 +66,11 @@ export class DuelGame {
   private static readonly MAX_POLL_ITERATIONS = 30
   private _disconnectedAt: number | null = null
   private _disconnectCheckInterval: ReturnType<typeof setInterval> | null = null
+  // C5: last wall-clock tick timestamp — lets a backgrounded client catch its
+  // displayed clock up with real elapsed time on return to the foreground.
+  private _lastTickAt: number = Date.now()
+  // C5: bound visibilitychange handler (removed in destroy()).
+  private _visibilityHandler: (() => void) | null = null
 
   constructor(roomId: string, playerId: string, team: 'WHITE' | 'BLACK', timeLimit: number) {
     this.chess = new Chess()
@@ -242,8 +247,36 @@ export class DuelGame {
       }
       if (status === 'SUBSCRIBED') {
         await this._channel?.track({ player_id: this._playerId + tag, team: this._team })
+        // C5 #3: reconcile from the authoritative row right after subscribing —
+        // realtime broadcasts alone miss events; DB reconstruction is required
+        // for refresh/reconnect/late-join correctness.
+        try {
+          const outcome = await this._syncFromDB()
+          console.log('[DUEL][SUBSCRIBE] Post-subscribe reconciliation:', JSON.stringify({ roomId: this._roomId, outcome }))
+          this.checkExpiredClockAuthority()
+          this.notify()
+        } catch (e) {
+          console.error('[DUEL][SUBSCRIBE] Reconciliation failed:', JSON.stringify({ roomId: this._roomId, errorMessage: String((e as Error)?.message || e) }))
+        }
       }
     })
+
+    // C5 #5: recover from background throttling / mobile suspension — the
+    // authoritative row is re-read when the app becomes visible again.
+    if (typeof document !== 'undefined' && !this._visibilityHandler) {
+      this._visibilityHandler = () => {
+        if (document.visibilityState !== 'visible') return
+        if (!this._channel) return
+        void this._syncFromDB().then((outcome) => {
+          this.checkExpiredClockAuthority()
+          this.notify()
+          if (outcome !== 'error' && outcome !== 'no-row') {
+            console.log('[DUEL][RECONCILE] Visibility reconciliation:', JSON.stringify({ roomId: this._roomId, outcome }))
+          }
+        })
+      }
+      document.addEventListener('visibilitychange', this._visibilityHandler)
+    }
 
     this._pollingInterval = setInterval(async () => {
       if (this._status !== 'waiting') {
@@ -262,78 +295,272 @@ export class DuelGame {
     }, 2000)
   }
 
-  private startGame() {
-    if (this._status === 'playing') return
+  private async startGame() {
+    // C5 #8: terminal games are immutable — never restart board/clocks.
+    if (this._status === 'playing' || this._status === 'game_over') return
+
+    // C5 #4: reconcile BEFORE initializing. An existing duel_games row with
+    // active or terminal state wins over a fresh initial position — a refresh
+    // mid-duel must never reset the board.
+    let outcome: Awaited<ReturnType<typeof this._syncFromDB>> = 'no-row'
+    try {
+      outcome = await this._syncFromDB()
+    } catch (e) {
+      console.error('[DUEL][RECONCILE] Pre-start sync failed:', JSON.stringify({
+        roomId: this._roomId,
+        errorMessage: String((e as Error)?.message || e),
+      }))
+    }
+    if (outcome === 'restored-game-over') {
+      if (this._pollingInterval) clearInterval(this._pollingInterval)
+      this.notify()
+      return
+    }
+
     this._status = 'playing'
     this._matchTimerActive = true
+    this._lastTickAt = Date.now()
+    // NOTE: when outcome === 'restored-playing', fen/move_history/clocks were
+    // already loaded by _syncFromDB onto this.chess — no fresh init here.
+
     this._timerInterval = setInterval(() => {
+      if (this._status !== 'playing') return
+      // C5 #6: elapsed-time based decrement (throttle-safe), not tick-count.
+      this.advanceClockByElapsed()
       const isWhiteTurn = this.chess.turn() === 'w'
-      if (isWhiteTurn) {
-        if (this._whiteTimeRemaining > 0) {
-          this._whiteTimeRemaining--
-          this.notify()
-          if (this._whiteTimeRemaining <= 0) {
-            this.handleTimeout()
-          }
-        }
-      } else {
-        if (this._blackTimeRemaining > 0) {
-          this._blackTimeRemaining--
-          this.notify()
-          if (this._blackTimeRemaining <= 0) {
-            this.handleTimeout()
-          }
-        }
+      const remaining = isWhiteTurn ? this._whiteTimeRemaining : this._blackTimeRemaining
+      if (remaining <= 0) {
+        this.checkExpiredClockAuthority()
+        this.notify()
+        return
       }
+      this.notify()
     }, 1000)
     this._disconnectCheckInterval = setInterval(() => {
       if (this._status !== 'playing') return
       if (!this._disconnectedAt) return
       if (Date.now() - this._disconnectedAt > 35000) {
         const opponentWins = this._team === 'WHITE' ? 'black' : 'white'
-        this.setGameOver(opponentWins, `${opponentWins === 'white' ? 'White' : 'Black'} wins by forfeit`, 'timeout')
+        void this.handleForfeit(opponentWins)
       }
     }, 1000)
+    // C5 #7: a restored game may already be past its clock deadline.
+    this.checkExpiredClockAuthority()
     this.notify()
   }
 
-  private async _syncFromDB() {
+  /**
+   * C5: targeted update of the authoritative duel_games row. Returns false on
+   * failure (logged loudly) so callers can decide rollback/retry — never
+   * silently swallowed.
+   */
+  private async persistGameState(fields: Record<string, unknown>): Promise<boolean> {
+    const { error } = await supabase
+      .from('duel_games')
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq('room_id', this._roomId)
+    if (error) {
+      console.error('[DUEL][PERSIST] Failed to persist duel state:', JSON.stringify({
+        roomId: this._roomId,
+        status: fields.status ?? this._status,
+        moveNumber: Array.isArray(fields.move_history) ? fields.move_history.length : this._moveHistory.length,
+        errorMessage: error.message,
+      }))
+      return false
+    }
+    return true
+  }
+
+  /**
+   * C5: persist the terminal result BEFORE it is broadcast (spec: never
+   * broadcast a GAME_OVER that does not exist in the DB). One bounded retry
+   * after a short delay; if both attempts fail the peer's own deterministic
+   * authority / later DB reconciliation still converges the game.
+   */
+  private async persistGameOver(
+    winner: 'white' | 'black' | 'draw',
+    result: string,
+    reason: string,
+  ): Promise<boolean> {
+    const payload = {
+      status: 'game_over',
+      winner,
+      game_result: result,
+      game_over_reason: reason,
+      white_time_remaining: this._whiteTimeRemaining,
+      black_time_remaining: this._blackTimeRemaining,
+    }
+    let ok = await this.persistGameState(payload)
+    if (!ok) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      ok = await this.persistGameState(payload)
+    }
+    return ok
+  }
+
+  /**
+   * C5: apply a terminal result locally WITHOUT broadcasting — used by DB
+   * reconciliation (the broadcast path uses setGameOver which notifies).
+   */
+  private applyGameOverLocal(winner: 'white' | 'black' | 'draw', result: string, reason: string | null): void {
+    this._status = 'game_over'
+    this._winner = winner
+    this._gameResult = result
+    this._gameOverReason = reason
+    this.stopTimer()
+  }
+
+  /**
+   * C5: authoritative reconciliation from duel_games.
+   *
+   * Returns one of:
+   * - 'no-row'        nothing persisted yet
+   * - 'waiting'       row exists but match not started
+   * - 'restored-playing'  active state restored (fen/history/clocks)
+   * - 'restored-game-over' terminal state restored locally
+   * - 'up-to-date'    row matches local state
+   * - 'error'         query failed
+   */
+  private async _syncFromDB(): Promise<
+    'no-row' | 'waiting' | 'restored-playing' | 'restored-game-over' | 'up-to-date' | 'error'
+  > {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('duel_games')
-        .select('fen, move_history, white_time_remaining, black_time_remaining, status')
+        .select('fen, move_history, white_time_remaining, black_time_remaining, status, winner, game_result, game_over_reason')
         .eq('room_id', this._roomId)
         .single()
 
-      if (!data || data.status !== 'playing') return
+      if (error || !data) {
+        console.warn('[DUEL][RECONCILE] No readable duel_games row:', JSON.stringify({
+          roomId: this._roomId,
+          errorMessage: error?.message ?? 'no row',
+        }))
+        return 'no-row'
+      }
 
-      if (data.fen) {
+      // Terminal rows are applied unconditionally — GAME_OVER is immutable and
+      // must survive refresh/reconnect regardless of local board state.
+      if (data.status === 'game_over') {
+        if (this._status === 'game_over') return 'up-to-date'
+        console.log('[DUEL][RECONCILE] Restoring GAME_OVER from DB:', JSON.stringify({ roomId: this._roomId, winner: data.winner }))
+        if (data.fen) this.chess.load(data.fen)
+        if (Array.isArray(data.move_history)) this._moveHistory = data.move_history
+        if (data.white_time_remaining !== undefined && data.white_time_remaining !== null) this._whiteTimeRemaining = data.white_time_remaining
+        if (data.black_time_remaining !== undefined && data.black_time_remaining !== null) this._blackTimeRemaining = data.black_time_remaining
+        this.applyGameOverLocal(
+          (data.winner as 'white' | 'black' | 'draw') ?? 'draw',
+          data.game_result ?? 'Game Over',
+          data.game_over_reason ?? null,
+        )
+        this.notify()
+        return 'restored-game-over'
+      }
+
+      if (data.status !== 'playing') return 'waiting'
+
+      // ADR-006-style stale-authority guard: only roll back to the row when it
+      // knows MORE chess than we do. A lagging/partially-written row can never
+      // drag an ahead client backwards.
+      const dbMoveCount = Array.isArray(data.move_history) ? data.move_history.length : 0
+      const localMoveCount = this._moveHistory.length
+      if (dbMoveCount < localMoveCount) {
+        console.warn('[DUEL][RECONCILE] Stale row ignored:', JSON.stringify({ roomId: this._roomId, dbMoveCount, localMoveCount }))
+        return 'up-to-date'
+      }
+
+      if (data.fen && data.fen !== this.chess.fen()) {
         this.chess.load(data.fen)
+        try {
+          const last = this.chess.history({ verbose: true } as never).slice(-1)[0] as { from: string; to: string } | undefined
+          this._lastMove = last ? { from: last.from, to: last.to } : null
+        } catch { /* history unavailable — leave lastMove as-is */ }
       }
-
-      if (data.white_time_remaining !== undefined && data.white_time_remaining !== null) {
-        this._whiteTimeRemaining = data.white_time_remaining
-      }
-      if (data.black_time_remaining !== undefined && data.black_time_remaining !== null) {
-        this._blackTimeRemaining = data.black_time_remaining
-      }
-
-      if (Array.isArray(data.move_history) && data.move_history.length > 0) {
-        this._moveHistory = data.move_history
-      }
-
+      if (Array.isArray(data.move_history)) this._moveHistory = data.move_history
+      if (data.white_time_remaining !== undefined && data.white_time_remaining !== null) this._whiteTimeRemaining = data.white_time_remaining
+      if (data.black_time_remaining !== undefined && data.black_time_remaining !== null) this._blackTimeRemaining = data.black_time_remaining
+      this._lastTickAt = Date.now()
       this.notify()
-    } catch (e) { console.error('[DuelGame] Failed to sync game to DB:', e) }
+      return dbMoveCount === localMoveCount && !data.fen ? 'up-to-date' : 'restored-playing'
+    } catch (e) {
+      console.error('[DUEL][RECONCILE] Failed to sync from DB:', JSON.stringify({
+        roomId: this._roomId,
+        errorMessage: String((e as Error)?.message || e),
+      }))
+      return 'error'
+    }
   }
 
-  private async handleTimeout() {
+  /**
+   * C5 #6/#7: advance the side-to-move's clock by REAL elapsed time since the
+   * last tick (not by tick count). Steady state elapsed === 1s (identical to
+   * the old behavior); a throttled/suspended tab catches up on its next fire
+   * instead of freezing the clock. Display/decision input only — authoritative
+   * clocks re-converge at every persisted move.
+   */
+  private advanceClockByElapsed(): void {
+    if (this._status !== 'playing') return
+    const now = Date.now()
+    const elapsedSec = Math.max(0, Math.floor((now - this._lastTickAt) / 1000))
+    this._lastTickAt = now
+    if (elapsedSec <= 0) return
+    const isWhiteTurn = this.chess.turn() === 'w'
+    if (isWhiteTurn) {
+      this._whiteTimeRemaining = Math.max(0, this._whiteTimeRemaining - elapsedSec)
+    } else {
+      this._blackTimeRemaining = Math.max(0, this._blackTimeRemaining - elapsedSec)
+    }
+  }
+
+  /**
+   * C5 #7: single deterministic timeout declarer — the OPPONENT of the expired
+   * side decides (so both devices can never race two different verdicts).
+   * Called from the tick loop and after every reconciliation (covers the case
+   * where the losing device was offline when its clock ran out).
+   */
+  private checkExpiredClockAuthority(): void {
+    if (this._status !== 'playing') return
+    if (this._whiteTimeRemaining <= 0 && this._team !== 'WHITE') {
+      void this.handleTimeout('white')
+    } else if (this._blackTimeRemaining <= 0 && this._team !== 'BLACK') {
+      void this.handleTimeout('black')
+    }
+  }
+
+  /**
+   * C5 #7: deterministic timeout resolution — the winner is ALWAYS the
+   * opposite of the side whose clock expired (engine-independent, so both
+   * devices converge on the identical verdict). The authoritative GAME_OVER is
+   * persisted BEFORE it is broadcast; an already-terminal game is never
+   * overwritten.
+   */
+  private async handleTimeout(expiredSide: 'white' | 'black') {
+    if (this._status === 'game_over') return
+    console.log('[DUEL][TIMEOUT] Clock expired:', JSON.stringify({ roomId: this._roomId, expiredSide }))
     this.stopTimer()
-    const score = this.evaluator ? await this.evaluator.evaluatePosition(this.chess.fen()).catch(() => 0) : 0
-    let winner: 'white' | 'black' | 'draw'
-    if (score > 0) winner = 'white'
-    else if (score < 0) winner = 'black'
-    else winner = 'draw'
-    const result = winner === 'draw' ? 'Draw by timeout' : (winner === 'white' ? 'White wins by timeout' : 'Black wins by timeout')
+    const winner: 'white' | 'black' = expiredSide === 'white' ? 'black' : 'white'
+    const result = `${winner === 'white' ? 'White' : 'Black'} wins by timeout`
+    const ok = await this.persistGameOver(winner, result, 'timeout')
+    if (!ok) {
+      // Never broadcast a GAME_OVER that does not exist in the DB. The
+      // declaring authority retries via the next tick / reconciliation sweep.
+      return
+    }
+    this.setGameOver(winner, result, 'timeout')
+    this.broadcastGameOver(winner, result, 'timeout')
+  }
+
+  /**
+   * C5: disconnect-forfeit — persisted before broadcast, like every terminal.
+   */
+  private async handleForfeit(winnerSide: 'white' | 'black') {
+    if (this._status === 'game_over') return
+    console.log('[DUEL][PERSIST] Disconnect forfeit:', JSON.stringify({ roomId: this._roomId, winnerSide }))
+    this.stopTimer()
+    const winner = winnerSide
+    const result = `${winner === 'white' ? 'White' : 'Black'} wins by forfeit`
+    const ok = await this.persistGameOver(winner, result, 'timeout')
+    if (!ok) return
     this.setGameOver(winner, result, 'timeout')
     this.broadcastGameOver(winner, result, 'timeout')
   }
@@ -364,7 +591,24 @@ export class DuelGame {
     if (!this.canMove()) return { success: false, error: 'Not your turn' }
 
     try {
+      // C5 #14-B/I: reconcile-if-behind BEFORE applying our own move. If we
+      // missed the opponent's broadcast, our board is stale and the move would
+      // be illegal/incorrect against the authoritative position.
+      const fenBeforeSync = this.chess.fen()
+      const syncOutcome = await this._syncFromDB()
+      if (this._status !== 'playing') return { success: false, error: 'Game is over' }
+      if (syncOutcome === 'restored-playing' && this.chess.fen() !== fenBeforeSync) {
+        console.log('[DUEL][RECONCILE] Pre-move catch-up applied:', JSON.stringify({ roomId: this._roomId }))
+        return { success: false, error: 'Board was out of date — please retry' }
+      }
+
+      // Snapshot for rollback if persistence fails — never corrupt local state.
       const fenBefore = this.chess.fen()
+      const historyBefore = [...this._moveHistory]
+      const lastMoveBefore = this._lastMove
+      const whiteTimeBefore = this._whiteTimeRemaining
+      const blackTimeBefore = this._blackTimeRemaining
+
       const from = uci.slice(0, 2)
       const to = uci.slice(2, 4)
       const promotion = uci.length > 4 ? uci.slice(4) : undefined
@@ -398,7 +642,30 @@ export class DuelGame {
         this._opponentAccuracy = accuracy
       }
 
-      this.broadcastMove(move.san)
+      // C5 #2: persist the complete authoritative state and only treat the
+      // move as committed once the DB write succeeds. No fire-and-forget.
+      const persisted = await this.persistGameState({
+        fen: this.chess.fen(),
+        move_history: this._moveHistory,
+        white_time_remaining: this._whiteTimeRemaining,
+        black_time_remaining: this._blackTimeRemaining,
+        status: 'playing',
+      })
+      if (!persisted) {
+        // Safe rollback: undo the chess move and restore the snapshot so the
+        // player can retry without corrupted state.
+        try { this.chess.undo() } catch (e) { console.error('[DUEL][PERSIST] Undo after failed persist threw:', e) }
+        this._moveHistory = historyBefore
+        this._lastMove = lastMoveBefore
+        this._whiteTimeRemaining = whiteTimeBefore
+        this._blackTimeRemaining = blackTimeBefore
+        this.notify()
+        return { success: false, error: 'Persist failed' }
+      }
+
+      // Committed → NOW broadcast as authoritative. ply lets the receiver
+      // drop stale replays and detect gaps (#9).
+      this.broadcastMove(move.san, this._moveHistory.length)
       this.notify()
 
       if (this.chess.isGameOver()) {
@@ -411,11 +678,11 @@ export class DuelGame {
     }
   }
 
-  private broadcastMove(san: string) {
+  private broadcastMove(san: string, ply?: number) {
     this._channel?.send({
       type: 'broadcast',
       event: 'duel_move',
-      payload: { move: san }
+      payload: ply !== undefined ? { move: san, ply } : { move: san }
     })
   }
 
@@ -427,18 +694,41 @@ export class DuelGame {
     })
   }
 
-  private handleOpponentMove(payload: { move: string }) {
+  private handleOpponentMove(payload: { move: string; ply?: number }) {
+    // C5 #9: never apply a realtime event blindly if persisted state is newer.
+    // ply = opponent's move_history length AFTER their move. Absent ply =
+    // legacy sender — fall through to the original path (mixed-version safe).
+    if (payload.ply !== undefined) {
+      if (payload.ply <= this._moveHistory.length) {
+        console.warn('[DUEL] Stale duel_move ignored:', JSON.stringify({ roomId: this._roomId, ply: payload.ply, localMoves: this._moveHistory.length }))
+        return
+      }
+      if (payload.ply > this._moveHistory.length + 1) {
+        // Gap — we missed at least one event. DB is authoritative: reconcile
+        // instead of applying a move onto a stale board.
+        console.warn('[DUEL][RECONCILE] duel_move gap detected — reconciling from DB:', JSON.stringify({ roomId: this._roomId, ply: payload.ply, localMoves: this._moveHistory.length }))
+        void this._syncFromDB().then(() => this.checkExpiredClockAuthority())
+        return
+      }
+    }
+
     try {
       this.chess.move(payload.move)
       this._lastMove = { from: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.from, to: (this.chess as any).history({ verbose: true }).slice(-1)[0]?.to }
       this._moveHistory = [...this._moveHistory, payload.move]
+      this._lastTickAt = Date.now()
       this.notify()
       this.onOpponentMove?.(this.chess.fen())
+      // C5 #5/#14-B: opportunistic self-heal for anything earlier we missed.
+      void this._syncFromDB()
       if (this.chess.isGameOver()) {
-        this.handleGameOver()
+        void this.handleGameOver()
       }
     } catch (e) {
       console.warn('[Duel] Failed to apply opponent move:', e)
+      // The broadcast could not be applied to our board — reconcile from the
+      // authoritative row instead of diverging silently.
+      void this._syncFromDB()
     }
   }
 
@@ -460,6 +750,16 @@ export class DuelGame {
       winner = 'draw'
       result = 'Game Over'
     }
+    // C5: persist the terminal state BEFORE broadcasting it.
+    const ok = await this.persistGameOver(winner, result, this.chess.isCheckmate() ? 'checkmate' : 'draw')
+    if (!ok) {
+      // Peer reached the same terminal position from duel_move and will
+      // persist it; DB reconciliation keeps both devices converged.
+      console.error('[DUEL][PERSIST] Terminal persist failed — relying on peer/reconciliation:', JSON.stringify({ roomId: this._roomId }))
+      this.applyGameOverLocal(winner, result, this.chess.isCheckmate() ? 'checkmate' : 'draw')
+      this.notify()
+      return
+    }
     this.setGameOver(winner, result)
     this.broadcastGameOver(winner, result, '')
   }
@@ -470,11 +770,15 @@ export class DuelGame {
     }
   }
 
-  resign() {
+  async resign() {
     if (this._status !== 'playing') return
+    console.log('[DUEL][PERSIST] Resign:', JSON.stringify({ roomId: this._roomId }))
     this.stopTimer()
-    const opponentWins = this._team === 'WHITE' ? 'black' : 'white'
+    const opponentWins: 'white' | 'black' = this._team === 'WHITE' ? 'black' : 'white'
     const result = opponentWins === 'white' ? 'White wins by resignation' : 'Black wins by resignation'
+    // C5: persist BEFORE broadcast so the opponent's reconnect sees GAME_OVER.
+    const ok = await this.persistGameOver(opponentWins, result, 'resignation')
+    if (!ok) return
     this.setGameOver(opponentWins, result, 'resignation')
     this.broadcastGameOver(opponentWins, result, 'resignation')
   }
@@ -483,6 +787,11 @@ export class DuelGame {
     this.stopTimer()
     if (this._pollingInterval) clearInterval(this._pollingInterval)
     if (this._disconnectCheckInterval) clearInterval(this._disconnectCheckInterval)
+    // C5: detach the visibility reconciliation listener with the engine.
+    if (this._visibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this._visibilityHandler)
+      this._visibilityHandler = null
+    }
     if (this._channel) supabase.removeChannel(this._channel)
   }
 }

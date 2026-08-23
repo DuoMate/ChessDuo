@@ -37,6 +37,8 @@ export type TraceStage =
   | 'REALTIME_BROADCAST'
   | 'CLIENT_RECEIVED'
   | 'TURN_COMPLETED'
+  | 'MOVE_SUBMIT_NO_GAME_ID'
+  | 'REALTIME_RETRY_EXHAUSTED'
 
 export interface TraceCtx {
   gameId?: string

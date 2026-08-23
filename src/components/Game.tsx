@@ -27,7 +27,7 @@ import { GameLobby } from './GameLobby'
 import { GameOnOverlay } from './GameOnOverlay'
 import { EvaluatingLoader } from './EvaluatingLoader'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playLockSound, playResolutionSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
-import { saveCompletedGame } from '@/lib/matchHistory'
+import { saveCompletedGame, type SaveCompletedGameResult } from '@/lib/matchHistory'
 import type { MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
@@ -272,6 +272,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
 
   const prevTurnRef = useRef<Team | null>(null)
   const gameSavedRef = useRef(false)
+  // C6: the ACTUAL in-flight completed-game persistence promise, so resign can
+  // await real DB settlement instead of polling a flag set at save-start.
+  const gameSavePromiseRef = useRef<Promise<SaveCompletedGameResult> | null>(null)
   const moveHistoryRef = useRef<MoveEntry[]>([])
   const teammateLabelShownRef = useRef(0)
   const lastTeammateLabelMoveKeyRef = useRef<string | null>(null)
@@ -580,14 +583,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [matchTimerStarted])
 
-  useEffect(() => {
-    if (gameState.status !== GameStatus.GAME_OVER) return
-    if (gameSavedRef.current) return
-
-    setShowGameOverDismissed(false)
+  /**
+   * C6: single guarded entry point for completed-game persistence. The
+   * game-over effect calls this on any terminal transition; handleResign
+   * awaits the returned promise so navigation happens only after the real
+   * Supabase write settles. The gameSavedRef guard guarantees exactly one
+   * save per game regardless of which caller fires first (Rule 7: no
+   * duplicate history entries).
+   */
+  const startGameOverSave = useCallback((): { promise: Promise<SaveCompletedGameResult> } | null => {
+    if (gameSavedRef.current) {
+      return gameSavePromiseRef.current ? { promise: gameSavePromiseRef.current } : null
+    }
 
     const g = isOnline ? onlineGameRef.current : game
-    if (!g) return
+    if (!g) return null
 
     let winner: 'WHITE' | 'BLACK' | 'DRAW' = 'DRAW'
     let result = 'Game Over'
@@ -623,7 +633,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       p2Acc = s.player2Accuracy
     }
 
-    saveCompletedGame({
+    const promise = saveCompletedGame({
       winner,
       gameResult: result,
       gameOverReason: reason,
@@ -643,11 +653,29 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         black: teamLabels.black.split(',').map(s => s.trim().replace(/[()]/g, '').trim()),
       },
     }, playerId || undefined)
-
+    gameSavePromiseRef.current = promise
+    promise.then((res) => {
+      // Failure is surfaced loudly here; guests (persisted:false, no error) are normal.
+      if (!res.persisted && res.error) {
+        console.error('[GAME] Completed-game persistence failed:', res.error, { roomId: isOnline ? roomId : undefined })
+      }
+    })
     toast.gameOver(result)
 
-    if (playerId) gameSavedRef.current = true
-  }, [gameState.status, isOnline, game, toast, playerId, roomId])
+    // Mark saved for ALL users — a guest game must not re-save on later
+    // effect runs (duplicate local history entries), and resign needs the
+    // guard to hold regardless of auth state.
+    gameSavedRef.current = true
+    return { promise }
+  }, [isOnline, game, toast, playerId, roomId, teamLabels.white, teamLabels.black])
+
+  useEffect(() => {
+    if (gameState.status !== GameStatus.GAME_OVER) return
+    if (gameSavedRef.current) return
+
+    setShowGameOverDismissed(false)
+    startGameOverSave()
+  }, [gameState.status, startGameOverSave])
 
   // Warn when match is abandoned by teammate — no auto-redirect, user stays to review
   const abandonNotifiedRef = useRef(false)
@@ -799,18 +827,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         // with a turnStartFen not already in the history.
         const comp = g.lastMoveComparison as MoveComparison | null
         if (comp && comp.turnStartFen) {
-          const shouldAdd = accuracyHistory.length === 0 ||
-            accuracyHistory[accuracyHistory.length - 1]?.turnStartFen !== comp.turnStartFen
-          if (shouldAdd) {
-            // Only add comparisons for the viewer's team turns (same logic as before)
-            const isViewerTeamTurn = !isFourPlayer && (
-              (prevTurn === Team.WHITE && currentTurn === Team.BLACK && myTeam === 'WHITE') ||
-              (prevTurn === Team.BLACK && currentTurn === Team.WHITE && myTeam === 'BLACK')
-            )
-            if (isViewerTeamTurn || isFourPlayer) {
-              setAccuracyHistory(prev => [...prev, comp])
-              DEBUG && console.log(`[ACCURACY-HISTORY] Added entry #${accuracyHistory.length + 1}, team=${prevTurn}, viewerTeam=${myTeam}`)
-            }
+          // Only add comparisons for the viewer's team turns (same logic as before)
+          const isViewerTeamTurn = !isFourPlayer && (
+            (prevTurn === Team.WHITE && currentTurn === Team.BLACK && myTeam === 'WHITE') ||
+            (prevTurn === Team.BLACK && currentTurn === Team.WHITE && myTeam === 'BLACK')
+          )
+          if (isViewerTeamTurn || isFourPlayer) {
+            // H5: dedupe INSIDE the functional updater — this realtime closure
+            // captures a stale accuracyHistory between renders, so deciding
+            // from `accuracyHistory.length` out here could append duplicates.
+            setAccuracyHistory(prev => (
+              prev.length > 0 && prev[prev.length - 1]?.turnStartFen === comp.turnStartFen
+                ? prev
+                : [...prev, comp]
+            ))
+            DEBUG && console.log(`[ACCURACY-HISTORY] append requested, team=${prevTurn}, viewerTeam=${myTeam}`)
           }
         }
 
@@ -1343,12 +1374,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (prevTurn === viewerTeam && currentTurn !== viewerTeam) {
       const comp = g.lastMoveComparison as MoveComparison | null
       if (comp && comp.turnStartFen) {
-        const shouldAdd = accuracyHistory.length === 0 ||
-          accuracyHistory[accuracyHistory.length - 1]?.turnStartFen !== comp.turnStartFen
-        if (shouldAdd) {
-          setAccuracyHistory(prev => [...prev, comp])
-          DEBUG && console.log(`[ACCURACY-HISTORY] (updateState) Added entry #${accuracyHistory.length + 1}`)
-        }
+        // H5: dedupe inside the functional updater — updateState's useCallback
+        // does not depend on accuracyHistory, so its closure can hold a stale
+        // array when several engine notifications land between renders.
+        setAccuracyHistory(prev => (
+          prev.length > 0 && prev[prev.length - 1]?.turnStartFen === comp.turnStartFen
+            ? prev
+            : [...prev, comp]
+        ))
+        DEBUG && console.log('[ACCURACY-HISTORY] (updateState) append requested')
         DEBUG && console.log('[ACCURACY-TRANSITION] (updateState) human→opponent detected, SET accuracy', { p1Move: comp.player1Move, p2Move: comp.player2Move, winnerId: comp.winnerId })
         setAccuracyComparison(comp)
       }
@@ -2238,22 +2272,25 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     } catch {
       // Channel may be dead during refresh; navigation still proceeds
     }
-    if (isOnline) {
-      // Wait for the save effect (which sets gameSavedRef) to run before
-      // navigating away, so the resigner's history record is persisted rather
-      // than lost to an immediate unmount. Bounded to 2s in case the effect
-      // never fires (e.g. abandoned game-over path).
-      const saveDeadline = Date.now() + 2000
-      while (!gameSavedRef.current && Date.now() < saveDeadline) {
-        await new Promise(r => setTimeout(r, 50))
+
+    // C6: await the REAL completed-game persistence promise before navigating.
+    // The previous implementation polled a flag that was set synchronously
+    // when the save STARTED — the actual write could still be cancelled by
+    // unmount. If the game-over effect has not flushed yet, this starts the
+    // save under the shared single-save guard; either way we await settlement.
+    const pendingSave = startGameOverSave()
+    if (pendingSave) {
+      try {
+        await pendingSave.promise
+      } catch (e) {
+        // saveCompletedGame never rejects in practice; belt-and-braces so a
+        // persistence error can never block the user from leaving.
+        console.error('[RESIGN] Completed-game persistence error:', e)
       }
-    } else {
-      // Offline: keep the short delay so the save effect can flush.
-      await new Promise(r => setTimeout(r, 200))
     }
     setShowGameOverDismissed(false)
     router.replace('/')
-  }, [isOnline])
+  }, [isOnline, startGameOverSave])
 
   const handleLeaveConfirm = useCallback(async () => {
     if (roomCode) {
