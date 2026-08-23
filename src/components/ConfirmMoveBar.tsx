@@ -39,7 +39,7 @@ export function ConfirmMoveBar({ visible, onConfirm, onCancel, disabled }: Confi
               type="button"
               onClick={onConfirm}
               disabled={disabled}
-              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] text-white font-bold transition-all hover:bg-white/10 active:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] text-white font-bold transition-[background-color,opacity] duration-150 ease-out hover:bg-white/10 active:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Confirm move"
             >
               <Check size={20} strokeWidth={3} />

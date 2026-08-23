@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Check, Clock } from 'lucide-react'
+import { memo } from 'react'
 
 export interface PendingMove {
   san?: string
@@ -102,7 +103,7 @@ function MoveCard({
   )
 }
 
-export function PendingMovesRow({
+function PendingMovesRowInner({
   yourMove,
   teammateMove,
   yourLabel = 'Your Move',
@@ -143,3 +144,18 @@ export function PendingMovesRow({
     </div>
   )
 }
+
+export const PendingMovesRow = memo(PendingMovesRowInner, (prev, next) => {
+  return (
+    prev.yourMove?.san === next.yourMove?.san &&
+    prev.yourMove?.piece === next.yourMove?.piece &&
+    prev.yourMove?.color === next.yourMove?.color &&
+    prev.teammateMove?.san === next.teammateMove?.san &&
+    prev.teammateMove?.piece === next.teammateMove?.piece &&
+    prev.teammateMove?.color === next.teammateMove?.color &&
+    prev.yourLabel === next.yourLabel &&
+    prev.teammateLabel === next.teammateLabel &&
+    prev.yourName === next.yourName &&
+    prev.teammateName === next.teammateName
+  )
+})

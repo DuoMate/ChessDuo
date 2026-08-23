@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Zap, Trophy, X, Check, ChevronRight, Sparkles, Target, Lightbulb, AlertTriangle, XCircle } from 'lucide-react'
+import { memo, useMemo } from 'react'
 import { classifyMove } from '@/lib/moveClassifier'
 import { getAccuracyCategory } from '@/features/shared/accuracy'
 import type { MoveComparison } from '@/features/shared/gameTypes'
@@ -150,13 +151,50 @@ function MoveColumn({
   )
 }
 
-export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
+function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
+  // Expensive insight calculations — memoize so a parent timer tick that does
+  // not change `data` does not recompute classifyMove/getAccuracyCategory.
+  const insight = useMemo(() => {
+    const san = data.engineChoseMove.san || ''
+    const moveClass = classifyMove(san)
+    const moveImpact = getMoveImpact(san)
+    let headline = ''
+    let HeadlineIcon: typeof Sparkles = Sparkles
+    let headlineColor = 'text-amber-300'
+    if (data.isSync) {
+      headline = 'Both played exactly the same move!'
+      HeadlineIcon = Sparkles
+      headlineColor = 'text-amber-300'
+    } else if (data.youMatchedEngine && data.teammateMatchedEngine) {
+      headline = 'Perfect — both matched the engine\u2019s best move!'
+      HeadlineIcon = Sparkles
+      headlineColor = 'text-amber-300'
+    } else if (data.youMatchedEngine) {
+      headline = 'You found the engine\u2019s top move!'
+      HeadlineIcon = Target
+      headlineColor = 'text-emerald-300'
+    } else if (data.teammateMatchedEngine) {
+      headline = 'Teammate found the engine\u2019s best move'
+      HeadlineIcon = Lightbulb
+      headlineColor = 'text-blue-300'
+    }
+    const isYouWinner = data.result === 'you_won'
+    const loserLoss = isYouWinner ? data.teammateLoss : data.yourLoss
+    const loserName = isYouWinner ? 'Teammate' : 'You'
+    const blunder = !data.isSync ? getBlunderWarning(loserLoss) : null
+    const winnerAcc = isYouWinner ? data.yourAccuracy : data.teammateAccuracy
+    const winnerCpLoss = winnerAcc >= 100 ? 0 : winnerAcc <= 0 ? 300 : Math.round(10 + (100 - winnerAcc) * (290 / 100))
+    const verdict = getAccuracyCategory(winnerCpLoss)
+    return { moveClass, moveImpact, headline, HeadlineIcon, headlineColor, blunder, loserLoss, loserName, verdict }
+  }, [data])
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-      className="w-full max-w-3xl mx-auto rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl"
+      className="w-full max-w-3xl mx-auto rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl will-change-transform"
+      style={{ willChange: 'transform, opacity' }}
     >
       <div className="flex items-center justify-center gap-2 mb-3">
         <Zap size={14} className="text-blue-400" />
@@ -192,87 +230,50 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
         />
       </div>
 
-      {(() => {
-        const san = data.engineChoseMove.san || ''
-        const moveClass = classifyMove(san)
-        const moveImpact = getMoveImpact(san)
-        // Headline insight line — mirrors the AccuracyBottomSheet phrasing.
-        let headline = ''
-        let HeadlineIcon: typeof Sparkles = Sparkles
-        let headlineColor = 'text-amber-300'
-        if (data.isSync) {
-          headline = 'Both played exactly the same move!'
-          HeadlineIcon = Sparkles
-          headlineColor = 'text-amber-300'
-        } else if (data.youMatchedEngine && data.teammateMatchedEngine) {
-          headline = 'Perfect — both matched the engine\u2019s best move!'
-          HeadlineIcon = Sparkles
-          headlineColor = 'text-amber-300'
-        } else if (data.youMatchedEngine) {
-          headline = 'You found the engine\u2019s top move!'
-          HeadlineIcon = Target
-          headlineColor = 'text-emerald-300'
-        } else if (data.teammateMatchedEngine) {
-          headline = 'Teammate found the engine\u2019s best move'
-          HeadlineIcon = Lightbulb
-          headlineColor = 'text-blue-300'
-        }
-        // The "loser" gets a blunder warning if their loss is large.
-        const isYouWinner = data.result === 'you_won'
-        const loserLoss = isYouWinner ? data.teammateLoss : data.yourLoss
-        const loserName = isYouWinner ? 'Teammate' : 'You'
-        const blunder = !data.isSync ? getBlunderWarning(loserLoss) : null
-        // The winner gets the quality verdict (Perfect / Great / Good / …).
-        const winnerAcc = isYouWinner ? data.yourAccuracy : data.teammateAccuracy
-        const winnerCpLoss = winnerAcc >= 100 ? 0 : winnerAcc <= 0 ? 300 : Math.round(10 + (100 - winnerAcc) * (290 / 100))
-        const verdict = getAccuracyCategory(winnerCpLoss)
-        return (
-          <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50 space-y-1.5">
-            {headline && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-medium">
-                <HeadlineIcon size={14} className={headlineColor} />
-                <span className={headlineColor}>{headline}</span>
-              </div>
-            )}
-            {moveImpact && (
-              <p className="text-center text-[11px] text-slate-300">
-                {moveImpact}
-              </p>
-            )}
-            {!data.isSync && blunder && (
-              <p className={`text-center text-[11px] font-semibold inline-flex items-center justify-center gap-1 w-full ${blunder.colorClass}`}>
-                <blunder.Icon size={12} /> {loserName}: {blunder.label}
-              </p>
-            )}
-            {!data.isSync && (
-              <div className="flex items-center justify-center gap-1.5 text-xs flex-wrap">
-                <span
-                  className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                    verdict.color === '#22c55e' ? 'bg-emerald-500/10 text-emerald-400' :
-                    verdict.color === '#84cc16' ? 'bg-lime-500/10 text-lime-400' :
-                    verdict.color === '#eab308' ? 'bg-yellow-500/10 text-yellow-400' :
-                    verdict.color === '#ef4444' ? 'bg-rose-500/10 text-rose-400' :
-                    'bg-slate-700/40 text-slate-300'
-                  }`}
-                >
-                  {verdict.emoji}{verdict.label} move
-                </span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-400">{loserLoss}cp lost</span>
-              </div>
-            )}
-            <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
-              <span className="text-base leading-none" aria-hidden>{moveClass.icon}</span>
-              <span>{moveClass.description}</span>
-            </div>
+      <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50 space-y-1.5">
+        {insight.headline && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-medium">
+            <insight.HeadlineIcon size={14} className={insight.headlineColor} />
+            <span className={insight.headlineColor}>{insight.headline}</span>
           </div>
-        )
-      })()}
+        )}
+        {insight.moveImpact && (
+          <p className="text-center text-[11px] text-slate-300">
+            {insight.moveImpact}
+          </p>
+        )}
+        {!data.isSync && insight.blunder && (
+          <p className={`text-center text-[11px] font-semibold inline-flex items-center justify-center gap-1 w-full ${insight.blunder.colorClass}`}>
+            <insight.blunder.Icon size={12} /> {insight.loserName}: {insight.blunder.label}
+          </p>
+        )}
+        {!data.isSync && (
+          <div className="flex items-center justify-center gap-1.5 text-xs flex-wrap">
+            <span
+              className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                insight.verdict.color === '#22c55e' ? 'bg-emerald-500/10 text-emerald-400' :
+                insight.verdict.color === '#84cc16' ? 'bg-lime-500/10 text-lime-400' :
+                insight.verdict.color === '#eab308' ? 'bg-yellow-500/10 text-yellow-400' :
+                insight.verdict.color === '#ef4444' ? 'bg-rose-500/10 text-rose-400' :
+                'bg-slate-700/40 text-slate-300'
+              }`}
+            >
+              {insight.verdict.emoji}{insight.verdict.label} move
+            </span>
+            <span className="text-slate-500">·</span>
+            <span className="text-slate-400">{insight.loserLoss}cp lost</span>
+          </div>
+        )}
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+          <span className="text-base leading-none" aria-hidden>{insight.moveClass.icon}</span>
+          <span>{insight.moveClass.description}</span>
+        </div>
+      </div>
 
       <button
         type="button"
         onClick={onNext}
-        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[var(--shadow-glow-emerald-strong)] transition-all"
+        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[var(--shadow-glow-emerald-strong)] transition-[background-color,opacity,transform] duration-150 ease-out"
       >
         Continue
         <ChevronRight size={18} />
@@ -280,3 +281,7 @@ export function MoveResolvedInline({ data, onNext }: MoveResolvedInlineProps) {
     </motion.div>
   )
 }
+
+export const MoveResolvedInline = memo(MoveResolvedInlineInner, (prev, next) => {
+  return prev.data === next.data && prev.onNext === next.onNext
+})

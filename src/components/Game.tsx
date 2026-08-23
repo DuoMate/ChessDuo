@@ -51,6 +51,7 @@ import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
+import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Lock, BarChart3 } from 'lucide-react'
 
@@ -1115,6 +1116,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     gameRef.current = game
   }, [game])
 
+  // Timer tick — updates engine's remaining but does NOT call setGameState
+  // per tick. Only the IsolatedMatchTimer polls the engine and rerenders
+  // itself; ChessBoard/PendingMovesRow/etc stay memoized and never rerender
+  // on timer ticks. Only timeout (≤0) triggers a real Game state update.
   const tickMatchTimer = useCallback(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
     if (!g) return
@@ -1155,8 +1160,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return
     }
 
+    // Normal tick: decrement engine silently; IsolatedMatchTimer will poll
+    // the new value on its own 1 Hz interval and rerender only itself.
     g.setMatchTimeRemaining(remaining - 1)
-    setGameState(prev => ({ ...prev, matchTimeRemaining: remaining - 1 }))
   }, [isOnline])
 
   const updateState = useCallback(() => {
@@ -2285,7 +2291,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const out: BoardTopBarPlayer[] = []
     let hasYou = false
     let hasBot = false
-    ids.slice(0, 2).forEach((id, idx) => {
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
       const isYou = id === playerId || (!isOnline && id === humanSlot)
@@ -2329,7 +2335,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.white, playerId, userProfile, gameState.myPendingOverlay, gameState.pendingOverlay, gameState.fen, isOnline, gameState.status])
+  }, [teamLabels.white, playerId, userProfile.username, userProfile.avatarUrl, gameState.myPendingOverlay, gameState.pendingOverlay, isOnline])
 
   const blackPlayers: BoardTopBarPlayer[] = useMemo(() => {
     const g = isOnline ? onlineGameRef.current : gameRef.current
@@ -2338,7 +2344,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     const out: BoardTopBarPlayer[] = []
     let hasYou = false
     let hasBot = false
-    ids.slice(0, 2).forEach((id, idx) => {
+    ids.slice(0, 2).forEach((id) => {
       const isBot = isOfflineBotId(id)
       const humanSlot = !isOnline ? (g as GameInterface)?.getHumanSlot?.() : undefined
       const isYou = id === playerId || (!isOnline && id === humanSlot)
@@ -2382,9 +2388,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     })
     return out
-  }, [teamLabels.black, playerId, userProfile, gameState.pendingOverlay, gameState.myPendingOverlay, gameState.fen, isOnline, gameState.status])
+  }, [teamLabels.black, playerId, userProfile.username, userProfile.avatarUrl, gameState.pendingOverlay, gameState.myPendingOverlay, isOnline])
 
-  const yourMoveForRow: PendingMove | null = (() => {
+  // Memoize row derivations — these do Array.from + board lookups; without
+  // memo they would rerun on every parent render (including timer ticks).
+  const yourMoveForRow: PendingMove | null = useMemo(() => {
     const humanColor = myTeamRef.current === 'WHITE' ? 'white' as const : 'black' as const
     if (heldMove) {
       return { san: heldMove.move.split('-').join(' '), piece: 'P', color: humanColor }
@@ -2419,9 +2427,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return { san: gameState.selectedMove, piece: 'P', color: humanColor }
     }
     return null
-  })()
+  }, [heldMove, playerId, gameState.selectedMove, gameState.myPendingOverlay, isOnline])
 
-  const teammateMoveForRow: PendingMove | null = (() => {
+  const teammateMoveForRow: PendingMove | null = useMemo(() => {
     if (!gameState.pendingOverlay) return null
     const base: PendingMove = {
       san: gameState.pendingOverlay.from + gameState.pendingOverlay.to,
@@ -2441,16 +2449,23 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       }
     }
     return base
-  })()
+  }, [gameState.pendingOverlay, isOnline, playerId])
 
-  const resolutionData: MoveResolutionData | null = accuracyComparison
-    ? (() => {
-        const p1Id = isOnline ? onlineGameRef.current?.player1Id : undefined
-        const isPlayer1 = !isOnline || !playerId || !p1Id || playerId === p1Id
-        DEBUG && console.log('[RESOLVE-DATA]', { isOnline, isPlayer1, myId: playerId, p1Id, p1Move: accuracyComparison.player1Move, p2Move: accuracyComparison.player2Move })
-        return buildResolutionData(accuracyComparison, isPlayer1, myTeamRef.current)
-      })()
-    : null
+  const resolutionData: MoveResolutionData | null = useMemo(() => {
+    if (!accuracyComparison) return null
+    const p1Id = isOnline ? onlineGameRef.current?.player1Id : undefined
+    const isPlayer1 = !isOnline || !playerId || !p1Id || playerId === p1Id
+    DEBUG && console.log('[RESOLVE-DATA]', { isOnline, isPlayer1, myId: playerId, p1Id, p1Move: accuracyComparison.player1Move, p2Move: accuracyComparison.player2Move })
+    return buildResolutionData(accuracyComparison, isPlayer1, myTeamRef.current)
+  }, [accuracyComparison, isOnline, playerId])
+
+  // Isolated timer — 1 Hz poll of engine, does NOT trigger Game rerenders on
+  // normal ticks (only timeout does). ChessBoard stays memoized.
+  const getTimeRemaining = useCallback(() => {
+    const g = isOnline ? onlineGameRef.current : gameRef.current
+    return g ? g.getMatchTimeRemaining() : (timeLimitSeconds || 600)
+  }, [isOnline, timeLimitSeconds])
+  const isTimerActive = gameState.matchTimerActive && gameState.status === GameStatus.PLAYING && matchTimerStarted
 
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
     const moves = moveHistoryRef.current
@@ -2558,6 +2573,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 totalMatchSeconds={timeLimitSeconds || 600}
                 roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
                 currentTurn={gameState.currentTurn}
+                timerNode={<IsolatedMatchTimer getTimeRemaining={getTimeRemaining} isActive={isTimerActive} totalSeconds={timeLimitSeconds || 600} />}
               />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
