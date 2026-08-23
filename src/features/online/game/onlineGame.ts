@@ -1655,14 +1655,46 @@ export class OnlineGame {
   }
 
   /**
+   * Reads back THIS player's authoritative submission row for the given turn.
+   * Used to distinguish "the write actually landed" (lost response / retry
+   * after a transport failure) from "the write was rejected" before failing
+   * a submission. Returns null when the row is absent or unreadable.
+   */
+  private async readOwnSubmission(gameId: string, turnNumber: number): Promise<{ move_san: string } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('turn_submissions')
+        .select('move_san')
+        .eq('game_id', gameId)
+        .eq('turn_number', turnNumber)
+        .eq('player_id', this._playerId)
+
+      if (error) {
+        DEBUG && console.warn('[SUBMIT] Own-submission read-back failed:', error.message)
+        return null
+      }
+      const rows = (data || []) as Array<{ move_san: string }>
+      return rows.length > 0 ? rows[0] : null
+    } catch (e) {
+      // Read-back failure must not mask the primary submission error — the
+      // caller treats null as "not verifiable" and proceeds to visible failure.
+      DEBUG && console.warn('[SUBMIT] Own-submission read-back threw:', e)
+      return null
+    }
+  }
+
+  /**
    * Writes the player's move to the turn_submissions table.
    * The composite PK (game_id, turn_number, player_id) enforces
    * exactly one submission per player per turn.
    *
-   * Returns true when the submission was persisted (and local pending state
-   * was applied). On failure the local pending move is fully rolled back and
-   * turnState returns to 'selecting' so the player can retry — a failed write
-   * must never leave the board locked.
+   * Idempotent completion: when the upsert reports an error, the authoritative
+   * row is read back first. If this exact move is already persisted for the
+   * current turn (retry after a lost response, resubmission after refresh),
+   * the submission is treated as SUCCESS — the move IS authoritatively stored.
+   * Anything else fails visibly: local pending state rolls back and turnState
+   * returns to 'selecting' so the player can retry — a failed write must never
+   * leave the board locked.
    */
   async submitMoveToDB(move: string, from: string, to: string, piece: string): Promise<boolean> {
     // C2: a terminal game accepts no moves — no resurrection via submission.
@@ -1737,7 +1769,17 @@ export class OnlineGame {
         }, { onConflict: 'game_id,turn_number,player_id' })
 
       if (error) {
-        DEBUG && console.warn('[SUBMIT] DB insert failed:', error.message)
+        DEBUG && console.warn('[SUBMIT] DB insert failed:', error.code, error.message)
+        // Idempotent-completion check BEFORE failing: a duplicate/conflict or
+        // lost-response retry may mean our submission is ALREADY persisted.
+        // Only an authoritative row holding THIS exact move counts as success;
+        // anything else (absent row, different move, unreadable) fails visibly.
+        const existing = await this.readOwnSubmission(this._gameId, this._currentTurnNumber)
+        if (existing && existing.move_san === move) {
+          DEBUG && console.log('[SUBMIT] Submission already persisted — idempotent success:', { turn: this._currentTurnNumber, player: this._playerId, move })
+          this.duoLog('MOVE', 'SUBMIT_ALREADY_PERSISTED', { turnNumber: this._currentTurnNumber, move, errorCode: error.code })
+          return true
+        }
         this.duoLog('MOVE', 'SUBMIT_FAILED', { errorCode: error.code, errorMessage: error.message, move })
         this.rollbackSubmission(move, from, to)
         return false
@@ -1747,7 +1789,16 @@ export class OnlineGame {
       this.duoLog('MOVE', 'SUBMIT_SUCCESS', { turnNumber: this._currentTurnNumber, move })
       return true
     } catch (e) {
-      DEBUG && console.error('[SUBMIT] DB write failed:', e)
+      DEBUG && console.error('[SUBMIT] DB write threw:', e)
+      // Same idempotency check for thrown transport failures — a commit may
+      // have landed even though the response never arrived.
+      // (readOwnSubmission catches its own errors and returns null.)
+      const existing = await this.readOwnSubmission(this._gameId, this._currentTurnNumber)
+      if (existing && existing.move_san === move) {
+        DEBUG && console.log('[SUBMIT] Submission already persisted (thrown write) — idempotent success:', { turn: this._currentTurnNumber, move })
+        this.duoLog('MOVE', 'SUBMIT_ALREADY_PERSISTED', { turnNumber: this._currentTurnNumber, move })
+        return true
+      }
       this.duoLog('MOVE', 'SUBMIT_FAILED', { errorMessage: String((e as Error)?.message || e), move })
       this.rollbackSubmission(move, from, to)
       return false

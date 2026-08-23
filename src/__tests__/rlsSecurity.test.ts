@@ -104,21 +104,39 @@ describe('P0-1 RLS: minimum-privilege policies exist', () => {
     expect(policyExists('games', 'Room members can update game')).toBe(true)
   })
 
-  it('turn_submissions: SELECT for members, INSERT only own move', () => {
+  it('turn_submissions: SELECT for members, INSERT/UPDATE only own move', () => {
     expect(policyExists('turn_submissions', 'Room members can view turn submissions')).toBe(true)
     expect(policyExists('turn_submissions', 'Players can submit their own moves')).toBe(true)
+    // Idempotent re-submission: PostgREST UPSERT executes ON CONFLICT DO UPDATE,
+    // which PostgreSQL authorizes under the UPDATE policy. It must exist and
+    // stay scoped to the caller's OWN row inside a game whose room they belong to.
+    expect(policyExists('turn_submissions', 'Players can update their own moves')).toBe(true)
     expect(activeSchema).toMatch(
       /CREATE\s+POLICY\s+"Players can submit their own moves"\s+ON\s+public\.turn_submissions[\s\S]*?auth\.uid\(\)::text\s*=\s*player_id/i
     )
+    const updatePolicy = activeSchema.match(
+      /CREATE\s+POLICY\s+"Players can update their own moves"\s+ON\s+public\.turn_submissions[\s\S]*?;/i
+    )
+    expect(updatePolicy).not.toBeNull()
+    const body = updatePolicy?.[0] ?? ''
+    expect(body).toMatch(/FOR\s+UPDATE/i)
+    expect(body).toMatch(/auth\.uid\(\)::text\s*=\s*player_id/)
+    expect(body).toMatch(/is_room_member\(g\.room_id\)/)
+    // WITH CHECK keeps player_id immutable across updates.
+    expect((body.match(/auth\.uid\(\)::text\s*=\s*player_id/g) || []).length).toBeGreaterThanOrEqual(2)
   })
 
-  it('turn_submissions: no UPDATE/DELETE policy granted to clients', () => {
-    // The only policies named for turn_submissions must be the two read/write ones;
-    // clients must never be able to alter or delete submissions directly.
+  it('turn_submissions: no DELETE policy granted to clients', () => {
+    // Clients may read, insert and idempotently re-submit their own moves —
+    // never alter or delete submissions outright. Exactly three policies must
+    // exist (SELECT / INSERT / UPDATE); any DELETE policy is a regression.
     const clientPolicies = activeSchema
       .split('\n')
       .filter((line) => /CREATE\s+POLICY/.test(line) && /turn_submissions/.test(line))
-    expect(clientPolicies.length).toBe(2)
+    expect(clientPolicies.length).toBe(3)
+    expect(activeSchema).not.toMatch(
+      /CREATE\s+POLICY[\s\S]{0,200}ON\s+public\.turn_submissions\s+FOR\s+DELETE/i
+    )
   })
 
   it('rooms: member resignation (UPDATE status) and creator DELETE are preserved', () => {
