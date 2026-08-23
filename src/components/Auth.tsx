@@ -82,7 +82,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
     const profile = await fetchProfile(userId)
     if (profile.username) {
       if (googleAvatarUrl || googleDisplayName) {
-        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName })
+        // Derivation material lets profileService repair the rare vanished-row
+        // race (implicit INSERT → 23502) with a derived username.
+        upsertProfile({ id: userId, avatar_url: googleAvatarUrl, display_name: googleDisplayName }, { deriveUsernameFrom: { candidate: googleDisplayName || email, seed: userId } })
       }
       onAuthComplete(userId, profile.username)
       if (googleAuthInProgressRef.current) {

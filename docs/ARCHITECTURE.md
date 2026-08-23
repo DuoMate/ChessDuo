@@ -444,6 +444,37 @@ is rehydrated from `games.last_human_resolution` JSONB on refresh/reconnect
 
 **Status**: IMPLEMENTED (2026-08-23)
 
+### ADR-006: Idempotent Resolution & Divergence Policy
+
+**Decision**: Client-local chess positions are *provisional* — they may lag the
+authoritative game after a missed realtime event or an unreadable games row
+(schema drift). Therefore:
+
+1. **Legality gate before resolution** (`resolvePendingMoves`): every pending
+   submission is probed against the turn-start FEN (`isMoveLegalAt`,
+   `chessUtils.ts`) BEFORE evaluation. Any illegal move ⇒ `STATE_DIVERGENCE`:
+   discard the turn (`startPendingTurn`), re-sync from the authoritative DB row,
+   reopen submissions, throw a typed error for Game.tsx's uniform recovery.
+   Never apply unvalidated data; never swallow-and-continue.
+2. **Single-writer resolution**: `resolvePendingMoves` throws
+   `RESOLVE_IN_PROGRESS` when re-entered while resolving. Duplicate triggers
+   (executeMove / bot handlers / initial-bot effect) must no-op.
+3. **Exactly-once application**: `_lastAppliedResolution {turnSequence,
+   winningMove}` marks what was applied; equal-seq duplicates of the same move
+   are no-ops in `handleTurnResolved`. The blind `board.move()` fallback was
+   removed — direct application requires a legality probe first; illegal moves
+   trigger authoritative re-sync instead.
+4. **Clocks never mutate boards**: `handleTimerSync` advances time only — turn
+   numbers advance exclusively via `handleTurnResolved`/`syncGameState`.
+5. **Stale-authority guard**: `syncGameState` rolls the board back to the DB FEN
+   only when the DB knows more chess (move_history ≥ local). A frozen/stale row
+   can never drag a mid-game client backward.
+6. **Schema-drift resilience**: `gamePersistence.ts` retries reads/writes once
+   without optional columns on PGRST204 so board-critical state (fen,
+   turn_number, coordinator_id) persists and loads even pre-migration.
+
+**Status**: IMPLEMENTED (2026-08-23)
+
 ---
 
 ## Pre-commit Checklist
@@ -463,4 +494,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-08-23 — ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
+*Last Updated: 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*

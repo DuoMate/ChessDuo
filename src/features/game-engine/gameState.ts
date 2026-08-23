@@ -134,6 +134,14 @@ export class GameState {
     this.pendingMoves.clear()
     this.locked.clear()
     this.selections.clear()
+    // A new turn opens move submission — a turn can never begin while the
+    // previous one is still marked LOCKED/RESOLVED. WAITING and GAME_OVER are
+    // deliberately preserved: starting a pending turn neither starts nor ends
+    // a match. Divergence recovery (ADR-006) relies on this reopening the
+    // submission phase after a discarded turn.
+    if (this._phase === GamePhase.LOCKED || this._phase === GamePhase.RESOLVED) {
+      this._phase = GamePhase.SELECTING
+    }
   }
 
   setPendingMove(player: Player, move: string, from: string, to: string, piece: string): void {

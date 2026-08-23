@@ -27,7 +27,7 @@ export function deriveUsername(candidate?: string | null, seed?: string): string
   return `player_${base.slice(0, 6)}`
 }
 
-export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ success: boolean; isUniqueConflict: boolean }> {
+export async function upsertProfile(fields: ProfileUpsertFields, options?: { deriveUsernameFrom?: { candidate?: string | null; seed?: string } }): Promise<{ success: boolean; isUniqueConflict: boolean }> {
   const payload: Record<string, unknown> = { id: fields.id }
   if (fields.username !== undefined) payload.username = fields.username
   if (fields.avatar_url !== undefined) payload.avatar_url = fields.avatar_url
@@ -35,23 +35,47 @@ export async function upsertProfile(fields: ProfileUpsertFields): Promise<{ succ
   if (fields.username_lower !== undefined) payload.username_lower = fields.username_lower
 
   try {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('profiles')
       .upsert(payload, { onConflict: 'id' })
+
+    // A username-less upsert whose target row vanished between fetch and write
+    // takes the implicit INSERT branch and violates `profiles.username NOT NULL`
+    // (23502). When the caller supplied derivation material, repair ONCE with a
+    // derived username — safe because a missing row has no username to overwrite,
+    // and the repair never touches rows that already exist successfully.
+    if (
+      error &&
+      error.code === '23502' &&
+      fields.username === undefined &&
+      options?.deriveUsernameFrom
+    ) {
+      console.warn('[profileService] username-less upsert hit NOT NULL violation — repairing with deriveUsername():', {
+        id: fields.id,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      })
+      const repairPayload = {
+        ...payload,
+        username: deriveUsername(options.deriveUsernameFrom.candidate, options.deriveUsernameFrom.seed),
+      }
+      const repaired = await supabase
+        .from('profiles')
+        .upsert(repairPayload, { onConflict: 'id' })
+      error = repaired.error
+    } else if (error && !error.message?.includes('unique') && error.code === '23502' && fields.username === undefined) {
+      console.warn('[profileService] username-less upsert hit NOT NULL violation — caller must deriveUsername():', {
+        id: fields.id,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      })
+    }
     if (error) {
       const isUniqueConflict = error.message?.includes('unique') || error.code === '23505'
-      // A username-less upsert for a user WITHOUT a profiles row is a NOT NULL
-      // INSERT violation (23502) — indicate the contract was broken so a single
-      // prod run surfaces the exact request that 400s instead of a bare network error.
-      if (!isUniqueConflict && error.code === '23502' && fields.username === undefined) {
-        console.warn('[profileService] username-less upsert hit NOT NULL violation — caller must deriveUsername():', {
-          id: fields.id,
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        })
-      }
       DEBUG && console.warn('[profileService] upsertProfile failed:', {
         id: fields.id,
         code: error.code,

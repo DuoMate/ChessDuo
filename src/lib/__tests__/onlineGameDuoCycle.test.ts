@@ -389,6 +389,10 @@ describe('Duo BLACK humans — White bot team first turn (BUG: black-side bot fr
     await coordinator.resolvePendingMoves()
     expect(coordinator.currentTurn).toBe(Team.BLACK)
 
+    // ADR-006 single-writer: resolution owns 'resolving'; the caller
+    // (Game.tsx) reopens selection after each completed resolution.
+    ;(coordinator as any).turnState = 'selecting'
+
     // Black's turn: coordinator + teammate bot (bot_opponent_1) submit.
     coordinator.setPendingMove('player1', 'e5', 'e7', 'e5', 'p')
     coordinator.setPendingMove('bot_opponent_1', 'e5', 'e7', 'e5', 'p')

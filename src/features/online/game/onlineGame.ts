@@ -7,6 +7,7 @@ import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFac
 import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
+import { isMoveLegalAt } from '../../../lib/chessUtils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
 import { RealtimeService } from '@/lib/realtimeService'
@@ -80,6 +81,10 @@ export class OnlineGame {
   private readonly LOCK_TIMEOUT_MS = 15_000
   private _turnSequence = 0
   private _coordinatorId: string = ''
+  // ADR-006 idempotent-resolution marker: the last turn_resolved actually
+  // applied to the local board (by seq). Equal-seq duplicates of the same
+  // winningMove are no-ops; different moves at equal seq are divergence.
+  private _lastAppliedResolution: { turnSequence: number; winningMove: string } | null = null
   private _gameId: string = ''
   private _currentTurnNumber: number = 1
   private _submissionChannel: RealtimeChannel | null = null
@@ -1123,13 +1128,26 @@ export class OnlineGame {
               this.gameState.startMatch()
             }
           } else {
-            // Not behind: verify local FEN matches authoritative DB FEN
+            // Not behind: verify local FEN matches authoritative DB FEN.
+            // ADR-006 stale-authority guard: only roll the board back to the DB
+            // position when the DB actually knows MORE chess than we do. If the
+            // row's move history is shorter than our board's, the row is stale
+            // (failed/pending persistence) and "authoritative wins" would drag a
+            // mid-game client backward onto an old position — the exact
+            // divergence that produces Invalid-move throws at resolution.
             if (this.gameState.fen !== saved.fen) {
-              DEBUG && console.warn('[ONLINE] FEN mismatch — loading authoritative FEN from DB')
-              try {
-                this.gameState.resetBoard(saved.fen)
-              } catch {
-                // Keep local board if reload fails (board may have valid local state)
+              const dbMoveCount = saved.moveHistory?.length ?? 0
+              const localMoveCount = this.gameState.board.history().length
+              if (dbMoveCount < localMoveCount) {
+                DEBUG && console.warn('[ONLINE] Stale games row ignored (db moves:', dbMoveCount, '< local:', localMoveCount, ') — keeping local board')
+                emitTrace('SYNC_STALE_ROW', { ...this.traceCtx(), extra: { dbMoveCount, localMoveCount } })
+              } else {
+                DEBUG && console.warn('[ONLINE] FEN mismatch — loading authoritative FEN from DB')
+                try {
+                  this.gameState.resetBoard(saved.fen)
+                } catch {
+                  // Keep local board if reload fails (board may have valid local state)
+                }
               }
             }
           }
@@ -1218,9 +1236,11 @@ export class OnlineGame {
   }
 
   private handleTimerSync(payload: { matchTimeRemaining: number; turnNumber?: number }): void {
-    if (payload.turnNumber !== undefined && payload.turnNumber > this._currentTurnNumber) {
-      this._currentTurnNumber = payload.turnNumber
-    }
+    // ADR-006: clock broadcasts must NEVER advance board/turn state. A client
+    // whose turn counter runs ahead of its board (missed turn_resolved) would
+    // otherwise accept next-turn submissions against a stale position and
+    // throw "Invalid move" at resolution. Turn numbers advance ONLY via
+    // handleTurnResolved / syncGameState (authoritative sources).
     if (payload.matchTimeRemaining !== undefined) {
       this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
       this.notifyStateChange()
@@ -1371,29 +1391,65 @@ export class OnlineGame {
         this._lastHumanResolution = payload.comparison
       }
     }
+
+    // ADR-006 idempotency: an equal-seq re-delivery of an already-applied
+    // resolution must not re-apply its move. Supabase Broadcast does not
+    // guarantee exactly-once delivery, and the R1 staleness check above
+    // intentionally accepts equal sequences.
+    const isDuplicateOfApplied =
+      !!this._lastAppliedResolution &&
+      this._lastAppliedResolution.turnSequence === incomingSeq &&
+      this._lastAppliedResolution.winningMove === payload.winningMove
+    if (isDuplicateOfApplied && !isOwnBroadcast) {
+      DEBUG && console.warn('[ONLINE] Duplicate turn_resolved ignored (already applied):', JSON.stringify({ seq: incomingSeq, winningMove: payload.winningMove }))
+    }
     
-    if (!isOwnBroadcast) {
+    if (!isOwnBroadcast && !isDuplicateOfApplied) {
       // Always sync timer from coordinator (single source of truth)
       if (payload.matchTimeRemaining !== undefined) {
         this.gameState.setMatchTimeRemaining(payload.matchTimeRemaining)
       }
 
+      // [RESOLVE][FORENSIC] dev-gated probe taken BEFORE any mutation — pairs
+      // with the resolvePendingMoves() probe when diagnosing Invalid-move throws.
+      if (DEBUG) {
+        console.log('[RESOLVE][FORENSIC]', JSON.stringify({
+          source: 'handleTurnResolved',
+          roomId: this._room?.id || undefined,
+          gameId: this._gameId || undefined,
+          turnNumber: payload.turnNumber ?? null,
+          turnSequence: incomingSeq,
+          coordinatorId: this._coordinatorId || undefined,
+          currentFen: this.gameState.fen,
+          currentTurn: this.gameState.currentTeam,
+          phase: this.gameState.phase,
+          winningMove: payload.winningMove,
+          legalAtCurrentFen: isMoveLegalAt(this.gameState.fen, payload.winningMove),
+          lastApplied: this._lastAppliedResolution,
+        }))
+      }
+
       // Try to apply the move through normal resolve flow
       const result = this.gameState.resolve(payload.winningMove)
-      
+
       if (result) {
         DEBUG && console.log('[ONLINE] Applied resolved move via gameState.resolve:', payload.winningMove, 'new turn:', this.gameState.currentTeam)
-      } else {
-        DEBUG && console.log('[ONLINE] resolve() returned null (phase:', this.gameState.phase, ') - turn already resolved by coordinator')
-        
-        // Phase is not LOCKED (already resolved by coordinator) - try to apply move directly to board
+        this._lastAppliedResolution = { turnSequence: incomingSeq, winningMove: payload.winningMove }
+      } else if (isMoveLegalAt(this.gameState.fen, payload.winningMove)) {
+        // Phase is not LOCKED — our local copy of a teammate submission was
+        // lost (missed postgres_changes/broadcast). The move IS legal at the
+        // current position, so apply it directly to keep the board advancing.
+        // ADR-006: validated before mutation — never apply unverified data.
         try {
           this.gameState.board.move(payload.winningMove)
-          DEBUG && console.log('[ONLINE] Applied move directly to board, new FEN:', this.gameState.fen)
+          this._lastAppliedResolution = { turnSequence: incomingSeq, winningMove: payload.winningMove }
+          DEBUG && console.log('[ONLINE] Applied validated move directly to board, new FEN:', this.gameState.fen)
         } catch (e) {
+          // Legality was just probed, so this should be unreachable; keep the
+          // board untouched rather than guessing.
           DEBUG && console.log('[ONLINE] Could not apply move directly:', e)
         }
-        
+
         // Sync turn with board - FEN position 7 indicates 'w' or 'b'
         const fenParts = this.gameState.fen.split(' ')
         const boardTurn = fenParts[1] === 'w' ? Team.WHITE : Team.BLACK
@@ -1401,6 +1457,18 @@ export class OnlineGame {
           this.gameState.setCurrentTeam(boardTurn)
           DEBUG && console.log('[ONLINE] Synced turn to match board:', boardTurn)
         }
+      } else {
+        // ADR-006 STATE_DIVERGENCE: the resolution's move is illegal against
+        // our board — we missed earlier resolutions and local state is stale.
+        // Never guess or force-apply: discard nothing, touch nothing, and
+        // rebuild the full state from the authoritative games row.
+        console.error('[RESOLVE][FORENSIC] STATE_DIVERGENCE on turn_resolved — re-syncing from DB:', JSON.stringify({
+          winningMove: payload.winningMove,
+          currentFen: this.gameState.fen,
+          turnSequence: incomingSeq,
+        }))
+        emitTrace('RESOLVE_DIVERGENCE', { ...this.traceCtx(), extra: { winningMove: payload.winningMove, currentFen: this.gameState.fen, turnSequence: incomingSeq } })
+        this.syncGameState().catch((e) => console.error('[ONLINE] Divergence re-sync failed:', e))
       }
     }
     
@@ -1883,6 +1951,9 @@ export class OnlineGame {
 
     // Broadcast turn_resolved to all non-coordinator clients
     this._turnSequence++
+    // ADR-006: record what THIS coordinator applied so its own broadcast echo /
+    // duplicates can be recognized as no-ops in handleTurnResolved.
+    this._lastAppliedResolution = { turnSequence: this._turnSequence, winningMove }
     emitTrace('REALTIME_BROADCAST', { ...this.traceCtx(), extra: { event: 'turn_resolved', seq: this._turnSequence } })
     if (this._channel) {
       await this._channel.send({
@@ -1918,10 +1989,58 @@ export class OnlineGame {
     }
   }
 
+  /**
+   * ADR-006 divergence recovery: local board state provably disagrees with a
+   * pending submission. Never apply unvalidated data and never reset the board
+   * blindly — discard the whole turn, rebuild state from the authoritative
+   * games row (which replays any missed resolutions), and reopen submissions
+   * so the turn can be replayed cleanly. The caller throws STATE_DIVERGENCE so
+   * Game.tsx's existing recovery path unlocks input uniformly.
+   */
+  private async _recoverFromDivergence(
+    currentFen: string,
+    pendingMoves: Array<{ player: string; move: string }>,
+    illegalMoves: string[]
+  ): Promise<void> {
+    // Always loud — divergence is a real corruption signal, not noise.
+    console.error('[RESOLVE][FORENSIC] STATE_DIVERGENCE — pending moves illegal at local position:', JSON.stringify({
+      roomId: this._room?.id || undefined,
+      gameId: this._gameId || undefined,
+      turnNumber: this._currentTurnNumber,
+      coordinatorId: this._coordinatorId || undefined,
+      currentFen,
+      pendingMoves,
+      illegalMoves,
+    }))
+    emitTrace('RESOLVE_DIVERGENCE', { ...this.traceCtx(), extra: { currentFen, illegalMoves, turnNumber: this._currentTurnNumber } })
+    this.duoLog('MOVE', 'RESOLVE_DIVERGENCE', { turnNumber: this._currentTurnNumber, illegalMoves })
+
+    this.startPendingTurn()
+    this.turnState = 'selecting'
+    this.notifyStateChange()
+
+    try {
+      const synced = await this.syncGameState()
+      DEBUG && console.log('[RESOLVE][FORENSIC] Divergence re-sync outcome:', synced ? 'restored from DB' : 'no DB row yet — will retry on next event')
+    } catch (e) {
+      // Re-sync failure must not mask the original divergence; the fallback
+      // poll / next realtime event retries syncGameState.
+      console.error('[RESOLVE][FORENSIC] Divergence re-sync failed:', e)
+    }
+  }
+
   async resolvePendingMoves(): Promise<{ winnerId: string; winningMove: string }> {
     if (!this.isCoordinator()) {
       DEBUG && console.log('[ONLINE] Not coordinator — waiting for coordinator broadcast')
       throw new Error('NOT_COORDINATOR')
+    }
+
+    // ADR-006 single-writer: a concurrent trigger (executeMove, bot handler,
+    // initial-bot effect) must not evaluate/apply the same turn twice. The
+    // in-flight invocation owns the state transition end-to-end.
+    if (this.turnState === 'resolving') {
+      DEBUG && console.warn('[RESOLVE] resolvePendingMoves re-entered while already resolving — no-op')
+      throw new Error('RESOLVE_IN_PROGRESS')
     }
 
     const currentTeam = this.gameState.currentTeam
@@ -2016,6 +2135,46 @@ export class OnlineGame {
     DEBUG && console.log(`[MOVES] ${player1Id}: ${player1Move} (${player1From}${player1To}) | ${player2Id}: ${player2Move} (${player2From}${player2To})`)
     
     const turnStartFen = this.gameState.fen
+
+    // [RESOLVE][FORENSIC] dev-gated state snapshot taken BEFORE any mutation.
+    // This is the primary diagnostic for "Invalid move: <SAN>" — it records
+    // exactly which FEN the resolution pipeline was about to mutate and
+    // whether each pending submission is legal there.
+    if (DEBUG) {
+      console.log('[RESOLVE][FORENSIC]', JSON.stringify({
+        source: 'resolvePendingMoves',
+        roomId: this._room?.id || undefined,
+        gameId: this._gameId || undefined,
+        turnNumber: this._currentTurnNumber,
+        coordinatorId: this._coordinatorId || undefined,
+        currentFen: turnStartFen,
+        turnStartFen: this.gameState.getTurnStartFen() || null,
+        currentTurn: currentTeam,
+        phase: this.gameState.phase,
+        pending: pendingMovesArray.map(([p, m]) => ({ player: p, move: m.move, locked: m.locked })),
+        legality: {
+          player1Move: isMoveLegalAt(turnStartFen, player1Move),
+          player2Move: isMoveLegalAt(turnStartFen, player2Move),
+        },
+        moveHistoryLength: this.gameState.board.history().length,
+        lastApplied: this._lastAppliedResolution,
+      }))
+    }
+
+    // ADR-006 divergence gate: every pending submission MUST be legal at the
+    // turn-start FEN. An illegal one proves local board state has diverged from
+    // the submitting client's view (missed turn_resolved, stale DB row).
+    // Applying it anyway corrupts the position and surfaces as a chess.js
+    // "Invalid move" throw mid-resolution. Instead: discard the turn, rebuild
+    // state from the authoritative games row, reopen submissions for a retry.
+    const illegalMoves = [player1Move, player2Move].filter((m) => !isMoveLegalAt(turnStartFen, m))
+    if (illegalMoves.length > 0) {
+      await this._recoverFromDivergence(turnStartFen, [
+        { player: player1Id, move: player1Move },
+        { player: player2Id, move: player2Move },
+      ], illegalMoves)
+      throw new Error(`STATE_DIVERGENCE: illegal pending moves (${illegalMoves.join(', ')}) at ${turnStartFen.split(' ').slice(0, 4).join(' ')}`)
+    }
     
     const player1Uci = player1From + player1To
     const player2Uci = player2From + player2To

@@ -1013,6 +1013,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               } catch (e) {
                 DEBUG && console.log(`[INITIAL-BOT] Resolve failed:`, e)
                 DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
+                // ADR-006 single-writer: another trigger owns the in-flight
+                // resolution — do not reset its state or schedule a retry.
+                if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                  DEBUG && console.warn('[INITIAL-BOT] Resolution already in flight — skipping duplicate trigger')
+                  return
+                }
                 // Recovery: reset turn state so humans can still play, then
                 // retry if we are still on the bot's turn.
                 g.setTurnState('selecting')
@@ -1641,9 +1647,18 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               updateStateRef.current()
               DEBUG && console.log(`[RESOLVE] Resolve succeeded`)
             } catch (e) {
+              // ADR-006 single-writer: a concurrent trigger already owns this
+              // resolution end-to-end (including its own error recovery) —
+              // touching lock/turn state here would fight the in-flight call.
+              if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                DEBUG && console.warn('[RESOLVE] Resolution already in flight — skipping duplicate trigger')
+                return
+              }
               // NEVER leave the board locked after a failed resolution.
               // Roll back the local turn state so both players can retry;
               // the fallback poll / next submission will re-derive from DB.
+              // (STATE_DIVERGENCE has already re-synced from the authoritative
+              // row inside _recoverFromDivergence before landing here.)
               DEBUG && console.warn(`[RESOLVE] Coordinator resolve failed — recovering turn state:`, e)
               console.error('[RESOLVE] Resolve failed — recovering:', e)
               g.setTurnState('selecting')
@@ -1825,6 +1840,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 } catch (e) {
                   DEBUG && console.log(`[RESOLVE] ${opponentTeam} resolve failed:`, e)
                   DEBUG && console.log('[CHESSDUO-BOT-TRACE] TURN_RESOLVED', JSON.stringify({ gameId: traceGameId2, failed: true, reason: String((e as Error)?.message || e), nextTurn: g.currentTurn }))
+                  // ADR-006 single-writer: another trigger owns the in-flight
+                  // resolution — leave its state transition alone.
+                  if (e instanceof Error && e.message === 'RESOLVE_IN_PROGRESS') {
+                    DEBUG && console.warn(`[RESOLVE] ${opponentTeam} resolution already in flight — skipping duplicate trigger`)
+                    return
+                  }
                   // Recovery: reset state so humans can continue playing
                   g.setTurnState('selecting')
                   inputLockedRef.current = false
