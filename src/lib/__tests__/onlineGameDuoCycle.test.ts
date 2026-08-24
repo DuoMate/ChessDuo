@@ -256,6 +256,151 @@ describe('Duo turn cycle — two real online clients (integration)', () => {
     })
   })
 
+  it('regression: bot turn resolves after a human resolution without a stale-resolving freeze', async () => {
+    // The human (WHITE) resolution leaves turnState === 'resolving' (the echo
+    // resets it async). The BLACK bot turn that follows must still resolve —
+    // the single-writer guard must be decoupled from turnState.
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'WHITE', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'WHITE', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'WHITE' },
+      { id: 'player2', team: 'WHITE' },
+    ])
+    startTurn(coordinator)
+
+    // Human (WHITE) turn resolves.
+    await coordinator.submitMoveToDB('e4', 'e2', 'e4', 'p')
+    const lockPromise = (coordinator as any).waitForTeammateLock()
+    ;(coordinator as any).handleSubmissionFromDB({
+      game_id: 'game-1', turn_number: 1, player_id: 'player2',
+      move_san: 'd4', move_from: 'd2', move_to: 'd4', piece: 'p',
+    })
+    await lockPromise
+    await coordinator.resolvePendingMoves()
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+    // The UI state is still 'resolving' — this is the exact stale state that
+    // used to make the following bot resolution throw RESOLVE_IN_PROGRESS.
+    expect(testG(coordinator).turnState).toBe('resolving')
+
+    // BLACK bot turn: both bot slots submit the same move, then resolve.
+    const blackSlots = coordinator.getPlayers(Team.BLACK)
+    expect(blackSlots.length).toBe(2)
+    for (const slot of blackSlots) {
+      coordinator.setPendingMove(slot, 'e5', 'e7', 'e5', 'p')
+      coordinator.lockPendingMove(slot)
+    }
+
+    await expect(coordinator.resolvePendingMoves()).resolves.toMatchObject({
+      winningMove: 'e5',
+    })
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+  })
+
+  it('multi-turn: humans on WHITE play consecutive human + bot turns seamlessly', async () => {
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'WHITE', slot: 0 },
+    ]
+    const coordinator = makeClient('player1', 'WHITE', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'WHITE' },
+      { id: 'player2', team: 'WHITE' },
+    ])
+    startTurn(coordinator)
+
+    const playHumanTurn = async (san: string, from: string, to: string, piece: string) => {
+      await coordinator.submitMoveToDB(san, from, to, piece)
+      const lockPromise = (coordinator as any).waitForTeammateLock()
+      ;(coordinator as any).handleSubmissionFromDB({
+        game_id: 'game-1',
+        turn_number: testG(coordinator)._currentTurnNumber,
+        player_id: 'player2',
+        move_san: san, move_from: from, move_to: to, piece,
+      })
+      await lockPromise
+      return coordinator.resolvePendingMoves()
+    }
+    const playBotTurn = async (san: string, from: string, to: string, piece: string) => {
+      for (const slot of coordinator.getPlayers(Team.BLACK)) {
+        coordinator.setPendingMove(slot, san, from, to, piece)
+        coordinator.lockPendingMove(slot)
+      }
+      const result = await coordinator.resolvePendingMoves()
+      // Game.tsx reopens selection after each completed bot resolution.
+      testG(coordinator).turnState = 'selecting'
+      return result
+    }
+
+    expect((await playHumanTurn('e4', 'e2', 'e4', 'p')).winningMove).toBe('e4')
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    expect((await playBotTurn('e5', 'e7', 'e5', 'p')).winningMove).toBe('e5')
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    expect((await playHumanTurn('Nf3', 'g1', 'f3', 'n')).winningMove).toBe('Nf3')
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    expect((await playBotTurn('Nc6', 'b8', 'c6', 'n')).winningMove).toBe('Nc6')
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    expect(coordinator.board.history().length).toBe(4)
+  })
+
+  it('multi-turn: humans on BLACK play consecutive bot + human turns seamlessly', async () => {
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'BLACK', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'BLACK', slot: 0 },
+    ]
+    const coordinator = makeClient('player1', 'BLACK', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'BLACK' },
+      { id: 'player2', team: 'BLACK' },
+    ])
+    startTurn(coordinator)
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    const playHumanTurn = async (san: string, from: string, to: string, piece: string) => {
+      await coordinator.submitMoveToDB(san, from, to, piece)
+      const lockPromise = (coordinator as any).waitForTeammateLock()
+      ;(coordinator as any).handleSubmissionFromDB({
+        game_id: 'game-1',
+        turn_number: testG(coordinator)._currentTurnNumber,
+        player_id: 'player2',
+        move_san: san, move_from: from, move_to: to, piece,
+      })
+      await lockPromise
+      return coordinator.resolvePendingMoves()
+    }
+    const playBotTurn = async (san: string, from: string, to: string, piece: string) => {
+      for (const slot of coordinator.getPlayers(Team.WHITE)) {
+        coordinator.setPendingMove(slot, san, from, to, piece)
+        coordinator.lockPendingMove(slot)
+      }
+      const result = await coordinator.resolvePendingMoves()
+      // Game.tsx reopens selection after each completed bot resolution.
+      testG(coordinator).turnState = 'selecting'
+      return result
+    }
+
+    expect((await playBotTurn('e4', 'e2', 'e4', 'p')).winningMove).toBe('e4')
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    expect((await playHumanTurn('e5', 'e7', 'e5', 'p')).winningMove).toBe('e5')
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    expect((await playBotTurn('Nf3', 'g1', 'f3', 'n')).winningMove).toBe('Nf3')
+    expect(coordinator.currentTurn).toBe(Team.BLACK)
+
+    expect((await playHumanTurn('Nc6', 'b8', 'c6', 'n')).winningMove).toBe('Nc6')
+    expect(coordinator.currentTurn).toBe(Team.WHITE)
+
+    expect(coordinator.board.history().length).toBe(4)
+  })
+
   it('S13: with different moves, the higher-accuracy move wins and is broadcast', async () => {
     shared.roomPlayers = [
       { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },

@@ -897,9 +897,13 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
         DEBUG && console.log('[ACCURACY-TRANSITION] prevTurn tracked:', prevTurn, '→', currentTurn)
 
-        // Trigger initial bot turn when game first enters PLAYING (online, human on non-first-turn team)
+        // Trigger initial bot turn when game first enters PLAYING (online, human
+        // on non-first-turn team → bots move first). Gate on "no moves played
+        // yet": bot turns that follow a human resolution are driven by
+        // executeMove's bot handler; firing here too would double-resolve the
+        // same bot turn and trigger a spurious STATE_DIVERGENCE re-sync.
         const traceGameId = roomId || (g as GameInterface).getCoordinatorId?.() || '?'
-        if (g.status === GameStatus.PLAYING) {
+        if (g.status === GameStatus.PLAYING && moveHistoryRef.current.length === 0) {
           const myTeam2 = currentTeam || (g as GameInterface).getTeam()
           const opponentTeam2 = myTeam2 === 'WHITE' ? Team.BLACK : Team.WHITE
           DEBUG && console.log('[CHESSDUO-BOT-TRACE] BOT_TURN_CHECK', JSON.stringify({

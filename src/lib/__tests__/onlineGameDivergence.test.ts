@@ -200,7 +200,7 @@ describe('ADR-006 divergence gate in resolvePendingMoves', () => {
     ])
     startTurn(coordinator)
 
-    testG(coordinator).turnState = 'resolving'
+    testG(coordinator)._resolving = true
 
     await expect(coordinator.resolvePendingMoves()).rejects.toThrow('RESOLVE_IN_PROGRESS')
   })

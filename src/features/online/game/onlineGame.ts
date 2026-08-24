@@ -85,6 +85,11 @@ export class OnlineGame {
   // applied to the local board (by seq). Equal-seq duplicates of the same
   // winningMove are no-ops; different moves at equal seq are divergence.
   private _lastAppliedResolution: { turnSequence: number; winningMove: string } | null = null
+  // ADR-006 single-writer in-flight marker. Decoupled from `turnState` (which is
+  // UI state and stays 'resolving' until the turn_resolved echo or a bot handler
+  // reopens selection): the guard must reflect "is resolvePendingMoves actually
+  // running now", not "what does the UI currently show".
+  private _resolving = false
   private _gameId: string = ''
   private _currentTurnNumber: number = 1
   private _submissionChannel: RealtimeChannel | null = null
@@ -1446,10 +1451,8 @@ export class OnlineGame {
       
       // Resolve the waitForTeammateLock Promise. NOTE: do NOT set turnState
       // to 'resolving' here — that state is owned exclusively by
-      // resolvePendingMoves() (its ADR-006 single-writer guard treats
-      // turnState === 'resolving' as "already resolving" and aborts). The
-      // waiter is released and resolvePendingMoves() transitions to
-      // 'resolving' as soon as executeMove resumes.
+      // resolvePendingMoves(). The waiter is released and resolvePendingMoves()
+      // transitions to 'resolving' as soon as executeMove resumes.
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
         DEBUG && console.log('[STATE] Teammate locked, releasing waiter')
         if (this._teammateLockTimeout) {
@@ -1970,11 +1973,9 @@ export class OnlineGame {
     this.gameState.lockPendingMove(submission.player_id as Player)
 
     // Resolve the waitForTeammateLock Promise. NOTE: do NOT set turnState to
-    // 'resolving' here — that state is owned exclusively by resolvePendingMoves()
-    // (its ADR-006 single-writer guard treats turnState === 'resolving' as
-    // "already resolving" and would abort the pending resolution). The waiter
-    // is released and resolvePendingMoves() transitions to 'resolving' as soon
-    // as executeMove resumes.
+    // 'resolving' here — that state is owned exclusively by resolvePendingMoves().
+    // The waiter is released and resolvePendingMoves() transitions to
+    // 'resolving' as soon as executeMove resumes.
     if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
       DEBUG && console.log('[STATE] Teammate submission received, releasing waiter')
       if (this._teammateLockTimeout) {
@@ -2269,13 +2270,25 @@ export class OnlineGame {
     }
 
     // ADR-006 single-writer: a concurrent trigger (executeMove, bot handler,
-    // initial-bot effect) must not evaluate/apply the same turn twice. The
-    // in-flight invocation owns the state transition end-to-end.
-    if (this.turnState === 'resolving') {
+    // initial-bot effect) must not evaluate/apply the same turn twice. Guard on
+    // a dedicated in-flight flag — NOT turnState, which is UI state that stays
+    // 'resolving' until the turn_resolved echo or a bot handler reopens
+    // selection. Reusing turnState here made the FIRST Duo move (and the bot
+    // turn that follows a human resolution) throw RESOLVE_IN_PROGRESS and freeze
+    // the board.
+    if (this._resolving) {
       DEBUG && console.warn('[RESOLVE] resolvePendingMoves re-entered while already resolving — no-op')
       throw new Error('RESOLVE_IN_PROGRESS')
     }
+    this._resolving = true
+    try {
+      return await this._resolvePendingMovesInner()
+    } finally {
+      this._resolving = false
+    }
+  }
 
+  private async _resolvePendingMovesInner(): Promise<{ winnerId: string; winningMove: string }> {
     const currentTeam = this.gameState.currentTeam
     
     this.turnState = 'resolving'
