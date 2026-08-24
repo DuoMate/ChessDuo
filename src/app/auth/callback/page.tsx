@@ -28,6 +28,7 @@ export default function AuthCallbackPage() {
   const router = useRouter()
   const [status, setStatus] = useState<Status>('processing')
   const [error, setError] = useState<CallbackError | null>(null)
+  const [isOAuth, setIsOAuth] = useState(false)
   const ranRef = useRef(false)
 
   useEffect(() => {
@@ -36,6 +37,11 @@ export default function AuthCallbackPage() {
     const cid = correlationId()
 
     async function handle() {
+      // OAuth (web Google) is the only flow that returns with `?redirect=<dest>`.
+      // Email-confirmation links use a bare `/auth/callback` (no redirect param),
+      // so its presence is a reliable discriminator between the two flows.
+      // Declared here (function scope) so the catch block can read it.
+      let isOAuthFlow = false
       try {
         const url = new URL(window.location.href)
         const query = url.searchParams
@@ -47,6 +53,10 @@ export default function AuthCallbackPage() {
         // handler instead of dropping the user's intent.
         const nextParam = query.get('redirect')
         const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null
+        isOAuthFlow = Boolean(safeNext)
+        // Mirror into React state for the loading/error copy (this closure is
+        // stale by the time the async exchange settles, so the state drives UI).
+        setIsOAuth(isOAuthFlow)
 
         // Auth providers surface errors directly in the redirect URL.
         const urlError = query.get('error') || hash.get('error')
@@ -131,7 +141,12 @@ export default function AuthCallbackPage() {
         // browser/device than the one that signed up (or the code was
         // replayed). The email is already confirmed server-side at this
         // point — recover via normal sign-in instead of a raw SDK error.
-        if (isPkceVerifierMissing(err)) {
+        //
+        // This recovery ONLY applies to email confirmation. For OAuth
+        // (has ?redirect=), a missing code verifier is a genuine sign-in
+        // failure — the session was never restored — so we must NOT show
+        // the "Email confirmed" screen. Fall through to the error state.
+        if (isPkceVerifierMissing(err) && !isOAuthFlow) {
           setStatus('recovery')
           return
         }
@@ -166,7 +181,7 @@ export default function AuthCallbackPage() {
     return (
       <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-5xl mb-3">⚠️</div>
-        <h1 className="text-xl font-bold mb-2">Couldn&apos;t confirm your email</h1>
+        <h1 className="text-xl font-bold mb-2">{isOAuth ? 'Couldn&apos;t sign in' : "Couldn't confirm your email"}</h1>
         <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">
           {error?.message || 'Something went wrong. Please try signing in again.'}
         </p>
@@ -181,5 +196,5 @@ export default function AuthCallbackPage() {
     )
   }
 
-  return <PageLoading label="Confirming your email..." />
+  return <PageLoading label={isOAuth ? 'Completing sign in...' : 'Confirming your email...'} />
 }

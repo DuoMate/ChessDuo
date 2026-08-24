@@ -337,6 +337,27 @@ export default function SetupPage() {
 
     if (redirectParam) {
       redirectUrlRef.current = redirectParam
+      // AUTH-JOIN FIX: strip the transient `redirect`/`signup` params from the
+      // current history entry at capture time. Leaving `?redirect=` in the
+      // browser URL means a stale entry survives behind the game route and,
+      // because the session is still active after sign-in, Back after a
+      // finished game re-follows it and bounces the user back into the game.
+      if (typeof window !== 'undefined') {
+        const currentUrl = new URL(window.location.href)
+        if (currentUrl.searchParams.has('redirect') || currentUrl.searchParams.has('signup')) {
+          currentUrl.searchParams.delete('redirect')
+          currentUrl.searchParams.delete('signup')
+          window.history.replaceState(null, '', currentUrl.toString())
+        }
+      }
+      // Preserve the destination through auth flows that reload the page
+      // (email signup → confirmation). OAuth round-trips `redirect` in its own
+      // URL and password login keeps this in memory, but a confirmation link
+      // lands on bare `/` with no redirect param — the stored action is the
+      // only thing that can recover the invite destination.
+      if (!playerId) {
+        storePendingAction({ type: 'navigate', route: redirectParam })
+      }
     }
 
     if (signupParam === '1' && sessionChecked) {
@@ -467,6 +488,35 @@ export default function SetupPage() {
     return ''
   }
 
+  // Follow a captured internal destination (`/game?...`, `/duel?...`, …) only
+  // if it is safe: must be a same-origin absolute-path route, and any embedded
+  // `playerId` must belong to the signed-in user (a forwarded/stale invite must
+  // never drop the joiner into someone else's game link). Strips transient
+  // `redirect`/`signup` params before navigating so a stale `?redirect=` history
+  // entry can't re-trigger navigation after the user later backs out.
+  const followInternalRoute = useCallback((route: string, userId: string): boolean => {
+    if (!route || !route.startsWith('/') || route.startsWith('//')) {
+      return false
+    }
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(route, window.location.origin)
+    } catch {
+      // Malformed URL — ignore.
+      return false
+    }
+    const urlPlayerId = parsedUrl.searchParams.get('playerId')
+    if (urlPlayerId && urlPlayerId !== userId) {
+      return false
+    }
+    const currentUrl = new URL(window.location.href)
+    currentUrl.searchParams.delete('redirect')
+    currentUrl.searchParams.delete('signup')
+    window.history.replaceState(null, '', currentUrl.toString())
+    router.replace(withDebugParam(route))
+    return true
+  }, [router])
+
   const executePendingAction = async (action: PendingAction, userId: string) => {
     const pid = userId
     switch (action.type) {
@@ -575,11 +625,8 @@ export default function SetupPage() {
         return
       }
       case 'navigate': {
-        if (action.route.startsWith('/')) {
-          router.replace(action.route)
-        } else {
-          router.push('/')
-        }
+        if (followInternalRoute(action.route, userId)) return
+        router.push('/')
         return
       }
     }
@@ -591,24 +638,8 @@ export default function SetupPage() {
     if (!url || !url.startsWith('/')) {
       return
     }
-    try {
-      const parsedUrl = new URL(url, window.location.origin)
-      const urlPlayerId = parsedUrl.searchParams.get('playerId')
-      if (urlPlayerId && urlPlayerId !== userId) {
-        // Redirect targets a different user's game link — drop it to avoid
-        // the /game <-> /?redirect= loop.
-        return
-      }
-      // Strip redirect/signup params from the browser URL before navigating.
-      const currentUrl = new URL(window.location.href)
-      currentUrl.searchParams.delete('redirect')
-      currentUrl.searchParams.delete('signup')
-      window.history.replaceState(null, '', currentUrl.toString())
-      router.replace(withDebugParam(url))
-    } catch {
-      // Malformed URL — ignore.
-    }
-  }, [router])
+    followInternalRoute(url, userId)
+  }, [router, followInternalRoute])
 
   const handleAuthComplete = (userId: string, name: string) => {
     setPlayerId(userId)
