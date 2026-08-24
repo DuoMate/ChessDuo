@@ -232,6 +232,32 @@ describe('SetupPage — joinError persistence', () => {
     expect(screen.queryByText('Room not found')).toBeNull()
   })
 
+  it('follows a captured ?redirect= destination after session restore (preserve intent)', async () => {
+    mockSearchParams.set('redirect', '/game?mode=online&room=abc&code=XYZ123&team=WHITE')
+
+    await act(async () => {
+      render(<SetupPage />)
+    })
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/game?mode=online&room=abc&code=XYZ123&team=WHITE')
+    })
+  })
+
+  it('drops a ?redirect= destination whose playerId belongs to a different user', async () => {
+    mockSearchParams.set('redirect', '/game?mode=online&room=abc&code=XYZ123&playerId=someone-else')
+
+    await act(async () => {
+      render(<SetupPage />)
+    })
+
+    // Session resolves to 'user-1'; the redirect targets 'someone-else' — the
+    // guarded follow must NOT navigate to the foreign game link.
+    await waitFor(() => {
+      expect(mockReplace).not.toHaveBeenCalledWith(expect.stringContaining('playerId=someone-else'))
+    })
+  })
+
   it('does not show stale joinError after re-mount without code param', async () => {
     // First mount: simulate failed auto-join
     mockSearchParams.set('code', 'ABC123')
