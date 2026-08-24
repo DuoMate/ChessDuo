@@ -37,9 +37,11 @@ export default function AuthCallbackPage() {
     const cid = correlationId()
 
     async function handle() {
-      // OAuth (web Google) is the only flow that returns with `?redirect=<dest>`.
-      // Email-confirmation links use a bare `/auth/callback` (no redirect param),
-      // so its presence is a reliable discriminator between the two flows.
+      // Discriminator between the two flows that share this route:
+      //  - OAuth (web Google) returns with `?flow=oauth` (always set by
+      //    authenticateWithGoogleWeb) and optionally `?redirect=<dest>`.
+      //  - Email-confirmation links use a bare `/auth/callback` (no flow, no
+      //    redirect param).
       // Declared here (function scope) so the catch block can read it.
       let isOAuthFlow = false
       try {
@@ -53,7 +55,9 @@ export default function AuthCallbackPage() {
         // handler instead of dropping the user's intent.
         const nextParam = query.get('redirect')
         const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null
-        isOAuthFlow = Boolean(safeNext)
+        // `flow=oauth` is authoritative; `safeNext` is a fallback for in-flight
+        // flows started before the marker existed.
+        isOAuthFlow = query.get('flow') === 'oauth' || Boolean(safeNext)
         // Mirror into React state for the loading/error copy (this closure is
         // stale by the time the async exchange settles, so the state drives UI).
         setIsOAuth(isOAuthFlow)
