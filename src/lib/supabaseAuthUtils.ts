@@ -174,7 +174,7 @@ async function authenticateWithGoogleCapacitorBrowser(): Promise<{
   }
 }
 
-async function authenticateWithGoogleWeb(redirectUrl?: string, navigate?: (url: string) => void): Promise<{
+async function authenticateWithGoogleWeb(redirectUrl?: string): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -191,21 +191,19 @@ async function authenticateWithGoogleWeb(redirectUrl?: string, navigate?: (url: 
     // the room-code input with a UUID and failing with "Room not found".
     // /auth/callback consumes the auth code and then routes onward cleanly,
     // preserving any original destination via an encoded `redirect` param.
-    let redirectTo = `${origin}/auth/callback`
+    //
+    // `flow=oauth` is an always-present marker so /auth/callback can reliably
+    // tell OAuth apart from email-confirmation links (which carry no flow
+    // param). It also keeps the auth GUID off the top-level `?code=` — it is
+    // consumed here, never on the home page.
+    let redirectTo = `${origin}/auth/callback?flow=oauth`
     if (redirectUrl && redirectUrl.startsWith('/')) {
-      redirectTo = `${origin}/auth/callback?redirect=${encodeURIComponent(redirectUrl)}`
+      redirectTo = `${origin}/auth/callback?flow=oauth&redirect=${encodeURIComponent(redirectUrl)}`
     }
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // HISTORY HYGIENE: navigate ourselves via location.replace instead of
-        // letting the SDK do a plain top-level redirect. A pushed entry leaves
-        // the Google consent pages permanently in the back stack, so pressing
-        // Back after signing in could land on accounts.google.com and re-run
-        // the OAuth flow. With replace(), a silent (non-interactive) OAuth
-        // chain collapses into the current entry and nothing is left behind.
-        skipBrowserRedirect: true,
         redirectTo,
         queryParams: {
           access_type: 'offline',
@@ -217,21 +215,17 @@ async function authenticateWithGoogleWeb(redirectUrl?: string, navigate?: (url: 
       },
     })
     if (error) return { success: false, error: error.message }
-    if (!data?.url) return { success: false, error: 'No OAuth URL returned' }
 
-    // Injectable navigation (same convention as capacitorAuth.ts opts.navigate)
-    // so tests can observe the jump; jsdom makes location.replace unforgeable.
-    const jump = navigate ?? ((url: string) => window.location.replace(url))
-    jump(data.url)
-
-    // Navigation is happening; keep the shape consistent for callers.
+    // The SDK performs the top-level redirect itself (standard OAuth flow —
+    // no skipBrowserRedirect, so no skip_http_redirect=true). Navigation is
+    // happening; keep the shape consistent for callers.
     return { success: true }
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Google sign-in failed' }
   }
 }
 
-export async function authenticateWithGoogle(opts?: { redirectUrl?: string; navigate?: (url: string) => void }): Promise<{
+export async function authenticateWithGoogle(opts?: { redirectUrl?: string }): Promise<{
   success: boolean
   userId?: string
   email?: string
@@ -260,5 +254,5 @@ export async function authenticateWithGoogle(opts?: { redirectUrl?: string; navi
   }
   
   DEBUG && console.log('[Auth] Running on web platform')
-  return authenticateWithGoogleWeb(opts?.redirectUrl, opts?.navigate)
+  return authenticateWithGoogleWeb(opts?.redirectUrl)
 }
