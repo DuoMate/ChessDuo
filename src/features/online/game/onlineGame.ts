@@ -1444,15 +1444,18 @@ export class OnlineGame {
       }
       this.gameState.lockPendingMove(payload.playerId as Player)
       
-      // Resolve the waitForTeammateLock Promise
+      // Resolve the waitForTeammateLock Promise. NOTE: do NOT set turnState
+      // to 'resolving' here — that state is owned exclusively by
+      // resolvePendingMoves() (its ADR-006 single-writer guard treats
+      // turnState === 'resolving' as "already resolving" and aborts). The
+      // waiter is released and resolvePendingMoves() transitions to
+      // 'resolving' as soon as executeMove resumes.
       if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
-        DEBUG && console.log('[STATE] Teammate locked, transitioning to resolving state')
+        DEBUG && console.log('[STATE] Teammate locked, releasing waiter')
         if (this._teammateLockTimeout) {
           clearTimeout(this._teammateLockTimeout)
           this._teammateLockTimeout = null
         }
-        this.turnState = 'resolving'
-        this.notifyStateChange()
         this.resolveTeammateLocked()
         this.resolveTeammateLocked = null
       }
@@ -1966,15 +1969,18 @@ export class OnlineGame {
     // Lock the teammate's move (submission to DB implies lock)
     this.gameState.lockPendingMove(submission.player_id as Player)
 
-    // Resolve the waitForTeammateLock Promise
+    // Resolve the waitForTeammateLock Promise. NOTE: do NOT set turnState to
+    // 'resolving' here — that state is owned exclusively by resolvePendingMoves()
+    // (its ADR-006 single-writer guard treats turnState === 'resolving' as
+    // "already resolving" and would abort the pending resolution). The waiter
+    // is released and resolvePendingMoves() transitions to 'resolving' as soon
+    // as executeMove resumes.
     if (this.resolveTeammateLocked && this.turnState === 'waiting_for_teammate') {
-      DEBUG && console.log('[STATE] Teammate submission received, transitioning to resolving state')
+      DEBUG && console.log('[STATE] Teammate submission received, releasing waiter')
       if (this._teammateLockTimeout) {
         clearTimeout(this._teammateLockTimeout)
         this._teammateLockTimeout = null
       }
-      this.turnState = 'resolving'
-      this.notifyStateChange()
       this.resolveTeammateLocked()
       this.resolveTeammateLocked = null
     }

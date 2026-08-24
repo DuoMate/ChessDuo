@@ -217,6 +217,45 @@ describe('Duo turn cycle — two real online clients (integration)', () => {
     expect(teammate.currentTurn).toBe(Team.BLACK)
   })
 
+  it('regression: first-turn resolve succeeds after the postgres_changes waiter is released (no RESOLVE_IN_PROGRESS)', async () => {
+    // Reproduces the production deadlock: the coordinator submits, calls
+    // waitForTeammateLock(), and the teammate's row arrives via
+    // handleSubmissionFromDB — which MUST only release the waiter and never
+    // pre-set turnState='resolving' (that state is owned by resolvePendingMoves).
+    shared.roomPlayers = [
+      { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
+      { room_id: 'room-1', player_id: 'player2', team: 'WHITE', slot: 0 },
+    ]
+
+    const coordinator = makeClient('player1', 'WHITE', 'player1')
+    setupPlayers(coordinator, [
+      { id: 'player1', team: 'WHITE' },
+      { id: 'player2', team: 'WHITE' },
+    ])
+    startTurn(coordinator)
+
+    // Coordinator submits its own move and begins waiting for the teammate lock.
+    await coordinator.submitMoveToDB('e4', 'e2', 'e4', 'p')
+    expect(testG(coordinator).turnState).toBe('waiting_for_teammate')
+
+    const lockPromise = (coordinator as any).waitForTeammateLock()
+
+    // Teammate's row lands via postgres_changes; handler releases the waiter.
+    ;(coordinator as any).handleSubmissionFromDB({
+      game_id: 'game-1', turn_number: 1, player_id: 'player2',
+      move_san: 'd4', move_from: 'd2', move_to: 'd4', piece: 'p',
+    })
+
+    await lockPromise
+
+    // Before the fix this threw RESOLVE_IN_PROGRESS (the guard saw the stale
+    // 'resolving' state pre-set by handleSubmissionFromDB) and the turn froze.
+    await expect(coordinator.resolvePendingMoves()).resolves.toMatchObject({
+      winningMove: 'e4',
+      winnerId: 'player1',
+    })
+  })
+
   it('S13: with different moves, the higher-accuracy move wins and is broadcast', async () => {
     shared.roomPlayers = [
       { room_id: 'room-1', player_id: 'player1', team: 'WHITE', slot: 0 },
