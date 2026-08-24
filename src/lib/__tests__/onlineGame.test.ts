@@ -1148,13 +1148,13 @@ describe('OnlineGame', () => {
       expect((game as any).turnState).toBe('waiting_for_teammate')
     })
 
-    it('should transition to resolving when teammate locks', async () => {
+    it('should release the waiter when teammate locks without pre-setting resolving', async () => {
       // Must call waitForTeammateLock first to set resolveTeammateLocked callback
       const lockPromise = (game as any).waitForTeammateLock()
 
       ;(game as any).handleTeammateLocked({ playerId: 'player2' })
 
-      expect((game as any).turnState).toBe('resolving')
+      expect((game as any).turnState).toBe('waiting_for_teammate')
       await lockPromise
     })
 

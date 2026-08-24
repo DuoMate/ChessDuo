@@ -397,7 +397,7 @@ describe('handleSubmissionFromDB (postgres_changes handler)', () => {
     expect(testG(game).turnState).toBe('waiting_for_teammate')
   })
 
-  it('resolves a pending waitForTeammateLock and transitions to resolving', async () => {
+  it('resolves a pending waitForTeammateLock without pre-setting resolving', async () => {
     const game = setupPlayingGame('player2', 'WHITE')
     testG(game).turnState = 'waiting_for_teammate'
 
@@ -408,7 +408,9 @@ describe('handleSubmissionFromDB (postgres_changes handler)', () => {
 
     await Promise.resolve()
     expect(resolved).toBe(true)
-    expect(testG(game).turnState).toBe('resolving')
+    // 'resolving' is owned exclusively by resolvePendingMoves() — the
+    // postgres_changes handler must only release the waiter, not claim it.
+    expect(testG(game).turnState).toBe('waiting_for_teammate')
   })
 })
 

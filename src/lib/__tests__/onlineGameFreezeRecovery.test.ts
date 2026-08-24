@@ -187,7 +187,7 @@ describe('A — coordinator recovers when the teammate submission realtime event
     jest.useRealTimers()
   })
 
-  it('recovery leaves turnState out of "waiting_for_teammate" so executeMove can resolve', async () => {
+  it('recovery releases the waiter and lets resolvePendingMoves proceed (no RESOLVE_IN_PROGRESS)', async () => {
     jest.useFakeTimers()
     const coordinator = makeClient('player1', 'WHITE', 'player1')
     setupPlayers(coordinator, [
@@ -206,8 +206,13 @@ describe('A — coordinator recovers when the teammate submission realtime event
     await jest.advanceTimersByTimeAsync(16_000)
     await lockPromise
 
-    expect(['resolving', 'locked', 'selecting']).toContain(testG(coordinator).turnState)
-    expect(testG(coordinator).turnState).not.toBe('waiting_for_teammate')
+    // Recovery restored + locked the teammate move and released the waiter
+    // without pre-setting 'resolving' (that state is owned by resolvePendingMoves).
+    expect(testG(coordinator).isBothPendingLocked()).toBe(true)
+    await expect(coordinator.resolvePendingMoves()).resolves.toMatchObject({
+      winningMove: 'e4',
+      winnerId: 'player1',
+    })
     jest.useRealTimers()
   })
 })
