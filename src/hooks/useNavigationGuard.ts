@@ -7,6 +7,7 @@ interface UseNavigationGuardOptions {
   enabled: boolean
   onAttemptLeave: () => void
   onOverlayBack?: () => boolean
+  hasOpenOverlay?: boolean
 }
 
 /**
@@ -21,11 +22,12 @@ function liveEntryIsGuardSentinel(): boolean {
   return !!state && state[GUARD_STATE_MARKER] === true
 }
 
-export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: UseNavigationGuardOptions) {
+export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack, hasOpenOverlay = false }: UseNavigationGuardOptions) {
   const router = useRouter()
   const blockedRef = useRef(false)
   const onAttemptLeaveRef = useRef(onAttemptLeave)
   const onOverlayBackRef = useRef(onOverlayBack)
+  const enabledRef = useRef(enabled)
 
   useEffect(() => {
     onAttemptLeaveRef.current = onAttemptLeave
@@ -34,6 +36,10 @@ export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: U
   useEffect(() => {
     onOverlayBackRef.current = onOverlayBack
   }, [onOverlayBack])
+
+  useEffect(() => {
+    enabledRef.current = enabled
+  }, [enabled])
 
   const blockNavigation = useCallback(() => {
     if (!enabled) return
@@ -45,16 +51,21 @@ export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: U
     blockedRef.current = false
   }, [])
 
+  // Intercept the browser/device Back button whenever the guard is active
+  // (active game) OR an in-game overlay is open (e.g. Move Insights on a
+  // completed game). When only an overlay is open the leave modal is skipped.
+  const shouldIntercept = enabled || hasOpenOverlay
+
   useEffect(() => {
-    if (!enabled) return
+    if (!shouldIntercept) return
 
     // Push a tagged blocker history entry so the first back press
     // does not immediately navigate away from the game page. The
     // popstate handler below relies on this entry: at popstate time
     // window.location is still the game URL, so its re-push restores
     // the exact same URL. The entry is consumed by the effect below
-    // when the guard deactivates (game over / unmount-after-disable)
-    // — leaving it in place made the first Back after a completed
+    // when we stop intercepting (game over / overlay closed) —
+    // leaving it in place made the first Back after a completed
     // game resurrect the /game history entry.
     const currentPath = window.location.pathname + window.location.search
     window.history.pushState({ [GUARD_STATE_MARKER]: true }, '', currentPath)
@@ -66,12 +77,14 @@ export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: U
     }
 
     const handlePopState = () => {
-      if (!blockedRef.current) {
-        // Check for open overlays first — close them before showing leave modal
-        if (onOverlayBackRef.current && onOverlayBackRef.current()) {
-          window.history.pushState({ [GUARD_STATE_MARKER]: true }, '', window.location.pathname + window.location.search)
-          return
-        }
+      if (blockedRef.current) return
+      // Check for open overlays first — close them before showing leave modal.
+      if (onOverlayBackRef.current && onOverlayBackRef.current()) {
+        window.history.pushState({ [GUARD_STATE_MARKER]: true }, '', window.location.pathname + window.location.search)
+        return
+      }
+      // Only block navigation (show leave modal) for an active game.
+      if (enabledRef.current) {
         window.history.pushState({ [GUARD_STATE_MARKER]: true }, '', window.location.pathname + window.location.search)
         blockedRef.current = true
         onAttemptLeaveRef.current()
@@ -85,22 +98,22 @@ export function useNavigationGuard({ enabled, onAttemptLeave, onOverlayBack }: U
       window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true })
       window.removeEventListener('popstate', handlePopState, { capture: true })
     }
-  }, [enabled])
+  }, [shouldIntercept])
 
-  // Consume the blocker entry when the guard deactivates while the page
-  // stays mounted (e.g. GAME_OVER). Only pops when our tagged sentinel is
-  // still the live entry — never after the user navigated away normally
-  // (confirmLeave push / replace truncate forward entries, and a natural
-  // back already consumed the sentinel). The listeners are already removed
-  // by the effect above at this point, so this synthetic pop cannot
-  // re-trigger the leave modal; the URL does not change (sentinel shares
-  // the game URL), so the router performs no navigation.
+  // Consume the blocker entry when we stop intercepting while the page
+  // stays mounted (e.g. GAME_OVER, or an in-game overlay was closed). Only
+  // pops when our tagged sentinel is still the live entry — never after the
+  // user navigated away normally (confirmLeave push / replace truncate
+  // forward entries, and a natural back already consumed the sentinel). The
+  // listeners are already removed by the effect above at this point, so this
+  // synthetic pop cannot re-trigger the leave modal; the URL does not change
+  // (sentinel shares the game URL), so the router performs no navigation.
   useEffect(() => {
-    if (enabled) return
+    if (shouldIntercept) return
     if (liveEntryIsGuardSentinel()) {
       window.history.back()
     }
-  }, [enabled])
+  }, [shouldIntercept])
 
   const confirmLeave = useCallback(() => {
     blockedRef.current = true
