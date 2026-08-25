@@ -147,3 +147,66 @@ describe('useNavigationGuard', () => {
       expect(onLeave).toHaveBeenCalled()
     })
   })
+
+  describe('hasOpenOverlay (completed game)', () => {
+    it('pushes a blocker history entry when an overlay is open even when disabled', () => {
+      const pushState = jest.spyOn(window.history, 'pushState')
+      renderHook(() =>
+        useNavigationGuard({
+          enabled: false,
+          onAttemptLeave: jest.fn(),
+          onOverlayBack: jest.fn(() => true),
+          hasOpenOverlay: true,
+        })
+      )
+      expect(pushState).toHaveBeenCalled()
+    })
+
+    it('closes the overlay on popstate without firing onAttemptLeave when disabled', () => {
+      const onLeave = jest.fn()
+      const onOverlayBack = jest.fn(() => true)
+      renderHook(() =>
+        useNavigationGuard({ enabled: false, onAttemptLeave: onLeave, onOverlayBack, hasOpenOverlay: true })
+      )
+
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      expect(onOverlayBack).toHaveBeenCalled()
+      expect(onLeave).not.toHaveBeenCalled()
+    })
+
+    it('does not register a popstate handler when disabled and no overlay is open', () => {
+      const onLeave = jest.fn()
+      const onOverlayBack = jest.fn(() => false)
+      renderHook(() =>
+        useNavigationGuard({ enabled: false, onAttemptLeave: onLeave, onOverlayBack, hasOpenOverlay: false })
+      )
+
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      expect(onOverlayBack).not.toHaveBeenCalled()
+      expect(onLeave).not.toHaveBeenCalled()
+    })
+
+    it('consumes the sentinel when the overlay closes on a disabled game', () => {
+      jest.spyOn(window.history, 'pushState')
+      const stateSpy = jest.spyOn(window.history, 'state', 'get').mockReturnValue({ __chessduoNavGuard: true })
+      const backSpy = jest.spyOn(window.history, 'back').mockImplementation(() => {})
+
+      const { rerender } = renderHook(
+        ({ hasOpenOverlay }) =>
+          useNavigationGuard({
+            enabled: false,
+            onAttemptLeave: jest.fn(),
+            onOverlayBack: jest.fn(() => true),
+            hasOpenOverlay,
+          }),
+        { initialProps: { hasOpenOverlay: true } },
+      )
+
+      expect(backSpy).not.toHaveBeenCalled()
+      rerender({ hasOpenOverlay: false })
+      expect(backSpy).toHaveBeenCalledTimes(1)
+
+      stateSpy.mockRestore()
+      backSpy.mockRestore()
+    })
+  })

@@ -353,10 +353,22 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     return false
   }, [])
 
+  // Any in-game overlay that Back should close before navigating away. The
+  // leave-confirm modal is intentionally excluded — it is owned by the guard's
+  // own `blockedRef` flow and only appears while the game is still active.
+  const hasOpenOverlay =
+    showRoundHistory ||
+    showInsights ||
+    showChat ||
+    showSettings ||
+    overlayMode !== 'none' ||
+    showResignConfirm
+
   useNavigationGuard({
     enabled: gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING,
     onAttemptLeave: () => setShowLeaveModal(true),
     onOverlayBack: closeTopmostOverlay,
+    hasOpenOverlay,
   })
 
   const handleUpgradeClick = useCallback(() => {

@@ -97,6 +97,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeaveModal(true),
     onOverlayBack: closeTopmostOverlay,
+    hasOpenOverlay: showSettings,
   })
 
   useCapacitorBackButton(
