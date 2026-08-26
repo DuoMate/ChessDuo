@@ -6,6 +6,7 @@ const mockEnableMoveInput = jest.fn()
 const mockDestroy = jest.fn()
 const mockSetPosition = jest.fn()
 const mockSetOrientation = jest.fn()
+const mockMovePiece = jest.fn()
 
 let capturedHandler = null
 let capturedColor = undefined
@@ -22,9 +23,10 @@ class Chessboard {
   destroy(...args) { return mockDestroy(...args) }
   setPosition(...args) { return mockSetPosition(...args) }
   setOrientation(...args) { return mockSetOrientation(...args) }
+  movePiece(...args) { return mockMovePiece(...args) }
 }
 
-export { Chessboard, mockAddMarker, mockRemoveMarkers, mockDisableMoveInput, mockEnableMoveInput, mockDestroy, mockSetPosition, mockSetOrientation }
+export { Chessboard, mockAddMarker, mockRemoveMarkers, mockDisableMoveInput, mockEnableMoveInput, mockDestroy, mockSetPosition, mockSetOrientation, mockMovePiece }
 export function getLastHandler() { return capturedHandler }
 export function getLastColor() { return capturedColor }
 export function resetCaptured() { capturedHandler = null; capturedColor = undefined }

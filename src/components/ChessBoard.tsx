@@ -28,6 +28,21 @@ export interface HighlightSquares {
   loserTo?: string
 }
 
+/**
+ * True when lastMove is a castling move: a king stepping exactly two files on
+ * the same rank (e.g. e1→g1, e8→c8). Used to animate castling via cm-chessboard's
+ * position-diff animation (king + rook both slide); non-castle moves snapshot
+ * without animation as before.
+ */
+function isCastleMove(lastMove: { from: string; to: string } | null): boolean {
+  if (!lastMove) return false
+  const { from, to } = lastMove
+  return from.length === 2 && to.length === 2 &&
+    from[0] === 'e' &&
+    from[1] === to[1] &&
+    Math.abs(to.charCodeAt(0) - from.charCodeAt(0)) === 2
+}
+
 interface ChessBoardProps {
   fen: string
   onMove: (move: string, promotion?: PromotionPiece) => void
@@ -159,26 +174,12 @@ function ChessBoardInner({
   }, [])
 
   useEffect(() => {
-    if (boardRef.current) {
-      boardRef.current.setPosition(fen, false)
-    }
+    if (!boardRef.current) return
+    // Animate castling so the king + rook both slide to their squares
+    // (cm-chessboard's setPosition diffs the position and moves both pieces).
+    // All other moves snapshot instantly as before.
+    boardRef.current.setPosition(fen, isCastleMove(lastMoveRef.current))
   }, [fen])
-  useEffect(() => {
-    if (!boardRef.current || !lastMove) return
-    const { from, to } = lastMove
-    if (from[0] !== 'e' || Math.abs(to.charCodeAt(0) - from.charCodeAt(0)) !== 2 || from[1] !== to[1]) return
-    const rank = from[1]
-    const rookFrom = to.charCodeAt(0) > from.charCodeAt(0) ? `h${rank}` : `a${rank}`
-    const rookTo = to.charCodeAt(0) > from.charCodeAt(0) ? `f${rank}` : `d${rank}`
-    // cm-chessboard's setPosition already handles castling internally, so the
-    // rook may already be on the target square. Guard against stale lastMove
-    // where the rook no longer exists at rookFrom.
-    try {
-      boardRef.current.movePiece(rookFrom, rookTo, true)
-    } catch {
-      // Rook already positioned by setPosition or no longer exists — skip animation
-    }
-  }, [fen, lastMove])
 
   useEffect(() => {
     if (boardRef.current) {
