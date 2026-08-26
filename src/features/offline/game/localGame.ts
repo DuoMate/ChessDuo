@@ -3,6 +3,7 @@ import { GameState, GamePhase, Team, Player, CapturedPieces, PendingMoveInfo } f
 import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE, PlayerColor, ResolvedColor, resolvePlayerColor } from '../../shared/gameConstants'
+import { sanToEvaluationUci } from '../../../lib/chessUtils'
 import { DEBUG } from '../../../lib/debug'
 
 import { GameStatus, MoveComparison } from '../../shared/gameTypes'
@@ -265,8 +266,8 @@ export class LocalGame {
      
      const turnStartFen = this.gameState.getTurnStartFen()
      
-      const player1Uci = player1From + player1To
-      const player2Uci = player2From + player2To
+      const player1Uci = sanToEvaluationUci(player1From, player1To, player1Move)
+      const player2Uci = sanToEvaluationUci(player2From, player2To, player2Move)
       
       const Chess = (await import('chess.js')).Chess
       const chess = new Chess(turnStartFen)

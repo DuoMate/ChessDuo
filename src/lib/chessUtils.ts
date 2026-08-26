@@ -25,6 +25,21 @@ export function uciToSan(uciMove: string, fen: string, promotion?: PromotionPiec
   throw new Error(`uciToSan: Move ${uciMove} not found in legal moves from position ${fen}`)
 }
 
+/**
+ * Build the evaluation UCI (long algebraic with promotion disambiguation) for a
+ * pending move. The resolution engines store only from/to + SAN; Stockfish's
+ * `searchmoves` requires the promotion piece character (e.g. `e7e8q`) — a bare
+ * 4-char UCI for a promotion is not a legal move and makes the engine stall
+ * until the evaluation timeout. The promotion piece is parsed from the SAN's
+ * `=<piece>` suffix (covers Q/R/B/N, captures, check `e8=Q+`, mate `e8=N#`).
+ * Non-promotion SANs contain no `=`, so the returned UCI is unchanged.
+ */
+export function sanToEvaluationUci(from: string, to: string, san: string | null | undefined): string {
+  if (!san) return from + to
+  const match = /=\s*([QRBN])/.exec(san)
+  return match ? from + to + match[1].toLowerCase() : from + to
+}
+
 export function getMoveFromUci(uciMove: string, fen: string): { from: string; to: string; piece: string } | null {
   const normalized = normalizeUci(uciMove)
   const from = normalized.substring(0, 2)
