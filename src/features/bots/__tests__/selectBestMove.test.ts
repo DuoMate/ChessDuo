@@ -76,4 +76,25 @@ describe('selectBestMove — uses humanized pipeline via pickSmartMoveAsync', ()
     const result = await bot.selectBestMove(fen)
     expect(result).toBe(uci)
   })
+
+  it('BLACK side: picks the best side-to-move scored move (white-perspective normalization)', async () => {
+    // Regression: evaluateMovesWithFallback must normalize Stockfish's
+    // side-to-move scores to white perspective before the black ascending
+    // sort. Without it, black picks its WORST move (weaker bot).
+    const fen = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'
+    const chess = new Chess(fen)
+    const legalMoves = chess.moves({ verbose: true }).map(m => m.from + m.to + (m.promotion || ''))
+
+    // Side-to-move (black) perspective: +120 = good for black, -120 = bad for black.
+    const scored = [
+      { move: 'g8f6', score: 120 },
+      { move: 'h7h6', score: -120 },
+    ]
+    const allResults = legalMoves.map(m => scored.find(s => s.move === m) || { move: m, score: 0 })
+
+    const mock = createMockEvaluator(allResults)
+    const bot = createBot({ skillLevel: 6, mockMoveEvaluator: mock })
+    const result = await bot.selectBestMove(fen)
+    expect(result).toBe('g8f6')
+  })
 })

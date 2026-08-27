@@ -160,7 +160,7 @@ export class ChessBot {
       const BOTTOM_SENTINEL = isBlackTurn ? Infinity : -Infinity
       const effectiveResults = results.map(r => ({
         move: r.move,
-        score: hasRealScores && r.score === 0 ? BOTTOM_SENTINEL : r.score
+        score: hasRealScores && r.score === 0 ? BOTTOM_SENTINEL : (isBlackTurn ? -r.score : r.score)
       }))
 
       const scoreMap = new Map<string, number>(effectiveResults.map(r => [r.move, r.score]))
