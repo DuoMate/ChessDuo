@@ -4,6 +4,7 @@ describe('crashReportPolicy', () => {
   describe('isAllowedOrigin', () => {
     it('allows the web app origin', () => {
       expect(isAllowedOrigin('https://chessduo.navron.org')).toBe(true)
+      expect(isAllowedOrigin('https://chessduo.chessdoubles27.workers.dev')).toBe(true)
     })
 
     it('allows the Capacitor Android origin (https://localhost) — the P0-2 fix', () => {

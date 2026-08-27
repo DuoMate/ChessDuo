@@ -8,6 +8,7 @@
 
 export const ALLOWED_ORIGINS = [
   'https://chessduo.navron.org',
+  'https://chessduo.chessdoubles27.workers.dev',
   'https://localhost',
   'http://localhost',
   'capacitor://localhost',
