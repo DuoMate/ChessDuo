@@ -28,5 +28,6 @@ Chess bot player system — move generation, difficulty tiers, opening book, and
 - `BrowserMoveEvaluator` (mobile-engine), `shared/gameConstants.ts`
 
 ## Recent Changes
+- **2026-08-27**: Restored Stockfish score normalization in `evaluateMovesWithFallback()` — raw engine scores are side-to-move perspective, so they are negated for black (`isBlackTurn ? -r.score : r.score`) to match the white-perspective sort in `applyHumanizedSelection()`. Restores the black/opponent bot to the same effective strength as the white/teammate bot (regression from `6fc0dd8`, which removed this normalization while keeping the direction-aware `Infinity`/`-Infinity` sentinel).
 - **2026-08-02**: Reverted evaluator changes from Phase 6.4 — `BrowserMoveEvaluator` restored to MultiPV=6 + eager init + all-moves-in-results. Bot evaluation now sees 6 Stockfish-evaluated moves at all levels, preventing fallback to crude material-count heuristic for unscored moves.
 - **2026-07-30**: Removed `SERVER_URL` env var dependency. Evaluator always uses browser WASM (no remote server). `isUsingStockfish()` check removed from constructor — always true. Evaluator reuses shared instance from `evaluatorFactory`.
