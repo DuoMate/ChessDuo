@@ -5,6 +5,7 @@ import {
   mockAddMarker,
   mockRemoveMarkers,
   mockEnableMoveInput,
+  mockSetPosition,
   getLastHandler,
   getLastColor,
   resetCaptured,
@@ -183,6 +184,34 @@ describe('ChessBoard', () => {
       })
 
       expect(mockAddMarker).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('castling animation', () => {
+    test('animates setPosition when lastMove is a castle', () => {
+      mount({ fen: 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1', lastMove: { from: 'e1', to: 'g1' } })
+      expect(mockSetPosition).toHaveBeenLastCalledWith(
+        'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+        true
+      )
+    })
+
+    test('animates black queenside castle', () => {
+      mount({ fen: 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1', lastMove: { from: 'e8', to: 'c8' } })
+      expect(mockSetPosition).toHaveBeenLastCalledWith(
+        'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1',
+        true
+      )
+    })
+
+    test('does not animate a normal move', () => {
+      mount({ fen: START_FEN, lastMove: { from: 'e2', to: 'e4' } })
+      expect(mockSetPosition).toHaveBeenLastCalledWith(START_FEN, false)
+    })
+
+    test('does not animate when there is no lastMove', () => {
+      mount({ fen: START_FEN, lastMove: null })
+      expect(mockSetPosition).toHaveBeenLastCalledWith(START_FEN, false)
     })
   })
 

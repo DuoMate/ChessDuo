@@ -2,6 +2,7 @@
 
 import { Component, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { reportError } from '@/lib/errorReporter'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -25,6 +26,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo)
+    reportError({
+      message: error.message || 'Unknown error',
+      stack: error.stack || '',
+      errorType: 'react_render_error',
+    }).catch(() => {
+      // Best-effort: a reporting failure must never break the fallback UI.
+    })
   }
 
   render() {

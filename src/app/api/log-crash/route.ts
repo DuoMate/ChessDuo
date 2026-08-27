@@ -5,6 +5,26 @@ import { recordGameTrace } from '@/lib/gameTraceStore'
 import { isAllowedOrigin, sanitizeCrashPayload } from '@/lib/crashReportPolicy'
 
 /**
+ * CORS preflight for cross-origin crash reports (Capacitor WebView).
+ * Returns the allowed origin back (never '*') and does not execute any
+ * business logic.
+ */
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin')
+  if (origin && isAllowedOrigin(origin)) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    })
+  }
+  return new NextResponse(null, { status: 204 })
+}
+
+/**
  * Client error/crash ingestion (P0-2).
  *
  * Accepts reports from the web app AND the Capacitor Android WebView. The

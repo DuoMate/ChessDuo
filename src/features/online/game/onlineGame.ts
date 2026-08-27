@@ -7,7 +7,7 @@ import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFac
 import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
 import { CHECKMATE_SCORE } from '../../shared/gameConstants'
-import { isMoveLegalAt } from '../../../lib/chessUtils'
+import { isMoveLegalAt, sanToEvaluationUci } from '../../../lib/chessUtils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
 import { RealtimeService } from '@/lib/realtimeService'
@@ -2422,8 +2422,8 @@ export class OnlineGame {
       throw new Error(`STATE_DIVERGENCE: illegal pending moves (${illegalMoves.join(', ')}) at ${turnStartFen.split(' ').slice(0, 4).join(' ')}`)
     }
     
-    const player1Uci = player1From + player1To
-    const player2Uci = player2From + player2To
+    const player1Uci = sanToEvaluationUci(player1From, player1To, player1Move)
+    const player2Uci = sanToEvaluationUci(player2From, player2To, player2Move)
     
     // Checkmate short-circuit: skip Stockfish if either move is checkmate
     try {

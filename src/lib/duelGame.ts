@@ -620,7 +620,7 @@ export class DuelGame {
       if (this.evaluator) {
         const chess = new Chess(fenBefore)
         const legalMoves = chess.moves({ verbose: true })
-        const ucis = legalMoves.map(m => m.from + m.to)
+        const ucis = legalMoves.map(m => m.from + m.to + (m.promotion || ''))
         try {
           const results = await this.evaluator.evaluateMoves(ucis, fenBefore)
           let bestScore = -Infinity
