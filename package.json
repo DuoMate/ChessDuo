@@ -13,6 +13,7 @@
     "lint": "eslint",
     "test": "jest",
     "precheck": "npm run lint && npm test",
+    "store:render": "node scripts/render-store-assets.mjs",
     "clean": "rm -rf node_modules .next package-lock.json",
     "reinstall": "npm run clean && npm install",
     "setup": "npm install",
