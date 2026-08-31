@@ -862,6 +862,18 @@ export default function SetupPage() {
     }
   }
 
+  // Coach Mode is premium-only and requires a signed-in user. Launch it directly
+  // (it has its own premium gate) — no home-screen configuration panel.
+  const handleStartCoach = () => {
+    const route = `/coach?level=${selectedLevel}&color=${selectedColor}`
+    if (!playerId) {
+      storePendingAction({ type: 'navigate', route })
+      setShowAuthOverlay(true)
+      return
+    }
+    router.push(withDebugParam(route))
+  }
+
   if (!sessionChecked) return <PageLoading />
 
   const showTopBar = !gameMode
@@ -1087,6 +1099,13 @@ if (!gameMode) {
                   title="4 Player"
                   subtitle="Friends Battle"
                 />
+                <GameModeCard
+                  onClick={handleStartCoach}
+                  leftIcons={[{ type: 'human', avatar: 'ace' }]}
+                  rightIcons={[{ type: 'bot' }]}
+                  title="Coach"
+                  subtitle="Premium · AI Coach vs Bot"
+                />
               </div>
             </div>
 
@@ -1230,6 +1249,13 @@ if (!gameMode) {
                     rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                     title="4 Player"
                     subtitle="Friends Battle"
+                  />
+                  <GameModeCard
+                    onClick={handleStartCoach}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }]}
+                    rightIcons={[{ type: 'bot' }]}
+                    title="Coach"
+                    subtitle="Premium · AI Coach vs Bot"
                   />
                 </div>
               </div>

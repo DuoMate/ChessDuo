@@ -13,6 +13,7 @@
     "lint": "eslint",
     "test": "jest",
     "precheck": "npm run lint && npm test",
+    "store:render": "node scripts/render-store-assets.mjs",
     "clean": "rm -rf node_modules .next package-lock.json",
     "reinstall": "npm run clean && npm install",
     "setup": "npm install",
@@ -23,6 +24,7 @@
     "cap:bundle": "bash scripts/build-aab.sh"
   },
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.3",
