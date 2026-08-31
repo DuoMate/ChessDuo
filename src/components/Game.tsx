@@ -591,9 +591,17 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const handleGameOnComplete = useCallback(() => {
     setShowGameOn(false)
     if (!matchTimerStarted) {
+      // Offline: the local engine is activated in LocalGame.start(). Mirror
+      // that into React state so IsolatedMatchTimer's `isActive` flips at the
+      // same moment `matchTimerStarted` flips and its 1 Hz poll drives the
+      // countdown. Online owns the clock in OnlineGame.startMatchTimer.
+      if (!isOnline) {
+        gameRef.current?.setMatchTimerActive?.(true)
+        setGameState(prev => ({ ...prev, matchTimerActive: true }))
+      }
       setMatchTimerStarted(true)
     }
-  }, [matchTimerStarted])
+  }, [matchTimerStarted, isOnline])
 
   /**
    * C6: single guarded entry point for completed-game persistence. The

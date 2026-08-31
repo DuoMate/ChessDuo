@@ -127,7 +127,28 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
     // Upsert on room_id so both participants' clients converge on a single
     // completed_games row (no duplicates). room_id is NULL for offline games,
     // which the UNIQUE(room_id) constraint treats as distinct (always insert).
-    const { error } = await supabase.from('completed_games').upsert({
+    // Offline games therefore get a fresh server-generated id — preserve the
+    // CLIENT id (the same one stored in localStorage) so ReplayView's
+    // getCompletedGame(id) can always recover the row from the DB even if the
+    // device-local entry is evicted. Online games keep the server id so the
+    // UNIQUE(room_id) convergence between both participants is untouched.
+    const upsertPayload: {
+      id?: string
+      room_id: string | null
+      winner: string
+      game_result: string
+      game_over_reason: string | null
+      white_moves: number
+      white_sync_rate: number
+      white_conflicts: number
+      player1_accuracy: number
+      player2_accuracy: number
+      total_moves: number
+      is_online: boolean
+      move_comparisons: unknown[]
+      challenge_id: string | null
+      played_at: string
+    } = {
       room_id: data.roomId || null,
       winner: data.winner,
       game_result: data.gameResult,
@@ -142,7 +163,11 @@ export async function saveCompletedGame(data: MatchSummaryData, userId?: string)
       move_comparisons: data.moveComparisons || [],
       challenge_id: data.challengeId || null,
       played_at: new Date().toISOString(),
-    }, { onConflict: 'room_id' })
+    }
+    if (!data.isOnline) {
+      upsertPayload.id = localEntry.id
+    }
+    const { error } = await supabase.from('completed_games').upsert(upsertPayload, { onConflict: 'room_id' })
 
     if (error) {
       // C6: persistence failures must be observable — the previous silent

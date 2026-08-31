@@ -4,6 +4,7 @@ import { getPlayerStats, saveCompletedGame, invalidateStatsCache, getMatchHistor
 const mockSelect = jest.fn()
 const mockEq = jest.fn()
 const mockInsert = jest.fn()
+const mockUpsert = jest.fn()
 const mockIn = jest.fn()
 const mockOrder = jest.fn()
 const mockLimit = jest.fn()
@@ -20,6 +21,7 @@ jest.mock('@/lib/supabase', () => ({
         return {
           select: mockSelect,
           insert: mockInsert,
+          upsert: mockUpsert,
         }
       }
       return { select: jest.fn(), insert: mockInsert }
@@ -275,5 +277,48 @@ describe('H3: merged history', () => {
     expect(mockIn).toHaveBeenCalledTimes(1)
     const idsArg = mockIn.mock.calls[0][1] as string[]
     expect(idsArg.length).toBe(200)
+  })
+})
+
+// ============================================================
+// GROUP 4 — offline replay id persistence (Bug: replay Game Not Found)
+// ============================================================
+describe('offline replay id persistence', () => {
+  beforeEach(() => {
+    mockUpsert.mockResolvedValue({ error: null })
+  })
+
+  it('persists the client id for offline games so replay can recover from DB', async () => {
+    await saveCompletedGame({
+      winner: 'WHITE',
+      gameResult: 'White wins',
+      gameOverReason: 'checkmate',
+      stats: { whiteMovesPlayed: 10, whiteSyncRate: 1, whiteConflicts: 0, player1Accuracy: 70, player2Accuracy: 70, totalMoves: 10 },
+      isOnline: false,
+      moveComparisons: [],
+    }, 'user-1')
+
+    const payload = mockUpsert.mock.calls[0][0]
+    expect(payload.id).toEqual(expect.any(String))
+    expect(payload.id.length).toBeGreaterThan(0)
+    // The same id the history Replay button navigates to — so lookups are stable.
+    const local = JSON.parse(localStorage.getItem('chessduo_history_user-1')!)[0]
+    expect(payload.id).toBe(local.id)
+  })
+
+  it('does not inject the client id for online games (server-id convergence preserved)', async () => {
+    await saveCompletedGame({
+      winner: 'BLACK',
+      gameResult: 'Black wins',
+      gameOverReason: 'checkmate',
+      stats: { whiteMovesPlayed: 20, whiteSyncRate: 0.7, whiteConflicts: 0, player1Accuracy: 40, player2Accuracy: 50, totalMoves: 20 },
+      isOnline: true,
+      roomId: 'room-1',
+      moveComparisons: [],
+    }, 'user-1')
+
+    const payload = mockUpsert.mock.calls[0][0]
+    expect(payload.id).toBeUndefined()
+    expect(payload.room_id).toBe('room-1')
   })
 })

@@ -110,9 +110,9 @@ describe('Parallel Model - Team Timer', () => {
       expect(g.getMatchTimeRemaining()).toBe(300)
     })
 
-    test('match timer is not active by default', () => {
+    test('match timer is activated when the game starts (offline countdown)', () => {
       setupFullGame()
-      expect(game.isMatchTimerActive()).toBe(false)
+      expect(game.isMatchTimerActive()).toBe(true)
     })
 
     test('match timer can be set and retrieved', () => {
