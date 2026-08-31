@@ -138,7 +138,6 @@ export function explainMove(input: {
   bestMoveSan: string | null
   centipawnLoss: number | null
 }): string {
-  const loss = input.centipawnLoss
   switch (input.verdict) {
     case 'best':
       return `${input.playerMoveSan} is the engine's top choice — excellent!`
@@ -149,8 +148,8 @@ export function explainMove(input: {
     case 'inaccuracy':
       return `${input.playerMoveSan} is a little inaccurate${input.bestMoveSan ? ` — consider ${input.bestMoveSan} instead` : ''}.`
     case 'mistake':
-      return `${input.playerMoveSan} is a mistake${input.bestMoveSan ? ` — ${input.bestMoveSan} keeps your advantage` : ''}${loss !== null ? ` (about ${loss.toFixed(0)} centipawns lost)` : ''}.`
+      return `${input.playerMoveSan} is a mistake${input.bestMoveSan ? ` — ${input.bestMoveSan} keeps your advantage` : ''}.`
     case 'blunder':
-      return `${input.playerMoveSan} is a blunder${input.bestMoveSan ? ` — ${input.bestMoveSan} was much stronger` : ''}${loss !== null ? ` (about ${loss.toFixed(0)} centipawns lost)` : ''}.`
+      return `${input.playerMoveSan} is a blunder${input.bestMoveSan ? ` — ${input.bestMoveSan} was much stronger` : ''}.`
   }
 }

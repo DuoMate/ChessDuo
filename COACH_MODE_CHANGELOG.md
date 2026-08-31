@@ -82,3 +82,16 @@ Every code change must be recorded. Format per change:
 - **Tests**: none (manual smoke).
 - **Regression status**: `tsc --noEmit` clean; existing routes unchanged.
 - **Rollback approach**: revert the two added card blocks + `handleStartCoach` in `src/app/page.tsx`.
+
+## Change 6 — Coach voice: remove centipawn-loss count from spoken/displayed explanation
+- **Date**: 2026-08-30
+- **Phase**: 7 (Voice coaching follow-up)
+- **Change**: Removed the `(about N centipawns lost)` parenthetical from `explainMove()` `mistake` and `blunder` verdicts.
+- **Files created**: none
+- **Files modified**: `src/features/coach/coachAnalysis.ts`
+- **Files deleted**: none
+- **Reason**: The parenthetical read awkwardly when spoken aloud by the voice coach. The centipawn figure is still shown separately as a compact `−Ncp` chip in `CoachPanel`, so no information is lost.
+- **Existing behaviour affected?**: Coach Mode only (spoken + displayed explanation text). No other mode touched.
+- **Tests**: `coachAnalysis.test.ts` (expect `.toContain('top choice'/'blunder'/'mistake')` — no assertion on the parenthetical); all 24 coach tests pass.
+- **Regression status**: `tsc --noEmit` clean; `npx jest src/features/coach` 24/24.
+- **Rollback approach**: restore the two `loss !== null` parenthetical fragments in `explainMove`.
