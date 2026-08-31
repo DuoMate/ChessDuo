@@ -146,12 +146,12 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         </button>
         <div className="flex items-center gap-2">
           <Crown size={16} className="text-amber-400" />
-          <h1 className="text-base font-black uppercase tracking-[0.15em] text-slate-900 dark:text-white">Coach</h1>
+          <h1 className="text-base font-black uppercase tracking-[0.15em] text-slate-900 dark:text-white">AI Coach</h1>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={toggleVoice}
-            aria-label="Toggle voice coaching"
+            aria-label="Toggle AI Coach voice"
             className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${voiceEnabled ? 'text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
           >
             {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}

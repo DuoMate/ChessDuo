@@ -50,9 +50,9 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15">
             <Lock size={24} className="text-blue-400" />
           </div>
-          <h1 className="text-xl font-black uppercase tracking-wide">AI Coach Mode</h1>
+          <h1 className="text-xl font-black uppercase tracking-wide">AI Coach</h1>
           <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            Coach Mode is a premium feature. Get real-time analysis, top-3 move recommendations,
+            AI Coach is a premium feature. Get real-time analysis, top-3 move recommendations,
             blunder detection, and personalised coaching explanations.
           </p>
           <button

@@ -1103,8 +1103,9 @@ if (!gameMode) {
                   onClick={handleStartCoach}
                   leftIcons={[{ type: 'human', avatar: 'ace' }]}
                   rightIcons={[{ type: 'bot' }]}
-                  title="Coach"
-                  subtitle="Premium · AI Coach vs Bot"
+                  title="AI Coach"
+                  subtitle="Learn while you play"
+                  premium
                 />
               </div>
             </div>
@@ -1254,8 +1255,9 @@ if (!gameMode) {
                     onClick={handleStartCoach}
                     leftIcons={[{ type: 'human', avatar: 'ace' }]}
                     rightIcons={[{ type: 'bot' }]}
-                    title="Coach"
-                    subtitle="Premium · AI Coach vs Bot"
+                    title="AI Coach"
+                    subtitle="Learn while you play"
+                    premium
                   />
                 </div>
               </div>
@@ -1416,6 +1418,7 @@ function GameModeCard({
   title,
   subtitle,
   showStar = false,
+  premium = false,
   selected = false,
 }: {
   onClick: () => void
@@ -1424,6 +1427,7 @@ function GameModeCard({
   title: string
   subtitle: string
   showStar?: boolean
+  premium?: boolean
   selected?: boolean
 }) {
   return (
@@ -1477,6 +1481,11 @@ function GameModeCard({
         <div className="flex items-center gap-1">
           <span className="font-bold text-sm text-slate-900 dark:text-white">{title}</span>
           {showStar && <span className="text-amber-500 text-xs shrink-0">★</span>}
+          {premium && (
+            <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-amber-400/40 bg-gradient-to-br from-amber-400/20 to-amber-500/10 px-1.5 py-0.5">
+              <Crown size={11} className="text-amber-500 dark:text-amber-400" />
+            </span>
+          )}
         </div>
         <p className="text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
