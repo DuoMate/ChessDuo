@@ -118,6 +118,7 @@ export class LocalGame {
 
   start(): void {
     this.gameState.startMatch()
+    this.gameState.setMatchTimerActive(true)
     this._status = GameStatus.PLAYING
     this.startPendingTurn()
   }

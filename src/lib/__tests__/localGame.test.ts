@@ -307,6 +307,16 @@ describe('Game Status and Timer Interaction', () => {
     expect(game.isMatchTimerActive()).toBe(false)
   })
 
+  test('start() activates the match timer (offline Quick Play countdown)', () => {
+    const game = new LocalGame()
+    game.addPlayer('player1', Team.WHITE)
+    game.addPlayer('player2', Team.WHITE)
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+    expect(game.isMatchTimerActive()).toBe(true)
+  })
+
   test('setMatchTimerActive toggles timer state', () => {
     const game = new LocalGame()
     game.setMatchTimerActive(true)
