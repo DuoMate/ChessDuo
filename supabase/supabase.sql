@@ -1192,3 +1192,48 @@ BEGIN
   END IF;
 END
 $$;
+
+-- ============================================================================
+-- Coach Mode (premium) — isolated persistence (coach_games)
+-- ============================================================================
+-- Self-contained addition (2026-08-29). Coach Mode never touches the
+-- production games / completed_games persistence contracts.
+-- Idempotent: safe to run repeatedly (CREATE TABLE IF NOT EXISTS, CREATE INDEX
+-- IF NOT EXISTS, DROP POLICY IF EXISTS + CREATE POLICY).
+
+CREATE TABLE IF NOT EXISTS public.coach_games (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id TEXT NOT NULL,
+  result TEXT NOT NULL CHECK (result IN ('win', 'loss', 'draw')),
+  player_color TEXT NOT NULL CHECK (player_color IN ('white', 'black')),
+  bot_level INTEGER NOT NULL DEFAULT 3,
+  fen TEXT,
+  move_history JSONB DEFAULT '[]'::jsonb,
+  blunders INTEGER NOT NULL DEFAULT 0,
+  mistakes INTEGER NOT NULL DEFAULT 0,
+  accuracy REAL NOT NULL DEFAULT 0,
+  played_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_coach_games_player_played_at ON public.coach_games(player_id, played_at DESC);
+
+ALTER TABLE public.coach_games ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Owner can view own coach games" ON public.coach_games;
+CREATE POLICY "Owner can view own coach games" ON public.coach_games
+  FOR SELECT USING (auth.uid() IS NOT NULL AND auth.uid()::text = player_id);
+
+DROP POLICY IF EXISTS "Owner can insert own coach games" ON public.coach_games;
+CREATE POLICY "Owner can insert own coach games" ON public.coach_games
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND auth.uid()::text = player_id);
+
+DROP POLICY IF EXISTS "Owner can update own coach games" ON public.coach_games;
+CREATE POLICY "Owner can update own coach games" ON public.coach_games
+  FOR UPDATE USING (auth.uid() IS NOT NULL AND auth.uid()::text = player_id);
+
+DROP POLICY IF EXISTS "Owner can delete own coach games" ON public.coach_games;
+CREATE POLICY "Owner can delete own coach games" ON public.coach_games
+  FOR DELETE USING (auth.uid() IS NOT NULL AND auth.uid()::text = player_id);
+
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.coach_games TO anon, authenticated;
