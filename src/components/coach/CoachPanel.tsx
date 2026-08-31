@@ -65,7 +65,7 @@ export function CoachPanel({ suggestion, feedback, analyzing, isPlayerTurn, onSp
               {onSpeak && (
                 <button
                   onClick={() => onSpeak(feedback.explanation)}
-                  aria-label="Read coaching feedback aloud"
+                  aria-label="Read AI Coach feedback aloud"
                   className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-blue-400"
                 >
                   <Volume2 size={16} />
