@@ -95,3 +95,16 @@ Every code change must be recorded. Format per change:
 - **Tests**: `coachAnalysis.test.ts` (expect `.toContain('top choice'/'blunder'/'mistake')` — no assertion on the parenthetical); all 24 coach tests pass.
 - **Regression status**: `tsc --noEmit` clean; `npx jest src/features/coach` 24/24.
 - **Rollback approach**: restore the two `loss !== null` parenthetical fragments in `explainMove`.
+
+## Change 7 — Rename to "AI Coach" + premium crown badge on home tile
+- **Date**: 2026-08-30
+- **Phase**: 8 (Premium/Presentation) + 10 (Home entry)
+- **Change**: User-facing naming + premium badge. "Coach" → "AI Coach"; home card subtitle "Premium · AI Coach vs Bot" → "Learn while you play", with a gold crown badge replacing the word "Premium"; "AI Coach Mode" → "AI Coach"; a11y labels updated.
+- **Files created**: none
+- **Files modified**: `src/app/page.tsx`, `src/components/coach/CoachGame.tsx`, `src/components/coach/CoachGate.tsx`, `src/components/coach/CoachPanel.tsx`
+- **Files deleted**: none
+- **Reason**: The "Coach"/"Premium" wording was unappealing and not self-explanatory. "AI Coach" is clearer; the crown badge flags the premium tile without the word "Premium".
+- **Existing behaviour affected?**: Coach Mode UI copy only. No logic/classes/routes/filenames changed.
+- **Tests**: `npx jest src/features/coach` 24/24; `npx tsc --noEmit` clean.
+- **Regression status**: copy-only change; internal identifiers untouched.
+- **Rollback approach**: revert the four files.
