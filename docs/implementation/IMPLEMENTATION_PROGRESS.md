@@ -253,7 +253,7 @@ Selected bugs from the August 2026 production backlog, grouped by priority and i
 
 **Bug #4 — Native deep-link routing**
 - Refactored `capacitorAuth.ts` to accept a `navigate` callback instead of calling `window.location` directly.
-- Recognizes both `https://chessduo.app/auth/callback` and `chessduo://auth/callback`.
+- Recognizes both `https://chessduo.navron.org/auth/callback` and `chessduo://auth/callback`.
 - For warm opens, uses the supplied `router.replace` callback; only cold opens fall back to full reload.
 - Wired the callback through `src/app/providers.tsx`.
 
