@@ -208,8 +208,19 @@ else
   log "Skipping Google Services config (google-services.json not found — push notifications won't work)"
 fi
 
-# ─── Inject signing config into build.gradle ─────
+# ─── Enable R8 minification + resource shrinking (release) ──
+# Capacitor's generated app/build.gradle always ships `minifyEnabled false`
+# inside its own `buildTypes { release { ... } }` block, so R8 never runs on
+# release (leaving the DEX effectively unobfuscated). Force it on idempotently.
 BUILD_GRADLE="android/app/build.gradle"
+sed -i 's/minifyEnabled false/minifyEnabled true/' "$BUILD_GRADLE"
+if ! grep -q 'shrinkResources true' "$BUILD_GRADLE" 2>/dev/null; then
+    sed -i '/minifyEnabled true/a\            shrinkResources true' "$BUILD_GRADLE"
+fi
+sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/" "$BUILD_GRADLE"
+ok "R8 minification + resource shrinking enabled for release"
+
+# ─── Inject signing config into build.gradle ─────
 if ! grep -q "keystore.properties" "$BUILD_GRADLE" 2>/dev/null; then
     log "Injecting signing config into build.gradle..."
     cat >> "$BUILD_GRADLE" << 'GRADLE'
@@ -251,6 +262,16 @@ if [ -f "$PATCH_SRC" ]; then
 else
     err "Patched GoogleProvider.java not found at $PATCH_SRC"
 fi
+
+# ─── Exclude androidbrowserhelper from the release DEX ──
+# androidbrowserhelper:2.5.0 (pulled in by @capgo/capacitor-social-login) calls
+# the deprecated Window.setStatusBarColor/setNavigationBarColor/getStatusBarColor
+# APIs flagged by Play Console under Android 15 edge-to-edge. The Google sign-in
+# path does not use it (only an unused TwaLauncher import in the disabled
+# AppleProvider), so demote it to compileOnly to keep it out of the APK.
+SL_GRADLE="node_modules/@capgo/capacitor-social-login/android/build.gradle"
+sed -i "s/implementation('com.google.androidbrowserhelper:androidbrowserhelper:2.5.0')/compileOnly('com.google.androidbrowserhelper:androidbrowserhelper:2.5.0')/" "$SL_GRADLE"
+ok "androidbrowserhelper demoted to compileOnly (excluded from release DEX)"
 
 # ─── Build APK ──────────────────────────────────
 log "Building release APK (this may take 3-5 minutes on first run)..."

@@ -213,25 +213,19 @@ else
   log "Skipping Google Services config (google-services.json not found — push notifications won't work)"
 fi
 
-# ─── Inject Android release config ──────────────
-# Build types tag
+# ─── Enable R8 minification + resource shrinking (release) ──
+# Capacitor's generated app/build.gradle always ships `minifyEnabled false`
+# inside its own `buildTypes { release { ... } }` block, so a "only inject if
+# buildTypes absent" check would be skipped and R8 would never run (leaving the
+# release DEX effectively unobfuscated — Play Console flags this). Force it on
+# idempotently against the existing block instead of appending a new one.
 BUILD_GRADLE="android/app/build.gradle"
-if ! grep -q "buildTypes" "$BUILD_GRADLE" 2>/dev/null; then
-    log "Injecting release build type into build.gradle..."
-    cat >> "$BUILD_GRADLE" << 'GRADLE'
-
-android {
-    buildTypes {
-        release {
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-}
-GRADLE
-    ok "Release build type injected"
+sed -i 's/minifyEnabled false/minifyEnabled true/' "$BUILD_GRADLE"
+if ! grep -q 'shrinkResources true' "$BUILD_GRADLE" 2>/dev/null; then
+    sed -i '/minifyEnabled true/a\            shrinkResources true' "$BUILD_GRADLE"
 fi
+sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/" "$BUILD_GRADLE"
+ok "R8 minification + resource shrinking enabled for release"
 
 # ─── Inject signing config ──────────────────────
 if ! grep -q "keystore.properties" "$BUILD_GRADLE" 2>/dev/null; then
@@ -272,6 +266,19 @@ if [ -f "$PATCH_SRC" ]; then
 else
     err "Patched GoogleProvider.java not found at $PATCH_SRC"
 fi
+
+# ─── Exclude androidbrowserhelper from the release DEX ──
+# @capgo/capacitor-social-login pulls androidbrowserhelper:2.5.0 in as an
+# `implementation` dependency (Google provider block). The actual Google
+# sign-in path (patched GoogleProvider.java) does NOT use it — the only
+# reference is an unused `TwaLauncher` import in the disabled AppleProvider.
+# androidbrowserhelper's WebViewFallbackActivity/Utils call the deprecated
+# Window.setStatusBarColor/setNavigationBarColor/getStatusBarColor APIs that
+# Play Console flags under Android 15 edge-to-edge. Demote it to compileOnly
+# so it is kept off the compile classpath only and excluded from the AAB.
+SL_GRADLE="node_modules/@capgo/capacitor-social-login/android/build.gradle"
+sed -i "s/implementation('com.google.androidbrowserhelper:androidbrowserhelper:2.5.0')/compileOnly('com.google.androidbrowserhelper:androidbrowserhelper:2.5.0')/" "$SL_GRADLE"
+ok "androidbrowserhelper demoted to compileOnly (excluded from release DEX)"
 
 # ─── Build AAB ──────────────────────────────────
 log "Building release AAB (this may take 3-5 minutes)..."
