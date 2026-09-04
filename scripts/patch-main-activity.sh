@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Script: Patch MainActivity.java to forward Google auth intents to SocialLoginPlugin
+# Script: Patch MainActivity.java for Google auth intents, Native AdMob, and edge-to-edge.
 # The default BridgeActivity doesn't route Google's authorization intents
 # (dynamic request codes in GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN range)
 # to the SocialLoginPlugin.handleGoogleLoginIntent() method.
@@ -14,12 +14,21 @@ if [ ! -f "$MAIN_ACTIVITY" ]; then
   exit 1
 fi
 
-echo "[INFO] Patching MainActivity.java for Google auth and Native AdMob..."
+# Check if already patched. A file from an older version without edge-to-edge
+# is deliberately re-patched so all generated builds converge on this version.
+if grep -q "EdgeToEdge.enable" "$MAIN_ACTIVITY" 2>/dev/null; then
+  echo "[OK]  MainActivity.java already patched"
+  exit 0
+fi
+
+echo "[INFO] Patching MainActivity.java (Google auth intents + Native AdMob + edge-to-edge)..."
 
 cat > "$MAIN_ACTIVITY" << 'JAVA'
 package com.navron.chessduo;
 
 import android.content.Intent;
+import android.os.Bundle;
+import androidx.activity.EdgeToEdge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.PluginHandle;
 import ee.forgr.capacitor.social.login.GoogleProvider;
@@ -27,11 +36,12 @@ import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity {
 
-  @Override
-  public void onCreate(android.os.Bundle savedInstanceState) {
-    registerPlugin(NativeAdPlugin.class);
-    super.onCreate(savedInstanceState);
-  }
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NativeAdPlugin.class);
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
