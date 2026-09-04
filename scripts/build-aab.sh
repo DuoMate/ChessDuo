@@ -86,27 +86,25 @@ REQUIRED_VARS=(
   "NEXT_PUBLIC_ADMOB_NATIVE_ID"
 )
 
-MISSING=0
+MISSING_VARS=()
 for var in "${REQUIRED_VARS[@]}"; do
   if [ -z "${!var:-}" ]; then
-    MISSING=$((MISSING + 1))
+    MISSING_VARS+=("$var")
   fi
 done
 
-if [ "$MISSING" -gt 0 ]; then
+if [ "${#MISSING_VARS[@]}" -gt 0 ]; then
   if [ -f ".env.production" ]; then
-    MISSING=0
     set -a; source .env.production; set +a
+    MISSING_VARS=()
     for var in "${REQUIRED_VARS[@]}"; do
-      if [ -z "${!var:-}" ]; then
-        MISSING=$((MISSING + 1))
-      fi
+      [ -z "${!var:-}" ] && MISSING_VARS+=("$var")
     done
   fi
 fi
 
-if [ "$MISSING" -gt 0 ]; then
-  err "Missing $MISSING required env var(s). Set them in your environment or create .env.production (see .env.example)."
+if [ "${#MISSING_VARS[@]}" -gt 0 ]; then
+  err "Missing required env var(s): ${MISSING_VARS[*]}. Set the corresponding GitHub secrets or create .env.production (see .env.example)."
 fi
 
 ok "All required env vars are set"
