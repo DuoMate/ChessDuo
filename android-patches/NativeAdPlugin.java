@@ -3,6 +3,7 @@ package com.navron.chessduo;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -12,8 +13,8 @@ import androidx.annotation.NonNull;
 
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import com.getcapacitor.annotation.PluginMethod;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
@@ -82,18 +83,19 @@ public class NativeAdPlugin extends Plugin {
 
         getActivity().runOnUiThread(() -> {
             View webView = getBridge().getWebView();
+            ViewGroup adContainer = (ViewGroup) webView.getParent();
             hideVisibleAd();
 
             NativeAdView adView = buildAdView(loadedAd);
             float density = getActivity().getResources().getDisplayMetrics().density;
-            FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams layout = new ViewGroup.LayoutParams(
                 Math.round((float) width * density),
                 Math.round((float) height * density)
             );
-            layout.leftMargin = Math.round((float) x * density);
-            layout.topMargin = Math.round((float) y * density);
-            webView.getOverlay().add(adView);
+            adView.setX((float) x * density);
+            adView.setY((float) y * density);
             adView.setLayoutParams(layout);
+            adContainer.addView(adView);
             visibleAdView = adView;
             loadedAd = null;
             loadedAdUnitId = null;
@@ -198,7 +200,8 @@ public class NativeAdPlugin extends Plugin {
     private void hideVisibleAd() {
         if (visibleAdView == null) return;
         visibleAdView.destroy();
-        getBridge().getWebView().getOverlay().remove(visibleAdView);
+        ViewGroup parent = (ViewGroup) visibleAdView.getParent();
+        if (parent != null) parent.removeView(visibleAdView);
         visibleAdView = null;
     }
 
