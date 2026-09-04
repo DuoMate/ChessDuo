@@ -65,6 +65,23 @@ jobs:
           NEXT_PUBLIC_ADMOB_NATIVE_ID=${{ secrets.NEXT_PUBLIC_ADMOB_NATIVE_ID }}
           EOF
 
+      - name: Validate AdMob secrets
+        run: |
+          missing=0
+          for name in NEXT_PUBLIC_ADMOB_APP_ID NEXT_PUBLIC_ADMOB_NATIVE_ID; do
+            if [ -z "${!name}" ]; then
+              echo "[ERR] Missing GitHub secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Create both AdMob secrets before running the Android release build."
+            exit 1
+          fi
+        env:
+          NEXT_PUBLIC_ADMOB_APP_ID: ${{ secrets.NEXT_PUBLIC_ADMOB_APP_ID }}
+          NEXT_PUBLIC_ADMOB_NATIVE_ID: ${{ secrets.NEXT_PUBLIC_ADMOB_NATIVE_ID }}
+
       - name: Init Capacitor Android project
         run: |
           rm -rf android
