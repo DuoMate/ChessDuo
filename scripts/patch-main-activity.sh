@@ -14,13 +14,7 @@ if [ ! -f "$MAIN_ACTIVITY" ]; then
   exit 1
 fi
 
-# Check if already patched
-if grep -q "handleGoogleLoginIntent" "$MAIN_ACTIVITY" 2>/dev/null; then
-  echo "[OK]  MainActivity.java already patched"
-  exit 0
-fi
-
-echo "[INFO] Patching MainActivity.java to forward Google auth intents..."
+echo "[INFO] Patching MainActivity.java for Google auth and Native AdMob..."
 
 cat > "$MAIN_ACTIVITY" << 'JAVA'
 package com.navron.chessduo;
@@ -32,6 +26,12 @@ import ee.forgr.capacitor.social.login.GoogleProvider;
 import ee.forgr.capacitor.social.login.SocialLoginPlugin;
 
 public class MainActivity extends BridgeActivity {
+
+  @Override
+  public void onCreate(android.os.Bundle savedInstanceState) {
+    registerPlugin(NativeAdPlugin.class);
+    super.onCreate(savedInstanceState);
+  }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {

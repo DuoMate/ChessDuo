@@ -121,6 +121,7 @@ src/
 │
 ├── lib/                          # Utilities & services
 │   ├── supabase.ts               # Supabase client
+│   ├── nativeAd.ts               # Web-safe bridge for bounded Android Native Advanced ads
 │   ├── gamePersistence.ts        # Room state persistence
 │   ├── matchHistory.ts           # Completed game storage
 │   ├── messages.ts               # Chat message CRUD
@@ -276,6 +277,16 @@ SubscriptionService
 - Team/fullness decisions (`white_count`/`black_count`, "room is full") come from the public SECURITY DEFINER RPC `get_room_join_state(p_room_id)` in `supabase/tables.sql`, not from a `room_players` select.
 - Join inserts use `room_players.upsert(..., { onConflict: 'room_id,player_id' })` — safe for rejoin and idempotent.
 - Challenge links: duel challenges pre-create a room + `duel_games` row and store `room_id` on the challenge; the acceptor joins THAT room (creator WHITE, acceptor BLACK) so both players meet in the same match. A `generateRoomCode()` fallback creates a fresh room if the pre-created one is gone.
+
+### 9. Native AdMob Integration
+
+**RULE**: Game-over ads use an Android Native Advanced ad, never a full-screen interstitial.
+
+- `src/lib/nativeAd.ts` is the web-safe Capacitor bridge. Web builds and missing IDs are no-ops.
+- `NativeAdSlot` is rendered only inside the existing `GameOverModal`; it waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
+- Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
+- `NEXT_PUBLIC_ADMOB_NATIVE_ID` must be a Native Advanced ad unit. `NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID` is not used for bounded popup placement.
+- Native ad loading and teardown are best effort and never gate game-over state, navigation, or popup controls.
 
 ---
 

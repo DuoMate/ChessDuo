@@ -148,19 +148,19 @@ if [ -d "android" ]; then
 else
     log "Creating Android project..."
     npx cap add android || fatal "Failed to create Android project"
+    if [ -n "${NEXT_PUBLIC_ADMOB_APP_ID:-}" ]; then
+        bash "$PROJECT_ROOT/scripts/install-native-ad.sh"
+    else
+        warn "Skipping Native AdMob setup; set NEXT_PUBLIC_ADMOB_APP_ID before building Android"
+    fi
     ok "Android project created"
 fi
 
-# ─── Remove AD_ID from merged manifest ──────────
+# ─── Keep AdMob advertising-ID permission ────────
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ]; then
-  if ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
-    sed -i '1s|<manifest |<manifest xmlns:tools="http://schemas.android.com/tools" |' "$MANIFEST"
-    sed -i '/<application/ i\    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>' "$MANIFEST"
-    ok "AD_ID permission removed from merged manifest"
-  else
-    ok "AD_ID already removed from manifest"
-  fi
+    sed -i '/com.google.android.gms.permission.AD_ID.*tools:node="remove"/d' "$MANIFEST"
+    ok "AD_ID permission is available for AdMob"
 
   if ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null; then
     sed -i '/<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"

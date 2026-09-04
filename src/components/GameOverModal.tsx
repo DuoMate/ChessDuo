@@ -5,6 +5,7 @@ import { Trophy, Handshake, Home, LogOut, X, Eye } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
+import { NativeAdSlot } from './NativeAdSlot'
 
 interface GameOverModalProps {
   open: boolean
@@ -85,6 +86,7 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
                 Review Board
               </motion.button>
             )}
+            <NativeAdSlot />
           </motion.div>
         </motion.div>
       )}

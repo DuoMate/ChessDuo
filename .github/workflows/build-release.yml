@@ -61,6 +61,8 @@ jobs:
           NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
           NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+          NEXT_PUBLIC_ADMOB_APP_ID=${{ secrets.NEXT_PUBLIC_ADMOB_APP_ID }}
+          NEXT_PUBLIC_ADMOB_NATIVE_ID=${{ secrets.NEXT_PUBLIC_ADMOB_NATIVE_ID }}
           EOF
 
       - name: Init Capacitor Android project
@@ -85,6 +87,9 @@ jobs:
 
       - name: Patch MainActivity for Google auth intent forwarding
         run: bash scripts/patch-main-activity.sh
+
+      - name: Install Native AdMob plugin
+        run: bash scripts/install-native-ad.sh
 
       - name: Install ImageMagick (icon generation)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick

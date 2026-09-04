@@ -82,6 +82,8 @@ REQUIRED_VARS=(
   "NEXT_PUBLIC_SUPABASE_ANON_KEY"
   "NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID"
   "NEXT_PUBLIC_SITE_URL"
+  "NEXT_PUBLIC_ADMOB_APP_ID"
+  "NEXT_PUBLIC_ADMOB_NATIVE_ID"
 )
 
 MISSING=0
@@ -139,6 +141,9 @@ echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
 
+# ─── Install bounded Native AdMob plugin ─────────
+bash "$PROJECT_ROOT/scripts/install-native-ad.sh"
+
 # ─── Add deep link intent filters (App Links + custom schemes) ──
 bash scripts/add-deep-link.sh
 ok "Deep link intent filters added"
@@ -157,9 +162,8 @@ bash "$PROJECT_ROOT/scripts/patch-main-activity.sh"
 # ─── Copy custom app icons ──
 bash "$PROJECT_ROOT/scripts/copy-app-icons.sh"
 
-# ─── Source manifest has tools:node="remove" for ads permissions ──
-# No additional patching needed — the source manifest is already correct.
-ok "Ads permissions handled via tools:node=remove in source manifest"
+# ─── AdMob permissions and metadata are applied by install-native-ad.sh ──
+ok "AdMob permissions and metadata handled by native plugin setup"
 
 # ─── Ensure POST_NOTIFICATIONS permission for push (Android 13+) ──
 MANIFEST="android/app/src/main/AndroidManifest.xml"
