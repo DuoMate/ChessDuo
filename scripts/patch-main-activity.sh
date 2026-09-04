@@ -16,7 +16,8 @@ fi
 
 # Check if already patched. A file from an older version without edge-to-edge
 # is deliberately re-patched so all generated builds converge on this version.
-if grep -q "EdgeToEdge.enable" "$MAIN_ACTIVITY" 2>/dev/null; then
+if grep -q "EdgeToEdge.enable" "$MAIN_ACTIVITY" 2>/dev/null \
+    && grep -q "registerPlugin(NativeAdPlugin.class)" "$MAIN_ACTIVITY" 2>/dev/null; then
   echo "[OK]  MainActivity.java already patched"
   exit 0
 fi
