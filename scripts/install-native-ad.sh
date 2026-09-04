@@ -28,7 +28,7 @@ fi
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if ! grep -q 'com.google.android.gms.ads.APPLICATION_ID' "$MANIFEST"; then
-  sed -i "/<application/a\        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"$APP_ID\" />" "$MANIFEST"
+  sed -i "/<\\/application>/i\        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"$APP_ID\" />" "$MANIFEST"
 fi
 
 echo "[OK] Native AdMob Android plugin installed"
