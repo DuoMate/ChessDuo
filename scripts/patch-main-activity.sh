@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Script: Patch MainActivity.java for Google auth intents + Android 15 edge-to-edge.
-# (1) The default BridgeActivity doesn't route Google's authorization intents
-#     (dynamic request codes in GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN range)
-#     to the SocialLoginPlugin.handleGoogleLoginIntent() method.
-#     Without this, the consent flow hangs after SHA-1 is fixed.
-# (2) Android 15 (SDK 35+) enforces edge-to-edge by default; enable it explicitly
-#     (with backward-compat via androidx EdgeToEdge) so the WebView draws behind the
-#     system bars and the web layer's env(safe-area-inset-*) padding resolves.
+# Script: Patch MainActivity.java for Google auth intents, Native AdMob, and edge-to-edge.
+# The default BridgeActivity doesn't route Google's authorization intents
+# (dynamic request codes in GoogleProvider.REQUEST_AUTHORIZE_GOOGLE_MIN range)
+# to the SocialLoginPlugin.handleGoogleLoginIntent() method.
+# Without this, the consent flow hangs after SHA-1 is fixed.
 
 MAIN_ACTIVITY="android/app/src/main/java/com/navron/chessduo/MainActivity.java"
 
@@ -17,14 +14,15 @@ if [ ! -f "$MAIN_ACTIVITY" ]; then
   exit 1
 fi
 
-# Check if already patched (use the newest marker so a file patched by an older
-# version of this script without the edge-to-edge onCreate still gets re-patched).
-if grep -q "EdgeToEdge.enable" "$MAIN_ACTIVITY" 2>/dev/null; then
+# Check if already patched. A file from an older version without edge-to-edge
+# is deliberately re-patched so all generated builds converge on this version.
+if grep -q "EdgeToEdge.enable" "$MAIN_ACTIVITY" 2>/dev/null \
+    && grep -q "registerPlugin(NativeAdPlugin.class)" "$MAIN_ACTIVITY" 2>/dev/null; then
   echo "[OK]  MainActivity.java already patched"
   exit 0
 fi
 
-echo "[INFO] Patching MainActivity.java (Google auth intents + edge-to-edge)..."
+echo "[INFO] Patching MainActivity.java (Google auth intents + Native AdMob + edge-to-edge)..."
 
 cat > "$MAIN_ACTIVITY" << 'JAVA'
 package com.navron.chessduo;
@@ -41,6 +39,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NativeAdPlugin.class);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
     }

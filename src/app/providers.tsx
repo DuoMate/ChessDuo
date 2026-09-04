@@ -18,6 +18,7 @@ import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 import { PremiumProvider } from '@/hooks/usePremium'
 import { PremiumCornerBadge } from '@/components/PremiumCornerBadge'
+import { preloadNativeAd } from '@/lib/nativeAd'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -36,6 +37,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerCapacitorAuthListener({ navigate: (path) => router.replace(path) }).catch(() => {})
     registerBackButtonListener()
     SubscriptionService.setProvider(GooglePlayBillingProvider)
+    void preloadNativeAd()
 
     // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
     // (especially critical when human plays as Black - White bots move first)
