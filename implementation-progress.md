@@ -37,3 +37,42 @@
 Note: this environment has no Android SDK or `chessduo.keystore` (CI secret), so the
 signed release artifact build and device verification are deferred to CI
 (`build-release.yml` on push to `prod`).
+
+## AI Coach UI/UX Redesign
+
+### Task 0 — Audit
+**Status:** complete
+**Files inspected:** `src/app/coach/page.tsx`, `src/components/coach/CoachGame.tsx`,
+`CoachPanel.tsx`, `CoachGate.tsx`, `src/components/ChessBoard.tsx`, Coach feature
+types/analysis, route and component contexts.
+**Findings:** Coach components are presentation and interaction wiring; evaluator,
+Stockfish, voice, persistence, and game state are isolated under `src/features/coach`.
+The shared board already accepts `highlightSquares` and renders the existing green
+best-move-style overlay.
+**Changes:** none to runtime during audit.
+**Verification:** read-only audit completed; initial git status preserved.
+
+### Task 1 — Data contract
+**Status:** complete
+**Files inspected:** `coachGame.ts`, `coachAnalysis.ts`, `CoachGame.tsx`, `CoachPanel.tsx`.
+**Findings:** Current-position best move is `suggestion.topMoves[0].uci`; feedback
+best move is SAN and may refer to a prior position, so it is not used for the live
+board highlight.
+**Changes:** documented the UI mapping in `plan.md`.
+**Verification:** no evaluator or API contract changes.
+
+### Task 4 — Show/Hide Best Move presentation
+**Status:** complete
+**Files changed:** `src/components/coach/CoachGame.tsx`,
+`src/components/coach/CoachPanel.tsx`, and focused `CoachPanel.test.tsx`.
+**Findings:** A local `showBestMove` flag is sufficient; no preview board or move
+execution is needed.
+**Changes:** added hidden-by-default Show/Hide action for the current suggestion,
+mapped its UCI squares to the existing `ChessBoard.highlightSquares` prop, and reset
+visibility whenever the live FEN changes.
+**Verification:** focused Jest test passed (2 tests); type diagnostics and ESLint
+passed for all changed Coach files; core/backend diff check was empty.
+
+### Scope confirmation
+Evaluator, Stockfish, engine configuration, backend, API, database, game state,
+move history, and new evaluation calls were not changed.

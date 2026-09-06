@@ -1,6 +1,6 @@
 'use client'
 
-import { Sparkles, Volume2, Trophy } from 'lucide-react'
+import { Eye, EyeOff, Sparkles, Volume2, Trophy } from 'lucide-react'
 import type { Suggestion, CoachFeedback, MoveVerdict } from '@/features/coach'
 
 const VERDICT_STYLES: Record<MoveVerdict, { label: string; badge: string; text: string }> = {
@@ -18,9 +18,21 @@ interface CoachPanelProps {
   analyzing: boolean
   isPlayerTurn: boolean
   onSpeak?: (text: string) => void
+  showBestMove?: boolean
+  onToggleBestMove?: () => void
 }
 
-export function CoachPanel({ suggestion, feedback, analyzing, isPlayerTurn, onSpeak }: CoachPanelProps) {
+export function CoachPanel({
+  suggestion,
+  feedback,
+  analyzing,
+  isPlayerTurn,
+  onSpeak,
+  showBestMove = false,
+  onToggleBestMove,
+}: CoachPanelProps) {
+  const currentBestMove = isPlayerTurn ? suggestion?.topMoves[0] : undefined
+
   return (
     <div className="space-y-3">
       {/* Suggestion — shown while it's the player's turn to move */}
@@ -47,6 +59,16 @@ export function CoachPanel({ suggestion, feedback, analyzing, isPlayerTurn, onSp
               ))
             )}
           </div>
+          {currentBestMove && onToggleBestMove && (
+            <button
+              onClick={onToggleBestMove}
+              aria-label={showBestMove ? 'Hide Best Move' : 'Show Best Move'}
+              className="mt-3 flex min-h-[44px] min-w-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-[var(--shadow-glow-emerald)] transition-colors hover:bg-emerald-400"
+            >
+              {showBestMove ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showBestMove ? 'Hide Best Move' : 'Show Best Move'}
+            </button>
+          )}
         </section>
       )}
 

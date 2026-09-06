@@ -34,6 +34,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const settings = useSettings()
   const [state, setState] = useState<CoachGameState | null>(null)
   const [voiceEnabled, setVoiceEnabled] = useState(coachVoice.isEnabled())
+  const [showBestMove, setShowBestMove] = useState(false)
   const [showLeave, setShowLeave] = useState(false)
   const gameRef = useRef<CoachGameEngine | null>(null)
   const spokenFeedbackKeyRef = useRef<string | null>(null)
@@ -67,6 +68,10 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       coachVoice.speak(state.feedback.explanation)
     }
   }, [state?.feedback])
+
+  useEffect(() => {
+    setShowBestMove(false)
+  }, [state?.fen])
 
   // Persist on game over (premium + signed-in; save is a no-op for guests).
   useEffect(() => {
@@ -132,6 +137,10 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   )
 
   const orientation = playerColor === 'black' ? 'black' : 'white'
+  const currentBestMove = isPlayerTurn ? state?.suggestion?.topMoves[0] : undefined
+  const bestMoveHighlight = showBestMove && currentBestMove
+    ? { winnerFrom: currentBestMove.uci.slice(0, 2), winnerTo: currentBestMove.uci.slice(2, 4) }
+    : null
 
   return (
     <div className="min-h-dvh bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
@@ -177,6 +186,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             enabled={boardEnabled}
             orientation={orientation}
             lastMove={state?.lastMove}
+            highlightSquares={bestMoveHighlight}
           />
         </div>
 
@@ -186,6 +196,8 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           analyzing={!!state?.analyzing}
           isPlayerTurn={isPlayerTurn}
           onSpeak={(text) => coachVoice.speak(text)}
+          showBestMove={showBestMove}
+          onToggleBestMove={() => setShowBestMove((visible) => !visible)}
         />
       </div>
 
