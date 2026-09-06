@@ -130,3 +130,9 @@ All React components — co-located by feature, not by type. Components handle r
 ## Dependencies
 - `features/` for game logic, `hooks/` for React hooks, `lib/` for utilities
 - `cm-chessboard` for board rendering, `chess.js` for move validation
+
+## Recent Changes
+- **2026-09-06**: Coach Mode best-move presentation uses local `showBestMove` state
+	and the existing `ChessBoard.highlightSquares` overlay. It reads only the current
+	`suggestion.topMoves[0].uci`; stale feedback cannot render a board highlight, and
+	the live FEN/game state remains unchanged.

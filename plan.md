@@ -64,3 +64,38 @@ No `package.json` / dependency change is required.
   WebView, plugins, auth, social login, no startup crash, no UI regression).
 - Android 15 edge-to-edge visual check (status/nav bars, bottom nav, board, dialogs,
   login screens) for hidden content, double/missing padding.
+
+## AI Coach UI/UX Redesign
+
+### Current architecture and UI boundary
+`src/app/coach/page.tsx` routes through `CoachGate` into the dynamically loaded
+`CoachGame` presentation shell. `CoachGame` subscribes to the existing
+`CoachGameState`, renders the shared `ChessBoard`, and passes suggestion/feedback
+data to `CoachPanel`. Evaluator logic remains isolated in `src/features/coach`.
+
+### Frozen boundaries
+The Coach evaluator, Stockfish worker, engine settings, analysis types, voice
+service, persistence, API/database paths, and game state remain unchanged. UI
+changes may only map existing state into presentation props and local visibility
+state.
+
+### Data contract used by the UI
+- Current best move: `suggestion.topMoves[0].uci`
+- Current recommendation list: `suggestion.topMoves`
+- Coach message and classification: `feedback.explanation` and `feedback.verdict`
+- Voice content/state: existing `coachVoice` service and `feedback.explanation`
+- Live board position: existing `state.fen`, `state.lastMove`, and shared `ChessBoard`
+
+### Task breakdown
+1. Audit components, routes, board annotations, evaluator boundary, and premium gate.
+2. Freeze and document the presentation data mapping.
+3. Build the primary Coach message hierarchy.
+4. Add UI-only best-move visibility using the existing green board highlight.
+5. Collapse recommendations, integrate voice, and polish responsive layout.
+6. Verify representative Coach states, mobile/desktop layouts, build, and scope.
+
+### Isolated best-move behavior
+The action is shown only when the current player-turn suggestion has a first move.
+`showBestMove` defaults to false, never changes FEN or game state, and resets when
+the live FEN changes. The board receives the existing `highlightSquares` prop only
+while visible; stale feedback alone cannot render a highlight.
