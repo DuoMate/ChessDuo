@@ -5,13 +5,13 @@ import { Capacitor } from '@capacitor/core'
 import { usePremium } from '@/hooks/usePremium'
 import { hideNativeAd, preloadNativeAd, showNativeAd } from '@/lib/nativeAd'
 
-export function NativeAdSlot() {
+export function NativeAdSlot({ open }: { open: boolean }) {
   const slotRef = useRef<HTMLDivElement>(null)
   const { isPremium, loading } = usePremium()
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (loading || isPremium || !Capacitor.isNativePlatform()) return
+    if (!open || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     let active = true
     preloadNativeAd().then((loaded) => {
@@ -22,10 +22,10 @@ export function NativeAdSlot() {
       active = false
       setReady(false)
     }
-  }, [isPremium, loading])
+  }, [isPremium, loading, open])
 
   useEffect(() => {
-    if (!ready || loading || isPremium || !Capacitor.isNativePlatform()) return
+    if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     const slot = slotRef.current
     if (!slot) return
@@ -53,9 +53,9 @@ export function NativeAdSlot() {
       window.removeEventListener('scroll', render, true)
       void hideNativeAd()
     }
-  }, [isPremium, loading, ready])
+  }, [isPremium, loading, open, ready])
 
-  if (!ready || loading || isPremium || !Capacitor.isNativePlatform()) return null
+  if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return null
 
   return <div ref={slotRef} aria-hidden="true" className="my-4 h-[180px] w-full overflow-hidden rounded-2xl" />
 }

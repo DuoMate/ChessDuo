@@ -2,6 +2,10 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { GameOverModal } from '../GameOverModal'
 
+jest.mock('../NativeAdSlot', () => ({
+  NativeAdSlot: ({ open }: { open: boolean }) => <div data-testid="native-ad-slot" data-open={String(open)} />,
+}))
+
 describe('GameOverModal', () => {
   it('renders with close button when onClose is provided', () => {
     render(
@@ -50,6 +54,11 @@ describe('GameOverModal', () => {
     render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} gameOverReason="abandoned" />)
     expect(screen.getByText('Match Abandoned')).toBeDefined()
     expect(screen.getByText('Home')).toBeDefined()
+  })
+
+  it('keeps the ad slot active for an abandoned game-over result', () => {
+    render(<GameOverModal open={true} winner="WHITE" onPlayAgain={jest.fn()} gameOverReason="abandoned" />)
+    expect(screen.getByTestId('native-ad-slot')).toHaveAttribute('data-open', 'true')
   })
 
   it('shows trophy icon for White win', () => {

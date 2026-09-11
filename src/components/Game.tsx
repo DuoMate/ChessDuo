@@ -2312,8 +2312,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         console.error('[RESIGN] Completed-game persistence error:', e)
       }
     }
+    // Keep the user on the shared GameOverModal so every terminal result,
+    // including resignation, gets the same ad and review actions.
     setShowGameOverDismissed(false)
-    router.replace('/')
   }, [isOnline, startGameOverSave])
 
   const handleLeaveConfirm = useCallback(async () => {
