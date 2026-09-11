@@ -38,6 +38,17 @@ describe('nativeAd', () => {
     expect(nativeAdPlugin.hide).toHaveBeenCalledTimes(1)
   })
 
+  it('deduplicates concurrent preload requests for the same native ad', async () => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+
+    const first = preloadNativeAd()
+    const second = preloadNativeAd()
+
+    await Promise.all([first, second])
+
+    expect(nativeAdPlugin.preload).toHaveBeenCalledTimes(1)
+  })
+
   it('does nothing on web', async () => {
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false)
 

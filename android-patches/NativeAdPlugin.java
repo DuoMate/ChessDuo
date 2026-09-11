@@ -2,6 +2,7 @@ package com.navron.chessduo;
 
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -27,6 +28,7 @@ import com.google.android.gms.ads.nativead.NativeAdView;
 
 @CapacitorPlugin(name = "NativeAd")
 public class NativeAdPlugin extends Plugin {
+    private static final String TAG = "ChessDuoAds";
     private NativeAd loadedAd;
     private NativeAdView visibleAdView;
     private String loadedAdUnitId;
@@ -35,7 +37,9 @@ public class NativeAdPlugin extends Plugin {
     @PluginMethod
     public void preload(PluginCall call) {
         String adUnitId = call.getString("adUnitId", "");
+        Log.d(TAG, "[ADS][GAMEOVER] adLoadRequested=true");
         if (adUnitId == null || adUnitId.trim().isEmpty()) {
+            Log.e(TAG, "[ADS][GAMEOVER] adLoadFailed=true errorMessage=Native ad unit ID is missing");
             call.reject("Native AdMob unit ID is missing");
             return;
         }
@@ -43,6 +47,7 @@ public class NativeAdPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             initializeSdk();
             if (loadedAd != null && adUnitId.equals(loadedAdUnitId)) {
+                Log.d(TAG, "[ADS][GAMEOVER] adLoadSucceeded=true nativeAdPresent=true reused=true");
                 call.resolve();
                 return;
             }
@@ -52,11 +57,14 @@ public class NativeAdPlugin extends Plugin {
                     destroyLoadedAd();
                     loadedAd = ad;
                     loadedAdUnitId = adUnitId;
+                    Log.d(TAG, "[ADS][GAMEOVER] adLoadSucceeded=true nativeAdPresent=true");
                     call.resolve();
                 })
                 .withAdListener(new AdListener() {
                     @Override
                     public void onAdFailedToLoad(@NonNull LoadAdError error) {
+                        Log.e(TAG, "[ADS][GAMEOVER] adLoadFailed=true errorCode="
+                            + error.getCode() + " errorMessage=" + error.getMessage());
                         call.reject("Native AdMob ad failed to load", String.valueOf(error.getCode()));
                     }
                 })
@@ -67,6 +75,7 @@ public class NativeAdPlugin extends Plugin {
 
     @PluginMethod
     public void show(PluginCall call) {
+        Log.d(TAG, "[ADS][GAMEOVER] nativeAdPresent=" + (loadedAd != null));
         if (loadedAd == null) {
             call.reject("Native AdMob ad is not ready");
             return;
@@ -99,6 +108,7 @@ public class NativeAdPlugin extends Plugin {
             visibleAdView = adView;
             loadedAd = null;
             loadedAdUnitId = null;
+            Log.d(TAG, "[ADS][GAMEOVER] nativeAdViewRendered=true");
             call.resolve();
         });
     }
@@ -199,6 +209,7 @@ public class NativeAdPlugin extends Plugin {
 
     private void hideVisibleAd() {
         if (visibleAdView == null) return;
+        Log.d(TAG, "[ADS][GAMEOVER] nativeAdViewDestroyed=true");
         visibleAdView.destroy();
         ViewGroup parent = (ViewGroup) visibleAdView.getParent();
         if (parent != null) parent.removeView(visibleAdView);
@@ -207,6 +218,7 @@ public class NativeAdPlugin extends Plugin {
 
     private void destroyLoadedAd() {
         if (loadedAd == null) return;
+        Log.d(TAG, "[ADS][GAMEOVER] loadedNativeAdDestroyed=true");
         loadedAd.destroy();
         loadedAd = null;
         loadedAdUnitId = null;

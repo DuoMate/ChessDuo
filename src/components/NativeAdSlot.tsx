@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { usePremium } from '@/hooks/usePremium'
 import { hideNativeAd, preloadNativeAd, showNativeAd } from '@/lib/nativeAd'
+import { DEBUG } from '@/lib/debug'
 
-export function NativeAdSlot({ open }: { open: boolean }) {
+export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOverReason?: string | null }) {
   const slotRef = useRef<HTMLDivElement>(null)
   const { isPremium, loading } = usePremium()
   const [ready, setReady] = useState(false)
@@ -14,15 +15,40 @@ export function NativeAdSlot({ open }: { open: boolean }) {
     if (!open || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     let active = true
+    DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+      reason: gameOverReason || 'unknown',
+      popupMounted: true,
+      adLoadRequested: true,
+      adLoadSucceeded: false,
+      adLoadFailed: false,
+      errorCode: null,
+      errorMessage: null,
+      nativeAdPresent: false,
+      nativeAdViewRendered: false,
+      popupVisible: open,
+    }))
     preloadNativeAd().then((loaded) => {
-      if (active) setReady(loaded)
+      if (!active) return
+      DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+        reason: gameOverReason || 'unknown',
+        popupMounted: true,
+        adLoadRequested: true,
+        adLoadSucceeded: loaded,
+        adLoadFailed: !loaded,
+        errorCode: null,
+        errorMessage: loaded ? null : 'Native ad preload failed; see Android logcat',
+        nativeAdPresent: loaded,
+        nativeAdViewRendered: false,
+        popupVisible: open,
+      }))
+      setReady(loaded)
     })
 
     return () => {
       active = false
       setReady(false)
     }
-  }, [isPremium, loading, open])
+  }, [gameOverReason, isPremium, loading, open])
 
   useEffect(() => {
     if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return
@@ -39,6 +65,19 @@ export function NativeAdSlot({ open }: { open: boolean }) {
         y: bounds.top,
         width: bounds.width,
         height: bounds.height,
+      }).then((rendered) => {
+        DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+          reason: gameOverReason || 'unknown',
+          popupMounted: true,
+          adLoadRequested: true,
+          adLoadSucceeded: true,
+          adLoadFailed: false,
+          errorCode: null,
+          errorMessage: null,
+          nativeAdPresent: true,
+          nativeAdViewRendered: rendered,
+          popupVisible: open,
+        }))
       })
     }
 
@@ -53,7 +92,7 @@ export function NativeAdSlot({ open }: { open: boolean }) {
       window.removeEventListener('scroll', render, true)
       void hideNativeAd()
     }
-  }, [isPremium, loading, open, ready])
+  }, [gameOverReason, isPremium, loading, open, ready])
 
   if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return null
 
