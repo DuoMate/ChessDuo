@@ -1,5 +1,36 @@
 # Plan — Play Console R8 + Edge-to-Edge Production Fix
 
+## Premium Production Enablement Audit — 2026-09-11
+
+### Existing architecture
+
+- `PremiumPage` calls `SubscriptionService`; browser users use the existing download-on-Google-Play CTA.
+- Android uses `GooglePlayBillingProvider` and `@capgo/native-purchases` for `premium_monthly` and `premium_yearly` subscriptions.
+- `/api/subscription/verify` verifies the token with Google Play, acknowledges active purchases, and writes the authenticated user's `profiles` row.
+- `/api/subscription/status` is the authoritative client read; expiry is checked server-side before `isPremium` is returned.
+
+### Audit findings and fixes
+
+- Fixed the hardcoded Coming Soon branch that made Android purchase controls unreachable.
+- Fixed the purchase flow so a native result is sent to `/api/subscription/verify` and is rejected unless verification succeeds.
+- Fixed restore handling to return and verify native transactions from the plugin instead of always returning an empty list.
+- Added the Android subscription `planIdentifier` required by the native plugin.
+- Added server-side product allowlisting for the two configured product IDs.
+- Added the missing `@capgo/native-purchases` production dependency.
+- Corrected the browser Play Store URL to package `com.navron.chessduo`.
+
+### Validation and blockers
+
+- Focused billing/Premium tests pass: 59 tests.
+- Typecheck is blocked by the pre-existing missing `@capacitor-community/text-to-speech` module in `src/features/coach/coachVoice.ts`.
+- No generated Android project or signed APK/AAB is present in this workspace, so Google Play purchase, restore, AdMob suppression, and device lifecycle testing were not performed.
+- Play Console product/base-plan/pricing state and production service-account configuration cannot be verified from the repository.
+- Purchase tokens are verified by Google but the current schema/API has no server-side Google-account-to-ChessDuo-account binding or token ownership constraint. This remains a production security blocker; no migration was applied.
+
+### Decision
+
+Premium source flow is repaired, but production release enablement is **NOT READY** until the account-linking design is established, Play Console configuration is confirmed, and a signed Android build passes the end-to-end test matrix.
+
 ChessDuo is live on Google Play (release 349 / 1.0.349). Play Console reports two
 findings to address:
 

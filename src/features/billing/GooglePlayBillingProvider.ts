@@ -2,8 +2,9 @@ import type { BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
 
 interface NativePurchasesPlugin {
   getProducts(options: { productIdentifiers: string[]; productType: string }): Promise<{ products: NativeProduct[] }>
-  purchaseProduct(options: { productIdentifier: string; productType: string }): Promise<NativeTransaction>
-  restorePurchases(): Promise<void>
+  getPurchases?(options: { productType: string }): Promise<{ purchases: NativeTransaction[] }>
+  purchaseProduct(options: { productIdentifier: string; productType: string; planIdentifier?: string }): Promise<NativeTransaction>
+  restorePurchases(): Promise<{ purchases?: NativeTransaction[] } | void>
 }
 
 interface NativeProduct {
@@ -111,6 +112,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         p.purchaseProduct({
           productIdentifier: productId,
           productType: 'subs',
+          planIdentifier: productId,
         }),
         BILLING_TIMEOUT_MS,
         null,
@@ -150,13 +152,28 @@ export const GooglePlayBillingProvider: BillingProvider = {
     if (!p) return []
 
     try {
-      await p.restorePurchases()
-      return []
+      const restored = await p.restorePurchases()
+      if (restored && 'purchases' in restored && restored.purchases) {
+        return restored.purchases.map(toPurchaseResult)
+      }
+      if (!p.getPurchases) return []
+      const current = await p.getPurchases({ productType: 'subs' })
+      return current.purchases.map(toPurchaseResult)
     } catch {
       return []
     }
   },
 
-  async acknowledgePurchase(_purchaseToken: string, _productId: string): Promise<void> {
+  async acknowledgePurchase(): Promise<void> {
   },
+}
+
+function toPurchaseResult(transaction: NativeTransaction): PurchaseResult {
+  const purchaseToken = transaction.purchaseToken || transaction.jwsRepresentation || ''
+  return {
+    success: Boolean(purchaseToken && transaction.productIdentifier),
+    purchaseToken,
+    productId: transaction.productIdentifier,
+    orderId: transaction.transactionId,
+  }
 }

@@ -1,4 +1,4 @@
-import type { BillingProvider, PurchaseResult, SubscriptionPlan } from '../types'
+import type { BillingProvider, PurchaseResult } from '../types'
 
 const mockProvider: BillingProvider = {
   initialize: jest.fn().mockResolvedValue(true),
@@ -89,16 +89,44 @@ describe('SubscriptionService', () => {
       expect(result.errorDetail).toBe('cancelled')
     })
 
-    it('returns success with checkoutUrl for redirect-based providers', async () => {
+    it('verifies a successful native purchase before returning success', async () => {
       (mockProvider.purchase as jest.Mock).mockResolvedValueOnce({
         success: true,
         purchaseToken: 'google_play_token',
         productId: 'premium_monthly',
       })
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
 
       const result = await SubscriptionService.purchaseMonthly()
       expect(result.success).toBe(true)
       expect(result.purchaseToken).toBe('google_play_token')
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/subscription/verify'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            purchaseToken: 'google_play_token',
+            productId: 'premium_monthly',
+            orderId: undefined,
+          }),
+        }),
+      )
+    })
+
+    it('does not grant success when verification fails', async () => {
+      (mockProvider.purchase as jest.Mock).mockResolvedValueOnce({
+        success: true,
+        purchaseToken: 'google_play_token',
+        productId: 'premium_monthly',
+      })
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: () => Promise.resolve({ error: 'verification failed' }) })
+
+      const result = await SubscriptionService.purchaseMonthly()
+
+      expect(result.success).toBe(false)
+      expect(result.errorDetail).toBe('verification')
     })
 
     it('handles null provider gracefully', async () => {
@@ -116,23 +144,29 @@ describe('SubscriptionService', () => {
       expect(result).toBe(false)
     })
 
-    it('returns true when restored purchases found (DB-backed, no verify call)', async () => {
+    it('verifies restored purchases before reporting success', async () => {
       (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
         { success: true, purchaseToken: 'google_play_restored', productId: 'premium_yearly', orderId: '' },
       ])
+
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
 
       const result = await SubscriptionService.restore()
       expect(result).toBe(true)
 
       const verifyCalls = mockFetch.mock.calls.filter(([url]) => String(url).includes('/api/subscription/verify'))
-      expect(verifyCalls).toHaveLength(0)
+      expect(verifyCalls).toHaveLength(1)
     })
 
     it('refreshes status after successful restore', async () => {
       (mockProvider.restorePurchases as jest.Mock).mockResolvedValueOnce([
         { success: true, purchaseToken: 'google_play_restored', productId: 'premium_monthly', orderId: '' },
       ])
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ isPremium: true, subscriptionProvider: 'GOOGLE_PLAY' }) })
 
       const result = await SubscriptionService.restore()
       expect(result).toBe(true)

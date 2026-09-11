@@ -1,5 +1,4 @@
 import type { BillingProvider, PurchaseResult, SubscriptionPlan, SubscriptionInfo } from './types'
-import { transition } from './SubscriptionStateMachine'
 import { getAppBaseUrl } from '@/lib/appUrl'
 
 const MONTHLY_PRODUCT_ID = 'premium_monthly'
@@ -54,6 +53,36 @@ async function fetchServerStatus(): Promise<SubscriptionInfo> {
     }
   } catch { /* network error or timeout — use cached */ }
   return getDefaultStatus()
+}
+
+async function verifyPurchase(result: PurchaseResult): Promise<PurchaseResult> {
+  if (!result.purchaseToken || !result.productId) {
+    return { success: false, error: 'Purchase verification data is missing', errorDetail: 'verification' }
+  }
+
+  try {
+    const headers = await getAuthHeaders()
+    const response = await fetchWithTimeout(`${getApiBase()}/api/subscription/verify`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        purchaseToken: result.purchaseToken,
+        productId: result.productId,
+        orderId: result.orderId,
+      }),
+    })
+    const data = await response.json() as { success?: boolean; error?: string }
+    if (!response.ok || data.success !== true) {
+      return {
+        success: false,
+        error: data.error || 'Purchase could not be verified. Please try again.',
+        errorDetail: 'verification',
+      }
+    }
+    return result
+  } catch {
+    return { success: false, error: 'Purchase verification failed. Please try again.', errorDetail: 'verification' }
+  }
 }
 
 function getDefaultStatus(): SubscriptionInfo {
@@ -123,14 +152,22 @@ export const SubscriptionService = {
       return { success: true, checkoutUrl: result.checkoutUrl, productId }
     }
 
-    return result
+    const verified = await verifyPurchase(result)
+    if (!verified.success) return verified
+
+    return verified
   },
 
   async restore(): Promise<boolean> {
     if (!provider) return false
     const restored = await provider.restorePurchases()
 
-    const anyRestored = restored.some(r => r.success && r.purchaseToken && r.productId)
+    const verifiedPurchases = await Promise.all(
+      restored
+        .filter(r => r.success && r.purchaseToken && r.productId)
+        .map(r => verifyPurchase(r)),
+    )
+    const anyRestored = verifiedPurchases.some(r => r.success)
     if (anyRestored) {
       cachedStatus = null
       statusCheckedAt = 0
