@@ -359,6 +359,14 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
   }, [])
 
+  const handleResign = useCallback(async () => {
+    try {
+      await gameRef.current?.resign()
+    } catch {
+      // Resignation failure is handled by the engine; keep the result screen usable.
+    }
+  }, [])
+
   const handleMove = useCallback(async (uci: string, promotion?: PromotionPiece) => {
     const game = gameRef.current
     if (!game) return
@@ -642,7 +650,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
       <ResignConfirmModal
         open={showResignConfirm}
-        onConfirm={() => { setShowResignConfirm(false); gameRef.current?.resign(); setTimeout(() => onLeave(), 150) }}
+        onConfirm={() => { setShowResignConfirm(false); void handleResign() }}
         onCancel={() => setShowResignConfirm(false)}
       />
       <LeaveConfirmModal

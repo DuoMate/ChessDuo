@@ -86,7 +86,7 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
                 Review Board
               </motion.button>
             )}
-            <NativeAdSlot />
+            <NativeAdSlot open={open} />
           </motion.div>
         </motion.div>
       )}
