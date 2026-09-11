@@ -2321,12 +2321,52 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     if (roomCode) {
       sessionStorage.setItem(`chessduo_left_${roomCode}`, 'true')
     }
-    if (isOnline && onlineGameRef.current) {
-      onlineGameRef.current.abandonMatch().catch(() => {})
+
+    // Lobby exits still navigate immediately because no game-over result or
+    // completed-game ad lifecycle exists before a match starts.
+    if (gameState.status !== GameStatus.PLAYING) {
+      if (isOnline && onlineGameRef.current) {
+        onlineGameRef.current.abandonMatch().catch(() => {})
+      }
+      setShowLeaveModal(false)
+      router.replace('/')
+      return
     }
+
     setShowLeaveModal(false)
-    router.replace('/')
-  }, [isOnline, roomCode, router])
+
+    if (isOnline && onlineGameRef.current) {
+      const onlineGame = onlineGameRef.current
+      try {
+        await onlineGame.abandonMatch()
+      } catch (error) {
+        // Preserve the shared result/ad lifecycle if channel teardown fails.
+        console.error('[LEAVE] Active-match abandonment failed:', error)
+        const humanTeam = onlineGame.getTeam()
+        onlineGame.setGameOverResult('Match abandoned')
+        onlineGame.setGameOverReason('abandoned')
+        setGameState(prev => ({
+          ...prev,
+          status: GameStatus.GAME_OVER,
+          winner: humanTeam === 'WHITE' ? 'BLACK' : 'WHITE',
+        }))
+      }
+      return
+    }
+
+    if (!isOnline && gameRef.current) {
+      const localGame = gameRef.current as LocalGame
+      const humanTeam = localGame.getTeam()
+      const opponentTeam = humanTeam === 'WHITE' ? 'BLACK' : 'WHITE'
+      localGame.setGameOverResult('Match abandoned')
+      localGame.setGameOverReason('abandoned')
+      setGameState(prev => ({
+        ...prev,
+        status: GameStatus.GAME_OVER,
+        winner: opponentTeam,
+      }))
+    }
+  }, [gameState.status, isOnline, roomCode, router])
 
   const handleResolutionComplete = useCallback(async () => {
     if (pendingOpponentTurnRef.current) {

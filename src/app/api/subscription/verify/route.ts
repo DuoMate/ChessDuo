@@ -140,10 +140,13 @@ export async function POST(request: Request) {
     const supabase = authSupabase
 
     const body = await request.json() as { purchaseToken?: string; productId?: string; orderId?: string }
-    const { purchaseToken, productId, orderId } = body
+    const { purchaseToken, productId } = body
     if (!purchaseToken || !productId) {
       console.warn(`[${route}] ${requestId} - Missing purchaseToken or productId`)
       return NextResponse.json({ error: 'Missing purchaseToken or productId' }, { status: 400 })
+    }
+    if (productId !== 'premium_monthly' && productId !== 'premium_yearly') {
+      return NextResponse.json({ error: 'Unsupported subscription product' }, { status: 400 })
     }
 
     const sa = getServiceAccount()

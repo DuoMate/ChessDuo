@@ -284,6 +284,8 @@ SubscriptionService
 
 - `src/lib/nativeAd.ts` is the web-safe Capacitor bridge. Web builds and missing IDs are no-ops.
 - `NativeAdSlot` is rendered only inside the existing `GameOverModal`; it waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
+- Active-match Back/Leave and resignation must converge on the same `GameOverModal` terminal lifecycle before navigation; lobby leave may navigate immediately because no match result exists.
+- Native-ad preload is single-flight: concurrent callers share one request, and a loaded ad is consumed only after a successful native render. Diagnostics use the `[ADS][GAMEOVER]` tag.
 - Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
 - `NEXT_PUBLIC_ADMOB_NATIVE_ID` must be a Native Advanced ad unit. `NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID` is not used for bounded popup placement.
 - Native ad loading and teardown are best effort and never gate game-over state, navigation, or popup controls.

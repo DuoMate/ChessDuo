@@ -644,6 +644,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         onPlayAgain={() => router.replace('/')}
         onClose={() => setShowGameOverDismissed(true)}
         gameResult={gameResult}
+        gameOverReason={gameOverReason}
       />
 
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
@@ -657,6 +658,15 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         open={showLeaveModal}
         onConfirm={() => {
           setShowLeaveModal(false)
+          if (status === 'playing') {
+            const opponent = team === 'WHITE' ? 'black' : 'white'
+            setShowGameOverDismissed(false)
+            setStatus('game_over')
+            setWinner(opponent)
+            setGameResult('Match abandoned')
+            setGameOverReason('abandoned')
+            return
+          }
           confirmNavLeave()
           onLeave()
         }}

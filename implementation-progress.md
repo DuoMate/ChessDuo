@@ -1,5 +1,45 @@
 # Implementation Progress — Play Console R8 + Edge-to-Edge
 
+## Premium Production Enablement Audit — 2026-09-11
+
+### Status: NOT READY — source flow repaired; release verification blocked
+
+### Audit
+
+- [x] Traced the UI -> provider -> verify route -> profile -> status flow.
+- [x] Confirmed browser remains on the download-on-Google-Play path.
+- [x] Confirmed native package ID is `com.navron.chessduo`.
+- [x] Confirmed product IDs in code are `premium_monthly` and `premium_yearly`.
+- [x] Confirmed status reads server-side profile state and checks expiry.
+- [x] Confirmed no complete purchase token is logged by the changed code.
+- [ ] Confirm exact Play Console product/base-plan/pricing configuration.
+- [ ] Confirm service-account and production secret deployment.
+- [ ] Establish Google Play account -> ChessDuo account binding and token ownership.
+
+### Fixes
+
+- [x] Removed the hardcoded native Coming Soon gate; retained the existing browser mobile-download UX.
+- [x] Verify successful native purchases before returning success.
+- [x] Verify restored native transactions before reporting restore success.
+- [x] Use the native plugin's Android subscription `planIdentifier`.
+- [x] Add `@capgo/native-purchases` to production dependencies.
+- [x] Allowlist supported product IDs in the verification route.
+- [x] Correct the browser Play Store URL package ID.
+- [x] No database migration applied.
+
+### Tests and release evidence
+
+- [x] Focused billing and Premium tests: `59 passed`.
+- [ ] Full Jest suite result recorded.
+- [ ] Typecheck: blocked by pre-existing missing `@capacitor-community/text-to-speech` module.
+- [ ] Lint of changed files using the repository ESLint 9 flat-config command.
+- [ ] Signed APK/AAB build.
+- [ ] Google Play purchase, cancellation, pending, verification failure, restore, restart, account switch, and AdMob suppression on a real Android device.
+
+### Release decision
+
+Premium was **not approved for production release**. The source purchase path is enabled for validation, but the artifact must remain unreleased until the listed security, Play Console, and device-test blockers are resolved.
+
 ## Status: implemented (build/device verification deferred to CI)
 
 ## Audit

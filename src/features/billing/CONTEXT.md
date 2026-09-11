@@ -63,4 +63,5 @@ CANCELLED → ACTIVE (via purchase/restore)
 - `@supabase/ssr` (server-side auth)
 
 ## Recent Changes
-- **2026-08-11**: Removed Creem billing. Restored Google Play Billing as the sole provider. Web users see "Download on Google Play" instead of purchase buttons. Removed all Creem API routes, dependencies (`@creem_io/nextjs`, `creem`), CI secrets, and docs references. GooglePlayBillingProvider types are now local (no `@capgo/native-purchases` build-time dependency).
+- **2026-09-11**: Production audit repaired the native purchase path: verified purchase and restore tokens through `/api/subscription/verify`, supplied the Android subscription base-plan identifier, added product allowlisting, and added the missing `@capgo/native-purchases` dependency. Release remains blocked pending account-linking, Play Console, and signed-device validation.
+- **2026-08-11**: Removed Creem billing. Restored Google Play Billing as the sole provider. Web users see "Download on Google Play" instead of purchase buttons. Removed all Creem API routes, dependencies (`@creem_io/nextjs`, `creem`), CI secrets, and docs references. GooglePlayBillingProvider types remain local while `@capgo/native-purchases` is included as the Android runtime dependency.
