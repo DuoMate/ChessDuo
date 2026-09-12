@@ -35,6 +35,12 @@ export interface SubscriptionInfo {
   purchaseState: SubscriptionState | null
   lastVerifiedDate: string | null
   subscriptionStatus: string | null
+  /** ISO timestamp of the last consumed AI Coach daily free game (server time). Optional until migration is applied. */
+  coachLastFreeGameAt?: string | null
+  /** Server-computed rolling-24h eligibility for the AI Coach daily free game. */
+  coachFreeEligible?: boolean
+  /** ISO timestamp when the next daily free game becomes available (server time). */
+  coachNextEligibleAt?: string | null
 }
 
 export interface PurchaseResult {

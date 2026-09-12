@@ -12,3 +12,11 @@ export type { CoachGameState, CoachStatus } from './coachGame'
 export { coachVoice } from './coachVoice'
 export { saveCoachGame, listCoachGames } from './coachPersistence'
 export type { CoachGameRecord, CoachGameResult } from './coachPersistence'
+export {
+  getCoachTrialState,
+  claimCoachDailyTrial,
+  isTrialEligible,
+  nextEligibleAt,
+  formatTrialCountdown,
+} from './coachTrial'
+export type { CoachTrialState } from './coachTrial'

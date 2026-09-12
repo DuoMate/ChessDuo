@@ -11,6 +11,7 @@ Isolated, modular premium game mode: Player vs AI with an advisory Stockfish coa
 | `coachAnalysis.ts` | Pure analysis — top-3, blunder/miss classification, verdict, explanation text |
 | `coachVoice.ts` | Optional TTS (`coachVoice`) — web SpeechSynthesis + Capacitor TTS, graceful degrade |
 | `coachPersistence.ts` | Isolated `coach_games` persistence (save/list) |
+| `coachTrial.ts` | Daily-trial layer (rolling 24h): eligibility, idempotent claim, server + local mirror |
 | `index.ts` | Public API re-exports |
 
 ## Logic & Decisions
@@ -27,4 +28,5 @@ Isolated, modular premium game mode: Player vs AI with an advisory Stockfish coa
 - `lib/supabase` (persistence)
 
 ## Recent Changes
+- **2026-09-12**: Daily free game (1 per rolling 24h, `COACH_TRIAL_WINDOW_MS`): `coachTrial.ts` (pure eligibility/countdown + idempotent per-session claim; `profiles.coach_last_free_game_at` authoritative with localStorage mirror pre-migration/offline), `CoachGate` trial-aware (premium unlimited / trial pass / hard block + countdown + `/premium` CTA), `CoachGame` claims at START only and embeds existing `NativeAdSlot` + premium offer in the inline Game Over modal for trial games. Requires migration `supabase/migrations/2026-09-12_coach_daily_trial.sql` (manual apply; code is tolerant pre-migration).
 - **2026-08-29**: Initial implementation (Coach Mode feature branch).

@@ -12,6 +12,9 @@ export const DEFAULT_POLLING_INTERVAL_MS = 2000
 
 export const INSIGHTS_FREE_LIMIT = 3
 
+/** Rolling window for the AI Coach daily free game (1 free game per 24h). */
+export const COACH_TRIAL_WINDOW_MS = 24 * 60 * 60 * 1000
+
 export type PlayerColor = 'white' | 'black' | 'random'
 
 export type ResolvedColor = 'white' | 'black'

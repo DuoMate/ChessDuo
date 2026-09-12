@@ -163,6 +163,33 @@ export default function SetupPage() {
   const [duelFriendsLoading, setDuelFriendsLoading] = useState(false)
   const [duelFriend, setDuelFriend] = useState<{ id: string; name: string } | null>(null)
   const mountedRef = useRef(true)
+  // AI Coach daily-trial hint (subtitle only — never changes navigation).
+  const [coachSubtitle, setCoachSubtitle] = useState('Learn while you play')
+
+  useEffect(() => {
+    if (!playerId) return
+    let active = true
+    import('@/features/coach/coachTrial')
+      .then(({ getCoachTrialState, formatTrialCountdown }) =>
+        getCoachTrialState(playerId).then((trial) => {
+          if (!active) return
+          if (trial.isPremium) {
+            setCoachSubtitle('Premium — unlimited coached games')
+          } else if (trial.eligible) {
+            setCoachSubtitle('Try 1 free game daily')
+          } else {
+            const countdown = formatTrialCountdown(trial.nextEligibleAt, Date.now())
+            setCoachSubtitle(countdown ? `Next free game in ${countdown}` : 'Premium — unlimited coached games')
+          }
+        }),
+      )
+      .catch(() => {
+        // Trial hint is advisory — keep the default subtitle on failure.
+      })
+    return () => {
+      active = false
+    }
+  }, [playerId])
 
   useEffect(() => {
     mountedRef.current = true
@@ -1075,13 +1102,21 @@ if (!gameMode) {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
               <div className="space-y-1.5">
                 <GameModeCard
+                  onClick={handleStartCoach}
+                  leftIcons={[{ type: 'human', avatar: 'ace' }]}
+                  rightIcons={[{ type: 'bot' }]}
+                  title="AI Coach"
+                  subtitle={coachSubtitle}
+                  premium
+                  showStar
+                />
+                <GameModeCard
                   onClick={() => handleGameModeClick('quick')}
                   selected={selectedGameMode === 'quick'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                   rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                   title="Quick Play"
                   subtitle="You + Bot vs Bots"
-                  showStar
                 />
                 <GameModeCard
                   onClick={() => handleGameModeClick('duo')}
@@ -1098,14 +1133,6 @@ if (!gameMode) {
                   rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                   title="4 Player"
                   subtitle="Friends Battle"
-                />
-                <GameModeCard
-                  onClick={handleStartCoach}
-                  leftIcons={[{ type: 'human', avatar: 'ace' }]}
-                  rightIcons={[{ type: 'bot' }]}
-                  title="AI Coach"
-                  subtitle="Learn while you play"
-                  premium
                 />
               </div>
             </div>
@@ -1227,13 +1254,21 @@ if (!gameMode) {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
                 <div className="space-y-1.5">
                   <GameModeCard
+                    onClick={handleStartCoach}
+                    leftIcons={[{ type: 'human', avatar: 'ace' }]}
+                    rightIcons={[{ type: 'bot' }]}
+                    title="AI Coach"
+                    subtitle={coachSubtitle}
+                    premium
+                    showStar
+                  />
+                  <GameModeCard
                     onClick={() => handleGameModeClick('quick')}
                     selected={selectedGameMode === 'quick'}
                     leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
                     rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
                     title="Quick Play"
                     subtitle="You + Bot vs Bots"
-                    showStar
                   />
                   <GameModeCard
                     onClick={() => handleGameModeClick('duo')}
@@ -1250,14 +1285,6 @@ if (!gameMode) {
                     rightIcons={[{ type: 'human', avatar: 'rex' }, { type: 'human', avatar: 'zee' }]}
                     title="4 Player"
                     subtitle="Friends Battle"
-                  />
-                  <GameModeCard
-                    onClick={handleStartCoach}
-                    leftIcons={[{ type: 'human', avatar: 'ace' }]}
-                    rightIcons={[{ type: 'bot' }]}
-                    title="AI Coach"
-                    subtitle="Learn while you play"
-                    premium
                   />
                 </div>
               </div>
