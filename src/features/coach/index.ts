@@ -6,7 +6,7 @@ export {
   buildFeedback,
   explainMove,
 } from './coachAnalysis'
-export type { MoveVerdict, ScoredMove, Suggestion, CoachFeedback } from './coachAnalysis'
+export type { MoveVerdict, ScoredMove, Suggestion, CoachFeedback, CoachInsight } from './coachAnalysis'
 export { CoachGame } from './coachGame'
 export type { CoachGameState, CoachStatus } from './coachGame'
 export { coachVoice } from './coachVoice'

@@ -3,7 +3,7 @@
 import { Eye, EyeOff, Sparkles, Volume2, Trophy } from 'lucide-react'
 import type { Suggestion, CoachFeedback, MoveVerdict } from '@/features/coach'
 
-const VERDICT_STYLES: Record<MoveVerdict, { label: string; badge: string; text: string }> = {
+export const VERDICT_STYLES: Record<MoveVerdict, { label: string; badge: string; text: string }> = {
   best: { label: 'Best move', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', text: 'text-emerald-400' },
   great: { label: 'Great', badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', text: 'text-emerald-400' },
   good: { label: 'Good', badge: 'bg-sky-500/15 text-sky-400 border-sky-500/30', text: 'text-sky-400' },

@@ -1,8 +1,9 @@
 import { Chess, Move, Square } from 'chess.js'
 import { ChessBot } from '../bots/chessBot'
 import { CoachEngine, EngineMove } from './coachEngine'
-import { buildFeedback, buildSuggestion, type CoachFeedback, type Suggestion } from './coachAnalysis'
+import { buildFeedback, buildSuggestion, type CoachFeedback, type CoachInsight, type Suggestion } from './coachAnalysis'
 import { calculateAccuracy } from '../shared/accuracy'
+import { COACH_HISTORY_LIMIT } from '../shared/gameConstants'
 import type { PromotionPiece } from '../shared/gameTypes'
 
 /**
@@ -32,6 +33,14 @@ export interface CoachGameState {
   mistakes: number
   accuracy: number
   analyzing: boolean
+  /**
+   * Append-only coaching history (one snapshot per analyzed player move,
+   * oldest-first). Powers the Insights timeline + coach transcript. Session
+   * scoped — a new `CoachGame` starts empty, so history never leaks across
+   * games. Recording here (not in UI) keeps a single source of truth that
+   * survives remounts and is unit-testable.
+   */
+  feedbackHistory: CoachInsight[]
 }
 
 export type CoachGameListener = (state: CoachGameState) => void
@@ -53,6 +62,7 @@ export class CoachGame {
   private lastMove: { from: string; to: string } | null = null
   private suggestion: Suggestion | null = null
   private feedback: CoachFeedback | null = null
+  private feedbackHistory: CoachInsight[] = []
   private result: string | null = null
   private gameOverReason: string | null = null
   private moveHistory: string[] = []
@@ -94,6 +104,7 @@ export class CoachGame {
       mistakes: this.mistakes,
       accuracy: this.movesAnalyzed > 0 ? Math.round(this.totalAccuracy / this.movesAnalyzed) : 0,
       analyzing: this.analyzing,
+      feedbackHistory: [...this.feedbackHistory],
     }
   }
 
@@ -155,6 +166,18 @@ export class CoachGame {
       if (this.feedback.centipawnLoss !== null) {
         this.totalAccuracy += calculateAccuracy(this.feedback.centipawnLoss)
         this.movesAnalyzed++
+      }
+      // Record the historical snapshot for Insights/transcript. Only analyzed
+      // moves (non-null feedback) become entries — engine failures leave no
+      // record rather than a hollow one.
+      if (this.feedback) {
+        this.feedbackHistory.push({
+          moveNumber: this.feedbackHistory.length + 1,
+          feedback: this.feedback,
+        })
+        if (this.feedbackHistory.length > COACH_HISTORY_LIMIT) {
+          this.feedbackHistory.shift()
+        }
       }
     } catch {
       // Analysis is advisory — never block the game on an engine error.

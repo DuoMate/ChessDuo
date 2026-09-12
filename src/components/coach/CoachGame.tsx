@@ -1,19 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Volume2, VolumeX, Flag, Crown } from 'lucide-react'
 import { ChessBoard } from '../ChessBoard'
+import { BoardBottomNav, type BoardTab } from '../BoardBottomNav'
+import { SlideOver } from '../SlideOver'
+import { RoundHistorySidebar, type RoundHistoryEntry } from '../RoundHistorySidebar'
 import type { PromotionPiece } from '@/features/shared/gameTypes'
 import { CoachGame as CoachGameEngine, coachVoice, saveCoachGame, claimCoachDailyTrial } from '@/features/coach'
 import type { CoachGameState } from '@/features/coach'
 import { CoachPanel } from './CoachPanel'
+import { CoachInsightsPanel } from './CoachInsightsPanel'
+import { CoachTranscriptPanel } from './CoachTranscriptPanel'
+import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
 import { NativeAdSlot } from '../NativeAdSlot'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
-import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSettings } from '@/hooks/useSettings'
 import { playMoveSound, playCaptureSound } from '@/lib/sounds'
 
@@ -35,12 +40,17 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const toast = useGameToast()
   const router = useRouter()
   const { isPremium, loading: premiumLoading } = usePremium()
-  const isMobile = useIsMobile()
   const settings = useSettings()
   const [state, setState] = useState<CoachGameState | null>(null)
   const [voiceEnabled, setVoiceEnabled] = useState(coachVoice.isEnabled())
   const [showBestMove, setShowBestMove] = useState(false)
   const [showLeave, setShowLeave] = useState(false)
+  // Bottom-nav panel: at most one open. Panels are pure views — opening or
+  // closing them never touches the engine or board state.
+  const [activePanel, setActivePanel] = useState<'moves' | 'insights' | 'chat' | null>(null)
+  // View-only history preview: index into `positions` (see below), or null
+  // for the live position. Board input is disabled while previewing.
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
   // True when this mount consumed the non-premium daily free game. Drives the
   // post-game monetization section (native ad + premium offer). Premium users
   // never see it; the ad slot additionally enforces the premium ad-free rule.
@@ -56,8 +66,51 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
 
   const status = state?.status ?? 'idle'
   const isPlayerTurn = !!state && state.turn === state.playerColor && state.status === 'playing'
-  const boardEnabled = isPlayerTurn && !state?.analyzing
   const showMonetization = status === 'game_over' && isTrialGame && !premiumLoading && !isPremium
+
+  // Position timeline: [initialFen, fenAfterPly0, ...]. Replayed from SANs —
+  // the engine stores no per-ply fens, and this derivation never writes back.
+  const moveHistory = state?.moveHistory ?? []
+  const positions = useMemo(() => buildFenSequence(moveHistory), [moveHistory])
+  const previewing = playbackIndex !== null
+  const playbackFen = previewing ? positions[playbackIndex] ?? null : null
+  const boardEnabled = isPlayerTurn && !state?.analyzing && !previewing
+
+  // Any new move returns the board to live (preview can never strand).
+  useEffect(() => {
+    setPlaybackIndex(null)
+  }, [moveHistory.length])
+
+  const roundEntries: RoundHistoryEntry[] = useMemo(
+    () => moveHistoryToRoundEntries(moveHistory, state?.playerColor ?? 'w', state?.feedbackHistory ?? []),
+    [moveHistory, state?.playerColor, state?.feedbackHistory],
+  )
+
+  const handleTabChange = useCallback((tab: BoardTab) => {
+    if (tab === 'game') {
+      setActivePanel(null)
+      return
+    }
+    // Tapping the open tab's button closes its panel (toggle).
+    setActivePanel((current) => (current === tab ? null : tab))
+  }, [])
+
+  const handleBackMove = useCallback(() => {
+    setPlaybackIndex((current) => {
+      const last = positions.length - 1
+      if (last < 1) return current
+      if (current === null) return last - 1
+      return Math.max(0, current - 1)
+    })
+  }, [positions.length])
+
+  const handleForwardMove = useCallback(() => {
+    setPlaybackIndex((current) => {
+      if (current === null) return current
+      const last = positions.length - 1
+      return current >= last - 1 ? null : current + 1
+    })
+  }, [positions.length])
 
   useEffect(() => {
     const game = new CoachGameEngine({ playerColor: playerColor === 'black' ? 'b' : 'w', botLevel })
@@ -222,13 +275,18 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       {/* Board + coach panel */}
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-8 pt-3">
         <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
+          {previewing && (
+            <p className="mb-1 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Reviewing history — board input paused
+            </p>
+          )}
           <ChessBoard
-            fen={state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
+            fen={playbackFen ?? state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
             onMove={handleMove}
             enabled={boardEnabled}
             orientation={orientation}
-            lastMove={state?.lastMove}
-            highlightSquares={bestMoveHighlight}
+            lastMove={previewing ? null : state?.lastMove}
+            highlightSquares={previewing ? null : bestMoveHighlight}
           />
         </div>
 
@@ -318,7 +376,36 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       )}
 
       {/* Mobile spacer hint — keep layout consistent with board pages */}
-      {isMobile && <div className="h-4" />}
+      <div className="h-24" />
+
+      {/* Bottom navigation — same shared component as other game modes.
+          Moves/Chat/Insights open read-only SlideOver panels; Back/Fwd step
+          through a view-only position preview (engine state never changes). */}
+      <BoardBottomNav
+        activeTab={activePanel ?? 'game'}
+        onTabChange={handleTabChange}
+        onBackMove={handleBackMove}
+        onForwardMove={handleForwardMove}
+      />
+
+      {/* Moves uses the shared move-list overlay directly — it renders its
+          own backdrop/panel, so it must NOT be nested inside a SlideOver. */}
+      <RoundHistorySidebar
+        open={activePanel === 'moves'}
+        entries={roundEntries.map((entry, index) => ({
+          ...entry,
+          isCurrent: !previewing && index === roundEntries.length - 1,
+        }))}
+        onClose={() => setActivePanel(null)}
+      />
+
+      <SlideOver open={activePanel === 'insights'} onClose={() => setActivePanel(null)} title="Insights">
+        <CoachInsightsPanel history={state?.feedbackHistory ?? []} />
+      </SlideOver>
+
+      <SlideOver open={activePanel === 'chat'} onClose={() => setActivePanel(null)} title="Coach Notes">
+        <CoachTranscriptPanel history={state?.feedbackHistory ?? []} suggestion={state?.suggestion ?? null} />
+      </SlideOver>
     </div>
   )
 }

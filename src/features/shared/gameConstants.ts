@@ -15,6 +15,9 @@ export const INSIGHTS_FREE_LIMIT = 3
 /** Rolling window for the AI Coach daily free game (1 free game per 24h). */
 export const COACH_TRIAL_WINDOW_MS = 24 * 60 * 60 * 1000
 
+/** Max coaching-history snapshots retained per AI Coach session (in-memory). */
+export const COACH_HISTORY_LIMIT = 100
+
 export type PlayerColor = 'white' | 'black' | 'random'
 
 export type ResolvedColor = 'white' | 'black'
