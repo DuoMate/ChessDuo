@@ -38,6 +38,8 @@ export default function PremiumPage() {
 
   const monthlyPlan = plans.find(p => p.billingPeriod === 'monthly')
   const yearlyPlan = plans.find(p => p.billingPeriod === 'yearly')
+  // DEBUG stage visible even while subscribing - proves handler fired and where it stalls
+  const [debugStage, setDebugStage] = useState<string | null>(null)
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
@@ -100,8 +102,17 @@ export default function PremiumPage() {
   }, [])
 
   const handleSubscribe = useCallback(async (productId: string) => {
-    setSubscribing(true)
+    // IMMEDIATE synchronous feedback - if this never appears, onClick never fired (button disabled / isNative false)
+    setDebugStage(`tap:${productId} @${new Date().toISOString()}`)
     setError(null)
+    setErrorDetail({ title: 'Debug: Tap Registered', message: `Upgrade tapped: ${productId}`, details: `productId=${productId} stage=tap isNative=${isNative} plansLoading=${plansLoading} subscribing=true` })
+    // Auto-dismiss the tap probe after 1.5s so real result popup can take over
+    setTimeout(() => {
+      // only clear if still showing tap probe
+      setErrorDetail(prev => (prev?.title === 'Debug: Tap Registered' ? null : prev))
+    }, 1500)
+    setSubscribing(true)
+    setDebugStage(`purchase_start:${productId}`)
     purchasePendingRef.current = true
     // Safety net + DEBUG POPUP: every settled path below reports its real stage/code.
     // For sideload triage we force a 12s debug timeout (prod is 30s) so the
@@ -122,9 +133,14 @@ export default function PremiumPage() {
       if (safetyNet) { clearTimeout(safetyNet); safetyNet = null }
     }
     try {
+      setDebugStage(`calling_native:${productId}`)
+      // Extra console for logcat even if modal fails
+      // eslint-disable-next-line no-console
+      console.log(`[PREMIUM][UI] tap productId=${productId} calling_native`)
       const result = productId.includes('yearly')
         ? await SubscriptionService.purchaseYearly()
         : await SubscriptionService.purchaseMonthly()
+      setDebugStage(`native_returned:${productId} success=${result.success} code=${result.errorDetail ?? 'none'}`)
 
       if (!mountedRef.current) return
       if (!result.success) {
@@ -202,9 +218,12 @@ export default function PremiumPage() {
     } finally {
       clearSafetyNet()
       purchasePendingRef.current = false
-      if (mountedRef.current) setSubscribing(false)
+      if (mountedRef.current) {
+        setSubscribing(false)
+        setDebugStage(prev => (prev?.startsWith('tap:') || prev?.startsWith('calling_native') || prev?.startsWith('purchase_start') ? `${prev} -> done` : prev))
+      }
     }
-  }, [])
+  }, [isNative, plansLoading])
 
   const handleRestore = useCallback(async () => {
     setRestoring(true)
@@ -253,10 +272,17 @@ export default function PremiumPage() {
                   <div className="py-12">
                     <PageLoading className="min-h-0 bg-transparent" />
                     <p className="text-center text-xs text-slate-400 mt-3">Contacting Google Play…</p>
+                    {debugStage && <p className="text-center text-[11px] font-mono text-amber-400/80 mt-2 break-all px-4">{debugStage}</p>}
                     {error && <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">{error}</div>}
+                    {/* Fallback DOM-visible timer ensures we see stall even if React modal is hidden behind overlay */}
+                    <p className="text-center text-[10px] text-slate-500 mt-2">If this spins &gt;15s, a timeout popup must appear. If not, JS timers are blocked.</p>
                   </div>
                 ) : isNative ? (
                   <>
+                    {/* DEBUG: always-visible handler proof */}
+                    {debugStage && !subscribing && (
+                      <div className="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono text-center break-all">{debugStage}</div>
+                    )}
                     {/* Native pricing cards */}
                     {!plansLoading && plans.length === 0 && (
                       <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
