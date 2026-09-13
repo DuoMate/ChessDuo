@@ -49,9 +49,23 @@ export default function PremiumPage() {
   }, [])
 
   const runLoad = useCallback(async () => {
+    const withUiTimeout = <T,>(p: Promise<T>, ms: number, fallback: T) =>
+      Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms))])
     try {
-      const subStatus = await SubscriptionService.getStatus()
-      const subPlans = await SubscriptionService.getPlans()
+      const statusFallback: SubscriptionInfo = {
+        isPremium: false,
+        subscriptionProvider: null,
+        subscriptionPlan: null,
+        purchaseToken: null,
+        subscriptionExpiryDate: null,
+        autoRenewStatus: false,
+        purchaseState: null,
+        lastVerifiedDate: null,
+        subscriptionStatus: null,
+      }
+      const subStatus = await withUiTimeout(SubscriptionService.getStatus(), 9000, statusFallback)
+      if (!mountedRef.current) return
+      const subPlans = await withUiTimeout(SubscriptionService.getPlans(), 9000, [] as SubscriptionPlan[])
       if (!mountedRef.current) return
       setStatus(subStatus)
       setIsPremium(subStatus.isPremium)
@@ -65,6 +79,18 @@ export default function PremiumPage() {
   }, [])
 
   useEffect(() => { runLoad() }, [runLoad])
+
+  // Safety net for initial load — handles loading/error/empty per ARCHITECTURE.md
+  useEffect(() => {
+    if (!loading) return
+    const t = setTimeout(() => {
+      if (!mountedRef.current || !loading) return
+      setPlansLoading(false)
+      setLoading(false)
+      setError('Premium screen took too long to load. Please retry.')
+    }, 10000)
+    return () => clearTimeout(t)
+  }, [loading])
 
   // Native only: if the Google Play sheet backgrounds the app and the
   // purchase bridge never settles, re-check entitlement on foreground.
