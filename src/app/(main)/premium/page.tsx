@@ -31,6 +31,9 @@ export default function PremiumPage() {
   const [status, setStatus] = useState<SubscriptionInfo | null>(null)
   const [isNative, setIsNative] = useState(false)
   const mountedRef = useRef(true)
+  // True while a native purchase is in flight. Lets the app-resume handler
+  // recover when the Play sheet returns without the bridge promise settling.
+  const purchasePendingRef = useRef(false)
   const router = useRouter()
 
   const monthlyPlan = plans.find(p => p.billingPeriod === 'monthly')
@@ -63,9 +66,43 @@ export default function PremiumPage() {
 
   useEffect(() => { runLoad() }, [runLoad])
 
+  // Native only: if the Google Play sheet backgrounds the app and the
+  // purchase bridge never settles, re-check entitlement on foreground.
+  // Only ever resolves *toward* premium (confirmed grant); every other
+  // outcome is left to the in-flight purchase flow so a later cancel/error
+  // can never be overwritten by this handler.
+  useEffect(() => {
+    let handle: { remove: () => void } | null = null
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core')
+        if (!Capacitor.isNativePlatform()) return
+        const { App } = await import('@capacitor/app')
+        if (cancelled) return
+        handle = await App.addListener('appStateChange', ({ isActive }) => {
+          if (!isActive || !purchasePendingRef.current || !mountedRef.current) return
+          SubscriptionService.invalidate()
+          SubscriptionService.getStatus().then((resumedStatus) => {
+            if (!mountedRef.current || !purchasePendingRef.current) return
+            if (resumedStatus.isPremium) {
+              purchasePendingRef.current = false
+              setIsPremium(true)
+              setSubscriptionStatus('active')
+              setStatus(resumedStatus)
+              setSubscribing(false)
+            }
+          }).catch(() => { /* leave the in-flight flow to report */ })
+        })
+      } catch { /* web or App plugin unavailable — no-op */ }
+    })()
+    return () => { cancelled = true; handle?.remove() }
+  }, [])
+
   const handleSubscribe = useCallback(async (productId: string) => {
     setSubscribing(true)
     setError(null)
+    purchasePendingRef.current = true
     // Safety net only: every settled path below reports its real stage/code.
     // This timer guarantees the button can never spin forever if the native
     // bridge or a network call never settles.
@@ -128,6 +165,7 @@ export default function PremiumPage() {
       setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: err.stack || JSON.stringify(err) })
     } finally {
       clearSafetyNet()
+      purchasePendingRef.current = false
       if (mountedRef.current) setSubscribing(false)
     }
   }, [])

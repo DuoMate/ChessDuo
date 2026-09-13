@@ -8,7 +8,7 @@ import {
 interface NativePurchasesPlugin {
   getProducts(options: { productIdentifiers: string[]; productType: string }): Promise<{ products: NativeProduct[] }>
   getPurchases?(options: { productType: string }): Promise<{ purchases: NativeTransaction[] }>
-  purchaseProduct(options: { productIdentifier: string; productType: string; planIdentifier?: string }): Promise<NativeTransaction>
+  purchaseProduct(options: { productIdentifier: string; productType: string; planIdentifier?: string; offerToken?: string }): Promise<NativeTransaction>
   restorePurchases(): Promise<{ purchases?: NativeTransaction[] } | void>
 }
 
@@ -20,6 +20,10 @@ interface NativeProduct {
   currencyCode: string
   priceString?: string
   subscriptionPeriod?: { unitString: string }
+  /** Android subscriptions: Google Play product ID tied to this offer/base plan. */
+  planIdentifier?: string
+  /** Android: offer token required to launch the billing flow for this offer. */
+  offerToken?: string
 }
 
 interface NativeTransaction {
@@ -30,6 +34,22 @@ interface NativeTransaction {
 }
 
 let plugin: NativePurchasesPlugin | null = null
+
+// Offer tokens returned by getProducts(), keyed by subscription product ID
+// (and base-plan ID as fallback). Play Billing requires the offer token to
+// launch the flow for a specific base plan/offer — launching without it is
+// the remaining "Upgrade spins forever / sheet never opens" cause.
+const offerTokenCache: Record<string, string> = {}
+
+function cacheOfferTokens(products: NativeProduct[]): void {
+  for (const prod of products) {
+    if (!prod.offerToken) continue
+    // Per plugin docs, planIdentifier is the subscription product ID.
+    if (prod.planIdentifier) offerTokenCache[prod.planIdentifier] = prod.offerToken
+    // identifier is the base-plan ID for subscriptions — cache as fallback.
+    offerTokenCache[prod.identifier] = prod.offerToken
+  }
+}
 
 function billingLog(stage: string, detail: string): void {
   // Structured diagnostics — never include tokens, auth material, or PII.
@@ -119,11 +139,12 @@ export const GooglePlayBillingProvider: BillingProvider = {
       billingLog('query_result', `productCount=${result.products.length}`)
       for (const prod of result.products) {
         // eslint-disable-next-line no-console
-        console.log(`[PREMIUM][PRODUCT] query_result productId=${prod.identifier} productType=subs`)
+        console.log(`[PREMIUM][PRODUCT] query_result productId=${prod.identifier} productType=subs hasOffer=${Boolean(prod.offerToken)}`)
       }
       if (result.products.length === 0) {
         billingError('product_query', 'product_unavailable', 'store returned zero products for requested ids')
       }
+      cacheOfferTokens(result.products)
 
       return result.products.map((prod) => {
         const isYr = isYearly(prod.identifier, prod)
@@ -154,7 +175,28 @@ export const GooglePlayBillingProvider: BillingProvider = {
     // (premium_monthly -> monthlybase). Passing the product ID as the plan was
     // the production launch failure — resolve it here, never at the call site.
     const planIdentifier = resolveBasePlanId(productId)
-    billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier}`)
+    // Play Billing also requires the offer token for the selected base
+    // plan/offer. Reuse the token cached by queryProductDetails(); if the
+    // Premium screen never loaded products (or the cache missed), fetch it
+    // now with a bounded query — never block the launch indefinitely.
+    let offerToken = offerTokenCache[productId] ?? offerTokenCache[planIdentifier]
+    if (!offerToken) {
+      billingLog('offer_lookup_start', `productId=${productId}`)
+      try {
+        const lookup = await withTimeout(
+          p.getProducts({ productIdentifiers: [productId], productType: 'subs' }),
+          BILLING_PRODUCT_QUERY_TIMEOUT_MS,
+          { products: [] },
+        )
+        cacheOfferTokens(lookup.products)
+        offerToken = offerTokenCache[productId] ?? offerTokenCache[planIdentifier]
+        billingLog('offer_lookup_result', `productId=${productId} hasOffer=${Boolean(offerToken)}`)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        billingError('offer_lookup', 'failed', message)
+      }
+    }
+    billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
 
     try {
       // No timeout here by design: the native Play sheet waits on the user for
@@ -165,6 +207,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         productIdentifier: productId,
         productType: 'subs',
         planIdentifier,
+        ...(offerToken ? { offerToken } : {}),
       })
 
       if (!result || !result.productIdentifier) {
