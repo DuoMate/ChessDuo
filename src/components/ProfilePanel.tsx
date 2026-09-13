@@ -40,16 +40,27 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   }, [playerId])
 
   useEffect(() => {
+    let cancelled = false
+    // Safety-net: if getStatus/fetchProfile hangs (no network / bridge hang),
+    // show the Upgrade button anyway after 8s instead of infinite spinner.
+    const fallback = setTimeout(() => {
+      if (!cancelled) setCheckingPremium(false)
+    }, 8000)
+
     Promise.all([
       SubscriptionService.getStatus(),
       fetchProfile(playerId),
     ]).then(([statusResult, profileResult]) => {
+      if (cancelled) return
+      clearTimeout(fallback)
       setIsPremium(statusResult.isPremium)
       setSubscriptionStatus(statusResult)
       if (profileResult.username) setUsername(profileResult.username)
       if (profileResult.avatar_url) setAvatarUrl(profileResult.avatar_url)
       setCheckingPremium(false)
     }).catch(() => {
+      if (cancelled) return
+      clearTimeout(fallback)
       setCheckingPremium(false)
     })
 
@@ -66,6 +77,8 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
     })
 
     return () => {
+      cancelled = true
+      clearTimeout(fallback)
       RealtimeService.cleanupChannel(channel)
     }
   }, [playerId])
