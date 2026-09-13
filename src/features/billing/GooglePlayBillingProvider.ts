@@ -171,6 +171,21 @@ export const GooglePlayBillingProvider: BillingProvider = {
       return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
     }
 
+    // Fast-fail if Play Billing is not supported on this device/account
+    // (prevents launch that would otherwise hang forever with no popup).
+    try {
+      const maybeCheck = (p as unknown as { isBillingSupported?: () => Promise<{ isBillingSupported: boolean }> }).isBillingSupported
+      if (maybeCheck) {
+        const supported = await withTimeout(maybeCheck.call(p), 3000, { isBillingSupported: true } as { isBillingSupported: boolean })
+        if (supported && 'isBillingSupported' in supported && !supported.isBillingSupported) {
+          billingError('purchase', 'billing_unavailable', 'Play Billing not supported on this device')
+          return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
+        }
+      }
+    } catch {
+      // best-effort only - do not block purchase on check failure
+    }
+
     // NOTE: the Play base-plan ID differs from the subscription product ID
     // (premium_monthly -> monthlybase). Passing the product ID as the plan was
     // the production launch failure — resolve it here, never at the call site.
@@ -190,20 +205,27 @@ export const GooglePlayBillingProvider: BillingProvider = {
         )
         cacheOfferTokens(lookup.products)
         offerToken = offerTokenCache[productId] ?? offerTokenCache[planIdentifier]
-        billingLog('offer_lookup_result', `productId=${productId} hasOffer=${Boolean(offerToken)}`)
+        billingLog('offer_lookup_result', `productId=${productId} hasOffer=${Boolean(offerToken)} products=${lookup.products.length}`)
+        if (lookup.products.length === 0) {
+          billingError('purchase', 'product_unavailable', `no products for ${productId} - check Play Console pricing/availability`)
+          return { success: false, error: 'This subscription is not available for your account or region right now.', errorDetail: 'product_unavailable' }
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         billingError('offer_lookup', 'failed', message)
       }
     }
+    if (!offerToken) {
+      billingError('purchase', 'product_unavailable', `no offerToken for ${productId}/${planIdentifier} - cannot launch billing flow`)
+      return { success: false, error: 'This subscription is not available for your account or region right now.', errorDetail: 'product_unavailable' }
+    }
     billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
 
     try {
-      // DEBUG: for sideload triage wrap the native sheet in a 15s hang detector.
-      // Prod relies on UI safety-net (30s) so user can take unbounded time on
-      // the Play sheet; debug forces a visible error quickly when the bridge
-      // never settles (the reported infinite spinner without popup).
-      const DEBUG_PURCHASE_HANG_MS = 15000
+      // For triage wrap the native sheet in a 10s hang detector (must fire
+      // BEFORE the UI 12s safety_net so the precise product_unavailable /
+      // billing_unavailable popup surfaces instead of generic timeout).
+      const DEBUG_PURCHASE_HANG_MS = 10000
       let hangTimer: ReturnType<typeof setTimeout> | null = null
       const hangGuard = new Promise<never>((_, reject) => {
         hangTimer = setTimeout(() => reject(new Error('DEBUG_HANG purchaseProduct did not settle')), DEBUG_PURCHASE_HANG_MS)
