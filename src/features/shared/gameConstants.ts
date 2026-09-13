@@ -24,11 +24,12 @@ export const PREMIUM_YEARLY_PRODUCT_ID = 'premium_yearly'
  * Google Play base-plan IDs per subscription product (must match Play Console
  * "Base plans and offers"). The native purchase flow requires the base-plan ID
  * — passing the subscription product ID as the plan was the production
- * "Upgrade loading forever" root cause.
+ * "Upgrade loading forever" root cause. Annual uses `yearlybaseplan`
+ * (the old monthly-cadence `yearlybase` is inactive in Play Console).
  */
 export const GOOGLE_PLAY_BASE_PLAN_IDS: Record<string, string> = {
   [PREMIUM_MONTHLY_PRODUCT_ID]: 'monthlybase',
-  [PREMIUM_YEARLY_PRODUCT_ID]: 'yearlybase',
+  [PREMIUM_YEARLY_PRODUCT_ID]: 'yearlybaseplan',
 }
 
 /** Bounded timeout for non-interactive billing queries (product details). */
