@@ -6,6 +6,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
 import { NativeAdSlot } from './NativeAdSlot'
+import { AdSenseSlot } from './AdSenseSlot'
 
 interface GameOverModalProps {
   open: boolean
@@ -87,6 +88,7 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
               </motion.button>
             )}
             <NativeAdSlot open={open} gameOverReason={gameOverReason} />
+            <AdSenseSlot open={open} gameOverReason={gameOverReason} />
           </motion.div>
         </motion.div>
       )}

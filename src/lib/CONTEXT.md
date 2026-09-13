@@ -30,6 +30,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `appUrl.ts` | App URL helpers (deep links) |
 | `share.ts` | Cross-platform share helper — native sheet via `@capacitor/share`, Web Share API, clipboard fallback |
 | `nativeAd.ts` | Web-safe bridge for the bounded Android Native Advanced AdMob view |
+| `webAds.ts` | Web-only AdSense helper (env-gated IDs, best-effort push, never throws) |
 | `capacitorAuth.ts` | Capacitor-specific auth bridge |
 | `capgo-stub.ts` | Capgo social login stub |
 | `webPush.ts` | Web Push sender using native Web Crypto (Cloudflare Workers compatible) |
@@ -47,6 +48,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - `@supabase/supabase-js`, `chess.js`, `@capacitor/*` (optional)
 
 ## Recent Changes
+- **2026-09-13**: New `webAds.ts` — web-only AdSense counterpart to `nativeAd.ts` (env-gated IDs, `canUseWebAds()` true only on non-native, best-effort `pushWebAd()` that never throws). See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Native-ad preload is now single-flight and reuses an unconsumed loaded ad, preventing provider preload and game-over preload calls from destroying each other. Successful `show` consumes the ad; native Android callbacks log `[ADS][GAMEOVER]` load failures, including AdMob error code/message, and render/destruction state.
 - **2026-09-04**: Added `nativeAd.ts`, a best-effort Capacitor bridge that preloads and positions Android Native Advanced ads without blocking game-over UI. Web builds and missing configuration are no-ops.
 - **2026-08-26**: **Pawn promotion evaluation fix** — added pure helper `chessUtils.sanToEvaluationUci(from, to, san)`: builds the disambiguated evaluation UCI (`e8=Q`/`axb8=Q`/`e8=N#` → `e7e8q`; non-promotion → unchanged `from+to`). Fixes the promotion 20–30s freeze (Stockfish `searchmoves` rejects the old suffix-less UCI) across `localGame.ts`, `onlineGame.ts`, and `duelGame.ts` (`duelGame` also restored `m.promotion` in its accuracy `legalMoves` mapping). Tests: `chessUtils.test.ts`.

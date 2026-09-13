@@ -4,6 +4,7 @@ import { Chakra_Petch } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
+import { AdSenseLoader } from "@/components/AdSenseLoader";
 
 export const metadata: Metadata = {
   title: "ChessDuo",
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
   applicationName: "ChessDuo",
   authors: [{ name: "ChessDuo" }],
   keywords: ["chess", "multiplayer", "2v2", "team chess", "AI chess", "online chess", "duo chess"],
+  metadataBase: new URL("https://chessduo.navron.org"),
+  alternates: { canonical: "/" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "ChessDuo — 2v2 Chess, Together",
@@ -80,6 +83,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="/cm-chessboard/extensions/promotion-dialog/promotion-dialog.css" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0f1119" />
+        <AdSenseLoader />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-transparent transition-colors duration-300">
         <Providers>{children}</Providers>

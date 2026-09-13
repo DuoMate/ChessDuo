@@ -17,7 +17,7 @@
 
 # ── Security headers (all routes) ──
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: wss:; frame-src https://api.razorpay.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: https://pagead2.googlesyndication.com; connect-src 'self' https: wss: https://pagead2.googlesyndication.com; frame-src https://api.razorpay.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin

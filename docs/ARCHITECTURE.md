@@ -290,6 +290,17 @@ SubscriptionService
 - `NEXT_PUBLIC_ADMOB_NATIVE_ID` must be a Native Advanced ad unit. `NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID` is not used for bounded popup placement.
 - Native ad loading and teardown are best effort and never gate game-over state, navigation, or popup controls.
 
+### 9.1 Web AdSense Game-Over Parity
+
+**RULE**: Web game-over ads mirror the Android native system exactly, with the platform gate inverted — one manual responsive display unit, never Auto ads, never an interstitial or vignette.
+
+- `src/lib/webAds.ts` mirrors `nativeAd.ts`: env-gated IDs, `canUseWebAds()` true only on web (`!Capacitor.isNativePlatform()`), best-effort `pushWebAd()` that never throws (ad blockers included). Missing IDs are no-ops.
+- `AdSenseLoader` (mounted in `layout.tsx <head>`) loads `adsbygoogle.js` once, gated by `usePremium()` + web platform + client ID — premium and native users download no ad script.
+- `AdSenseSlot` is rendered beside `NativeAdSlot` in `GameOverModal` and the Coach inline modal only, with the same `{ open, gameOverReason }` props, the same suppression semantics, and one `push({})` per game-over. No other caller may render it.
+- The `<ins>` uses Tailwind `block w-full` instead of Google's `style="display:block"` (identical rendering, satisfies the no-`style={{}}` rule); all other `data-*` attributes match the approved unit verbatim.
+- `public/ads.txt` carries the AdSense line; `app-ads.txt` stays AdMob-only. `_headers` CSP allowlists `pagead2.googlesyndication.com` + `googleads.g.doubleclick.net`.
+- Secrets `NEXT_PUBLIC_ADSENSE_CLIENT_ID` / `NEXT_PUBLIC_ADSENSE_SLOT_ID` are wired in `deploy-cf-pages.yml` only (web build); `build-release.yml` stays AdMob-only. Diagnostics reuse the `[ADS][GAMEOVER]` tag with `source: 'adsense'`.
+
 ---
 
 ## Styling Conventions
