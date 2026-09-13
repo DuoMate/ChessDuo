@@ -103,14 +103,19 @@ export default function PremiumPage() {
     setSubscribing(true)
     setError(null)
     purchasePendingRef.current = true
-    // Safety net only: every settled path below reports its real stage/code.
+    // Safety net + DEBUG POPUP: every settled path below reports its real stage/code.
     // This timer guarantees the button can never spin forever if the native
-    // bridge or a network call never settles.
+    // bridge or a network call never settles. Now also surfaces a modal so
+    // sideload triage can see the stall reason without logcat.
+    // TODO: DEBUG POPUP - remove extra setErrorDetail after triage
     let safetyNet: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       safetyNet = null
       if (mountedRef.current) {
+        const timeoutMsg = 'Google Play purchase timed out. Please check your Google Play account and try again.'
         setSubscribing(false)
-        setError('Google Play purchase timed out. Please check your Google Play account and try again.')
+        purchasePendingRef.current = false
+        setError(timeoutMsg)
+        setErrorDetail({ title: 'Purchase Timeout', message: timeoutMsg, details: `productId=${productId} stage=safety_net code=timeout timeoutMs=${PREMIUM_PURCHASE_SAFETY_NET_MS}` })
       }
     }, PREMIUM_PURCHASE_SAFETY_NET_MS)
     const clearSafetyNet = () => {
@@ -123,24 +128,49 @@ export default function PremiumPage() {
 
       if (!mountedRef.current) return
       if (!result.success) {
+        // TODO: DEBUG POPUP - remove setErrorDetail after triage
+        const detailBase = `productId=${productId} code=${result.errorDetail ?? 'unknown'}`
         if (result.errorDetail === 'cancelled') {
-          setError('Purchase cancelled. You can try again anytime.')
+          const msg = 'Purchase cancelled. You can try again anytime.'
+          setError(msg)
+          setErrorDetail({ title: 'Purchase Cancelled', message: msg, details: `${detailBase} stage=purchase` })
         } else if (result.errorDetail === 'already_owned') {
-          await SubscriptionService.restore()
-          const newStatus = await SubscriptionService.getStatus()
-          if (!mountedRef.current) return
-          if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
-          else { setError('Your existing subscription was found but could not be activated. Please try Restore Purchases.') }
+          try {
+            await SubscriptionService.restore()
+            const newStatus = await SubscriptionService.getStatus()
+            if (!mountedRef.current) return
+            if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
+            else {
+              const msg = 'Your existing subscription was found but could not be activated. Please try Restore Purchases.'
+              setError(msg)
+              setErrorDetail({ title: 'Already Owned', message: msg, details: `${detailBase} stage=restore` })
+            }
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            const errMsg = 'Your existing subscription was found but could not be activated. Please try Restore Purchases.'
+            setError(errMsg)
+            setErrorDetail({ title: 'Already Owned - Restore Failed', message: errMsg, details: `${detailBase} stage=restore error=${msg}` })
+          }
         } else if (result.errorDetail === 'billing_unavailable') {
-          setError('Google Play Billing is not available on this device or account.')
+          const msg = 'Google Play Billing is not available on this device or account.'
+          setError(msg)
+          setErrorDetail({ title: 'Billing Unavailable', message: result.error || msg, details: `${detailBase} stage=purchase` })
         } else if (result.errorDetail === 'product_unavailable') {
-          setError('This subscription is not available for your account or region right now.')
+          const msg = 'This subscription is not available for your account or region right now.'
+          setError(msg)
+          setErrorDetail({ title: 'Product Unavailable', message: result.error || msg, details: `${detailBase} stage=purchase` })
         } else if (result.errorDetail === 'network') {
-          setError('Network error. Please check your connection and try again.')
+          const msg = 'Network error. Please check your connection and try again.'
+          setError(msg)
+          setErrorDetail({ title: 'Network Error', message: result.error || msg, details: `${detailBase} stage=purchase` })
         } else if (result.errorDetail === 'verification') {
-          setError(result.error || 'Purchase could not be verified. Please try again.')
+          const msg = result.error || 'Purchase could not be verified. Please try again.'
+          setError(msg)
+          setErrorDetail({ title: 'Verification Failed', message: msg, details: `${detailBase} stage=verification` })
         } else {
-          setError(result.error || 'Google Play purchase could not be started. Please check your Google Play account and try again.')
+          const msg = result.error || 'Google Play purchase could not be started. Please check your Google Play account and try again.'
+          setError(msg)
+          setErrorDetail({ title: 'Purchase Failed', message: msg, details: `${detailBase} stage=purchase` })
         }
         return
       }
@@ -157,12 +187,18 @@ export default function PremiumPage() {
         const retryStatus = await SubscriptionService.getStatus()
         if (!mountedRef.current) return
         if (retryStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(retryStatus) }
-        else { setError('Purchase verified. Your premium status is refreshing — reopen this screen shortly.') }
+        else {
+          const msg = 'Purchase verified. Your premium status is refreshing — reopen this screen shortly.'
+          setError(msg)
+          // TODO: DEBUG POPUP - remove after triage
+          setErrorDetail({ title: 'Premium Refresh Pending', message: msg, details: `productId=${productId} stage=entitlement code=refresh_pending` })
+        }
       }
     } catch (e: unknown) {
       if (!mountedRef.current) return
       const err = e instanceof Error ? e : new Error(String(e))
-      setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: err.stack || JSON.stringify(err) })
+      setError(err.message || 'An unexpected error occurred')
+      setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: `productId=${productId} stage=catch error=${err.message} stack=${(err.stack || '').slice(0, 800)}` })
     } finally {
       clearSafetyNet()
       purchasePendingRef.current = false
