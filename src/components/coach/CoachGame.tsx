@@ -15,6 +15,7 @@ import { CoachInsightsPanel } from './CoachInsightsPanel'
 import { CoachTranscriptPanel } from './CoachTranscriptPanel'
 import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
 import { NativeAdSlot } from '../NativeAdSlot'
+import { AdSenseSlot } from '../AdSenseSlot'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
@@ -344,6 +345,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                 logcat `[ADS][GAMEOVER]` to distinguish "not requested" from
                 "requested but no fill". */}
             <NativeAdSlot open={status === 'game_over'} gameOverReason={state?.gameOverReason} />
+            <AdSenseSlot open={status === 'game_over'} gameOverReason={state?.gameOverReason} />
             {showMonetization && (
               <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-left">
                 <p className="text-sm font-bold text-white">Your free AI Coach game is complete.</p>

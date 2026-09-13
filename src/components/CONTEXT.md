@@ -58,6 +58,8 @@ All React components — co-located by feature, not by type. Components handle r
 | `RoundHistorySidebar.tsx` | **Board-page revamp** — right-side panel of past rounds |
 | `BoardBottomNav.tsx` | **Board-page revamp** — 5-tab in-game nav (Moves / Game / Surrender / Insights / Chat) |
 | `NativeAdSlot.tsx` | Optional Android Native Advanced AdMob slot inside `GameOverModal` |
+| `AdSenseSlot.tsx` | Optional web responsive AdSense display slot beside `NativeAdSlot` (game-over modals only) |
+| `AdSenseLoader.tsx` | Web-only AdSense base-script loader (non-premium, client ID required) |
 
 ## Logic & Decisions
 - Components access game logic through `GameInterface` — never use `as any`.
@@ -89,6 +91,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-09-13**: Web AdSense game-over parity (`AdSenseSlot` + `AdSenseLoader`). Single manual responsive display unit beside `NativeAdSlot` in `GameOverModal` and the Coach inline modal only; premium/native/missing-ID suppression mirrors native inversely; Auto ads stay off. See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Active-match Back/Leave now converges on the existing `GameOverModal`, matching resignation and natural game over so the shared NativeAdSlot can render before the user chooses Home. Lobby leave still navigates immediately. Native-ad diagnostics report terminal reason, load state, and render state.
 - **2026-09-11**: Game-over AdMob visibility now follows `GameOverModal.open` for every terminal result. Resignation no longer navigates away before the shared result screen can display the existing ad; the ad slot cleans up when the modal closes.
 - **2026-09-04**: Added an optional Android Native Advanced AdMob slot inside the existing `GameOverModal`. It is hidden on web, for premium users, and when native preload fails; existing popup controls and animations are unchanged.

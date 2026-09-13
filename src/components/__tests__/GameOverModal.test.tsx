@@ -6,6 +6,10 @@ jest.mock('../NativeAdSlot', () => ({
   NativeAdSlot: ({ open }: { open: boolean }) => <div data-testid="native-ad-slot" data-open={String(open)} />,
 }))
 
+jest.mock('../AdSenseSlot', () => ({
+  AdSenseSlot: ({ open }: { open: boolean }) => <div data-testid="adsense-slot" data-open={String(open)} />,
+}))
+
 describe('GameOverModal', () => {
   it('renders with close button when onClose is provided', () => {
     render(
