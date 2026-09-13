@@ -51,22 +51,43 @@ export default function PremiumPage() {
   }, [])
 
   const runLoad = useCallback(async () => {
+    setDebugStage('loading: status+plans')
     try {
       const subStatus = await SubscriptionService.getStatus()
+      if (!mountedRef.current) return
+      setDebugStage(`loading: status done isPremium=${subStatus.isPremium}`)
       const subPlans = await SubscriptionService.getPlans()
       if (!mountedRef.current) return
+      setDebugStage(`loading: plans done count=${subPlans.length}`)
       setStatus(subStatus)
       setIsPremium(subStatus.isPremium)
       setSubscriptionStatus(subStatus.subscriptionStatus)
       setPlans(subPlans)
-    } catch {
+    } catch (e) {
       if (!mountedRef.current) return
+      const msg = e instanceof Error ? e.message : String(e)
+      setDebugStage(`loading: error ${msg}`)
+      setErrorDetail({ title: 'Premium Load Failed', message: msg, details: `stage=initial_load error=${msg}` })
     } finally {
       if (mountedRef.current) { setPlansLoading(false); setLoading(false) }
     }
   }, [])
 
   useEffect(() => { runLoad() }, [runLoad])
+
+  // Safety net for initial load - if PageLoading spins >10s, surface it
+  useEffect(() => {
+    if (!loading) return
+    const t = setTimeout(() => {
+      if (!mountedRef.current || !loading) return
+      setPlansLoading(false)
+      setLoading(false)
+      setDebugStage('loading: timeout 10s - forced')
+      setError('Premium screen took too long to load. Please retry.')
+      setErrorDetail({ title: 'Premium Load Timeout', message: 'Premium screen took too long to load.', details: `stage=initial_load code=timeout isNative=${isNative} plansLoading=${plansLoading}` })
+    }, 10000)
+    return () => clearTimeout(t)
+  }, [loading, isNative, plansLoading])
 
   // Native only: if the Google Play sheet backgrounds the app and the
   // purchase bridge never settles, re-check entitlement on foreground.
