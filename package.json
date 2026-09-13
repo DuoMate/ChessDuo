@@ -1,6 +1,10 @@
 {
   "name": "chessduo",
-  "version": "1.0.365",
+<<<<<<< HEAD
+  "version": "1.0.365-debug-popup2",,
+=======
+  "version": "1.0.365-debug-popup2",,
+>>>>>>> ceb526c (debug(billing): force visible timeout after 12s + hang detector for purchaseProduct)
   "private": true,
   "scripts": {
     "dev": "next dev",

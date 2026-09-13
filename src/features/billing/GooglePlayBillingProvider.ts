@@ -199,16 +199,24 @@ export const GooglePlayBillingProvider: BillingProvider = {
     billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
 
     try {
-      // No timeout here by design: the native Play sheet waits on the user for
-      // an unbounded time. A race timeout would fake-fail an in-progress
-      // purchase. Termination is guaranteed by the plugin settling (result or
-      // throw) plus the UI-level 30s safety net as a last resort.
-      const result = await p.purchaseProduct({
+      // DEBUG: for sideload triage wrap the native sheet in a 15s hang detector.
+      // Prod relies on UI safety-net (30s) so user can take unbounded time on
+      // the Play sheet; debug forces a visible error quickly when the bridge
+      // never settles (the reported infinite spinner without popup).
+      const DEBUG_PURCHASE_HANG_MS = 15000
+      let hangTimer: ReturnType<typeof setTimeout> | null = null
+      const hangGuard = new Promise<never>((_, reject) => {
+        hangTimer = setTimeout(() => reject(new Error('DEBUG_HANG purchaseProduct did not settle')), DEBUG_PURCHASE_HANG_MS)
+      })
+      const purchasePromise = p.purchaseProduct({
         productIdentifier: productId,
         productType: 'subs',
         planIdentifier,
         ...(offerToken ? { offerToken } : {}),
       })
+      const result = await Promise.race([purchasePromise, hangGuard]).finally(() => {
+        if (hangTimer) clearTimeout(hangTimer)
+      }) as NativeTransaction
 
       if (!result || !result.productIdentifier) {
         billingError('purchase', 'failed', 'empty purchase result from store')
@@ -234,6 +242,10 @@ export const GooglePlayBillingProvider: BillingProvider = {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('DEBUG_HANG')) {
+        billingError('purchase', 'hang', `purchaseProduct hang productId=${productId} planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
+        return { success: false, error: 'Google Play did not respond. Please check your Google Play account and try again.', errorDetail: 'network' }
+      }
       billingLog('callback', `responseCode=ERROR debugMessage=${msg}`)
       if (msg.includes('cancelled') || msg.includes('cancel') || msg.includes('CANCEL') || msg.includes('USER_CANCEL')) {
         return { success: false, error: 'Purchase cancelled', errorDetail: 'cancelled' }

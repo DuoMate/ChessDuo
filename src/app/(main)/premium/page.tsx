@@ -104,10 +104,10 @@ export default function PremiumPage() {
     setError(null)
     purchasePendingRef.current = true
     // Safety net + DEBUG POPUP: every settled path below reports its real stage/code.
-    // This timer guarantees the button can never spin forever if the native
-    // bridge or a network call never settles. Now also surfaces a modal so
-    // sideload triage can see the stall reason without logcat.
-    // TODO: DEBUG POPUP - remove extra setErrorDetail after triage
+    // For sideload triage we force a 12s debug timeout (prod is 30s) so the
+    // hang reason surfaces quickly without logcat. Never hides underlying error.
+    // TODO: DEBUG POPUP - restore PREMIUM_PURCHASE_SAFETY_NET_MS after triage
+    const DEBUG_SAFETY_NET_MS = 12000
     let safetyNet: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       safetyNet = null
       if (mountedRef.current) {
@@ -115,9 +115,9 @@ export default function PremiumPage() {
         setSubscribing(false)
         purchasePendingRef.current = false
         setError(timeoutMsg)
-        setErrorDetail({ title: 'Purchase Timeout', message: timeoutMsg, details: `productId=${productId} stage=safety_net code=timeout timeoutMs=${PREMIUM_PURCHASE_SAFETY_NET_MS}` })
+        setErrorDetail({ title: 'Purchase Timeout', message: timeoutMsg, details: `productId=${productId} stage=safety_net code=timeout timeoutMs=${DEBUG_SAFETY_NET_MS} (bridge hang - plugin did not settle)` })
       }
-    }, PREMIUM_PURCHASE_SAFETY_NET_MS)
+    }, DEBUG_SAFETY_NET_MS)
     const clearSafetyNet = () => {
       if (safetyNet) { clearTimeout(safetyNet); safetyNet = null }
     }
@@ -250,7 +250,11 @@ export default function PremiumPage() {
                 )}
 
                 {subscribing ? (
-                  <div className="py-12"><PageLoading className="min-h-0 bg-transparent" /></div>
+                  <div className="py-12">
+                    <PageLoading className="min-h-0 bg-transparent" />
+                    <p className="text-center text-xs text-slate-400 mt-3">Contacting Google Play…</p>
+                    {error && <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">{error}</div>}
+                  </div>
                 ) : isNative ? (
                   <>
                     {/* Native pricing cards */}
