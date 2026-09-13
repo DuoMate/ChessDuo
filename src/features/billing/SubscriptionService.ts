@@ -1,8 +1,14 @@
 import type { BillingProvider, PurchaseResult, SubscriptionPlan, SubscriptionInfo } from './types'
 import { getAppBaseUrl } from '@/lib/appUrl'
+import {
+  BILLING_AUTH_TIMEOUT_MS,
+  BILLING_VERIFY_TIMEOUT_MS,
+  PREMIUM_MONTHLY_PRODUCT_ID,
+  PREMIUM_YEARLY_PRODUCT_ID,
+} from '@/features/shared/gameConstants'
 
-const MONTHLY_PRODUCT_ID = 'premium_monthly'
-const YEARLY_PRODUCT_ID = 'premium_yearly'
+const MONTHLY_PRODUCT_ID = PREMIUM_MONTHLY_PRODUCT_ID
+const YEARLY_PRODUCT_ID = PREMIUM_YEARLY_PRODUCT_ID
 
 let provider: BillingProvider | null = null
 let initialized = false
@@ -17,8 +23,15 @@ function getApiBase(): string {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   try {
+    // Bounded: AuthService.getSession() must never hang the purchase flow.
+    // A slow session read surfaces as a retryable verification error, never
+    // an infinite spinner.
     const { AuthService } = await import('@/lib/authService')
-    const session = await AuthService.getSession()
+    const session = await withTimeout(
+      AuthService.getSession(),
+      BILLING_AUTH_TIMEOUT_MS,
+      null,
+    )
     if (session?.access_token) {
       headers['Authorization'] = `Bearer ${session.access_token}`
     }
@@ -26,7 +39,17 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 10_000): Promise<Response> {
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const timeout = new Promise<T>(resolve => {
+    timer = setTimeout(() => resolve(fallback), timeoutMs)
+  })
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = BILLING_VERIFY_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -60,6 +83,8 @@ async function verifyPurchase(result: PurchaseResult): Promise<PurchaseResult> {
     return { success: false, error: 'Purchase verification data is missing', errorDetail: 'verification' }
   }
 
+  // eslint-disable-next-line no-console
+  console.log(`[PREMIUM][ENTITLEMENT] verification_start productId=${result.productId}`)
   try {
     const headers = await getAuthHeaders()
     const response = await fetchWithTimeout(`${getApiBase()}/api/subscription/verify`, {
@@ -73,14 +98,18 @@ async function verifyPurchase(result: PurchaseResult): Promise<PurchaseResult> {
     })
     const data = await response.json() as { success?: boolean; error?: string }
     if (!response.ok || data.success !== true) {
+      console.warn(`[PREMIUM][ERROR] stage=verification code=${response.status} message=${data.error || 'verify-rejected'}`)
       return {
         success: false,
         error: data.error || 'Purchase could not be verified. Please try again.',
         errorDetail: 'verification',
       }
     }
+    // eslint-disable-next-line no-console
+    console.log('[PREMIUM][ENTITLEMENT] verification_result success=true')
     return result
   } catch {
+    console.warn('[PREMIUM][ERROR] stage=verification code=network message=verify-request-failed')
     return { success: false, error: 'Purchase verification failed. Please try again.', errorDetail: 'verification' }
   }
 }

@@ -50,7 +50,7 @@ export interface PurchaseResult {
   productId?: string
   orderId?: string
   error?: string
-  errorDetail?: 'cancelled' | 'failed' | 'already_owned' | 'network' | 'verification' | 'unknown'
+  errorDetail?: 'cancelled' | 'failed' | 'already_owned' | 'network' | 'verification' | 'billing_unavailable' | 'product_unavailable' | 'unknown'
 }
 
 export interface BillingProvider {
