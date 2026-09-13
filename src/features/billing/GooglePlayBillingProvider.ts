@@ -119,9 +119,9 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async queryProductDetails(productIds: string[]): Promise<SubscriptionPlan[]> {
-    const p = await getPlugin()
+    const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      billingError('product_query', 'billing_unavailable', 'native billing plugin unavailable')
+      billingError('product_query', 'billing_unavailable', 'native billing plugin unavailable or timed out')
       return []
     }
 
@@ -165,10 +165,23 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async purchase(productId: string): Promise<PurchaseResult> {
-    const p = await getPlugin()
+    const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable')
+      billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable or timed out')
       return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
+    }
+
+    try {
+      const maybeCheck = (p as unknown as { isBillingSupported?: () => Promise<{ isBillingSupported: boolean }> }).isBillingSupported
+      if (maybeCheck) {
+        const supported = await withTimeout(maybeCheck.call(p), 3000, { isBillingSupported: true } as { isBillingSupported: boolean })
+        if (supported && 'isBillingSupported' in supported && !supported.isBillingSupported) {
+          billingError('purchase', 'billing_unavailable', 'Play Billing not supported on this device')
+          return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
+        }
+      }
+    } catch {
+      // best-effort only
     }
 
     // NOTE: the Play base-plan ID differs from the subscription product ID
@@ -190,11 +203,19 @@ export const GooglePlayBillingProvider: BillingProvider = {
         )
         cacheOfferTokens(lookup.products)
         offerToken = offerTokenCache[productId] ?? offerTokenCache[planIdentifier]
-        billingLog('offer_lookup_result', `productId=${productId} hasOffer=${Boolean(offerToken)}`)
+        billingLog('offer_lookup_result', `productId=${productId} hasOffer=${Boolean(offerToken)} products=${lookup.products.length}`)
+        if (lookup.products.length === 0) {
+          billingError('purchase', 'product_unavailable', `no products for ${productId} - check Play Console pricing/availability`)
+          return { success: false, error: 'This subscription is not available for your account or region right now.', errorDetail: 'product_unavailable' }
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         billingError('offer_lookup', 'failed', message)
       }
+    }
+    if (!offerToken) {
+      billingError('purchase', 'product_unavailable', `no offerToken for ${productId}/${planIdentifier} - cannot launch billing flow`)
+      return { success: false, error: 'This subscription is not available for your account or region right now.', errorDetail: 'product_unavailable' }
     }
     billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
 

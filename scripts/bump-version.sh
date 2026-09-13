@@ -22,8 +22,12 @@ OLD_VERSION_NAME=$versionName
 
 NEW_VERSION_CODE=$((OLD_VERSION_CODE + 1))
 
-BASE_VERSION=$(echo "$OLD_VERSION_NAME" | sed 's/\.[0-9]*$//')
-LAST_SEGMENT=$(echo "$OLD_VERSION_NAME" | sed 's/.*\.//')
+CLEAN_VERSION=$(echo "$OLD_VERSION_NAME" | sed 's/-.*$//')
+BASE_VERSION=$(echo "$CLEAN_VERSION" | sed 's/\.[0-9]*$//')
+LAST_SEGMENT=$(echo "$CLEAN_VERSION" | sed 's/.*\.//')
+if ! [[ "$LAST_SEGMENT" =~ ^[0-9]+$ ]]; then
+  err "Invalid version segment: $LAST_SEGMENT (from $OLD_VERSION_NAME)"
+fi
 NEW_LAST_SEGMENT=$((LAST_SEGMENT + 1))
 NEW_VERSION_NAME="${BASE_VERSION}.${NEW_LAST_SEGMENT}"
 
