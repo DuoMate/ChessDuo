@@ -52,13 +52,29 @@ export default function PremiumPage() {
 
   const runLoad = useCallback(async () => {
     setDebugStage('loading: status+plans')
+    const withUiTimeout = <T,>(p: Promise<T>, ms: number, fallback: T) =>
+      Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms))])
     try {
-      const subStatus = await SubscriptionService.getStatus()
+      // Do not block premium UI on Google Play - plans have 8s internal timeout
+      // but native bridge import can hang; race each call at UI level so
+      // PageLoading can never stall.
+      const statusFallback: SubscriptionInfo = {
+        isPremium: false,
+        subscriptionProvider: null,
+        subscriptionPlan: null,
+        purchaseToken: null,
+        subscriptionExpiryDate: null,
+        autoRenewStatus: false,
+        purchaseState: null,
+        lastVerifiedDate: null,
+        subscriptionStatus: null,
+      }
+      const subStatus = await withUiTimeout(SubscriptionService.getStatus(), 9000, statusFallback)
       if (!mountedRef.current) return
-      setDebugStage(`loading: status done isPremium=${subStatus.isPremium}`)
-      const subPlans = await SubscriptionService.getPlans()
+      setDebugStage(`loading: status done isPremium=${subStatus.isPremium} ${subStatus === statusFallback ? '(fallback)' : ''}`)
+      const subPlans = await withUiTimeout(SubscriptionService.getPlans(), 9000, [] as SubscriptionPlan[])
       if (!mountedRef.current) return
-      setDebugStage(`loading: plans done count=${subPlans.length}`)
+      setDebugStage(`loading: plans done count=${subPlans.length} ${subPlans.length===0 ? '(fallback prices)' : ''}`)
       setStatus(subStatus)
       setIsPremium(subStatus.isPremium)
       setSubscriptionStatus(subStatus.subscriptionStatus)

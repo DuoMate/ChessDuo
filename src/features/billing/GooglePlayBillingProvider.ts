@@ -119,9 +119,9 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async queryProductDetails(productIds: string[]): Promise<SubscriptionPlan[]> {
-    const p = await getPlugin()
+    const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      billingError('product_query', 'billing_unavailable', 'native billing plugin unavailable')
+      billingError('product_query', 'billing_unavailable', 'native billing plugin unavailable or timed out')
       return []
     }
 
@@ -165,9 +165,9 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async purchase(productId: string): Promise<PurchaseResult> {
-    const p = await getPlugin()
+    const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable')
+      billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable or timed out')
       return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
     }
 
