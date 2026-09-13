@@ -10,6 +10,7 @@ import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { PageLoading } from '@/components/PageLoading'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
+import { PREMIUM_PURCHASE_SAFETY_NET_MS } from '@/features/shared/gameConstants'
 
 interface ErrorDetail {
   title: string
@@ -65,32 +66,69 @@ export default function PremiumPage() {
   const handleSubscribe = useCallback(async (productId: string) => {
     setSubscribing(true)
     setError(null)
+    // Safety net only: every settled path below reports its real stage/code.
+    // This timer guarantees the button can never spin forever if the native
+    // bridge or a network call never settles.
+    let safetyNet: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      safetyNet = null
+      if (mountedRef.current) {
+        setSubscribing(false)
+        setError('Google Play purchase timed out. Please check your Google Play account and try again.')
+      }
+    }, PREMIUM_PURCHASE_SAFETY_NET_MS)
+    const clearSafetyNet = () => {
+      if (safetyNet) { clearTimeout(safetyNet); safetyNet = null }
+    }
     try {
       const result = productId.includes('yearly')
         ? await SubscriptionService.purchaseYearly()
         : await SubscriptionService.purchaseMonthly()
 
+      if (!mountedRef.current) return
       if (!result.success) {
         if (result.errorDetail === 'cancelled') {
           setError('Purchase cancelled. You can try again anytime.')
         } else if (result.errorDetail === 'already_owned') {
           await SubscriptionService.restore()
           const newStatus = await SubscriptionService.getStatus()
+          if (!mountedRef.current) return
           if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
+          else { setError('Your existing subscription was found but could not be activated. Please try Restore Purchases.') }
+        } else if (result.errorDetail === 'billing_unavailable') {
+          setError('Google Play Billing is not available on this device or account.')
+        } else if (result.errorDetail === 'product_unavailable') {
+          setError('This subscription is not available for your account or region right now.')
+        } else if (result.errorDetail === 'network') {
+          setError('Network error. Please check your connection and try again.')
+        } else if (result.errorDetail === 'verification') {
+          setError(result.error || 'Purchase could not be verified. Please try again.')
         } else {
-          setError(result.error || 'Purchase failed. Please try again.')
+          setError(result.error || 'Google Play purchase could not be started. Please check your Google Play account and try again.')
         }
         return
       }
 
       SubscriptionService.invalidate()
       const newStatus = await SubscriptionService.getStatus()
+      if (!mountedRef.current) return
       if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
+      else {
+        // Verified but status not yet refreshed — one bounded retry before
+        // surfacing a message (never an endless poll).
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        SubscriptionService.invalidate()
+        const retryStatus = await SubscriptionService.getStatus()
+        if (!mountedRef.current) return
+        if (retryStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(retryStatus) }
+        else { setError('Purchase verified. Your premium status is refreshing — reopen this screen shortly.') }
+      }
     } catch (e: unknown) {
+      if (!mountedRef.current) return
       const err = e instanceof Error ? e : new Error(String(e))
       setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: err.stack || JSON.stringify(err) })
     } finally {
-      setSubscribing(false)
+      clearSafetyNet()
+      if (mountedRef.current) setSubscribing(false)
     }
   }, [])
 
@@ -142,6 +180,9 @@ export default function PremiumPage() {
                 ) : isNative ? (
                   <>
                     {/* Native pricing cards */}
+                    {!plansLoading && plans.length === 0 && (
+                      <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
+                    )}
                     <div className="relative rounded-[24px] border border-slate-700/70 bg-slate-800/50 p-5 mb-4 overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex flex-col items-center gap-3 mb-3">

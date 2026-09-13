@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Crown, Lock } from 'lucide-react'
-import { SubscriptionService } from '@/features/billing'
+import { formatTrialCountdown, getCoachTrialState } from '@/features/coach/coachTrial'
 import { Spinner } from '../Spinner'
 
 interface CoachGateProps {
@@ -12,19 +12,35 @@ interface CoachGateProps {
 }
 
 /**
- * Premium gate for Coach Mode. Enforces access client-side via
- * `SubscriptionService.isPremium()` (mirrors the existing InsightsGate pattern).
- * Non-premium users are shown an upsell and can never mount the coach game.
+ * Premium + daily-trial gate for Coach Mode.
+ *
+ * - Premium users: unlimited, no trial messaging.
+ * - Non-premium + daily trial available: game mounts; the trial is consumed
+ *   at game START (see CoachGame), never by opening this screen.
+ * - Non-premium + trial consumed: hard block with countdown + existing
+ *   `/premium` upgrade CTA (Google Play flow on mobile, download CTA on web).
+ * Fail-closed: subscription/trial lookup failure keeps the game locked.
  */
 export function CoachGate({ playerId, children }: CoachGateProps) {
   const router = useRouter()
-  const [status, setStatus] = useState<'loading' | 'locked' | 'unlocked'>('loading')
+  const [status, setStatus] = useState<'loading' | 'unlocked' | 'trial' | 'locked'>('loading')
+  const [nextEligibleAt, setNextEligibleAt] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    SubscriptionService.isPremium()
-      .then((premium) => {
-        if (active) setStatus(premium ? 'unlocked' : 'locked')
+    getCoachTrialState(playerId)
+      .then((trial) => {
+        if (!active) return
+        if (trial.isPremium) {
+          setStatus('unlocked')
+          return
+        }
+        if (trial.eligible) {
+          setStatus('trial')
+          return
+        }
+        setNextEligibleAt(trial.nextEligibleAt)
+        setStatus('locked')
       })
       .catch(() => {
         // Subscription lookup failed — treat as locked (fail closed).
@@ -43,7 +59,21 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
     )
   }
 
+  if (status === 'trial') {
+    return (
+      <>
+        <div className="mx-auto w-full max-w-md px-4 pt-3">
+          <p className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-300">
+            Free daily game — enjoy your AI Coach session
+          </p>
+        </div>
+        {children}
+      </>
+    )
+  }
+
   if (status === 'locked') {
+    const countdown = formatTrialCountdown(nextEligibleAt, Date.now())
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--color-page-bg)] px-4 text-gray-900 dark:text-white">
         <div className="w-full max-w-sm rounded-[24px] border border-slate-200 bg-white/80 p-6 text-center backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/70">
@@ -52,8 +82,8 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
           </div>
           <h1 className="text-xl font-black uppercase tracking-wide">AI Coach</h1>
           <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            AI Coach is a premium feature. Get real-time analysis, top-3 move recommendations,
-            blunder detection, and personalised coaching explanations.
+            Your free AI Coach game is complete. Unlock unlimited AI Coach games.
+            {countdown ? ` Or come back for your next free game in ${countdown}.` : ''}
           </p>
           <button
             onClick={() => router.push('/premium')}

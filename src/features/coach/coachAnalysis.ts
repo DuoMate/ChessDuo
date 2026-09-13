@@ -39,6 +39,17 @@ export interface CoachFeedback {
   evaluationDisplay: string
 }
 
+/**
+ * One historical coaching record — a snapshot of the feedback generated for a
+ * single player move. Stored append-only in `CoachGameState.feedbackHistory`.
+ * Plain data only (no engine handles); safe to render in Insights/transcript.
+ */
+export interface CoachInsight {
+  /** 1-indexed ordinal of the player's own moves (not plies). */
+  moveNumber: number
+  feedback: CoachFeedback
+}
+
 export function classifyLoss(lossCp: number): MoveVerdict {
   if (lossCp <= 10) return 'best'
   if (lossCp <= 30) return 'great'

@@ -1,16 +1,24 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Volume2, VolumeX, Flag, Crown } from 'lucide-react'
 import { ChessBoard } from '../ChessBoard'
+import { BoardBottomNav, type BoardTab } from '../BoardBottomNav'
+import { SlideOver } from '../SlideOver'
+import { RoundHistorySidebar, type RoundHistoryEntry } from '../RoundHistorySidebar'
 import type { PromotionPiece } from '@/features/shared/gameTypes'
-import { CoachGame as CoachGameEngine, coachVoice, saveCoachGame } from '@/features/coach'
+import { CoachGame as CoachGameEngine, coachVoice, saveCoachGame, claimCoachDailyTrial } from '@/features/coach'
 import type { CoachGameState } from '@/features/coach'
 import { CoachPanel } from './CoachPanel'
+import { CoachInsightsPanel } from './CoachInsightsPanel'
+import { CoachTranscriptPanel } from './CoachTranscriptPanel'
+import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
+import { NativeAdSlot } from '../NativeAdSlot'
 import { useGameToast } from '../Toast'
+import { usePremium } from '@/hooks/usePremium'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
-import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSettings } from '@/hooks/useSettings'
 import { playMoveSound, playCaptureSound } from '@/lib/sounds'
 
@@ -30,25 +38,103 @@ function resultToOutcome(result: string | null): 'win' | 'loss' | 'draw' {
 
 export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: CoachGameProps) {
   const toast = useGameToast()
-  const isMobile = useIsMobile()
+  const router = useRouter()
+  const { isPremium, loading: premiumLoading } = usePremium()
   const settings = useSettings()
   const [state, setState] = useState<CoachGameState | null>(null)
   const [voiceEnabled, setVoiceEnabled] = useState(coachVoice.isEnabled())
   const [showBestMove, setShowBestMove] = useState(false)
   const [showLeave, setShowLeave] = useState(false)
+  // Bottom-nav panel: at most one open. Panels are pure views — opening or
+  // closing them never touches the engine or board state.
+  const [activePanel, setActivePanel] = useState<'moves' | 'insights' | 'chat' | null>(null)
+  // View-only history preview: index into `positions` (see below), or null
+  // for the live position. Board input is disabled while previewing.
+  const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
+  // True when this mount consumed the non-premium daily free game. Drives the
+  // post-game monetization section (native ad + premium offer). Premium users
+  // never see it; the ad slot additionally enforces the premium ad-free rule.
+  const [isTrialGame, setIsTrialGame] = useState(false)
   const gameRef = useRef<CoachGameEngine | null>(null)
   const spokenFeedbackKeyRef = useRef<string | null>(null)
   const savedRef = useRef(false)
+  const claimedRef = useRef(false)
+  const claimPersistedRef = useRef(true)
+  // Stable per-mount session id so double-tap / StrictMode / remount can only
+  // ever claim the trial once (see claimCoachDailyTrial idempotency).
+  const sessionIdRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
   const status = state?.status ?? 'idle'
   const isPlayerTurn = !!state && state.turn === state.playerColor && state.status === 'playing'
-  const boardEnabled = isPlayerTurn && !state?.analyzing
+  const showMonetization = status === 'game_over' && isTrialGame && !premiumLoading && !isPremium
+
+  // Position timeline: [initialFen, fenAfterPly0, ...]. Replayed from SANs —
+  // the engine stores no per-ply fens, and this derivation never writes back.
+  const moveHistory = state?.moveHistory ?? []
+  const positions = useMemo(() => buildFenSequence(moveHistory), [moveHistory])
+  const previewing = playbackIndex !== null
+  const playbackFen = previewing ? positions[playbackIndex] ?? null : null
+  const boardEnabled = isPlayerTurn && !state?.analyzing && !previewing
+
+  // Any new move returns the board to live (preview can never strand).
+  useEffect(() => {
+    setPlaybackIndex(null)
+  }, [moveHistory.length])
+
+  const roundEntries: RoundHistoryEntry[] = useMemo(
+    () => moveHistoryToRoundEntries(moveHistory, state?.playerColor ?? 'w', state?.feedbackHistory ?? []),
+    [moveHistory, state?.playerColor, state?.feedbackHistory],
+  )
+
+  const handleTabChange = useCallback((tab: BoardTab) => {
+    if (tab === 'game') {
+      setActivePanel(null)
+      return
+    }
+    // Tapping the open tab's button closes its panel (toggle).
+    setActivePanel((current) => (current === tab ? null : tab))
+  }, [])
+
+  const handleBackMove = useCallback(() => {
+    setPlaybackIndex((current) => {
+      const last = positions.length - 1
+      if (last < 1) return current
+      if (current === null) return last - 1
+      return Math.max(0, current - 1)
+    })
+  }, [positions.length])
+
+  const handleForwardMove = useCallback(() => {
+    setPlaybackIndex((current) => {
+      if (current === null) return current
+      const last = positions.length - 1
+      return current >= last - 1 ? null : current + 1
+    })
+  }, [positions.length])
 
   useEffect(() => {
     const game = new CoachGameEngine({ playerColor: playerColor === 'black' ? 'b' : 'w', botLevel })
     gameRef.current = game
     const unsub = game.onStateChange(setState)
-    game.start()
+    game.start().then(() => {
+      // Trial is consumed at game START only — opening the screen without
+      // starting never reaches here, so backing out costs nothing.
+      if (claimedRef.current) return
+      claimedRef.current = true
+      claimCoachDailyTrial(playerId, sessionIdRef.current)
+        .then(({ claimed, persisted, state: trialState }) => {
+          claimPersistedRef.current = persisted
+          setIsTrialGame(claimed && !trialState.isPremium)
+          if (claimed && !persisted) {
+            toast.warning('Could not sync free-game status; will retry automatically')
+          }
+        })
+        .catch(() => {
+          // Claim lookup failed — allow a retry on game over rather than
+          // silently losing the trial state.
+          claimedRef.current = false
+        })
+    })
     return () => {
       unsub()
       game.destroy()
@@ -77,6 +163,15 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   useEffect(() => {
     if (state?.status !== 'game_over' || savedRef.current) return
     savedRef.current = true
+    // Retry the trial-claim sync if it failed at game start (idempotent per
+    // session — safe against duplicate game-over callbacks).
+    if (claimedRef.current && !claimPersistedRef.current) {
+      claimCoachDailyTrial(playerId, sessionIdRef.current).then(({ persisted }) => {
+        claimPersistedRef.current = persisted
+      }).catch(() => {
+        // Best-effort; never block the game-over screen.
+      })
+    }
     saveCoachGame({
       player_id: playerId,
       result: resultToOutcome(state.result),
@@ -180,13 +275,18 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       {/* Board + coach panel */}
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-8 pt-3">
         <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
+          {previewing && (
+            <p className="mb-1 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Reviewing history — board input paused
+            </p>
+          )}
           <ChessBoard
-            fen={state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
+            fen={playbackFen ?? state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
             onMove={handleMove}
             enabled={boardEnabled}
             orientation={orientation}
-            lastMove={state?.lastMove}
-            highlightSquares={bestMoveHighlight}
+            lastMove={previewing ? null : state?.lastMove}
+            highlightSquares={previewing ? null : bestMoveHighlight}
           />
         </div>
 
@@ -225,16 +325,43 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         </div>
       )}
 
-      {/* Game over */}
+      {/* Game over — normal result experience first; resignation converges
+          here via the same status pipeline (no special-casing), so every
+          legitimate terminal outcome reaches the same ad + offer flow. */}
       {status === 'game_over' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-700/60 bg-slate-900 p-6 text-center">
+          <div className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 text-center">
             <div className="mb-2 text-4xl">{state?.result?.startsWith('Win') ? '🏆' : state?.result?.startsWith('Draw') ? '🤝' : '♟️'}</div>
             <h2 className="text-xl font-black text-white">{state?.result ?? 'Game over'}</h2>
             {state && (
               <p className="mt-2 text-xs text-slate-400">
                 Accuracy {state.accuracy}% · Blunders {state.blunders} · Mistakes {state.mistakes}
               </p>
+            )}
+            {/* Existing native AdMob placement. Best-effort: hidden on web,
+                for premium users, and when the ad is not ready — it never
+                blocks the Game Over screen. If ads are not serving, check
+                logcat `[ADS][GAMEOVER]` to distinguish "not requested" from
+                "requested but no fill". */}
+            <NativeAdSlot open={status === 'game_over'} gameOverReason={state?.gameOverReason} />
+            {showMonetization && (
+              <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-left">
+                <p className="text-sm font-bold text-white">Your free AI Coach game is complete.</p>
+                <p className="mt-1 text-xs text-slate-300">Unlock unlimited AI Coach games.</p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-300">
+                  <li>♾️ Unlimited AI Coach games</li>
+                  <li>🎙️ Voice coaching</li>
+                  <li>🎯 Best-move guidance</li>
+                  <li>🚫 Ad-free experience</li>
+                </ul>
+                <button
+                  onClick={() => router.push('/premium')}
+                  className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white transition-all hover:from-amber-400 hover:to-orange-400"
+                >
+                  <Crown size={16} />
+                  Upgrade to Premium
+                </button>
+              </div>
             )}
             <div className="mt-5 flex flex-col gap-2">
               <button
@@ -249,7 +376,36 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       )}
 
       {/* Mobile spacer hint — keep layout consistent with board pages */}
-      {isMobile && <div className="h-4" />}
+      <div className="h-24" />
+
+      {/* Bottom navigation — same shared component as other game modes.
+          Moves/Chat/Insights open read-only SlideOver panels; Back/Fwd step
+          through a view-only position preview (engine state never changes). */}
+      <BoardBottomNav
+        activeTab={activePanel ?? 'game'}
+        onTabChange={handleTabChange}
+        onBackMove={handleBackMove}
+        onForwardMove={handleForwardMove}
+      />
+
+      {/* Moves uses the shared move-list overlay directly — it renders its
+          own backdrop/panel, so it must NOT be nested inside a SlideOver. */}
+      <RoundHistorySidebar
+        open={activePanel === 'moves'}
+        entries={roundEntries.map((entry, index) => ({
+          ...entry,
+          isCurrent: !previewing && index === roundEntries.length - 1,
+        }))}
+        onClose={() => setActivePanel(null)}
+      />
+
+      <SlideOver open={activePanel === 'insights'} onClose={() => setActivePanel(null)} title="Insights">
+        <CoachInsightsPanel history={state?.feedbackHistory ?? []} />
+      </SlideOver>
+
+      <SlideOver open={activePanel === 'chat'} onClose={() => setActivePanel(null)} title="Coach Notes">
+        <CoachTranscriptPanel history={state?.feedbackHistory ?? []} suggestion={state?.suggestion ?? null} />
+      </SlideOver>
     </div>
   )
 }

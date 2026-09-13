@@ -283,7 +283,7 @@ SubscriptionService
 **RULE**: Game-over ads use an Android Native Advanced ad, never a full-screen interstitial.
 
 - `src/lib/nativeAd.ts` is the web-safe Capacitor bridge. Web builds and missing IDs are no-ops.
-- `NativeAdSlot` is rendered only inside the existing `GameOverModal`; it waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
+- `NativeAdSlot` is rendered inside the existing `GameOverModal` (Quick/Duo) and inside the Coach Mode inline game-over modal (Coach has its own modal and never uses `GameOverModal`); it waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement. No other caller may render it; never create a second ad unit, bridge, or interstitial.
 - Active-match Back/Leave and resignation must converge on the same `GameOverModal` terminal lifecycle before navigation; lobby leave may navigate immediately because no match result exists.
 - Native-ad preload is single-flight: concurrent callers share one request, and a loaded ad is consumed only after a successful native render. Diagnostics use the `[ADS][GAMEOVER]` tag.
 - Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
@@ -507,4 +507,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
+*Last Updated: 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*

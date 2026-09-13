@@ -38,6 +38,7 @@ export type Database = {
           last_verified_date: string | null
           subscription_status: string
           created_at: string
+          coach_last_free_game_at: string | null
         }
         Insert: {
           id: string
@@ -53,6 +54,7 @@ export type Database = {
           purchase_state?: string | null
           last_verified_date?: string | null
           subscription_status?: string
+          coach_last_free_game_at?: string | null
         }
         Update: {
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
           purchase_state?: string | null
           last_verified_date?: string | null
           subscription_status?: string
+          coach_last_free_game_at?: string | null
         }
       }
       rooms: {

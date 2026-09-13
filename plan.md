@@ -1,132 +1,48 @@
-# Plan — Play Console R8 + Edge-to-Edge Production Fix
+# AI Coach Daily Trial — Plan
 
-## Premium Production Enablement Audit — 2026-09-11
+## 1. Discovered architecture
+- AI Coach is isolated: `coachGame.ts` (chess.js + ChessBot + CoachEngine) + `CoachGame.tsx` + `CoachPanel` + `CoachGate` (binary premium, fail-closed) + `coach_games` table. Does NOT use `GameInterface`/`OnlineGame`/`LocalGame`/`Game.tsx`/`GameOverModal`.
+- Premium truth: Supabase `profiles` via `GET /api/subscription/status` (expiry-checked) + `POST /api/subscription/verify` (Google androidpublisher, server acknowledge + `profiles` upsert). IDs `premium_monthly`/`premium_yearly`. Web = Download CTA only.
+- Ads (`ARCHITECTURE.md` §9): `nativeAd.ts` bridge (single-flight, consume-on-render, web/no-ID no-op) + `NativeAdSlot` (only inside `GameOverModal`) + `NativeAdPlugin.java`. Coach modal has NO ad call (category A: code-does-not-request).
+- Real Coach terminals only: checkmate, stalemate, threefold, insufficient, draw, resignation, bot-error abort. No clocks/timeout, bot never resigns, no Realtime, persistence is fire-and-forget `coach_games` insert.
 
-### Existing architecture
+## 2. Decisions (user-locked)
+- Cadence: 1 free game per rolling 24h window (not lifetime).
+- Persistence: Supabase `profiles.coach_last_free_game_at TIMESTAMPTZ NULL` (server timestamp, survives reinstall) + localStorage mirror fallback. Migration file created, must be applied in Supabase dashboard — NOT auto-applied here.
+- Block: hard block second game inside window → upsell with `Next free in Xh Ym` + existing `/premium` CTA.
+- Ad: reuse existing `NativeAdSlot` inside Coach Game Over only.
+- Benefits copy: verified-only (Unlimited AI Coach, voice coaching, best-move guidance, ad-free).
 
-- `PremiumPage` calls `SubscriptionService`; browser users use the existing download-on-Google-Play CTA.
-- Android uses `GooglePlayBillingProvider` and `@capgo/native-purchases` for `premium_monthly` and `premium_yearly` subscriptions.
-- `/api/subscription/verify` verifies the token with Google Play, acknowledges active purchases, and writes the authenticated user's `profiles` row.
-- `/api/subscription/status` is the authoritative client read; expiry is checked server-side before `isPremium` is returned.
+## 3. Claim semantics
+- Consumed at `CoachGame.start()` (`idle→playing`) exactly once per mount session (ref guard + in-memory session set + storage check).
+- Open/screen/back-out/auth-overlay never claim. Abandon (Back/nav-guard/Leave) stays non-terminal, no ad/offer.
+- All real terminals converge on existing inline Game Over → NativeAdSlot → premium offer (non-premium trial game only). Premium: no offer, ad auto-suppressed.
 
-### Audit findings and fixes
+## 4. Files to change
+1. `supabase/migrations/2026-09-12_coach_daily_trial.sql` (NEW, needs manual apply)
+2. `src/features/shared/gameConstants.ts` (+ `COACH_TRIAL_WINDOW_MS`)
+3. `src/features/billing/types.ts` (+ optional trial fields)
+4. `src/lib/supabase.ts` (+ column types)
+5. `src/app/api/subscription/status/route.ts` (tolerant select + eligibility)
+6. `src/features/coach/coachTrial.ts` (NEW isolated module)
+7. `src/features/coach/index.ts` (re-export)
+8. `src/components/coach/CoachGate.tsx` (daily gate)
+9. `src/components/coach/CoachGame.tsx` (claim + ad + offer)
+10. `src/app/coach/page.tsx` (pass-through, unchanged logic)
+11. `src/app/page.tsx` (subtitle copy only, 2 spots)
+12. `src/features/coach/__tests__/coachTrial.test.ts` (NEW tests)
 
-- Fixed the hardcoded Coming Soon branch that made Android purchase controls unreachable.
-- Fixed the purchase flow so a native result is sent to `/api/subscription/verify` and is rejected unless verification succeeds.
-- Fixed restore handling to return and verify native transactions from the plugin instead of always returning an empty list.
-- Added the Android subscription `planIdentifier` required by the native plugin.
-- Added server-side product allowlisting for the two configured product IDs.
-- Added the missing `@capgo/native-purchases` production dependency.
-- Corrected the browser Play Store URL to package `com.navron.chessduo`.
+## 5. Protected (untouched)
+`GameInterface.ts`, `onlineGame.ts`, `localGame.ts`, `Game.tsx`, `DuelGame.tsx`, `duelGame.ts`, `gameState.ts`, chess engine, timers, Realtime, `roomActions`/`fourPlayerActions`/`gamePersistence`/`matchHistory`, `GooglePlayBillingProvider`, `verify` logic, `nativeAd.ts`, `NativeAdPlugin.java`, `GameOverModal.tsx`, browser premium CTA, auth, Quick/Duo/4P.
 
-### Validation and blockers
+## 6. Test plan
+- `npx tsc --noEmit`, `npm test` (no new failures).
+- New: eligibility boundaries (null/23h59/24h01), next-eligible countdown, double-claim idempotency, open-without-start, resign/checkmate/draw all reach same Game Over pipeline, ad-fail intact, premium bypass, browser no-billing.
 
-- Focused billing/Premium tests pass: 59 tests.
-- Typecheck is blocked by the pre-existing missing `@capacitor-community/text-to-speech` module in `src/features/coach/coachVoice.ts`.
-- No generated Android project or signed APK/AAB is present in this workspace, so Google Play purchase, restore, AdMob suppression, and device lifecycle testing were not performed.
-- Play Console product/base-plan/pricing state and production service-account configuration cannot be verified from the repository.
-- Purchase tokens are verified by Google but the current schema/API has no server-side Google-account-to-ChessDuo-account binding or token ownership constraint. This remains a production security blocker; no migration was applied.
+## 7. Risks
+- Migration not yet applied → code runs in local-mirror mode until applied (documented in-app? no — documented here + progress file).
+- Device-clock skew for window math (server timestamp mitigates; full server-authoritative check on next gate load).
+- Offline claim → optimistic local + best-effort server sync, `persisted:false` surfaced, retry on game over.
 
-### Decision
-
-Premium source flow is repaired, but production release enablement is **NOT READY** until the account-linking design is established, Play Console configuration is confirmed, and a signed Android build passes the end-to-end test matrix.
-
-ChessDuo is live on Google Play (release 349 / 1.0.349). Play Console reports two
-findings to address:
-
-1. R8 / release obfuscation (2% — below the 25% threshold)
-2. Android 15 edge-to-edge / deprecated system-bar APIs
-
-Scope is strictly limited to these two findings. The memory/Stockfish finding is
-intentionally out of scope.
-
-## Finding 1 — R8 / Obfuscation
-
-### Root cause
-`scripts/build-aab.sh` injected `minifyEnabled true` only when `buildTypes` was
-absent from `android/app/build.gradle`. Capacitor's generated project always ships
-`buildTypes { release { minifyEnabled false ... } }`, so the injection was skipped
-and R8 never ran. `scripts/build-apk.sh` had no minify step at all. Result: ~2%
-obfuscation.
-
-### Fix
-Force R8 on idempotently against the existing `buildTypes` block in both build
-scripts:
-- `minifyEnabled false` → `minifyEnabled true`
-- add `shrinkResources true`
-- switch `proguard-android.txt` → `proguard-android-optimize.txt`
-
-The existing `resources/proguard-rules.pro` (including `-keep class com.getcapacitor.**`)
-is left unchanged. The keep rule is redundant with the social-login plugin's own
-`consumer-proguard-rules.pro` but is harmless and safest to retain.
-
-## Finding 2 — Android 15 Edge-to-Edge
-
-Two sub-findings share a release.
-
-### 2a. Deprecated APIs
-`android.view.Window.setStatusBarColor` / `setNavigationBarColor` / `getStatusBarColor`
-originate from `com.google.androidbrowserhelper:androidbrowserhelper:2.5.0`, pulled in
-as an `implementation` dependency by `@capgo/capacitor-social-login`.
-
-- The patched `GoogleProvider.java` (the actual Google sign-in path) does NOT use it.
-- The only reference is an unused `TwaLauncher` import in the disabled `AppleProvider`.
-- Upgrading the plugin does NOT help (latest `8.5.5` still pins `androidbrowserhelper:2.5.0`).
-
-Fix: demote `androidbrowserhelper` to `compileOnly` in the plugin's `build.gradle`
-(via both build scripts), keeping it off the release DEX/manifest.
-
-### 2b. Edge-to-edge display
-App targets SDK 35+ but `MainActivity` never enables edge-to-edge and Capacitor 8.3.4
-does not auto-enable it. Fix: call `EdgeToEdge.enable(this)` in `MainActivity.onCreate`
-via `scripts/patch-main-activity.sh`. The web layer already handles
-`env(safe-area-inset-*)` via `viewportFit: cover`.
-
-## Files changed
-- `scripts/build-aab.sh` — R8 enable + browserhelper demotion
-- `scripts/build-apk.sh` — R8 enable + browserhelper demotion
-- `scripts/patch-main-activity.sh` — `EdgeToEdge.enable(this)`
-- `plan.md`, `implementation-progress.md` — tracking
-
-No `package.json` / dependency change is required.
-
-## Verification
-- Signed release AAB must be built and verified (R8 `mapping.txt`, install, launch,
-  WebView, plugins, auth, social login, no startup crash, no UI regression).
-- Android 15 edge-to-edge visual check (status/nav bars, bottom nav, board, dialogs,
-  login screens) for hidden content, double/missing padding.
-
-## AI Coach UI/UX Redesign
-
-### Current architecture and UI boundary
-`src/app/coach/page.tsx` routes through `CoachGate` into the dynamically loaded
-`CoachGame` presentation shell. `CoachGame` subscribes to the existing
-`CoachGameState`, renders the shared `ChessBoard`, and passes suggestion/feedback
-data to `CoachPanel`. Evaluator logic remains isolated in `src/features/coach`.
-
-### Frozen boundaries
-The Coach evaluator, Stockfish worker, engine settings, analysis types, voice
-service, persistence, API/database paths, and game state remain unchanged. UI
-changes may only map existing state into presentation props and local visibility
-state.
-
-### Data contract used by the UI
-- Current best move: `suggestion.topMoves[0].uci`
-- Current recommendation list: `suggestion.topMoves`
-- Coach message and classification: `feedback.explanation` and `feedback.verdict`
-- Voice content/state: existing `coachVoice` service and `feedback.explanation`
-- Live board position: existing `state.fen`, `state.lastMove`, and shared `ChessBoard`
-
-### Task breakdown
-1. Audit components, routes, board annotations, evaluator boundary, and premium gate.
-2. Freeze and document the presentation data mapping.
-3. Build the primary Coach message hierarchy.
-4. Add UI-only best-move visibility using the existing green board highlight.
-5. Collapse recommendations, integrate voice, and polish responsive layout.
-6. Verify representative Coach states, mobile/desktop layouts, build, and scope.
-
-### Isolated best-move behavior
-The action is shown only when the current player-turn suggestion has a first move.
-`showBestMove` defaults to false, never changes FEN or game state, and resets when
-the live FEN changes. The board receives the existing `highlightSquares` prop only
-while visible; stale feedback alone cannot render a highlight.
+## 8. Rollback
+Revert gate/modal/trial module; Coach returns to binary premium gate. Shared systems untouched so nothing else to unwind.
