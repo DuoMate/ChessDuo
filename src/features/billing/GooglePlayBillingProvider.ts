@@ -1,4 +1,4 @@
-import type { BillingDiagnostic, BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
+import type { BillingDiagnostic, BillingDiagnosticCode, BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
 import {
   BILLING_PRODUCT_QUERY_TIMEOUT_MS,
   BILLING_RESTORE_TIMEOUT_MS,
@@ -40,6 +40,15 @@ type ProductQueryResult =
 let plugin: NativePurchasesPlugin | null = null
 let lastDiagnostic: BillingDiagnostic | null = null
 let nativeOperationQueue: Promise<void> = Promise.resolve()
+interface PluginDiagnosticInput {
+  code: BillingDiagnosticCode
+  platform: string
+  nativePlatform: boolean
+  elapsedMs: number
+  pluginExportPresent: boolean
+  error?: unknown
+  proxyMethods?: string[]
+}
 
 // Offer tokens returned by getProducts(), keyed by subscription product ID
 // (and base-plan ID as fallback). Play Billing requires the offer token to
@@ -60,6 +69,22 @@ function diagnosticMessage(error: unknown): string {
     .slice(0, 240)
 }
 
+export function createPluginDiagnostic(input: PluginDiagnosticInput): BillingDiagnostic {
+  const error = input.error ? ` errorName=${input.error instanceof Error ? input.error.name : 'UnknownError'} errorMessage=${diagnosticMessage(input.error)}` : ''
+  const methods = input.proxyMethods ? ` proxyMethods=${input.proxyMethods.join(',') || 'none'}` : ''
+  return {
+    stage: 'connection',
+    code: input.code,
+    message: 'Native Google Play billing plugin could not be resolved.',
+    details: [
+      `platform=${input.platform}`,
+      `nativePlatform=${input.nativePlatform}`,
+      `elapsedMs=${input.elapsedMs}`,
+      `pluginExportPresent=${input.pluginExportPresent}`,
+      `${methods}${error}`,
+    ].join(' '),
+  }
+}
 function setDiagnostic(diagnostic: BillingDiagnostic | null): void {
   lastDiagnostic = diagnostic
   if (diagnostic) billingError(diagnostic.stage, diagnostic.code, diagnostic.message)
@@ -92,18 +117,60 @@ export function resolveBasePlanId(productId: string): string {
 async function getPlugin(): Promise<NativePurchasesPlugin | null> {
   if (plugin) return plugin
   billingLog('connection_start', '')
+  const startedAt = Date.now()
   try {
     const { Capacitor } = await import('@capacitor/core')
-    if (!Capacitor.isNativePlatform()) {
+    const nativePlatform = Capacitor.isNativePlatform()
+    const platform = Capacitor.getPlatform?.() || 'unknown'
+    if (!nativePlatform) {
+      setDiagnostic(createPluginDiagnostic({
+        code: 'not_native_platform',
+        platform,
+        nativePlatform,
+        elapsedMs: Date.now() - startedAt,
+        pluginExportPresent: false,
+      }))
       billingLog('connection_result', 'responseCode=UNAVAILABLE debugMessage=not-native-platform')
       return null
     }
     const mod = await import('@capgo/native-purchases')
-    plugin = mod.NativePurchases as unknown as NativePurchasesPlugin
+    const candidate = mod.NativePurchases as unknown as NativePurchasesPlugin | undefined
+    if (!candidate) {
+      setDiagnostic(createPluginDiagnostic({
+        code: 'plugin_export_missing',
+        platform,
+        nativePlatform,
+        elapsedMs: Date.now() - startedAt,
+        pluginExportPresent: false,
+      }))
+      return null
+    }
+    plugin = candidate
+    const proxyMethods = ['getProducts', 'purchaseProduct', 'restorePurchases'].filter(method => typeof candidate[method as keyof NativePurchasesPlugin] === 'function')
+    if (proxyMethods.length === 0) {
+      setDiagnostic(createPluginDiagnostic({
+        code: 'native_registration_missing',
+        platform,
+        nativePlatform,
+        elapsedMs: Date.now() - startedAt,
+        pluginExportPresent: true,
+        proxyMethods,
+      }))
+      plugin = null
+      return null
+    }
     billingLog('connection_result', 'responseCode=OK debugMessage=plugin-loaded')
     return plugin
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = diagnosticMessage(err)
+    setDiagnostic(createPluginDiagnostic({
+      code: 'js_import_failed',
+      platform: 'unknown',
+      nativePlatform: true,
+      elapsedMs: Date.now() - startedAt,
+      pluginExportPresent: false,
+      error: err,
+    }))
     billingLog('connection_result', `responseCode=FAILED debugMessage=${message}`)
     return null
   }
@@ -146,12 +213,14 @@ export const GooglePlayBillingProvider: BillingProvider = {
     setDiagnostic(null)
     const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      setDiagnostic({
-        stage: 'connection',
-        code: 'plugin_unavailable',
-        message: 'Native Google Play billing plugin was unavailable or timed out.',
-        details: 'getPlugin timeout=5000ms',
-      })
+      if (!lastDiagnostic || lastDiagnostic.code === 'plugin_unavailable') {
+        setDiagnostic({
+          stage: 'connection',
+          code: 'plugin_import_timeout',
+          message: 'Native Google Play billing plugin import timed out.',
+          details: 'getPlugin timeout=5000ms',
+        })
+      }
       return []
     }
 
