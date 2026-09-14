@@ -38,8 +38,6 @@ export default function PremiumPage() {
 
   const monthlyPlan = plans.find(p => p.billingPeriod === 'monthly')
   const yearlyPlan = plans.find(p => p.billingPeriod === 'yearly')
-  // DEBUG stage visible even while subscribing - proves handler fired and where it stalls
-  const [debugStage, setDebugStage] = useState<string | null>(null)
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
@@ -51,13 +49,9 @@ export default function PremiumPage() {
   }, [])
 
   const runLoad = useCallback(async () => {
-    setDebugStage('loading: status+plans')
     const withUiTimeout = <T,>(p: Promise<T>, ms: number, fallback: T) =>
       Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms))])
     try {
-      // Do not block premium UI on Google Play - plans have 8s internal timeout
-      // but native bridge import can hang; race each call at UI level so
-      // PageLoading can never stall.
       const statusFallback: SubscriptionInfo = {
         isPremium: false,
         subscriptionProvider: null,
@@ -71,19 +65,14 @@ export default function PremiumPage() {
       }
       const subStatus = await withUiTimeout(SubscriptionService.getStatus(), 9000, statusFallback)
       if (!mountedRef.current) return
-      setDebugStage(`loading: status done isPremium=${subStatus.isPremium} ${subStatus === statusFallback ? '(fallback)' : ''}`)
       const subPlans = await withUiTimeout(SubscriptionService.getPlans(), 9000, [] as SubscriptionPlan[])
       if (!mountedRef.current) return
-      setDebugStage(`loading: plans done count=${subPlans.length} ${subPlans.length===0 ? '(fallback prices)' : ''}`)
       setStatus(subStatus)
       setIsPremium(subStatus.isPremium)
       setSubscriptionStatus(subStatus.subscriptionStatus)
       setPlans(subPlans)
-    } catch (e) {
+    } catch {
       if (!mountedRef.current) return
-      const msg = e instanceof Error ? e.message : String(e)
-      setDebugStage(`loading: error ${msg}`)
-      setErrorDetail({ title: 'Premium Load Failed', message: msg, details: `stage=initial_load error=${msg}` })
     } finally {
       if (mountedRef.current) { setPlansLoading(false); setLoading(false) }
     }
@@ -91,19 +80,17 @@ export default function PremiumPage() {
 
   useEffect(() => { runLoad() }, [runLoad])
 
-  // Safety net for initial load - if PageLoading spins >10s, surface it
+  // Safety net for initial load — handles loading/error/empty per ARCHITECTURE.md
   useEffect(() => {
     if (!loading) return
     const t = setTimeout(() => {
       if (!mountedRef.current || !loading) return
       setPlansLoading(false)
       setLoading(false)
-      setDebugStage('loading: timeout 10s - forced')
       setError('Premium screen took too long to load. Please retry.')
-      setErrorDetail({ title: 'Premium Load Timeout', message: 'Premium screen took too long to load.', details: `stage=initial_load code=timeout isNative=${isNative} plansLoading=${plansLoading}` })
     }, 10000)
     return () => clearTimeout(t)
-  }, [loading, isNative, plansLoading])
+  }, [loading])
 
   // Native only: if the Google Play sheet backgrounds the app and the
   // purchase bridge never settles, re-check entitlement on foreground.
@@ -139,91 +126,47 @@ export default function PremiumPage() {
   }, [])
 
   const handleSubscribe = useCallback(async (productId: string) => {
-    // IMMEDIATE synchronous feedback - if this never appears, onClick never fired (button disabled / isNative false)
-    setDebugStage(`tap:${productId} @${new Date().toISOString()}`)
-    setError(null)
-    setErrorDetail({ title: 'Debug: Tap Registered', message: `Upgrade tapped: ${productId}`, details: `productId=${productId} stage=tap isNative=${isNative} plansLoading=${plansLoading} subscribing=true` })
-    // Auto-dismiss the tap probe after 1.5s so real result popup can take over
-    setTimeout(() => {
-      // only clear if still showing tap probe
-      setErrorDetail(prev => (prev?.title === 'Debug: Tap Registered' ? null : prev))
-    }, 1500)
     setSubscribing(true)
-    setDebugStage(`purchase_start:${productId}`)
+    setError(null)
     purchasePendingRef.current = true
-    // Safety net + DEBUG POPUP: every settled path below reports its real stage/code.
-    // For sideload triage we force a 12s debug timeout (prod is 30s) so the
-    // hang reason surfaces quickly without logcat. Never hides underlying error.
-    // TODO: DEBUG POPUP - restore PREMIUM_PURCHASE_SAFETY_NET_MS after triage
-    const DEBUG_SAFETY_NET_MS = 12000
+    // Safety net only: every settled path below reports its real stage/code.
+    // This timer guarantees the button can never spin forever if the native
+    // bridge or a network call never settles.
     let safetyNet: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       safetyNet = null
       if (mountedRef.current) {
-        const timeoutMsg = 'Google Play purchase timed out. Please check your Google Play account and try again.'
         setSubscribing(false)
-        purchasePendingRef.current = false
-        setError(timeoutMsg)
-        setErrorDetail({ title: 'Purchase Timeout', message: timeoutMsg, details: `productId=${productId} stage=safety_net code=timeout timeoutMs=${DEBUG_SAFETY_NET_MS} (bridge hang - plugin did not settle)` })
+        setError('Google Play purchase timed out. Please check your Google Play account and try again.')
       }
-    }, DEBUG_SAFETY_NET_MS)
+    }, PREMIUM_PURCHASE_SAFETY_NET_MS)
     const clearSafetyNet = () => {
       if (safetyNet) { clearTimeout(safetyNet); safetyNet = null }
     }
     try {
-      setDebugStage(`calling_native:${productId}`)
-      // Extra console for logcat even if modal fails
-      // eslint-disable-next-line no-console
-      console.log(`[PREMIUM][UI] tap productId=${productId} calling_native`)
       const result = productId.includes('yearly')
         ? await SubscriptionService.purchaseYearly()
         : await SubscriptionService.purchaseMonthly()
-      setDebugStage(`native_returned:${productId} success=${result.success} code=${result.errorDetail ?? 'none'}`)
 
       if (!mountedRef.current) return
       if (!result.success) {
-        // TODO: DEBUG POPUP - remove setErrorDetail after triage
-        const detailBase = `productId=${productId} code=${result.errorDetail ?? 'unknown'}`
         if (result.errorDetail === 'cancelled') {
-          const msg = 'Purchase cancelled. You can try again anytime.'
-          setError(msg)
-          setErrorDetail({ title: 'Purchase Cancelled', message: msg, details: `${detailBase} stage=purchase` })
+          setError('Purchase cancelled. You can try again anytime.')
         } else if (result.errorDetail === 'already_owned') {
-          try {
-            await SubscriptionService.restore()
-            const newStatus = await SubscriptionService.getStatus()
-            if (!mountedRef.current) return
-            if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
-            else {
-              const msg = 'Your existing subscription was found but could not be activated. Please try Restore Purchases.'
-              setError(msg)
-              setErrorDetail({ title: 'Already Owned', message: msg, details: `${detailBase} stage=restore` })
-            }
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e)
-            const errMsg = 'Your existing subscription was found but could not be activated. Please try Restore Purchases.'
-            setError(errMsg)
-            setErrorDetail({ title: 'Already Owned - Restore Failed', message: errMsg, details: `${detailBase} stage=restore error=${msg}` })
-          }
+          await SubscriptionService.restore()
+          const newStatus = await SubscriptionService.getStatus()
+          if (!mountedRef.current) return
+          if (newStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(newStatus) }
+          else { setError('Your existing subscription was found but could not be activated. Please try Restore Purchases.') }
         } else if (result.errorDetail === 'billing_unavailable') {
-          const msg = 'Google Play Billing is not available on this device or account.'
-          setError(msg)
-          setErrorDetail({ title: 'Billing Unavailable', message: result.error || msg, details: `${detailBase} stage=purchase` })
+          setError('Google Play Billing is not available on this device or account.')
         } else if (result.errorDetail === 'product_unavailable') {
-          const msg = 'This subscription is not available for your account or region right now.'
-          setError(msg)
-          setErrorDetail({ title: 'Product Unavailable', message: result.error || msg, details: `${detailBase} stage=purchase` })
+          setError('This subscription is not available for your account or region right now.')
         } else if (result.errorDetail === 'network') {
-          const msg = 'Network error. Please check your connection and try again.'
-          setError(msg)
-          setErrorDetail({ title: 'Network Error', message: result.error || msg, details: `${detailBase} stage=purchase` })
+          setError('Network error. Please check your connection and try again.')
         } else if (result.errorDetail === 'verification') {
-          const msg = result.error || 'Purchase could not be verified. Please try again.'
-          setError(msg)
-          setErrorDetail({ title: 'Verification Failed', message: msg, details: `${detailBase} stage=verification` })
+          setError(result.error || 'Purchase could not be verified. Please try again.')
         } else {
-          const msg = result.error || 'Google Play purchase could not be started. Please check your Google Play account and try again.'
-          setError(msg)
-          setErrorDetail({ title: 'Purchase Failed', message: msg, details: `${detailBase} stage=purchase` })
+          setError(result.error || 'Google Play purchase could not be started. Please check your Google Play account and try again.')
         }
         return
       }
@@ -240,27 +183,18 @@ export default function PremiumPage() {
         const retryStatus = await SubscriptionService.getStatus()
         if (!mountedRef.current) return
         if (retryStatus.isPremium) { setIsPremium(true); setSubscriptionStatus('active'); setStatus(retryStatus) }
-        else {
-          const msg = 'Purchase verified. Your premium status is refreshing — reopen this screen shortly.'
-          setError(msg)
-          // TODO: DEBUG POPUP - remove after triage
-          setErrorDetail({ title: 'Premium Refresh Pending', message: msg, details: `productId=${productId} stage=entitlement code=refresh_pending` })
-        }
+        else { setError('Purchase verified. Your premium status is refreshing — reopen this screen shortly.') }
       }
     } catch (e: unknown) {
       if (!mountedRef.current) return
       const err = e instanceof Error ? e : new Error(String(e))
-      setError(err.message || 'An unexpected error occurred')
-      setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: `productId=${productId} stage=catch error=${err.message} stack=${(err.stack || '').slice(0, 800)}` })
+      setErrorDetail({ title: 'Purchase Failed', message: err.message || 'An unexpected error occurred', details: err.stack || JSON.stringify(err) })
     } finally {
       clearSafetyNet()
       purchasePendingRef.current = false
-      if (mountedRef.current) {
-        setSubscribing(false)
-        setDebugStage(prev => (prev?.startsWith('tap:') || prev?.startsWith('calling_native') || prev?.startsWith('purchase_start') ? `${prev} -> done` : prev))
-      }
+      if (mountedRef.current) setSubscribing(false)
     }
-  }, [isNative, plansLoading])
+  }, [])
 
   const handleRestore = useCallback(async () => {
     setRestoring(true)
@@ -306,20 +240,9 @@ export default function PremiumPage() {
                 )}
 
                 {subscribing ? (
-                  <div className="py-12">
-                    <PageLoading className="min-h-0 bg-transparent" />
-                    <p className="text-center text-xs text-slate-400 mt-3">Contacting Google Play…</p>
-                    {debugStage && <p className="text-center text-[11px] font-mono text-amber-400/80 mt-2 break-all px-4">{debugStage}</p>}
-                    {error && <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">{error}</div>}
-                    {/* Fallback DOM-visible timer ensures we see stall even if React modal is hidden behind overlay */}
-                    <p className="text-center text-[10px] text-slate-500 mt-2">If this spins &gt;15s, a timeout popup must appear. If not, JS timers are blocked.</p>
-                  </div>
+                  <div className="py-12"><PageLoading className="min-h-0 bg-transparent" /></div>
                 ) : isNative ? (
                   <>
-                    {/* DEBUG: always-visible handler proof */}
-                    {debugStage && !subscribing && (
-                      <div className="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono text-center break-all">{debugStage}</div>
-                    )}
                     {/* Native pricing cards */}
                     {!plansLoading && plans.length === 0 && (
                       <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>

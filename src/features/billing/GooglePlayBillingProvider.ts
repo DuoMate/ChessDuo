@@ -171,8 +171,6 @@ export const GooglePlayBillingProvider: BillingProvider = {
       return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
     }
 
-    // Fast-fail if Play Billing is not supported on this device/account
-    // (prevents launch that would otherwise hang forever with no popup).
     try {
       const maybeCheck = (p as unknown as { isBillingSupported?: () => Promise<{ isBillingSupported: boolean }> }).isBillingSupported
       if (maybeCheck) {
@@ -183,7 +181,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         }
       }
     } catch {
-      // best-effort only - do not block purchase on check failure
+      // best-effort only
     }
 
     // NOTE: the Play base-plan ID differs from the subscription product ID
@@ -222,23 +220,16 @@ export const GooglePlayBillingProvider: BillingProvider = {
     billingLog('launch_start', `productId=${productId} productType=subs planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
 
     try {
-      // For triage wrap the native sheet in a 10s hang detector (must fire
-      // BEFORE the UI 12s safety_net so the precise product_unavailable /
-      // billing_unavailable popup surfaces instead of generic timeout).
-      const DEBUG_PURCHASE_HANG_MS = 10000
-      let hangTimer: ReturnType<typeof setTimeout> | null = null
-      const hangGuard = new Promise<never>((_, reject) => {
-        hangTimer = setTimeout(() => reject(new Error('DEBUG_HANG purchaseProduct did not settle')), DEBUG_PURCHASE_HANG_MS)
-      })
-      const purchasePromise = p.purchaseProduct({
+      // No timeout here by design: the native Play sheet waits on the user for
+      // an unbounded time. A race timeout would fake-fail an in-progress
+      // purchase. Termination is guaranteed by the plugin settling (result or
+      // throw) plus the UI-level 30s safety net as a last resort.
+      const result = await p.purchaseProduct({
         productIdentifier: productId,
         productType: 'subs',
         planIdentifier,
         ...(offerToken ? { offerToken } : {}),
       })
-      const result = await Promise.race([purchasePromise, hangGuard]).finally(() => {
-        if (hangTimer) clearTimeout(hangTimer)
-      }) as NativeTransaction
 
       if (!result || !result.productIdentifier) {
         billingError('purchase', 'failed', 'empty purchase result from store')
@@ -264,10 +255,6 @@ export const GooglePlayBillingProvider: BillingProvider = {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('DEBUG_HANG')) {
-        billingError('purchase', 'hang', `purchaseProduct hang productId=${productId} planIdentifier=${planIdentifier} hasOffer=${Boolean(offerToken)}`)
-        return { success: false, error: 'Google Play did not respond. Please check your Google Play account and try again.', errorDetail: 'network' }
-      }
       billingLog('callback', `responseCode=ERROR debugMessage=${msg}`)
       if (msg.includes('cancelled') || msg.includes('cancel') || msg.includes('CANCEL') || msg.includes('USER_CANCEL')) {
         return { success: false, error: 'Purchase cancelled', errorDetail: 'cancelled' }

@@ -41,8 +41,6 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
 
   useEffect(() => {
     let cancelled = false
-    // Safety-net: if getStatus/fetchProfile hangs (no network / bridge hang),
-    // show the Upgrade button anyway after 8s instead of infinite spinner.
     const fallback = setTimeout(() => {
       if (!cancelled) setCheckingPremium(false)
     }, 8000)
