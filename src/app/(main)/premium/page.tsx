@@ -52,6 +52,8 @@ export default function PremiumPage() {
     const withUiTimeout = <T,>(p: Promise<T>, ms: number, fallback: T) =>
       Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback), ms))])
     try {
+      setError(null)
+      setErrorDetail(null)
       const statusFallback: SubscriptionInfo = {
         isPremium: false,
         subscriptionProvider: null,
@@ -71,6 +73,19 @@ export default function PremiumPage() {
       setIsPremium(subStatus.isPremium)
       setSubscriptionStatus(subStatus.subscriptionStatus)
       setPlans(subPlans)
+      const diagnostic = subPlans.length === 0 ? SubscriptionService.getBillingDiagnostic() : null
+      if (diagnostic) {
+        setError('Google Play plans could not be loaded. Open technical details to identify the cause.')
+        setErrorDetail({
+          title: 'Google Play Plans Unavailable',
+          message: diagnostic.message,
+          details: [
+            `stage=${diagnostic.stage}`,
+            `code=${diagnostic.code}`,
+            diagnostic.details,
+          ].filter(Boolean).join('\n'),
+        })
+      }
     } catch {
       if (!mountedRef.current) return
     } finally {

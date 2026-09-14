@@ -1,4 +1,4 @@
-import type { BillingProvider, PurchaseResult, SubscriptionPlan, SubscriptionInfo } from './types'
+import type { BillingDiagnostic, BillingProvider, PurchaseResult, SubscriptionPlan, SubscriptionInfo } from './types'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import {
   BILLING_AUTH_TIMEOUT_MS,
@@ -244,6 +244,10 @@ export const SubscriptionService = {
     } catch {
       return []
     }
+  },
+
+  getBillingDiagnostic(): BillingDiagnostic | null {
+    return provider?.getLastDiagnostic?.() ?? null
   },
 
   async getStatus(): Promise<SubscriptionInfo> {

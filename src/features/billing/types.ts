@@ -53,6 +53,19 @@ export interface PurchaseResult {
   errorDetail?: 'cancelled' | 'failed' | 'already_owned' | 'network' | 'verification' | 'billing_unavailable' | 'product_unavailable' | 'unknown'
 }
 
+export type BillingDiagnosticCode =
+  | 'plugin_unavailable'
+  | 'product_query_timeout'
+  | 'product_unavailable'
+  | 'product_query_failed'
+
+export interface BillingDiagnostic {
+  stage: 'connection' | 'product_query'
+  code: BillingDiagnosticCode
+  message: string
+  details?: string
+}
+
 export interface BillingProvider {
   /** Connect to the billing service. Returns true if billing is available. */
   initialize(): Promise<boolean>
@@ -66,4 +79,6 @@ export interface BillingProvider {
   isAvailable(): Promise<boolean>
   /** Acknowledge a purchase (some stores require this). */
   acknowledgePurchase(purchaseToken: string, productId: string): Promise<void>
+  /** Last non-sensitive diagnostic from a billing operation, when available. */
+  getLastDiagnostic?(): BillingDiagnostic | null
 }
