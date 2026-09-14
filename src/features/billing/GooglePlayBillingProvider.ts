@@ -1,4 +1,5 @@
 import type { BillingDiagnostic, BillingDiagnosticCode, BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
+import { Capacitor } from '@capacitor/core'
 import { NativePurchases } from '@capgo/native-purchases'
 import {
   BILLING_PRODUCT_QUERY_TIMEOUT_MS,
@@ -120,7 +121,6 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
   billingLog('connection_start', '')
   const startedAt = Date.now()
   try {
-    const { Capacitor } = await import('@capacitor/core')
     const nativePlatform = Capacitor.isNativePlatform()
     const platform = Capacitor.getPlatform?.() || 'unknown'
     if (!nativePlatform) {
@@ -202,7 +202,6 @@ export const GooglePlayBillingProvider: BillingProvider = {
 
   async isAvailable(): Promise<boolean> {
     try {
-      const { Capacitor } = await import('@capacitor/core')
       if (!Capacitor.isNativePlatform()) return false
       const p = await getPlugin()
       return p !== null
