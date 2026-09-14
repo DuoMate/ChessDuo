@@ -63,6 +63,7 @@ CANCELLED → ACTIVE (via purchase/restore)
 - `@supabase/ssr` (server-side auth)
 
 ## Recent Changes
+- **2026-09-14**: Fixed Capacitor proxy thenable assimilation by making `getPlugin()` synchronous and never awaiting the `NativePurchases` proxy; added regression coverage for proxies exposing `then`.
 - **2026-09-14**: Added bounded, redacted billing trace breadcrumbs surfaced through the existing Premium technical-details modal, including plugin lookup, native billing initialization, product query, and purchase boundaries.
 - **2026-09-14**: Expanded native plugin diagnostics to distinguish platform, JavaScript import, export, registration, and timeout failures; added sanitized runtime context for Premium technical details and CI registration verification.
 - **2026-09-14**: Added serialized native BillingClient operations, explicit product-query timeout diagnostics, subscription product-ID normalization, and safe Premium technical details for diagnosing Play product loading failures. Diagnostics exclude purchase/auth tokens and PII.
