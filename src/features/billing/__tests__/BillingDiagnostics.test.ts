@@ -1,10 +1,26 @@
-import { createPluginDiagnostic, formatBillingTrace } from '../GooglePlayBillingProvider'
+import { createPluginDiagnostic, formatBillingTrace, GooglePlayBillingProvider } from '../GooglePlayBillingProvider'
+
+jest.mock('@capacitor/core', () => ({
+  Capacitor: {
+    isNativePlatform: () => true,
+    getPlatform: () => 'android',
+  },
+}), { virtual: true })
 
 jest.mock('@capgo/native-purchases', () => ({
-  NativePurchases: {},
+  NativePurchases: {
+    then: () => new Promise(() => undefined),
+    getProducts: jest.fn(),
+    purchaseProduct: jest.fn(),
+    restorePurchases: jest.fn(),
+  },
 }), { virtual: true })
 
 describe('billing plugin diagnostics', () => {
+  it('does not assimilate the Capacitor proxy then property during lookup', async () => {
+    await expect(GooglePlayBillingProvider.initialize()).resolves.toBe(true)
+  })
+
   it('formats a bounded safe trace for the technical details popup', () => {
     expect(formatBillingTrace([
       { event: 'provider_module_loaded', elapsedMs: 1 },

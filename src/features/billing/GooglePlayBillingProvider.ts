@@ -148,7 +148,7 @@ export function resolveBasePlanId(productId: string): string {
   return GOOGLE_PLAY_BASE_PLAN_IDS[productId] ?? productId
 }
 
-async function getPlugin(): Promise<NativePurchasesPlugin | null> {
+function getPlugin(): NativePurchasesPlugin | null {
   if (plugin) {
     traceEvent('plugin_lookup_success', 'name=NativePurchases source=cache')
     return plugin
@@ -239,14 +239,14 @@ function isYearly(productId: string, prod: NativeProduct): boolean {
 
 export const GooglePlayBillingProvider: BillingProvider = {
   async initialize(): Promise<boolean> {
-    const p = await getPlugin()
+    const p = getPlugin()
     return p !== null
   },
 
   async isAvailable(): Promise<boolean> {
     try {
       if (!Capacitor.isNativePlatform()) return false
-      const p = await getPlugin()
+      const p = getPlugin()
       return p !== null
     } catch {
       return false
@@ -257,15 +257,15 @@ export const GooglePlayBillingProvider: BillingProvider = {
     resetBillingTrace()
     traceEvent('native_billing_initialization_start')
     setDiagnostic(null)
-    const p = await withTimeout(getPlugin(), 5000, null)
+    const p = getPlugin()
     if (!p) {
-      traceEvent('plugin_lookup_timeout', 'operation=getPlugin timeoutMs=5000')
+      traceEvent('plugin_lookup_failed', 'operation=getPlugin')
       if (!lastDiagnostic || lastDiagnostic.code === 'plugin_unavailable') {
         setDiagnostic({
           stage: 'plugin_lookup',
-          code: 'plugin_lookup_timeout',
-          message: 'Native Google Play billing plugin lookup timed out.',
-          details: 'operation=getPlugin timeoutMs=5000',
+          code: 'plugin_unavailable',
+          message: 'Native Google Play billing plugin lookup failed.',
+          details: 'operation=getPlugin result=null',
         })
       }
       return []
@@ -383,7 +383,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
 
   async purchase(productId: string): Promise<PurchaseResult> {
     traceEvent('upgrade_clicked', `productId=${productId}`)
-    const p = await withTimeout(getPlugin(), 5000, null)
+    const p = getPlugin()
     if (!p) {
       traceEvent('native_billing_initialization_failed', 'operation=getPlugin timeout=5000')
       billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable or timed out')
@@ -503,7 +503,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async restorePurchases(): Promise<PurchaseResult[]> {
-    const p = await getPlugin()
+    const p = getPlugin()
     if (!p) return []
 
     try {
