@@ -1,5 +1,9 @@
 import { createPluginDiagnostic } from '../GooglePlayBillingProvider'
 
+jest.mock('@capgo/native-purchases', () => ({
+  NativePurchases: {},
+}), { virtual: true })
+
 describe('billing plugin diagnostics', () => {
   it('preserves runtime context while redacting sensitive error values', () => {
     const diagnostic = createPluginDiagnostic({

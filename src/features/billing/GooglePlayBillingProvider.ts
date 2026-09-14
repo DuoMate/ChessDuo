@@ -1,4 +1,5 @@
 import type { BillingDiagnostic, BillingDiagnosticCode, BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
+import { NativePurchases } from '@capgo/native-purchases'
 import {
   BILLING_PRODUCT_QUERY_TIMEOUT_MS,
   BILLING_RESTORE_TIMEOUT_MS,
@@ -133,8 +134,9 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
       billingLog('connection_result', 'responseCode=UNAVAILABLE debugMessage=not-native-platform')
       return null
     }
-    const mod = await import('@capgo/native-purchases')
-    const candidate = mod.NativePurchases as unknown as NativePurchasesPlugin | undefined
+    // Use a static import. A dynamic import becomes a separate web chunk in
+    // the static Capacitor export and can remain pending in the Android WebView.
+    const candidate = NativePurchases as unknown as NativePurchasesPlugin | undefined
     if (!candidate) {
       setDiagnostic(createPluginDiagnostic({
         code: 'plugin_export_missing',
