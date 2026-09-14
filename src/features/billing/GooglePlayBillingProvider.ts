@@ -1,4 +1,4 @@
-import type { BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
+import type { BillingDiagnostic, BillingProvider, PurchaseResult, SubscriptionPlan } from './types'
 import {
   BILLING_PRODUCT_QUERY_TIMEOUT_MS,
   BILLING_RESTORE_TIMEOUT_MS,
@@ -33,13 +33,37 @@ interface NativeTransaction {
   jwsRepresentation?: string
 }
 
+type ProductQueryResult =
+  | { products: NativeProduct[] }
+  | { products: NativeProduct[]; timedOut: true }
+
 let plugin: NativePurchasesPlugin | null = null
+let lastDiagnostic: BillingDiagnostic | null = null
+let nativeOperationQueue: Promise<void> = Promise.resolve()
 
 // Offer tokens returned by getProducts(), keyed by subscription product ID
 // (and base-plan ID as fallback). Play Billing requires the offer token to
 // launch the flow for a specific base plan/offer — launching without it is
 // the remaining "Upgrade spins forever / sheet never opens" cause.
 const offerTokenCache: Record<string, string> = {}
+
+function runSerialized<T>(operation: () => Promise<T>): Promise<T> {
+  const result = nativeOperationQueue.then(operation, operation)
+  nativeOperationQueue = result.then(() => undefined, () => undefined)
+  return result
+}
+
+function diagnosticMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  return message
+    .replace(/(token|authorization|bearer)\s*[=:]\s*\S+/gi, '$1=[redacted]')
+    .slice(0, 240)
+}
+
+function setDiagnostic(diagnostic: BillingDiagnostic | null): void {
+  lastDiagnostic = diagnostic
+  if (diagnostic) billingError(diagnostic.stage, diagnostic.code, diagnostic.message)
+}
 
 function cacheOfferTokens(products: NativeProduct[]): void {
   for (const prod of products) {
@@ -119,22 +143,38 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async queryProductDetails(productIds: string[]): Promise<SubscriptionPlan[]> {
+    setDiagnostic(null)
     const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
-      billingError('product_query', 'billing_unavailable', 'native billing plugin unavailable or timed out')
+      setDiagnostic({
+        stage: 'connection',
+        code: 'plugin_unavailable',
+        message: 'Native Google Play billing plugin was unavailable or timed out.',
+        details: 'getPlugin timeout=5000ms',
+      })
       return []
     }
 
     billingLog('query_start', `productIds=${productIds.join(',')} productType=subs`)
     try {
-      const result = await withTimeout(
-        p.getProducts({
+      const result = await withTimeout<ProductQueryResult>(
+        runSerialized(() => p.getProducts({
           productIdentifiers: productIds,
           productType: 'subs',
-        }),
+        })),
         BILLING_PRODUCT_QUERY_TIMEOUT_MS,
-        { products: [] },
+        { products: [], timedOut: true },
       )
+
+      if ('timedOut' in result && result.timedOut) {
+        setDiagnostic({
+          stage: 'product_query',
+          code: 'product_query_timeout',
+          message: `Google Play did not respond within ${BILLING_PRODUCT_QUERY_TIMEOUT_MS} ms.`,
+          details: `productIds=${productIds.join(',')} elapsedMs>=${BILLING_PRODUCT_QUERY_TIMEOUT_MS}`,
+        })
+        return []
+      }
 
       billingLog('query_result', `productCount=${result.products.length}`)
       for (const prod of result.products) {
@@ -142,14 +182,20 @@ export const GooglePlayBillingProvider: BillingProvider = {
         console.log(`[PREMIUM][PRODUCT] query_result productId=${prod.identifier} productType=subs hasOffer=${Boolean(prod.offerToken)}`)
       }
       if (result.products.length === 0) {
-        billingError('product_query', 'product_unavailable', 'store returned zero products for requested ids')
+        setDiagnostic({
+          stage: 'product_query',
+          code: 'product_unavailable',
+          message: 'Google Play returned zero eligible products.',
+          details: `productIds=${productIds.join(',')} response=empty`,
+        })
       }
       cacheOfferTokens(result.products)
 
       return result.products.map((prod) => {
-        const isYr = isYearly(prod.identifier, prod)
+        const productId = prod.planIdentifier ?? prod.identifier
+        const isYr = isYearly(productId, prod)
         return {
-          productId: prod.identifier,
+          productId,
           title: prod.title,
           subtitle: isYr ? 'Most popular choice' : 'Flexible & cancel anytime',
           price: prod.priceString || `${prod.currencyCode} ${prod.price}`,
@@ -158,10 +204,18 @@ export const GooglePlayBillingProvider: BillingProvider = {
         }
       })
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      billingError('product_query', 'failed', message)
+      setDiagnostic({
+        stage: 'product_query',
+        code: 'product_query_failed',
+        message: diagnosticMessage(err),
+        details: `productIds=${productIds.join(',')}`,
+      })
       return []
     }
+  },
+
+  getLastDiagnostic(): BillingDiagnostic | null {
+    return lastDiagnostic
   },
 
   async purchase(productId: string): Promise<PurchaseResult> {
@@ -174,7 +228,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
     try {
       const maybeCheck = (p as unknown as { isBillingSupported?: () => Promise<{ isBillingSupported: boolean }> }).isBillingSupported
       if (maybeCheck) {
-        const supported = await withTimeout(maybeCheck.call(p), 3000, { isBillingSupported: true } as { isBillingSupported: boolean })
+        const supported = await withTimeout(runSerialized(() => maybeCheck.call(p)), 3000, { isBillingSupported: true } as { isBillingSupported: boolean })
         if (supported && 'isBillingSupported' in supported && !supported.isBillingSupported) {
           billingError('purchase', 'billing_unavailable', 'Play Billing not supported on this device')
           return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
@@ -197,7 +251,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
       billingLog('offer_lookup_start', `productId=${productId}`)
       try {
         const lookup = await withTimeout(
-          p.getProducts({ productIdentifiers: [productId], productType: 'subs' }),
+          runSerialized(() => p.getProducts({ productIdentifiers: [productId], productType: 'subs' })),
           BILLING_PRODUCT_QUERY_TIMEOUT_MS,
           { products: [] },
         )
@@ -224,12 +278,12 @@ export const GooglePlayBillingProvider: BillingProvider = {
       // an unbounded time. A race timeout would fake-fail an in-progress
       // purchase. Termination is guaranteed by the plugin settling (result or
       // throw) plus the UI-level 30s safety net as a last resort.
-      const result = await p.purchaseProduct({
+      const result = await runSerialized(() => p.purchaseProduct({
         productIdentifier: productId,
         productType: 'subs',
         planIdentifier,
         ...(offerToken ? { offerToken } : {}),
-      })
+      }))
 
       if (!result || !result.productIdentifier) {
         billingError('purchase', 'failed', 'empty purchase result from store')
@@ -285,7 +339,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
 
     try {
       const restored = await withTimeout(
-        p.restorePurchases(),
+        runSerialized(() => p.restorePurchases()),
         BILLING_RESTORE_TIMEOUT_MS,
         undefined,
       )
@@ -295,7 +349,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
       }
       if (!p.getPurchases) return []
       const current = await withTimeout(
-        p.getPurchases({ productType: 'subs' }),
+        runSerialized(() => p.getPurchases!({ productType: 'subs' })),
         BILLING_RESTORE_TIMEOUT_MS,
         { purchases: [] },
       )

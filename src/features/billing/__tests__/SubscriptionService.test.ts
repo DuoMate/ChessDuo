@@ -1,4 +1,4 @@
-import type { BillingProvider, PurchaseResult } from '../types'
+import type { BillingDiagnostic, BillingProvider, PurchaseResult } from '../types'
 
 const mockProvider: BillingProvider = {
   initialize: jest.fn().mockResolvedValue(true),
@@ -10,6 +10,7 @@ const mockProvider: BillingProvider = {
   restorePurchases: jest.fn().mockResolvedValue([]),
   isAvailable: jest.fn().mockResolvedValue(true),
   acknowledgePurchase: jest.fn().mockResolvedValue(undefined),
+  getLastDiagnostic: jest.fn().mockReturnValue(null),
 }
 
 const mockFetch = jest.fn()
@@ -61,6 +62,24 @@ describe('SubscriptionService', () => {
       SubscriptionService.setProvider(errorProvider)
       const plans = await SubscriptionService.getPlans()
       expect(plans).toEqual([])
+    })
+
+    it('exposes the provider diagnostic after a failed product query', async () => {
+      const diagnostic: BillingDiagnostic = {
+        stage: 'product_query',
+        code: 'product_query_timeout',
+        message: 'Google Play did not respond within 8000 ms',
+      }
+      const diagnosticProvider: BillingProvider = {
+        ...mockProvider,
+        queryProductDetails: jest.fn().mockResolvedValue([]),
+        getLastDiagnostic: jest.fn().mockReturnValue(diagnostic),
+      }
+      SubscriptionService.setProvider(diagnosticProvider)
+
+      await SubscriptionService.getPlans()
+
+      expect(SubscriptionService.getBillingDiagnostic()).toEqual(diagnostic)
     })
   })
 
