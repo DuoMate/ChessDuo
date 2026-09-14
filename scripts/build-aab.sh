@@ -138,6 +138,7 @@ log "Syncing Capacitor web assets..."
 echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 npx cap sync android
 ok "Sync complete"
+bash "$PROJECT_ROOT/scripts/verify-native-billing.sh"
 
 # ─── Install bounded Native AdMob plugin ─────────
 bash "$PROJECT_ROOT/scripts/install-native-ad.sh"

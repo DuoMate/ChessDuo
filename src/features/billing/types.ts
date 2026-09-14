@@ -55,6 +55,13 @@ export interface PurchaseResult {
 
 export type BillingDiagnosticCode =
   | 'plugin_unavailable'
+  | 'not_native_platform'
+  | 'js_import_failed'
+  | 'plugin_import_timeout'
+  | 'plugin_export_missing'
+  | 'native_registration_missing'
+  | 'billing_connection_failed'
+  | 'billing_connection_timeout'
   | 'product_query_timeout'
   | 'product_unavailable'
   | 'product_query_failed'
