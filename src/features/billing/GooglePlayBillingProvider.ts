@@ -8,6 +8,7 @@ import {
 } from '@/features/shared/gameConstants'
 
 interface NativePurchasesPlugin {
+  isBillingSupported?(): Promise<{ isBillingSupported: boolean }>
   getProducts(options: { productIdentifiers: string[]; productType: string }): Promise<{ products: NativeProduct[] }>
   getPurchases?(options: { productType: string }): Promise<{ purchases: NativeTransaction[] }>
   purchaseProduct(options: { productIdentifier: string; productType: string; planIdentifier?: string; offerToken?: string }): Promise<NativeTransaction>
@@ -42,6 +43,8 @@ type ProductQueryResult =
 let plugin: NativePurchasesPlugin | null = null
 let lastDiagnostic: BillingDiagnostic | null = null
 let nativeOperationQueue: Promise<void> = Promise.resolve()
+let traceStartedAt = Date.now()
+let billingTrace: BillingTraceEvent[] = []
 interface PluginDiagnosticInput {
   code: BillingDiagnosticCode
   platform: string
@@ -50,6 +53,12 @@ interface PluginDiagnosticInput {
   pluginExportPresent: boolean
   error?: unknown
   proxyMethods?: string[]
+}
+
+export interface BillingTraceEvent {
+  event: string
+  elapsedMs: number
+  detail?: string
 }
 
 // Offer tokens returned by getProducts(), keyed by subscription product ID
@@ -71,6 +80,25 @@ function diagnosticMessage(error: unknown): string {
     .slice(0, 240)
 }
 
+export function formatBillingTrace(trace: BillingTraceEvent[]): string {
+  return trace
+    .map((entry, index) => `${index + 1}. ${entry.event} elapsedMs=${entry.elapsedMs}${entry.detail ? ` ${entry.detail}` : ''}`)
+    .join('\n')
+}
+
+function traceEvent(event: string, detail?: string): void {
+  const safeDetail = detail ? diagnosticMessage(detail) : undefined
+  billingTrace = [...billingTrace, { event, elapsedMs: Date.now() - traceStartedAt, ...(safeDetail ? { detail: safeDetail } : {}) }].slice(-40)
+  // eslint-disable-next-line no-console
+  console.log(`[CHESSDUO_BILLING] ${event}${safeDetail ? ` ${safeDetail}` : ''}`)
+}
+
+function resetBillingTrace(): void {
+  traceStartedAt = Date.now()
+  billingTrace = []
+  traceEvent('provider_module_loaded')
+}
+
 export function createPluginDiagnostic(input: PluginDiagnosticInput): BillingDiagnostic {
   const error = input.error ? ` errorName=${input.error instanceof Error ? input.error.name : 'UnknownError'} errorMessage=${diagnosticMessage(input.error)}` : ''
   const methods = input.proxyMethods ? ` proxyMethods=${input.proxyMethods.join(',') || 'none'}` : ''
@@ -89,7 +117,9 @@ export function createPluginDiagnostic(input: PluginDiagnosticInput): BillingDia
 }
 function setDiagnostic(diagnostic: BillingDiagnostic | null): void {
   lastDiagnostic = diagnostic
-  if (diagnostic) billingError(diagnostic.stage, diagnostic.code, diagnostic.message)
+    ? { ...diagnostic, details: [diagnostic.details, `trace=${formatBillingTrace(billingTrace)}`].filter(Boolean).join(' ') }
+    : null
+  if (lastDiagnostic) billingError(lastDiagnostic.stage, lastDiagnostic.code, lastDiagnostic.message)
 }
 
 function cacheOfferTokens(products: NativeProduct[]): void {
@@ -117,13 +147,19 @@ export function resolveBasePlanId(productId: string): string {
 }
 
 async function getPlugin(): Promise<NativePurchasesPlugin | null> {
-  if (plugin) return plugin
+  if (plugin) {
+    traceEvent('plugin_lookup_success', 'name=NativePurchases source=cache')
+    return plugin
+  }
+  traceEvent('plugin_lookup_start', 'name=NativePurchases')
   billingLog('connection_start', '')
   const startedAt = Date.now()
   try {
     const nativePlatform = Capacitor.isNativePlatform()
     const platform = Capacitor.getPlatform?.() || 'unknown'
+    traceEvent('platform_detected', `platform=${platform} nativePlatform=${nativePlatform}`)
     if (!nativePlatform) {
+      traceEvent('plugin_lookup_failed', 'reason=not_native_platform')
       setDiagnostic(createPluginDiagnostic({
         code: 'not_native_platform',
         platform,
@@ -138,6 +174,7 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
     // the static Capacitor export and can remain pending in the Android WebView.
     const candidate = NativePurchases as unknown as NativePurchasesPlugin | undefined
     if (!candidate) {
+      traceEvent('plugin_lookup_failed', 'reason=export_missing')
       setDiagnostic(createPluginDiagnostic({
         code: 'plugin_export_missing',
         platform,
@@ -147,9 +184,11 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
       }))
       return null
     }
+    traceEvent('plugin_object_found', `type=${typeof candidate}`)
     plugin = candidate
     const proxyMethods = ['getProducts', 'purchaseProduct', 'restorePurchases'].filter(method => typeof candidate[method as keyof NativePurchasesPlugin] === 'function')
     if (proxyMethods.length === 0) {
+      traceEvent('plugin_lookup_failed', 'reason=methods_missing')
       setDiagnostic(createPluginDiagnostic({
         code: 'native_registration_missing',
         platform,
@@ -161,10 +200,12 @@ async function getPlugin(): Promise<NativePurchasesPlugin | null> {
       plugin = null
       return null
     }
+    traceEvent('plugin_lookup_success', 'name=NativePurchases')
     billingLog('connection_result', 'responseCode=OK debugMessage=plugin-loaded')
     return plugin
   } catch (err) {
     const message = diagnosticMessage(err)
+    traceEvent('plugin_lookup_error', `error=${message}`)
     setDiagnostic(createPluginDiagnostic({
       code: 'js_import_failed',
       platform: 'unknown',
@@ -211,20 +252,67 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async queryProductDetails(productIds: string[]): Promise<SubscriptionPlan[]> {
+    resetBillingTrace()
+    traceEvent('native_billing_initialization_start')
     setDiagnostic(null)
     const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
+      traceEvent('plugin_lookup_timeout', 'operation=getPlugin timeoutMs=5000')
       if (!lastDiagnostic || lastDiagnostic.code === 'plugin_unavailable') {
         setDiagnostic({
-          stage: 'connection',
-          code: 'plugin_import_timeout',
-          message: 'Native Google Play billing plugin import timed out.',
-          details: 'getPlugin timeout=5000ms',
+          stage: 'plugin_lookup',
+          code: 'plugin_lookup_timeout',
+          message: 'Native Google Play billing plugin lookup timed out.',
+          details: 'operation=getPlugin timeoutMs=5000',
         })
       }
       return []
     }
 
+    traceEvent('native_billing_initialization_success')
+    if (p.isBillingSupported) {
+      traceEvent('native_initialize_start', 'method=isBillingSupported')
+      let supportResult: { isBillingSupported: boolean } | null = null
+      try {
+        supportResult = await withTimeout(
+          runSerialized(() => p.isBillingSupported!()),
+          5000,
+          null,
+        )
+      } catch (err) {
+        traceEvent('native_initialize_error', `error=${diagnosticMessage(err)}`)
+        setDiagnostic({
+          stage: 'native_initialize',
+          code: 'billing_connection_failed',
+          message: 'Native Google Play billing initialization failed.',
+          details: `operation=isBillingSupported error=${diagnosticMessage(err)}`,
+        })
+        return []
+      }
+      if (!supportResult) {
+        traceEvent('native_initialize_timeout', 'method=isBillingSupported timeoutMs=5000')
+        setDiagnostic({
+          stage: 'native_initialize',
+          code: 'billing_connection_timeout',
+          message: 'Native Google Play billing initialization timed out.',
+          details: `operation=isBillingSupported timeoutMs=5000 trace=${formatBillingTrace(billingTrace)}`,
+        })
+        return []
+      }
+      traceEvent('native_initialize_returned', `isBillingSupported=${supportResult.isBillingSupported}`)
+      if (!supportResult.isBillingSupported) {
+        setDiagnostic({
+          stage: 'native_initialize',
+          code: 'billing_connection_failed',
+          message: 'Native Google Play billing is not supported on this device.',
+          details: `operation=isBillingSupported trace=${formatBillingTrace(billingTrace)}`,
+        })
+        return []
+      }
+    } else {
+      traceEvent('native_initialize_skipped', 'reason=method_missing')
+    }
+    traceEvent('product_query_start', `productIds=${productIds.join(',')} productType=subs`)
     billingLog('query_start', `productIds=${productIds.join(',')} productType=subs`)
     try {
       const result = await withTimeout<ProductQueryResult>(
@@ -237,6 +325,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
       )
 
       if ('timedOut' in result && result.timedOut) {
+        traceEvent('product_query_timeout', `timeoutMs=${BILLING_PRODUCT_QUERY_TIMEOUT_MS}`)
         setDiagnostic({
           stage: 'product_query',
           code: 'product_query_timeout',
@@ -247,6 +336,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
       }
 
       billingLog('query_result', `productCount=${result.products.length}`)
+      traceEvent('product_query_returned', `productCount=${result.products.length}`)
       for (const prod of result.products) {
         // eslint-disable-next-line no-console
         console.log(`[PREMIUM][PRODUCT] query_result productId=${prod.identifier} productType=subs hasOffer=${Boolean(prod.offerToken)}`)
@@ -274,6 +364,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         }
       })
     } catch (err) {
+      traceEvent('product_query_error', `error=${diagnosticMessage(err)}`)
       setDiagnostic({
         stage: 'product_query',
         code: 'product_query_failed',
@@ -289,8 +380,10 @@ export const GooglePlayBillingProvider: BillingProvider = {
   },
 
   async purchase(productId: string): Promise<PurchaseResult> {
+    traceEvent('upgrade_clicked', `productId=${productId}`)
     const p = await withTimeout(getPlugin(), 5000, null)
     if (!p) {
+      traceEvent('native_billing_initialization_failed', 'operation=getPlugin timeout=5000')
       billingError('purchase', 'billing_unavailable', 'native billing plugin unavailable or timed out')
       return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
     }
@@ -298,7 +391,9 @@ export const GooglePlayBillingProvider: BillingProvider = {
     try {
       const maybeCheck = (p as unknown as { isBillingSupported?: () => Promise<{ isBillingSupported: boolean }> }).isBillingSupported
       if (maybeCheck) {
+        traceEvent('native_initialize_start', 'method=isBillingSupported')
         const supported = await withTimeout(runSerialized(() => maybeCheck.call(p)), 3000, { isBillingSupported: true } as { isBillingSupported: boolean })
+        traceEvent('native_initialize_returned', `isBillingSupported=${supported.isBillingSupported}`)
         if (supported && 'isBillingSupported' in supported && !supported.isBillingSupported) {
           billingError('purchase', 'billing_unavailable', 'Play Billing not supported on this device')
           return { success: false, error: 'Google Play Billing is not available on this device.', errorDetail: 'billing_unavailable' }
@@ -354,6 +449,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         planIdentifier,
         ...(offerToken ? { offerToken } : {}),
       }))
+      traceEvent('launch_billing_flow_returned', `productId=${productId}`)
 
       if (!result || !result.productIdentifier) {
         billingError('purchase', 'failed', 'empty purchase result from store')
@@ -378,6 +474,7 @@ export const GooglePlayBillingProvider: BillingProvider = {
         orderId: result.transactionId,
       }
     } catch (err: unknown) {
+      traceEvent('purchases_updated_callback', `error=${diagnosticMessage(err)}`)
       const msg = err instanceof Error ? err.message : String(err)
       billingLog('callback', `responseCode=ERROR debugMessage=${msg}`)
       if (msg.includes('cancelled') || msg.includes('cancel') || msg.includes('CANCEL') || msg.includes('USER_CANCEL')) {

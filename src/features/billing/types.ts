@@ -58,6 +58,7 @@ export type BillingDiagnosticCode =
   | 'not_native_platform'
   | 'js_import_failed'
   | 'plugin_import_timeout'
+  | 'plugin_lookup_timeout'
   | 'plugin_export_missing'
   | 'native_registration_missing'
   | 'billing_connection_failed'
@@ -67,7 +68,7 @@ export type BillingDiagnosticCode =
   | 'product_query_failed'
 
 export interface BillingDiagnostic {
-  stage: 'connection' | 'product_query'
+  stage: 'connection' | 'plugin_lookup' | 'native_initialize' | 'product_query' | 'purchase' | 'verification'
   code: BillingDiagnosticCode
   message: string
   details?: string
