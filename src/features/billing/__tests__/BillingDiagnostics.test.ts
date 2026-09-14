@@ -1,10 +1,17 @@
-import { createPluginDiagnostic } from '../GooglePlayBillingProvider'
+import { createPluginDiagnostic, formatBillingTrace } from '../GooglePlayBillingProvider'
 
 jest.mock('@capgo/native-purchases', () => ({
   NativePurchases: {},
 }), { virtual: true })
 
 describe('billing plugin diagnostics', () => {
+  it('formats a bounded safe trace for the technical details popup', () => {
+    expect(formatBillingTrace([
+      { event: 'provider_module_loaded', elapsedMs: 1 },
+      { event: 'plugin_lookup_start', elapsedMs: 4, detail: 'name=NativePurchases' },
+    ])).toBe('1. provider_module_loaded elapsedMs=1\n2. plugin_lookup_start elapsedMs=4 name=NativePurchases')
+  })
+
   it('preserves runtime context while redacting sensitive error values', () => {
     const diagnostic = createPluginDiagnostic({
       code: 'js_import_failed',

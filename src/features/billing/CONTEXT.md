@@ -63,6 +63,7 @@ CANCELLED → ACTIVE (via purchase/restore)
 - `@supabase/ssr` (server-side auth)
 
 ## Recent Changes
+- **2026-09-14**: Added bounded, redacted billing trace breadcrumbs surfaced through the existing Premium technical-details modal, including plugin lookup, native billing initialization, product query, and purchase boundaries.
 - **2026-09-14**: Expanded native plugin diagnostics to distinguish platform, JavaScript import, export, registration, and timeout failures; added sanitized runtime context for Premium technical details and CI registration verification.
 - **2026-09-14**: Added serialized native BillingClient operations, explicit product-query timeout diagnostics, subscription product-ID normalization, and safe Premium technical details for diagnosing Play product loading failures. Diagnostics exclude purchase/auth tokens and PII.
 - **2026-09-11**: Production audit repaired the native purchase path: verified purchase and restore tokens through `/api/subscription/verify`, supplied the Android subscription base-plan identifier, added product allowlisting, and added the missing `@capgo/native-purchases` dependency. Release remains blocked pending account-linking, Play Console, and signed-device validation.
