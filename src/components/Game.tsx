@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChessBoard, PendingOverlay, HighlightSquares } from './ChessBoard'
+import { type PendingOverlay, type HighlightSquares } from './ChessBoard'
 import type { PromotionPiece } from '@/features/shared/gameTypes'
-import { MobileChessBoard } from './MobileChessBoard'
 import { LocalGame } from '@/features/offline/game/localGame'
 import { GameStatus, MoveComparison } from '@/features/shared/gameTypes'
 import { OnlineGame } from '@/features/online/game/onlineGame'
@@ -32,11 +31,11 @@ import type { MoveEntry } from './MovePlayback'
 import { SlideOver } from './SlideOver'
 import { ProfilePanel } from './ProfilePanel'
 import { HistoryPanel } from './HistoryPanel'
-import { GameMenu } from './GameMenu'
+import { GameTopBarSection, GameBoardSection } from './GameSections'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/hooks/useSettings'
-import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { type BoardTopBarPlayer } from './BoardTopBar'
 import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
@@ -2663,6 +2662,19 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     }
   }, [playbackIndex])
 
+  // P5 perf: MoveResolvedInline memo compares onNext by ref — the previous
+  // inline closure defeated it on every shell render despite its expensive
+  // insight calculations. GameMenu handlers stabilized for the same reason
+  // (section-level memo below).
+  const dismissResolution = useCallback(() => setAccuracyComparison(null), [])
+  const openResignConfirm = useCallback(() => setShowResignConfirm(true), [])
+  const openSettings = useCallback(() => setShowSettings(true), [])
+  const openProfile = useCallback(() => setOverlayMode('profile'), [])
+  const toggleSound = useCallback(
+    () => settings.setSoundEnabled(!settings.soundEnabled),
+    [settings.setSoundEnabled, settings.soundEnabled]
+  )
+
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
     const moves = moveHistoryRef.current
     return moves.slice(-10).map((m, i) => {
@@ -2755,80 +2767,53 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       )}
 
       <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pb-24">
-        {/* Compact top bar — header + team avatars + timer + controls */}
-        <div className="w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2">
-          <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
-            <div className="min-w-0 flex-1">
-              <BoardTopBar
-                whitePlayers={whitePlayersWithPresence}
-                blackPlayers={blackPlayersWithPresence}
-                capturedWhite={gameState.capturedByWhite}
-                capturedBlack={gameState.capturedByBlack}
-                matchTimeRemaining={gameState.matchTimeRemaining}
-                matchTimerActive={gameState.matchTimerActive}
-                totalMatchSeconds={timeLimitSeconds || 600}
-                roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
-                currentTurn={gameState.currentTurn}
-                timerNode={timerNode}
-              />
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <GameMenu
-                onResign={gameState.status !== GameStatus.GAME_OVER ? () => setShowResignConfirm(true) : undefined}
-                onOpenSettings={() => setShowSettings(true)}
-                soundEnabled={settings.soundEnabled}
-                onToggleSound={() => settings.setSoundEnabled(!settings.soundEnabled)}
-                onOpenProfile={() => setOverlayMode('profile')}
-              />
-            </div>
-          </div>
-        </div>
+        {/* Compact top bar — header + team avatars + timer + controls.
+            P5: memoized section — skips reconciliation unless its own slice changed. */}
+        <GameTopBarSection
+          whitePlayers={whitePlayersWithPresence}
+          blackPlayers={blackPlayersWithPresence}
+          capturedWhite={gameState.capturedByWhite}
+          capturedBlack={gameState.capturedByBlack}
+          matchTimeRemaining={gameState.matchTimeRemaining}
+          matchTimerActive={gameState.matchTimerActive}
+          totalMatchSeconds={timeLimitSeconds || 600}
+          roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
+          currentTurn={gameState.currentTurn}
+          timerNode={timerNode}
+          resignVisible={gameState.status !== GameStatus.GAME_OVER}
+          onResign={openResignConfirm}
+          onOpenSettings={openSettings}
+          soundEnabled={settings.soundEnabled}
+          onToggleSound={toggleSound}
+          onOpenProfile={openProfile}
+        />
 
-        {/* Chess Board — 80% of viewport */}
-        <div className="flex justify-center px-3">
-          <div
-            className="w-full aspect-square flex-shrink-0 relative"
-            style={{ maxWidth: 'min(95vw, 80vh, 720px)' }}
-          >
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
-              {(() => {
-                const currentTurn = gameState.currentTurn
-                const myTeamEnabled = isFourPlayer
-                  ? currentTurn === myTeamRef.current
-                  : currentTurn === myTeamRef.current
-                const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)) && !(isOnline && inputLockedRef.current))
-                const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
-                return isMobile ? (
-                  <MobileChessBoard
-                    key={boardKey}
-                    fen={playbackFen || gameState.fen}
-                    onMove={handleMove}
-                    enabled={isBoardEnabled}
-                    orientation={boardOrientation as 'white' | 'black'}
-                    lastMove={gameState.lastMove}
-                    pendingOverlay={gameState.pendingOverlay}
-                    myPendingOverlay={gameState.myPendingOverlay}
-                    highlightSquares={gameState.highlightSquares}
-                    onAnimationComplete={handleResolutionComplete}
-                  />
-                ) : (
-                  <ChessBoard
-                    key={boardKey}
-                    fen={playbackFen || gameState.fen}
-                    onMove={handleMove}
-                    enabled={isBoardEnabled}
-                    orientation={boardOrientation as 'white' | 'black'}
-                    lastMove={gameState.lastMove}
-                    pendingOverlay={gameState.pendingOverlay}
-                    myPendingOverlay={gameState.myPendingOverlay}
-                    highlightSquares={gameState.highlightSquares}
-                    onAnimationComplete={handleResolutionComplete}
-                  />
-                )
-              })()}
-            </div>
-          </div>
-        </div>
+        {/* Chess Board — 80% of viewport.
+            P5: enabled/orientation computed inline each render (cheap ref reads,
+            identical freshness to the previous IIFE) and passed as values so the
+            memoized section holds when nothing board-relevant changed. */}
+        {(() => {
+          const currentTurn = gameState.currentTurn
+          const myTeamEnabled = currentTurn === myTeamRef.current
+          const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)) && !(isOnline && inputLockedRef.current))
+          const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
+          return (
+            <GameBoardSection
+              boardKey={boardKey}
+              fen={playbackFen || gameState.fen}
+              enabled={isBoardEnabled}
+              orientation={boardOrientation as 'white' | 'black'}
+              lastMove={gameState.lastMove}
+              pendingOverlay={gameState.pendingOverlay}
+              myPendingOverlay={gameState.myPendingOverlay}
+              highlightSquares={gameState.highlightSquares}
+              onMove={handleMove}
+              onAnimationComplete={handleResolutionComplete}
+              isMobile={isMobile}
+              maxWidth="min(95vw, 80vh, 720px)"
+            />
+          )
+        })()}
 
         {/* Pending moves row */}
         {gameState.status === GameStatus.PLAYING && (
@@ -2859,7 +2844,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="px-3 pb-2">
             <MoveResolvedInline
               data={resolutionData}
-              onNext={() => setAccuracyComparison(null)}
+              onNext={dismissResolution}
             />
           </div>
         )}
