@@ -149,8 +149,12 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 key={game.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl hover:bg-slate-800/70 transition-colors"
+                // P1 perf: cap stagger at the first viewport (~8 rows). Previously
+                // all 50 rows staggered (delay up to 1.5s), keeping 50 concurrent
+                // animations alive on open. Offscreen rows skip layout/paint via
+                // content-visibility until scrolled into view — order/appearance identical.
+                transition={{ delay: Math.min(i, 8) * 0.03 }}
+                className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl hover:bg-slate-800/70 transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_80px]"
               >
                 <div className="flex items-center justify-between mb-2 gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">

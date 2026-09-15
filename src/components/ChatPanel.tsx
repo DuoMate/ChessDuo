@@ -24,15 +24,21 @@ export function ChatPanel({ currentUserId, friendId, friendName, currentUserName
   const unsubRef = useRef<(() => void) | null>(null)
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // P1 perf: initial history load snaps instantly (`auto`) — a `smooth` scroll
+  // across a long history runs a seconds-long animation on WebView on open.
+  // Live incoming/sent messages keep the smooth scroll (short distance).
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    bottomRef.current?.scrollIntoView({ behavior })
+  }, [])
+  const scrollToBottomInstant = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [])
 
   useEffect(() => {
     getConversation(currentUserId, friendId).then(msgs => {
       setMessages(msgs)
       setLoading(false)
-      scrollTimerRef.current = setTimeout(scrollToBottom, 100)
+      scrollTimerRef.current = setTimeout(scrollToBottomInstant, 100)
     }).catch(() => {
       setLoading(false)
     })
@@ -54,7 +60,7 @@ export function ChatPanel({ currentUserId, friendId, friendName, currentUserName
       unsubRef.current?.()
       clearTimeout(scrollTimerRef.current)
     }
-  }, [currentUserId, friendId, scrollToBottom])
+  }, [currentUserId, friendId, scrollToBottom, scrollToBottomInstant])
 
   const handleSend = async () => {
     if (!input.trim() || sending) return
