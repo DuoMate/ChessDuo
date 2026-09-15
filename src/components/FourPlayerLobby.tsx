@@ -30,9 +30,10 @@ interface FourPlayerLobbyProps {
 type LobbyView = 'loading' | 'lobby' | 'starting' | 'error'
 
 // Shallow roster comparison for the lobby poll (see fetchPlayers).
+// Exported for unit testing — compares every visible field.
 // Compares every visible field — a ready/lock/slot/username change must still
 // re-render; only a byte-identical roster bails out.
-function sameRoster(a: LobbyPlayer[], b: LobbyPlayer[]): boolean {
+export function sameRoster(a: LobbyPlayer[], b: LobbyPlayer[]): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) {
     const x = a[i]
