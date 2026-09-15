@@ -27,8 +27,9 @@ import type { PromotionPiece } from '@/features/shared/gameTypes'
 interface GameTopBarSectionProps {
   whitePlayers: BoardTopBarPlayer[]
   blackPlayers: BoardTopBarPlayer[]
-  capturedWhite: string[]
-  capturedBlack: string[]
+  /** Captured-piece material rows. Optional — DuelGame has no capture display. */
+  capturedWhite?: string[]
+  capturedBlack?: string[]
   matchTimeRemaining: number
   matchTimerActive: boolean
   totalMatchSeconds: number
@@ -40,14 +41,19 @@ interface GameTopBarSectionProps {
   onOpenSettings: () => void
   soundEnabled: boolean
   onToggleSound: () => void
-  onOpenProfile: () => void
+  onOpenProfile?: () => void
+  /**
+   * P7: wrapper classes differ per game mode (Game vs DuelGame) — passed as
+   * stable string literals so the memo holds. Defaults preserve Game's visuals.
+   */
+  shellClassName?: string
 }
 
 function GameTopBarSectionInner({
   whitePlayers,
   blackPlayers,
-  capturedWhite,
-  capturedBlack,
+  capturedWhite = [],
+  capturedBlack = [],
   matchTimeRemaining,
   matchTimerActive,
   totalMatchSeconds,
@@ -60,9 +66,10 @@ function GameTopBarSectionInner({
   soundEnabled,
   onToggleSound,
   onOpenProfile,
+  shellClassName = 'w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2',
 }: GameTopBarSectionProps) {
   return (
-    <div className="w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2">
+    <div className={shellClassName}>
       <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
         <div className="min-w-0 flex-1">
           <BoardTopBar
@@ -107,6 +114,8 @@ interface GameBoardSectionProps {
   onAnimationComplete: () => void
   isMobile: boolean
   maxWidth: string
+  /** P7: outer flex wrapper differs per mode (Game has px-3, DuelGame does not). */
+  outerClassName?: string
 }
 
 function GameBoardSectionInner({
@@ -122,9 +131,10 @@ function GameBoardSectionInner({
   onAnimationComplete,
   isMobile,
   maxWidth,
+  outerClassName = 'flex justify-center px-3',
 }: GameBoardSectionProps) {
   return (
-    <div className="flex justify-center px-3">
+    <div className={outerClassName}>
       <div
         className="w-full aspect-square flex-shrink-0 relative"
         style={{ maxWidth }}

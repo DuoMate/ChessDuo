@@ -2,19 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChessBoard } from './ChessBoard'
 import type { PromotionPiece } from '@/features/shared/gameTypes'
-import { MobileChessBoard } from './MobileChessBoard'
+import { GameTopBarSection, GameBoardSection } from './GameSections'
 import { DuelGame as DuelGameEngine } from '@/lib/duelGame'
 import { GameOverModal } from './GameOverModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Team } from '@/features/game-engine/gameState'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
-import { GameMenu } from './GameMenu'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
-import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { type BoardTopBarPlayer } from './BoardTopBar'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
@@ -556,33 +554,37 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     }
   }, [moveHistory.length, playbackIndex])
 
+  // P7 perf: stable GameMenu handlers for the shared memoized top-bar section.
+  // (DuelGame has no resolution animation — a stable noop keeps section memo held.)
+  const noopDuelAnimationComplete = useCallback(() => {}, [])
+  const openDuelResignConfirm = useCallback(() => setShowResignConfirm(true), [])
+  const openDuelSettings = useCallback(() => setShowSettings(true), [])
+  const toggleDuelSound = useCallback(
+    () => settings.setSoundEnabled(!settings.soundEnabled),
+    [settings.setSoundEnabled, settings.soundEnabled]
+  )
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3 pb-24">
-        <div className="w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2">
-          <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
-            <div className="min-w-0 flex-1">
-              <BoardTopBar
-                whitePlayers={whitePlayersWithPresence}
-                blackPlayers={blackPlayersWithPresence}
-                matchTimeRemaining={remainingSeconds}
-                matchTimerActive={timerActive}
-                totalMatchSeconds={totalSeconds}
-                roundLabel={undefined}
-                currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
-                timerNode={duelTimerNode}
-              />
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <GameMenu
-                onResign={status !== 'game_over' ? () => setShowResignConfirm(true) : undefined}
-                onOpenSettings={() => setShowSettings(true)}
-                soundEnabled={settings.soundEnabled}
-                onToggleSound={() => settings.setSoundEnabled(!settings.soundEnabled)}
-              />
-            </div>
-          </div>
-        </div>
+        {/* P7: shared memoized top-bar section. shellClassName preserves
+            DuelGame's exact wrapper visuals (differs from Game's). */}
+        <GameTopBarSection
+          whitePlayers={whitePlayersWithPresence}
+          blackPlayers={blackPlayersWithPresence}
+          matchTimeRemaining={remainingSeconds}
+          matchTimerActive={timerActive}
+          totalMatchSeconds={totalSeconds}
+          roundLabel={undefined}
+          currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
+          timerNode={duelTimerNode}
+          resignVisible={status !== 'game_over'}
+          onResign={openDuelResignConfirm}
+          onOpenSettings={openDuelSettings}
+          soundEnabled={settings.soundEnabled}
+          onToggleSound={toggleDuelSound}
+          shellClassName="w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2"
+        />
 
         {/* Turn status pill */}
         <div className="flex items-center justify-center gap-2 py-2 px-3 text-[11px] font-semibold">
@@ -594,35 +596,24 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </span>
         </div>
 
-        {/* Chess Board — 80% of viewport */}
-        <div className="flex justify-center">
-          <div
-            className="w-full aspect-square flex-shrink-0 relative"
-            style={{ maxWidth: 'min(95vw, 80vh, 600px)' }}
-          >
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
-              {isMobile ? (
-                <MobileChessBoard
-                  key={boardKey}
-                  fen={playbackFen || fen}
-                  onMove={handleMove}
-                  enabled={isMyTurn && !pendingPromotion}
-                  orientation={team === 'WHITE' ? 'white' : 'black'}
-                  lastMove={lastMove}
-                />
-              ) : (
-                <ChessBoard
-                  key={boardKey}
-                  fen={playbackFen || fen}
-                  onMove={handleMove}
-                  enabled={isMyTurn && !pendingPromotion}
-                  orientation={team === 'WHITE' ? 'white' : 'black'}
-                  lastMove={lastMove}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Chess Board — 80% of viewport.
+            P7: shared memoized board section; outerClassName + maxWidth preserve
+            DuelGame's exact layout (no px-3, 600px cap, unlike Game's). */}
+        <GameBoardSection
+          boardKey={boardKey}
+          fen={playbackFen || fen}
+          enabled={isMyTurn && !pendingPromotion}
+          orientation={team === 'WHITE' ? 'white' : 'black'}
+          lastMove={lastMove}
+          pendingOverlay={null}
+          myPendingOverlay={null}
+          highlightSquares={null}
+          onMove={handleMove}
+          onAnimationComplete={noopDuelAnimationComplete}
+          isMobile={isMobile}
+          maxWidth="min(95vw, 80vh, 600px)"
+          outerClassName="flex justify-center"
+        />
 
         <AnimatePresence>
           {showAccuracy && (

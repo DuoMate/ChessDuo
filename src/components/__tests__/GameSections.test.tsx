@@ -119,4 +119,37 @@ describe('GameSections memo (P0/P5 regression lock)', () => {
     rerender(React.createElement(GameTopBarSection, { ...props, currentTurn: Team.BLACK }))
     expect(mockRenderCounts.topBar).toBe(2)
   })
+
+  test('P7 visual parity: DuelGame variant keeps its own wrapper, no captures', () => {
+    const { whitePlayers, blackPlayers, ...rest } = topBarProps()
+    const { container } = render(React.createElement(GameTopBarSection, {
+      whitePlayers,
+      blackPlayers,
+      matchTimeRemaining: rest.matchTimeRemaining,
+      matchTimerActive: rest.matchTimerActive,
+      totalMatchSeconds: rest.totalMatchSeconds,
+      roundLabel: undefined,
+      currentTurn: rest.currentTurn,
+      timerNode: rest.timerNode,
+      resignVisible: true,
+      onResign: rest.onResign,
+      onOpenSettings: rest.onOpenSettings,
+      soundEnabled: rest.soundEnabled,
+      onToggleSound: rest.onToggleSound,
+      shellClassName: 'w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2',
+    }))
+    const shell = container.firstChild as HTMLElement
+    expect(shell.className).toContain('bg-[var(--color-page-bg)]')
+    expect(shell.className).not.toContain('bg-white')
+  })
+
+  test('P7 visual parity: board outer wrapper is configurable per mode', () => {
+    const { container } = render(React.createElement(GameBoardSection, {
+      ...boardProps(),
+      maxWidth: 'min(95vw, 80vh, 600px)',
+      outerClassName: 'flex justify-center',
+    }))
+    const outer = container.firstChild as HTMLElement
+    expect(outer.className).toBe('flex justify-center')
+  })
 })
