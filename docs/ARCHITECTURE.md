@@ -283,9 +283,9 @@ SubscriptionService
 **RULE**: Game-over ads use an Android Native Advanced ad, never a full-screen interstitial.
 
 - `src/lib/nativeAd.ts` is the web-safe Capacitor bridge. Web builds and missing IDs are no-ops.
-- `NativeAdSlot` is rendered inside the existing `GameOverModal` (Quick/Duo), inside the Coach Mode inline game-over modal (Coach has its own modal and never uses `GameOverModal`), and on the non-premium Premium upgrade screen. Each visible surface owns one slot, and the upgrade screen requests its own fresh ad after navigation; never render duplicate slots in the same surface or create a second ad unit, bridge, or interstitial. It waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
-- Active-match Back/Leave and resignation must converge on the same `GameOverModal` terminal lifecycle before navigation; lobby leave may navigate immediately because no match result exists.
-- Native-ad preload is single-flight: concurrent callers share one request, and a loaded ad is consumed only after a successful native render. Diagnostics use the `[ADS][GAMEOVER]` tag.
+- `NativeAdSlot` is rendered inside the existing `GameOverModal` (Quick/Duo), inside the Coach Mode inline game-over modal (Coach has its own modal and never uses `GameOverModal`), and on the non-premium Premium upgrade screen. Each visible surface owns one slot; native preload is globally single-flight and may reuse an unconsumed ad, so the upgrade screen does not require a new network request when one is already loaded. Never render duplicate slots in the same surface or create a second ad unit, bridge, or interstitial. It waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
+- Active-match Back/Leave and resignation must converge on the existing terminal game-over lifecycle before navigation. Quick/Duo/Duel use `GameOverModal`; Coach uses its inline terminal overlay. Lobby leave may navigate immediately because no match result exists.
+- Native-ad preload is single-flight: concurrent callers share one request, and a loaded ad is consumed only after a successful native render. Diagnostics use `[ADS][GAMEOVER]` for terminal surfaces and `[ADS][UPGRADE]` for the Premium upgrade surface.
 - Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
 - `NEXT_PUBLIC_ADMOB_NATIVE_ID` must be a Native Advanced ad unit. `NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID` is not used for bounded popup placement.
 - Native ad loading and teardown are best effort and never gate game-over state, navigation, or popup controls.
@@ -296,10 +296,10 @@ SubscriptionService
 
 - `src/lib/webAds.ts` mirrors `nativeAd.ts`: env-gated IDs, `canUseWebAds()` true only on web (`!Capacitor.isNativePlatform()`), best-effort `pushWebAd()` that never throws (ad blockers included). Missing IDs are no-ops.
 - `AdSenseLoader` (mounted in `layout.tsx <head>`) loads `adsbygoogle.js` once, gated by `usePremium()` + web platform + client ID — premium and native users download no ad script.
-- `AdSenseSlot` is rendered beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the non-premium Premium upgrade screen, with the same `{ open, gameOverReason }` props and suppression semantics. The upgrade screen is a separate visible surface and makes one fresh `push({})` request per mount/open; never render duplicate slots in the same surface. Auto ads remain off.
+- `AdSenseSlot` is rendered beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the non-premium Premium upgrade screen, with the same suppression semantics and an explicit surface label. The upgrade screen is a separate visible surface and makes at most one `push({})` request per open cycle; never render duplicate slots in the same surface. Auto ads remain off.
 - The `<ins>` uses Tailwind `block w-full` instead of Google's `style="display:block"` (identical rendering, satisfies the no-`style={{}}` rule); all other `data-*` attributes match the approved unit verbatim.
 - `public/ads.txt` carries the AdSense line; `app-ads.txt` stays AdMob-only. `_headers` CSP allowlists `pagead2.googlesyndication.com` + `googleads.g.doubleclick.net`.
-- Secrets `NEXT_PUBLIC_ADSENSE_CLIENT_ID` / `NEXT_PUBLIC_ADSENSE_SLOT_ID` are wired in `deploy-cf-pages.yml` only (web build); `build-release.yml` stays AdMob-only. Diagnostics reuse the `[ADS][GAMEOVER]` tag with `source: 'adsense'`.
+- Secrets `NEXT_PUBLIC_ADSENSE_CLIENT_ID` / `NEXT_PUBLIC_ADSENSE_SLOT_ID` are wired in `deploy-cf-pages.yml` only (web build); `build-release.yml` stays AdMob-only. Diagnostics use `[ADS][GAMEOVER]` for terminal surfaces and `[ADS][UPGRADE]` for the Premium upgrade surface, with `source: 'adsense'` on web.
 
 ---
 

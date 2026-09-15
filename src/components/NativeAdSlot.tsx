@@ -6,7 +6,9 @@ import { usePremium } from '@/hooks/usePremium'
 import { hideNativeAd, preloadNativeAd, showNativeAd } from '@/lib/nativeAd'
 import { DEBUG } from '@/lib/debug'
 
-export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOverReason?: string | null }) {
+type AdSurface = 'game_over' | 'upgrade'
+
+export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { open: boolean; gameOverReason?: string | null; surface?: AdSurface }) {
   const slotRef = useRef<HTMLDivElement>(null)
   const { isPremium, loading } = usePremium()
   const [ready, setReady] = useState(false)
@@ -15,7 +17,8 @@ export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOver
     if (!open || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     let active = true
-    DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+    DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
+      surface,
       reason: gameOverReason || 'unknown',
       popupMounted: true,
       adLoadRequested: true,
@@ -29,7 +32,8 @@ export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOver
     }))
     preloadNativeAd().then((loaded) => {
       if (!active) return
-      DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+      DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
+        surface,
         reason: gameOverReason || 'unknown',
         popupMounted: true,
         adLoadRequested: true,
@@ -48,7 +52,7 @@ export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOver
       active = false
       setReady(false)
     }
-  }, [gameOverReason, isPremium, loading, open])
+  }, [gameOverReason, isPremium, loading, open, surface])
 
   useEffect(() => {
     if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return
@@ -66,7 +70,8 @@ export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOver
         width: bounds.width,
         height: bounds.height,
       }).then((rendered) => {
-        DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+        DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
+          surface,
           reason: gameOverReason || 'unknown',
           popupMounted: true,
           adLoadRequested: true,
@@ -92,7 +97,7 @@ export function NativeAdSlot({ open, gameOverReason }: { open: boolean; gameOver
       window.removeEventListener('scroll', render, true)
       void hideNativeAd()
     }
-  }, [gameOverReason, isPremium, loading, open, ready])
+  }, [gameOverReason, isPremium, loading, open, ready, surface])
 
   if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return null
 

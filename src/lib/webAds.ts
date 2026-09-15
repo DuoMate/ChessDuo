@@ -3,7 +3,8 @@ import { Capacitor } from '@capacitor/core'
 // Web AdSense counterpart to `nativeAd.ts` (Android Native Advanced).
 // Same contract, inverted platform gate: web-only, best effort, never gates UI.
 // Auto ads are OFF — only the single approved responsive display unit
-// (chessduo_gameover_responsive) is ever rendered, inside game-over modals.
+// (chessduo_gameover_responsive) is rendered inside game-over modals and the
+// Premium upgrade surface.
 
 declare global {
   interface Window {
