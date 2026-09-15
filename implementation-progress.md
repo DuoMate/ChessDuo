@@ -134,6 +134,17 @@
 - Change: `moves`/player arrays/handlers via `useMemo`/`useCallback` (same logic, stable
   refs). Pre-existing `currentTurn={'WHITE' as any}` left untouched (out of perf scope).
 
+## P4 — Coach + 4-player (CoachGame.tsx, FourPlayerLobby.tsx)
+- Audit: `CoachGame` already followed the P0 patterns (stable `handleMove`/nav callbacks,
+  memoized `positions`/`roundEntries`, no match timer). One gap: inline `.map` for
+  `RoundHistorySidebar entries` re-allocated on every render incl. analyzing ticks.
+  `FourPlayerLobby` 2s poll called `setPlayers` with a fresh array every tick.
+- Change: sidebar entries via `useMemo` on `[roundEntries, previewing]`; lobby poll
+  shallow-compares every visible roster field (id/team/slot/status/username) and reuses
+  the previous array when identical. Polling interval, room-status transition, and
+  ready-state propagation untouched.
+- Verification: `tsc` clean; `FourPlayerLobby` + `coach` suites (16) pass; scope grep clean.
+
 ## Final verification (2026-09-15, branch `ui-refactoring`)
 - `npx tsc --noEmit`: clean.
 - Full `npm test`: 1394 passed / 9 failed / 87 skipped — IDENTICAL to clean-baseline
