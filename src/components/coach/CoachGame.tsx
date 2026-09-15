@@ -16,6 +16,7 @@ import { CoachTranscriptPanel } from './CoachTranscriptPanel'
 import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
 import { NativeAdSlot } from '../NativeAdSlot'
 import { AdSenseSlot } from '../AdSenseSlot'
+import { ResignConfirmModal } from '../ResignConfirmModal'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
@@ -46,6 +47,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const [voiceEnabled, setVoiceEnabled] = useState(coachVoice.isEnabled())
   const [showBestMove, setShowBestMove] = useState(false)
   const [showLeave, setShowLeave] = useState(false)
+  const [showResignConfirm, setShowResignConfirm] = useState(false)
   // Bottom-nav panel: at most one open. Panels are pure views — opening or
   // closing them never touches the engine or board state.
   const [activePanel, setActivePanel] = useState<'moves' | 'insights' | 'chat' | null>(null)
@@ -57,6 +59,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   // never see it; the ad slot additionally enforces the premium ad-free rule.
   const [isTrialGame, setIsTrialGame] = useState(false)
   const gameRef = useRef<CoachGameEngine | null>(null)
+  const showResignConfirmRef = useRef(false)
   const spokenFeedbackKeyRef = useRef<string | null>(null)
   const savedRef = useRef(false)
   const claimedRef = useRef(false)
@@ -160,6 +163,10 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     setShowBestMove(false)
   }, [state?.fen])
 
+  useEffect(() => {
+    showResignConfirmRef.current = showResignConfirm
+  }, [showResignConfirm])
+
   // Persist on game over (premium + signed-in; save is a no-op for guests).
   useEffect(() => {
     if (state?.status !== 'game_over' || savedRef.current) return
@@ -218,10 +225,20 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   useNavigationGuard({
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeave(true),
+    onOverlayBack: () => {
+      if (!showResignConfirmRef.current) return false
+      setShowResignConfirm(false)
+      return true
+    },
+    hasOpenOverlay: showResignConfirm,
   })
 
   useCapacitorBackButton(
     () => {
+      if (showResignConfirmRef.current) {
+        setShowResignConfirm(false)
+        return true
+      }
       if (status === 'playing') {
         setShowLeave(true)
       } else {
@@ -263,7 +280,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           </button>
           {status === 'playing' && (
             <button
-              onClick={() => gameRef.current?.resign()}
+              onClick={() => setShowResignConfirm(true)}
               aria-label="Resign"
               className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-rose-400 transition-colors hover:text-rose-500"
             >
@@ -272,6 +289,15 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           )}
         </div>
       </div>
+
+      <ResignConfirmModal
+        open={showResignConfirm}
+        onConfirm={() => {
+          setShowResignConfirm(false)
+          void gameRef.current?.resign()
+        }}
+        onCancel={() => setShowResignConfirm(false)}
+      />
 
       {/* Board + coach panel */}
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-8 pt-3">

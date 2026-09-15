@@ -1,4 +1,4 @@
-import { createPluginDiagnostic, formatBillingTrace, GooglePlayBillingProvider } from '../GooglePlayBillingProvider'
+import { classifyPurchaseError, createPluginDiagnostic, formatBillingTrace, GooglePlayBillingProvider } from '../GooglePlayBillingProvider'
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -17,6 +17,13 @@ jest.mock('@capgo/native-purchases', () => ({
 }), { virtual: true })
 
 describe('billing plugin diagnostics', () => {
+  it('classifies the native USER_CANCELED code as silent cancellation', () => {
+    expect(classifyPurchaseError({ message: 'Purchase is not purchased', code: 'USER_CANCELED' })).toEqual({
+      error: 'Purchase cancelled',
+      errorDetail: 'cancelled',
+    })
+  })
+
   it('does not assimilate the Capacitor proxy then property during lookup', async () => {
     await expect(GooglePlayBillingProvider.initialize()).resolves.toBe(true)
   })

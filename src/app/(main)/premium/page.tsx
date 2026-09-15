@@ -11,6 +11,8 @@ import { PageLoading } from '@/components/PageLoading'
 import { SubscriptionService } from '@/features/billing'
 import type { SubscriptionPlan, SubscriptionInfo } from '@/features/billing'
 import { PREMIUM_PURCHASE_SAFETY_NET_MS } from '@/features/shared/gameConstants'
+import { NativeAdSlot } from '@/components/NativeAdSlot'
+import { AdSenseSlot } from '@/components/AdSenseSlot'
 
 interface ErrorDetail {
   title: string
@@ -165,7 +167,7 @@ export default function PremiumPage() {
       if (!mountedRef.current) return
       if (!result.success) {
         if (result.errorDetail === 'cancelled') {
-          setError('Purchase cancelled. You can try again anytime.')
+          // User cancellation is a normal return from Google Play.
         } else if (result.errorDetail === 'already_owned') {
           await SubscriptionService.restore()
           const newStatus = await SubscriptionService.getStatus()
@@ -341,6 +343,13 @@ export default function PremiumPage() {
                       <ExternalLink size={16} />
                       Download on Google Play
                     </a>
+                  </div>
+                )}
+
+                {!plansLoading && (
+                  <div className="mb-6">
+                    <NativeAdSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" />
+                    <AdSenseSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" />
                   </div>
                 )}
 

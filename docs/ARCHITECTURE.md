@@ -283,7 +283,7 @@ SubscriptionService
 **RULE**: Game-over ads use an Android Native Advanced ad, never a full-screen interstitial.
 
 - `src/lib/nativeAd.ts` is the web-safe Capacitor bridge. Web builds and missing IDs are no-ops.
-- `NativeAdSlot` is rendered inside the existing `GameOverModal` (Quick/Duo) and inside the Coach Mode inline game-over modal (Coach has its own modal and never uses `GameOverModal`); it waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement. No other caller may render it; never create a second ad unit, bridge, or interstitial.
+- `NativeAdSlot` is rendered inside the existing `GameOverModal` (Quick/Duo), inside the Coach Mode inline game-over modal (Coach has its own modal and never uses `GameOverModal`), and on the non-premium Premium upgrade screen. Each visible surface owns one slot, and the upgrade screen requests its own fresh ad after navigation; never render duplicate slots in the same surface or create a second ad unit, bridge, or interstitial. It waits for a successful preload and hides on no-fill, SDK failure, offline state, or premium entitlement.
 - Active-match Back/Leave and resignation must converge on the same `GameOverModal` terminal lifecycle before navigation; lobby leave may navigate immediately because no match result exists.
 - Native-ad preload is single-flight: concurrent callers share one request, and a loaded ad is consumed only after a successful native render. Diagnostics use the `[ADS][GAMEOVER]` tag.
 - Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
@@ -296,7 +296,7 @@ SubscriptionService
 
 - `src/lib/webAds.ts` mirrors `nativeAd.ts`: env-gated IDs, `canUseWebAds()` true only on web (`!Capacitor.isNativePlatform()`), best-effort `pushWebAd()` that never throws (ad blockers included). Missing IDs are no-ops.
 - `AdSenseLoader` (mounted in `layout.tsx <head>`) loads `adsbygoogle.js` once, gated by `usePremium()` + web platform + client ID — premium and native users download no ad script.
-- `AdSenseSlot` is rendered beside `NativeAdSlot` in `GameOverModal` and the Coach inline modal only, with the same `{ open, gameOverReason }` props, the same suppression semantics, and one `push({})` per game-over. No other caller may render it.
+- `AdSenseSlot` is rendered beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the non-premium Premium upgrade screen, with the same `{ open, gameOverReason }` props and suppression semantics. The upgrade screen is a separate visible surface and makes one fresh `push({})` request per mount/open; never render duplicate slots in the same surface. Auto ads remain off.
 - The `<ins>` uses Tailwind `block w-full` instead of Google's `style="display:block"` (identical rendering, satisfies the no-`style={{}}` rule); all other `data-*` attributes match the approved unit verbatim.
 - `public/ads.txt` carries the AdSense line; `app-ads.txt` stays AdMob-only. `_headers` CSP allowlists `pagead2.googlesyndication.com` + `googleads.g.doubleclick.net`.
 - Secrets `NEXT_PUBLIC_ADSENSE_CLIENT_ID` / `NEXT_PUBLIC_ADSENSE_SLOT_ID` are wired in `deploy-cf-pages.yml` only (web build); `build-release.yml` stays AdMob-only. Diagnostics reuse the `[ADS][GAMEOVER]` tag with `source: 'adsense'`.
@@ -518,4 +518,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
+*Last Updated: 2026-09-15 — Coach resignation now uses the shared confirmation flow; NativeAdSlot/AdSenseSlot also render on the non-premium Premium upgrade screen with a fresh request per surface; 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
