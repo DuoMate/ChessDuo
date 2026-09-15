@@ -15,6 +15,7 @@ import { GameMenu } from './GameMenu'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { BoardTopBar, type BoardTopBarPlayer } from './BoardTopBar'
+import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -79,6 +80,12 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const moveAccuracyRef = useRef<number | null>(null)
   const opponentAccuracyRef = useRef<number | null>(null)
   const prevFenRef = useRef('')
+  const prevTurnRef = useRef<'w' | 'b'>('w')
+  // Refs for clock-tick filtering — read inside engine callback without
+  // capturing stale React state (all updates funnel through this callback).
+  const winnerRef = useRef<'white' | 'black' | 'draw' | null>(null)
+  const moveHistoryLengthRef = useRef(0)
+  const disconnectedAgeRef = useRef(0)
   const prevStatusRef = useRef<'waiting' | 'playing' | 'game_over'>('waiting')
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
@@ -117,6 +124,26 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     gameRef.current = game
 
     game.setOnStateChange((state) => {
+      // P0-2 perf: skip pure 1 Hz clock ticks — the isolated timer below polls
+      // the engine directly, so clock-only notifies must NOT re-render DuelGame
+      // (and therefore must NOT re-render Board/ChessBoard). Non-clock changes
+      // (fen/status/turn/winner/history/disconnect-age) still propagate.
+      // Timeout/forfeit converge via status change (playing → game_over), which
+      // is never skipped. Disconnect age is included so the AvatarTile forfeit
+      // countdown keeps ticking while a peer is disconnected.
+      const clockOnlyTick =
+        prevFenRef.current !== '' &&
+        state.fen === prevFenRef.current &&
+        state.status === prevStatusRef.current &&
+        state.currentTurn === prevTurnRef.current &&
+        state.winner === winnerRef.current &&
+        state.moveHistory.length === moveHistoryLengthRef.current &&
+        (state.disconnectedAgeMs ?? 0) === disconnectedAgeRef.current
+      if (clockOnlyTick) return
+      winnerRef.current = state.winner
+      moveHistoryLengthRef.current = state.moveHistory.length
+      prevTurnRef.current = state.currentTurn
+      disconnectedAgeRef.current = state.disconnectedAgeMs ?? 0
       setFen(state.fen)
       setStatus(state.status)
       setCurrentTurn(state.currentTurn)
@@ -477,8 +504,57 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   // For 1v1, render the timer text inside the BoardTopBar so the
   // single-shot 5:00 / 4:59 is visible.
+  // P0-2 perf: isolated 1 Hz timer polls the engine directly — parent no longer
+  // re-renders every second (see clockOnlyTick filter in setOnStateChange).
+  // matchTimeRemaining/matchTimerActive below are now initial values only;
+  // the live countdown is owned by `duelTimerNode`.
   const totalSeconds = timeLimit || 600
   const remainingSeconds = team === 'WHITE' ? whiteTime : blackTime
+  const getDuelTimeRemaining = useCallback(() => {
+    const g = gameRef.current
+    if (!g) return team === 'WHITE' ? whiteTime : blackTime
+    return team === 'WHITE' ? g.whiteTimeRemaining : g.blackTimeRemaining
+  }, [team, whiteTime, blackTime])
+  const isDuelTimerActive = timerActive && status === 'playing'
+  const duelTimerNode = useMemo(() => (
+    <IsolatedMatchTimer getTimeRemaining={getDuelTimeRemaining} isActive={isDuelTimerActive} totalSeconds={totalSeconds} />
+  ), [getDuelTimeRemaining, isDuelTimerActive, totalSeconds])
+
+  // P0-1 perf: memoize presence mapping so BoardTopBar's referential comparator
+  // holds when disconnectedAge/base arrays are unchanged.
+  const whitePlayersWithPresence: BoardTopBarPlayer[] = useMemo(() => (
+    whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))
+  ), [whitePlayers, disconnectedAge])
+  const blackPlayersWithPresence: BoardTopBarPlayer[] = useMemo(() => (
+    blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))
+  ), [blackPlayers, disconnectedAge])
+
+  // Stable BoardBottomNav handlers (were inline closures defeating memo).
+  const handleDuelTabChange = useCallback((t: BoardTab) => setActiveBoardTab(t), [])
+  const handleDuelForward = useCallback(() => {}, [])
+  const handleDuelBackMove = useCallback(() => {
+    if (moveHistory.length === 0) return
+    const current = playbackIndex ?? moveHistory.length - 1
+    if (current <= 0) {
+      setPlaybackIndex(-1)
+      setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    } else {
+      setPlaybackIndex(current - 1)
+      setPlaybackFen(moveEntriesRef.current[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    }
+  }, [moveHistory.length, playbackIndex])
+  const handleDuelForwardMove = useCallback(() => {
+    if (moveHistory.length === 0) return
+    if (playbackIndex === null) return
+    const current = playbackIndex ?? moveHistory.length - 1
+    if (current >= moveHistory.length - 1) {
+      setPlaybackIndex(null)
+      setPlaybackFen(null)
+    } else {
+      setPlaybackIndex(current + 1)
+      setPlaybackFen(moveEntriesRef.current[current + 1]?.fenAfter || null)
+    }
+  }, [moveHistory.length, playbackIndex])
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
@@ -487,13 +563,14 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
-                whitePlayers={whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
-                blackPlayers={blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
+                whitePlayers={whitePlayersWithPresence}
+                blackPlayers={blackPlayersWithPresence}
                 matchTimeRemaining={remainingSeconds}
                 matchTimerActive={timerActive}
                 totalMatchSeconds={totalSeconds}
                 roundLabel={undefined}
                 currentTurn={currentTurn === 'w' ? Team.WHITE : Team.BLACK}
+                timerNode={duelTimerNode}
               />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -601,31 +678,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         {/* Bottom nav */}
         <BoardBottomNav
           activeTab={activeBoardTab}
-          onTabChange={(t) => setActiveBoardTab(t)}
-          onForward={() => {}}
-          onBackMove={() => {
-            if (moveHistory.length === 0) return
-            const current = playbackIndex ?? moveHistory.length - 1
-            if (current <= 0) {
-              setPlaybackIndex(-1)
-              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-            } else {
-              setPlaybackIndex(current - 1)
-              setPlaybackFen(moveEntriesRef.current[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-            }
-          }}
-          onForwardMove={() => {
-            if (moveHistory.length === 0) return
-            if (playbackIndex === null) return
-            const current = playbackIndex ?? moveHistory.length - 1
-            if (current >= moveHistory.length - 1) {
-              setPlaybackIndex(null)
-              setPlaybackFen(null)
-            } else {
-              setPlaybackIndex(current + 1)
-              setPlaybackFen(moveEntriesRef.current[current + 1]?.fenAfter || null)
-            }
-          }}
+          onTabChange={handleDuelTabChange}
+          onForward={handleDuelForward}
+          onBackMove={handleDuelBackMove}
+          onForwardMove={handleDuelForwardMove}
         />
 
         {/* Floating Confirm Move Bar — overlays above BoardBottomNav */}
