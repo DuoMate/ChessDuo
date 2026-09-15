@@ -95,6 +95,39 @@ function ChessBoardInner({
   const [retractionData, setRetractionData] = useState<{ from: string; to: string; piece: string; color: string } | null>(null)
   const [teammateLabelVisible, setTeammateLabelVisible] = useState(false)
   const [overlayWidth, setOverlayWidth] = useState(0)
+  // P0-3 perf: cache chess.js parses during an active touch gesture.
+  // Previously moveInputStarted + validateMoveInput + moveInputFinished each
+  // constructed `new Chess(fen)` + `moves({verbose:true})` (3 full move-gen
+  // passes per tap/drag on the main thread). Cache is keyed by fen and bounded;
+  // cleared on position change. Presentation-only — legality results identical.
+  const verboseMovesCacheRef = useRef<{ fen: string; moves: Array<{ from: string; to: string; promotion?: string }> } | null>(null)
+  const squareMovesCacheRef = useRef<Map<string, string[]>>(new Map())
+  const getVerboseMoves = (positionFen: string) => {
+    const cached = verboseMovesCacheRef.current
+    if (cached && cached.fen === positionFen) return cached.moves
+    const chess = new Chess(positionFen)
+    const moves = chess.moves({ verbose: true }) as Array<{ from: string; to: string; promotion?: string }>
+    verboseMovesCacheRef.current = { fen: positionFen, moves }
+    // Position changed → per-square destinations from the old position are stale.
+    if (squareMovesCacheRef.current.size > 0) squareMovesCacheRef.current.clear()
+    return moves
+  }
+  const getSquareDestinations = (positionFen: string, squareFrom: string): string[] => {
+    const key = `${positionFen}|${squareFrom}`
+    const hit = squareMovesCacheRef.current.get(key)
+    if (hit) return hit
+    let dests: string[] = []
+    try {
+      const all = getVerboseMoves(positionFen)
+      dests = all.filter(m => m.from === squareFrom).map(m => m.to)
+    } catch {
+      dests = []
+    }
+    // Bound the cache: one position × ≤32 origins is tiny; clear on overflow.
+    if (squareMovesCacheRef.current.size > 64) squareMovesCacheRef.current.clear()
+    squareMovesCacheRef.current.set(key, dests)
+    return dests
+  }
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -236,17 +269,10 @@ function ChessBoardInner({
           boardRef.current?.removeMarkers(MARKER_TYPE.dot)
 
           if (squareFrom) {
-            try {
-              const chess = new Chess(fenRef.current)
-              const piece = chess.get(squareFrom as Square)
-              if (piece) {
-                const moves = chess.moves({ square: squareFrom as Square, verbose: true })
-                for (const move of moves) {
-                  boardRef.current?.addMarker(MARKER_TYPE.dot, move.to)
-                }
-              }
-            } catch {
-              // ignore — marker dots are cosmetic only
+            // Cached: one move-gen pass per position, shared with validate/finish.
+            const dests = getSquareDestinations(fenRef.current, squareFrom)
+            for (const to of dests) {
+              boardRef.current?.addMarker(MARKER_TYPE.dot, to)
             }
           }
 
@@ -265,8 +291,7 @@ function ChessBoardInner({
           }
 
           try {
-            const chess = new Chess(fenRef.current)
-            const moves = chess.moves({ verbose: true })
+            const moves = getVerboseMoves(fenRef.current)
             const validMove = moves.find(m => m.from === squareFrom && m.to === squareTo)
 
             if (validMove) {
@@ -284,18 +309,17 @@ function ChessBoardInner({
           const { squareFrom, squareTo } = event
           if (squareFrom && squareTo) {
             try {
-              const chess = new Chess(fenRef.current)
-              const moves = chess.moves({ verbose: true })
+              const moves = getVerboseMoves(fenRef.current)
               const validMove = moves.find(m => m.from === squareFrom && m.to === squareTo)
 
               if (validMove) {
-                const promotionPiece = checkPromotion(squareFrom, squareTo)
-                
+                // Reuse the already-computed verbose move: `promotion` flag is
+                // on validMove, so no extra `new Chess()` parse is needed.
+                const promotionPiece = (validMove.promotion as PromotionPiece | undefined) ?? null
+                const move = `${squareFrom}-${squareTo}`
                 if (promotionPiece) {
-                  const move = `${squareFrom}-${squareTo}`
                   onMoveRef.current(move, promotionPiece)
                 } else {
-                  const move = `${squareFrom}-${squareTo}`
                   onMoveRef.current(move)
                 }
                 return true
@@ -357,7 +381,10 @@ function ChessBoardInner({
 
   return (
     <div className="relative w-full pt-[100%]">
-      <div className="absolute inset-0 rounded-[24px] border border-slate-200/80 bg-white/70 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/70" />
+      {/* P1 perf: no backdrop-blur under the board — the cm-chessboard view is
+          opaque and covers this frame entirely, so the blur only cost GPU
+          (full-board backdrop sampling on every frame) with zero visual effect. */}
+      <div className="absolute inset-0 rounded-[24px] border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/70" />
       <div
         ref={containerRef}
         className="absolute inset-1 overflow-hidden rounded-[22px]"
