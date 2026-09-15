@@ -138,6 +138,15 @@ All React components — co-located by feature, not by type. Components handle r
 - `cm-chessboard` for board rendering, `chess.js` for move validation
 
 ## Recent Changes
+- **2026-09-15**: UI performance refactor (branch `ui-refactoring`, presentation-only).
+	Game/DuelGame/ReplayView stabilize memo-busting props (`timerNode`, presence arrays,
+	nav handlers via `useMemo`/`useCallback`) so existing `BoardTopBar`/`BoardBottomNav`/
+	`ChessBoard` memos hold. `DuelGame` adopts the `IsolatedMatchTimer` pattern (clock-only
+	engine ticks filtered; disconnect-age still propagates for the forfeit countdown).
+	`ChessBoard` caches `chess.js` move-gen per position (3 parses → 1 per gesture;
+	promotion flag reused) and drops the invisible `backdrop-blur-xl` under the opaque
+	board. `HistoryPanel` caps row stagger + `content-visibility`; `ChatPanel` initial
+	scroll snaps (`auto`, live messages stay `smooth`). No game/backend/billing/ad/auth changes.
 - **2026-09-06**: Coach Mode best-move presentation uses local `showBestMove` state
 	and the existing `ChessBoard.highlightSquares` overlay. It reads only the current
 	`suggestion.topMoves[0].uci`; stale feedback cannot render a board highlight, and
