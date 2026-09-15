@@ -6,10 +6,13 @@ import { canUseWebAds, getAdSenseClientId, getAdSenseSlotId, pushWebAd } from '@
 import { DEBUG } from '@/lib/debug'
 
 // Web AdSense counterpart to NativeAdSlot: single responsive display unit
-// (chessduo_gameover_responsive) inside game-over modals only.
+// (chessduo_gameover_responsive) inside game-over modals and the Premium
+// upgrade surface.
 // Suppression mirrors NativeAdSlot inversely — hidden on native, for premium
 // users, and when the ad cannot serve. Best effort, never blocks the modal.
-export function AdSenseSlot({ open, gameOverReason }: { open: boolean; gameOverReason?: string | null }) {
+type AdSurface = 'game_over' | 'upgrade'
+
+export function AdSenseSlot({ open, gameOverReason, surface = 'game_over' }: { open: boolean; gameOverReason?: string | null; surface?: AdSurface }) {
   const { isPremium, loading } = usePremium()
   const pushedRef = useRef(false)
 
@@ -24,8 +27,9 @@ export function AdSenseSlot({ open, gameOverReason }: { open: boolean; gameOverR
     pushedRef.current = true
 
     const rendered = pushWebAd()
-    DEBUG && console.log('[ADS][GAMEOVER]', JSON.stringify({
+    DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
       source: 'adsense',
+      surface,
       reason: gameOverReason || 'unknown',
       popupMounted: true,
       adLoadRequested: true,
@@ -35,7 +39,7 @@ export function AdSenseSlot({ open, gameOverReason }: { open: boolean; gameOverR
       errorMessage: rendered ? null : 'AdSense push failed; ad blocker or script not loaded',
       popupVisible: open,
     }))
-  }, [gameOverReason, open, ready])
+  }, [gameOverReason, open, ready, surface])
 
   if (!ready) return null
 

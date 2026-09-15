@@ -348,8 +348,8 @@ export default function PremiumPage() {
 
                 {!plansLoading && (
                   <div className="mb-6">
-                    <NativeAdSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" />
-                    <AdSenseSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" />
+                    <NativeAdSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" surface="upgrade" />
+                    <AdSenseSlot open={!subscribing && !isPremium} gameOverReason="upgrade_offer" surface="upgrade" />
                   </div>
                 )}
 
