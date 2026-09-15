@@ -159,6 +159,20 @@
   `SidebarNav`; `BillingDiagnostics` flaked once under full load, passes alone,
   billing untouched by diff). Scope grep clean.
 
+## P6 — Bundle analysis + memo regression locks (tests only, no library change)
+- Measurement (`npm run build`, Turbopack): total client JS 2.3MB uncompressed;
+  largest chunks 241KB (supabase), 226KB, 143KB, 119KB; framer-motion code is
+  already split per route by Next code-splitting; anime distinctive chunk ~31KB.
+  Estimated LazyMotion + anime-removal saving ≈ 25–35KB gzip (~4% of total).
+- Decision: SKIP the 49-file LazyMotion migration — saving does not justify the
+  regression surface (per DO NOT OVER-OPTIMIZE; no working-library replacement
+  without proportionate evidence). Per-route splitting already bounds eager cost.
+- Change (tests only): `GameSections.test.tsx` (section skip-on-stable /
+  update-on-change, negative-controlled — verified to fail with memo removed);
+  `FourPlayerLobbyRoster.test.ts` (sameRoster join/leave/team/slot/ready/username);
+  `sameRoster` exported for testing (pure helper, no behavior change).
+- Verification: `tsc` clean; 10/10 new tests pass.
+
 ## Final verification (2026-09-15, branch `ui-refactoring`)
 - `npx tsc --noEmit`: clean.
 - Full `npm test`: 1394 passed / 9 failed / 87 skipped — IDENTICAL to clean-baseline
