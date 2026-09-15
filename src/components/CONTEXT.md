@@ -138,6 +138,9 @@ All React components — co-located by feature, not by type. Components handle r
 - `cm-chessboard` for board rendering, `chess.js` for move validation
 
 ## Recent Changes
+- **2026-09-15**: UI perf P5 — new `GameSections.tsx` (`GameTopBarSection` +
+	`GameBoardSection`, shallow memo) consumed by `Game.tsx`; `MoveResolvedInline`
+	`onNext` + `GameMenu` handlers stabilized. No game/backend/billing/ad/auth changes.
 - **2026-09-15**: UI performance refactor (branch `ui-refactoring`, presentation-only).
 	Game/DuelGame/ReplayView stabilize memo-busting props (`timerNode`, presence arrays,
 	nav handlers via `useMemo`/`useCallback`) so existing `BoardTopBar`/`BoardBottomNav`/

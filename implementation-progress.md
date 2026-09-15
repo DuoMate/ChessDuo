@@ -134,8 +134,7 @@
 - Change: `moves`/player arrays/handlers via `useMemo`/`useCallback` (same logic, stable
   refs). Pre-existing `currentTurn={'WHITE' as any}` left untouched (out of perf scope).
 
-## P4 — Coach + 4-player (CoachGame.tsx, FourPlayerLobby.tsx)
-- Audit: `CoachGame` already followed the P0 patterns (stable `handleMove`/nav callbacks,
+## P4 — Coach + 4-player (CoachGame.tsx, FourPlayerLobby.tsx)- Audit: `CoachGame` already followed the P0 patterns (stable `handleMove`/nav callbacks,
   memoized `positions`/`roundEntries`, no match timer). One gap: inline `.map` for
   `RoundHistorySidebar entries` re-allocated on every render incl. analyzing ticks.
   `FourPlayerLobby` 2s poll called `setPlayers` with a fresh array every tick.
@@ -144,6 +143,21 @@
   the previous array when identical. Polling interval, room-status transition, and
   ready-state propagation untouched.
 - Verification: `tsc` clean; `FourPlayerLobby` + `coach` suites (16) pass; scope grep clean.
+
+## P5 — Game.tsx section split (GameSections.tsx NEW, Game.tsx)
+- Bottleneck: post-P0 memo held at leaf level, but every shell render still
+  reconciled the full top-bar + board wrapper tree; `MoveResolvedInline onNext`
+  and `GameMenu` inline closures defeated their memos on every render.
+- Change: new `GameSections.tsx` with memoized `GameTopBarSection` +
+  `GameBoardSection` (default shallow memo; all props stable-or-primitive).
+  `enabled`/`orientation` resolve inline each render (cheap ref reads — same
+  freshness as the previous IIFE; deliberately NOT memoized since they read
+  mutable refs + engine maps). Identical `isFourPlayer ? X : X` branches collapsed
+  (dead ternary, same value). `key={boardKey}` remount preserved inside section.
+- Verification: `tsc` clean; 39 game/board tests pass; full suite 1395 pass with
+  only the known pre-existing failures (`server/engine`, `ConfirmMoveBar`,
+  `SidebarNav`; `BillingDiagnostics` flaked once under full load, passes alone,
+  billing untouched by diff). Scope grep clean.
 
 ## Final verification (2026-09-15, branch `ui-refactoring`)
 - `npx tsc --noEmit`: clean.
