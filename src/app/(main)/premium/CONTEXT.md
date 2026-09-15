@@ -23,6 +23,7 @@ Marketing page for ChessDuo premium subscription. Uses Google Play Billing (Andr
 - `@/components/ErrorBoundary`, `@/components/ErrorDetailModal`, `@/components/BackButton`
 
 ## Recent Changes
+- **2026-09-15**: Added the existing NativeAdSlot/AdSenseSlot pair to the non-premium upgrade screen. Each platform requests its own best-effort ad when the pricing surface opens; premium users remain suppressed.
 - **2026-08-11**: **Creem removal** — reverted to Google Play Billing (Android only). Web page now shows "Download on Google Play" CTA for non-Android visitors. Removed Creem checkout redirect flow, verify-on-return polling, and `creem/return` bridge.
 - **2026-08-01**: **Bug 41** fix — the page now re-runs `runLoad()` (status check) when the Capacitor app returns to the foreground after a purchase was initiated (`appStateChange` resume, gated by a `checkoutPendingRef` set in `handleSubscribe`). On mobile the purchase opens the Google Play dialog which may not trigger a direct return to the success state, so re-checking on resume ensures the user sees "You're Premium!".
 - **2026-07-31**: Premium success redesign — active state now displays a full success screen with "Welcome to Premium!", plan pill, feature icons, and a "Go to Dashboard" CTA bar that routes to `/profile`. Kept the existing dark theme instead of the light screenshot reference.

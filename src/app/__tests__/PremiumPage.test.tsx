@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import PremiumPage from '../(main)/premium/page'
 import { SubscriptionService } from '@/features/billing'
 
@@ -38,6 +38,18 @@ jest.mock('@/features/billing', () => ({
 
 jest.mock('@/components/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+jest.mock('@/components/NativeAdSlot', () => ({
+  NativeAdSlot: ({ open, gameOverReason }: { open: boolean; gameOverReason?: string }) => (
+    open ? <div data-testid={`native-ad-${gameOverReason}`} /> : null
+  ),
+}))
+
+jest.mock('@/components/AdSenseSlot', () => ({
+  AdSenseSlot: ({ open, gameOverReason }: { open: boolean; gameOverReason?: string }) => (
+    open ? <div data-testid={`adsense-ad-${gameOverReason}`} /> : null
+  ),
 }))
 
 function setNativePlatform(native: boolean) {
@@ -111,6 +123,29 @@ describe('PremiumPage Component — Native (Android)', () => {
     render(<PremiumPage />)
     const restore = await screen.findByText('Restore Purchases')
     expect(restore).toBeDefined()
+  })
+
+  test('shows fresh native and web upgrade ads for non-premium users', async () => {
+    render(<PremiumPage />)
+
+    expect(await screen.findByTestId('native-ad-upgrade_offer')).toBeDefined()
+    expect(screen.getByTestId('adsense-ad-upgrade_offer')).toBeDefined()
+  })
+
+  test('silently returns to Premium after Google Play cancellation', async () => {
+    ;(SubscriptionService.purchaseMonthly as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: 'Purchase is not purchased',
+      errorDetail: 'cancelled',
+    })
+
+    render(<PremiumPage />)
+    const buttons = await screen.findAllByRole('button', { name: /Upgrade to Premium/ })
+    fireEvent.click(buttons[0])
+
+    await waitFor(() => expect(SubscriptionService.purchaseMonthly).toHaveBeenCalled())
+    expect(screen.queryByText('Purchase cancelled. You can try again anytime.')).toBeNull()
+    expect(screen.queryByText(/Google Play purchase could not be started/)).toBeNull()
   })
 
   test('shows premium success screen when premium', async () => {

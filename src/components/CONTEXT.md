@@ -91,7 +91,8 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
-- **2026-09-13**: Web AdSense game-over parity (`AdSenseSlot` + `AdSenseLoader`). Single manual responsive display unit beside `NativeAdSlot` in `GameOverModal` and the Coach inline modal only; premium/native/missing-ID suppression mirrors native inversely; Auto ads stay off. See `docs/ARCHITECTURE.md §9.1`.
+- **2026-09-15**: AI Coach resignation now opens the shared `ResignConfirmModal` before calling `CoachGame.resign()`. The existing terminal game-over state and ad/upgrade surface remain unchanged.
+- **2026-09-13**: Web AdSense game-over parity (`AdSenseSlot` + `AdSenseLoader`). Single manual responsive display unit beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the Premium upgrade screen; premium/native/missing-ID suppression mirrors native inversely; Auto ads stay off. See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Active-match Back/Leave now converges on the existing `GameOverModal`, matching resignation and natural game over so the shared NativeAdSlot can render before the user chooses Home. Lobby leave still navigates immediately. Native-ad diagnostics report terminal reason, load state, and render state.
 - **2026-09-11**: Game-over AdMob visibility now follows `GameOverModal.open` for every terminal result. Resignation no longer navigates away before the shared result screen can display the existing ad; the ad slot cleans up when the modal closes.
 - **2026-09-04**: Added an optional Android Native Advanced AdMob slot inside the existing `GameOverModal`. It is hidden on web, for premium users, and when native preload fails; existing popup controls and animations are unchanged.

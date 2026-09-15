@@ -81,6 +81,17 @@ function diagnosticMessage(error: unknown): string {
     .slice(0, 240)
 }
 
+export function classifyPurchaseError(error: unknown): Pick<PurchaseResult, 'error' | 'errorDetail'> | null {
+  const err = error as { message?: unknown; code?: unknown }
+  const message = typeof err.message === 'string' ? err.message : String(error)
+  const code = typeof err.code === 'string' ? err.code : ''
+  const combined = `${code} ${message}`
+  if (combined.includes('USER_CANCELED') || combined.includes('USER_CANCELLED') || /cancel/i.test(combined)) {
+    return { error: 'Purchase cancelled', errorDetail: 'cancelled' }
+  }
+  return null
+}
+
 export function formatBillingTrace(trace: BillingTraceEvent[]): string {
   return trace
     .map((entry, index) => `${index + 1}. ${entry.event} elapsedMs=${entry.elapsedMs}${entry.detail ? ` ${entry.detail}` : ''}`)
@@ -478,10 +489,9 @@ export const GooglePlayBillingProvider: BillingProvider = {
     } catch (err: unknown) {
       traceEvent('purchases_updated_callback', `error=${diagnosticMessage(err)}`)
       const msg = err instanceof Error ? err.message : String(err)
+      const cancellation = classifyPurchaseError(err)
       billingLog('callback', `responseCode=ERROR debugMessage=${msg}`)
-      if (msg.includes('cancelled') || msg.includes('cancel') || msg.includes('CANCEL') || msg.includes('USER_CANCEL')) {
-        return { success: false, error: 'Purchase cancelled', errorDetail: 'cancelled' }
-      }
+      if (cancellation) return { success: false, ...cancellation }
       if (msg.includes('already') || msg.includes('ALREADY_OWN') || msg.includes('ITEM_ALREADY_OWNED')) {
         return { success: false, error: 'Already owned', errorDetail: 'already_owned' }
       }
