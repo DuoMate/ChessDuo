@@ -90,6 +90,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     [moveHistory, state?.playerColor, state?.feedbackHistory],
   )
 
+  // P4 perf: derive sidebar entries once per move/preview change — the inline
+  // `.map` previously allocated a new array (and new row objects) on EVERY
+  // CoachGame render (including analyzing ticks), re-rendering the open sidebar.
+  const sidebarEntries: RoundHistoryEntry[] = useMemo(() => (
+    roundEntries.map((entry, index) => ({
+      ...entry,
+      isCurrent: !previewing && index === roundEntries.length - 1,
+    }))
+  ), [roundEntries, previewing])
+
   const handleTabChange = useCallback((tab: BoardTab) => {
     if (tab === 'game') {
       setActivePanel(null)
@@ -420,10 +430,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           own backdrop/panel, so it must NOT be nested inside a SlideOver. */}
       <RoundHistorySidebar
         open={activePanel === 'moves'}
-        entries={roundEntries.map((entry, index) => ({
-          ...entry,
-          isCurrent: !previewing && index === roundEntries.length - 1,
-        }))}
+        entries={sidebarEntries}
         onClose={() => setActivePanel(null)}
       />
 
