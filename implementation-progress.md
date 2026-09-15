@@ -173,6 +173,17 @@
   `sameRoster` exported for testing (pure helper, no behavior change).
 - Verification: `tsc` clean; 10/10 new tests pass.
 
+## P7 — DuelGame adopts shared sections (DuelGame.tsx, GameSections.tsx)
+- Bottleneck: post-P0 memo held at leaf level in `DuelGame`, but the shell still
+  reconciled the top-bar + board wrapper trees on every move/scrub render.
+- Change: `DuelGame` renders shared `GameTopBarSection`/`GameBoardSection`.
+  Sections gained optional `shellClassName`/`outerClassName`/`captured*` props
+  (stable literals/defaults — memo holds) so DuelGame keeps pixel-identical
+  visuals (own wrapper bg, no px-3, 600px cap, no captures, no profile entry).
+  Menu handlers stabilized; stable noop for the absent resolution animation.
+- Verification: `tsc` clean; section/lobby/coach suites pass (incl. 2 new P7
+  visual-parity tests); scope grep clean.
+
 ## Final verification (2026-09-15, branch `ui-refactoring`)
 - `npx tsc --noEmit`: clean.
 - Full `npm test`: 1394 passed / 9 failed / 87 skipped — IDENTICAL to clean-baseline
