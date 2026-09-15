@@ -2596,6 +2596,73 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }, [isOnline, timeLimitSeconds])
   const isTimerActive = gameState.matchTimerActive && gameState.status === GameStatus.PLAYING && matchTimerStarted
 
+  // P0-1 perf: stabilize referentially-compared props so memoized children
+  // (BoardTopBar custom comparator, BoardBottomNav shallow memo) actually skip.
+  // New JSX/array literals every Game render previously defeated memo on EVERY
+  // shell update (move resolution, chat, insights) — now stable unless inputs change.
+  const timerNode = useMemo(() => (
+    <IsolatedMatchTimer getTimeRemaining={getTimeRemaining} isActive={isTimerActive} totalSeconds={timeLimitSeconds || 600} />
+  ), [getTimeRemaining, isTimerActive, timeLimitSeconds])
+
+  // Presence mapping creates new objects per render; memoize so TopBar's
+  // `prev.whitePlayers === next.whitePlayers` check holds when disconnectedAge
+  // and base arrays are unchanged. Behavior identical — same mapping logic.
+  const whitePlayersWithPresence: BoardTopBarPlayer[] = useMemo(() => (
+    whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))
+  ), [whitePlayers, disconnectedAge])
+  const blackPlayersWithPresence: BoardTopBarPlayer[] = useMemo(() => (
+    blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))
+  ), [blackPlayers, disconnectedAge])
+
+  // Stable BoardBottomNav handlers — inline closures previously created new
+  // function refs every Game render, defeating memo even on timer-idle renders.
+  const handleBoardTabChange = useCallback((t: BoardTab) => {
+    if (t === 'moves') {
+      setActiveBoardTab('game')
+      closeAllPanels()
+      setShowRoundHistory(true)
+      return
+    }
+    if (t === 'insights') {
+      setActiveBoardTab('game')
+      closeAllPanels()
+      setShowInsights(true)
+      return
+    }
+    if (t === 'chat') {
+      setActiveBoardTab('game')
+      closeAllPanels()
+      setShowChat(true)
+      return
+    }
+    setActiveBoardTab(t)
+  }, [closeAllPanels])
+  const handleBoardForward = useCallback(() => {}, [])
+  const handleBoardBackMove = useCallback(() => {
+    const moves = moveHistoryRef.current
+    if (moves.length === 0) return
+    const current = playbackIndex ?? moves.length - 1
+    if (current <= 0) {
+      setPlaybackIndex(-1)
+      setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    } else {
+      setPlaybackIndex(current - 1)
+      setPlaybackFen(moves[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+    }
+  }, [playbackIndex])
+  const handleBoardForwardMove = useCallback(() => {
+    const moves = moveHistoryRef.current
+    if (moves.length === 0) return
+    const current = playbackIndex ?? moves.length - 1
+    if (current >= moves.length - 1) {
+      setPlaybackIndex(null)
+      setPlaybackFen(null)
+    } else {
+      setPlaybackIndex(current + 1)
+      setPlaybackFen(moves[current + 1]?.fenAfter || '')
+    }
+  }, [playbackIndex])
+
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
     const moves = moveHistoryRef.current
     return moves.slice(-10).map((m, i) => {
@@ -2693,8 +2760,8 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <BoardTopBar
-                whitePlayers={whitePlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
-                blackPlayers={blackPlayers.map(p => ({ ...p, disconnectedSinceMs: !p.isYou ? disconnectedAge : undefined }))}
+                whitePlayers={whitePlayersWithPresence}
+                blackPlayers={blackPlayersWithPresence}
                 capturedWhite={gameState.capturedByWhite}
                 capturedBlack={gameState.capturedByBlack}
                 matchTimeRemaining={gameState.matchTimeRemaining}
@@ -2702,7 +2769,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
                 totalMatchSeconds={timeLimitSeconds || 600}
                 roundLabel={gameState.status === GameStatus.PLAYING ? 'Round ' + (Math.floor(moveHistoryRef.current.length / 2) + 1) : undefined}
                 currentTurn={gameState.currentTurn}
-                timerNode={<IsolatedMatchTimer getTimeRemaining={getTimeRemaining} isActive={isTimerActive} totalSeconds={timeLimitSeconds || 600} />}
+                timerNode={timerNode}
               />
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -2800,52 +2867,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         {/* Bottom nav */}
         <BoardBottomNav
           activeTab={activeBoardTab}
-          onTabChange={(t) => {
-            if (t === 'moves') {
-              setActiveBoardTab('game')
-              closeAllPanels()
-              setShowRoundHistory(true)
-              return
-            }
-            if (t === 'insights') {
-              setActiveBoardTab('game')
-              closeAllPanels()
-              setShowInsights(true)
-              return
-            }
-            if (t === 'chat') {
-              setActiveBoardTab('game')
-              closeAllPanels()
-              setShowChat(true)
-              return
-            }
-            setActiveBoardTab(t)
-          }}
-          onForward={() => {}}
-          onBackMove={() => {
-            const moves = moveHistoryRef.current
-            if (moves.length === 0) return
-            const current = playbackIndex ?? moves.length - 1
-            if (current <= 0) {
-              setPlaybackIndex(-1)
-              setPlaybackFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-            } else {
-              setPlaybackIndex(current - 1)
-              setPlaybackFen(moves[current - 1]?.fenAfter || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-            }
-          }}
-          onForwardMove={() => {
-            const moves = moveHistoryRef.current
-            if (moves.length === 0) return
-            const current = playbackIndex ?? moves.length - 1
-            if (current >= moves.length - 1) {
-              setPlaybackIndex(null)
-              setPlaybackFen(null)
-            } else {
-              setPlaybackIndex(current + 1)
-              setPlaybackFen(moves[current + 1]?.fenAfter || '')
-            }
-          }}
+          onTabChange={handleBoardTabChange}
+          onForward={handleBoardForward}
+          onBackMove={handleBoardBackMove}
+          onForwardMove={handleBoardForwardMove}
           insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>
