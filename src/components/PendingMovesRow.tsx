@@ -33,14 +33,14 @@ function pieceChar(piece?: string, color?: 'white' | 'black'): string {
   return PIECE_CHARS[key] || piece
 }
 
-function SubmittedBadge() {
+const SubmittedBadge = memo(function SubmittedBadge() {
   return (
     <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-green-500/30 bg-green-500/20 px-2 py-0.5 text-[11px] font-semibold leading-4 text-green-300">
       <Check size={10} className="shrink-0" strokeWidth={3} aria-hidden />
       <span>Submitted</span>
     </span>
   )
-}
+})
 
 /**
  * "Your Move" / "Teammate" status cards.
@@ -56,7 +56,7 @@ function SubmittedBadge() {
  * a long username (e.g. VeryLongPlayerName123456789) can never overlap or push
  * the Submitted badge off the card.
  */
-function MoveCard({
+function MoveCardInner({
   icon,
   label,
   name,
@@ -102,6 +102,10 @@ function MoveCard({
     </motion.div>
   )
 }
+
+// Memoized — parent comparator gates on SAN/piece/color/label; memo here
+// guards against icon-node identity churn when the row itself re-renders.
+const MoveCard = memo(MoveCardInner)
 
 function PendingMovesRowInner({
   yourMove,

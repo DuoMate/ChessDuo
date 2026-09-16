@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useLayoutEffect, useCallback, memo } from 'react'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { Chessboard, COLOR, INPUT_EVENT_TYPE, InputEvent } from 'cm-chessboard'
 import { Markers, MARKER_TYPE } from 'cm-chessboard/src/extensions/markers/Markers'
 import { Chess, Square } from 'chess.js'
@@ -129,19 +129,31 @@ function ChessBoardInner({
     return dests
   }
 
-  useLayoutEffect(() => {
+  // Overlay glyph sizing only needs the board width when an overlay is
+  // visible. rAF-coalesced + width-change-guarded so continuous resizes
+  // don't setState every frame; passive effect (no layout read during render).
+  useEffect(() => {
+    let raf = 0
     const measure = () => {
-      if (overlayContainerRef.current) {
-        setOverlayWidth(overlayContainerRef.current.getBoundingClientRect().width)
-      }
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        if (overlayContainerRef.current) {
+          const w = overlayContainerRef.current.getBoundingClientRect().width
+          setOverlayWidth((prev) => (Math.abs(prev - w) < 1 ? prev : w))
+        }
+      })
     }
     measure()
 
     if (typeof ResizeObserver !== 'undefined' && overlayContainerRef.current) {
       const observer = new ResizeObserver(measure)
       observer.observe(overlayContainerRef.current)
-      return () => observer.disconnect()
+      return () => {
+        cancelAnimationFrame(raf)
+        observer.disconnect()
+      }
     }
+    return () => cancelAnimationFrame(raf)
   }, [orientation])
  
   useEffect(() => {
@@ -404,7 +416,7 @@ function ChessBoardInner({
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="absolute flex items-center justify-center font-bold select-none will-change-transform"
+            className="absolute flex items-center justify-center font-bold select-none"
             // Dynamic piece-contrast colors: pending-move glyphs must render in
             // literal piece white/black with an inverted halo so they stay
             // legible on either square color — Tailwind tokens can't express
@@ -437,7 +449,7 @@ function ChessBoardInner({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="absolute flex items-center justify-center font-bold select-none will-change-transform"
+            className="absolute flex items-center justify-center font-bold select-none"
             // Dynamic piece-contrast colors: pending-move glyphs must render in
             // literal piece white/black with an inverted halo so they stay
             // legible on either square color — Tailwind tokens can't express
@@ -534,7 +546,7 @@ function ChessBoardInner({
                     }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.4, ease: "easeOut" }}
-                    className="absolute rounded-full pointer-events-none will-change-transform"
+                    className="absolute rounded-full pointer-events-none"
                     style={{ 
                       width: '6px',
                       height: '6px',
@@ -620,10 +632,12 @@ export const ChessBoard = memo(ChessBoardInner, (prev, next) => {
     prev.pendingOverlay?.from === next.pendingOverlay?.from &&
     prev.pendingOverlay?.to === next.pendingOverlay?.to &&
     prev.pendingOverlay?.piece === next.pendingOverlay?.piece &&
+    prev.pendingOverlay?.color === next.pendingOverlay?.color &&
     prev.pendingOverlay?.showTeammateLabel === next.pendingOverlay?.showTeammateLabel &&
     prev.myPendingOverlay?.from === next.myPendingOverlay?.from &&
     prev.myPendingOverlay?.to === next.myPendingOverlay?.to &&
     prev.myPendingOverlay?.piece === next.myPendingOverlay?.piece &&
+    prev.myPendingOverlay?.color === next.myPendingOverlay?.color &&
     prev.highlightSquares?.winnerFrom === next.highlightSquares?.winnerFrom &&
     prev.highlightSquares?.winnerTo === next.highlightSquares?.winnerTo &&
     prev.highlightSquares?.loserFrom === next.highlightSquares?.loserFrom &&

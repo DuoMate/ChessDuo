@@ -508,11 +508,20 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   // the live countdown is owned by `duelTimerNode`.
   const totalSeconds = timeLimit || 600
   const remainingSeconds = team === 'WHITE' ? whiteTime : blackTime
+  void remainingSeconds
+  // Stable getter: reads live engine values via ref; mount-time fallbacks are
+  // mirrored into refs so whiteTime/blackTime state updates don't recreate
+  // this callback (which would tear down IsolatedMatchTimer's 1s interval and
+  // invalidate duelTimerNode's memo on every non-clock engine event).
+  const fallbackTimeRef = useRef({ whiteTime, blackTime })
+  useEffect(() => {
+    fallbackTimeRef.current = { whiteTime, blackTime }
+  }, [whiteTime, blackTime])
   const getDuelTimeRemaining = useCallback(() => {
     const g = gameRef.current
-    if (!g) return team === 'WHITE' ? whiteTime : blackTime
+    if (!g) return team === 'WHITE' ? fallbackTimeRef.current.whiteTime : fallbackTimeRef.current.blackTime
     return team === 'WHITE' ? g.whiteTimeRemaining : g.blackTimeRemaining
-  }, [team, whiteTime, blackTime])
+  }, [team])
   const isDuelTimerActive = timerActive && status === 'playing'
   const duelTimerNode = useMemo(() => (
     <IsolatedMatchTimer getTimeRemaining={getDuelTimeRemaining} isActive={isDuelTimerActive} totalSeconds={totalSeconds} />

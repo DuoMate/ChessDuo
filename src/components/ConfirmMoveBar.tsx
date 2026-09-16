@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { memo } from 'react'
 import { Check, X } from 'lucide-react'
 
 interface ConfirmMoveBarProps {
@@ -10,7 +11,7 @@ interface ConfirmMoveBarProps {
   disabled?: boolean
 }
 
-export function ConfirmMoveBar({ visible, onConfirm, onCancel, disabled }: ConfirmMoveBarProps) {
+function ConfirmMoveBarInner({ visible, onConfirm, onCancel, disabled }: ConfirmMoveBarProps) {
   return (
     <AnimatePresence>
       {visible && (
@@ -51,3 +52,7 @@ export function ConfirmMoveBar({ visible, onConfirm, onCancel, disabled }: Confi
     </AnimatePresence>
   )
 }
+
+// Memoized — only visible/disabled/handler identity re-renders the bar;
+// shell state (timer/chat/insights) otherwise skips it.
+export const ConfirmMoveBar = memo(ConfirmMoveBarInner)
