@@ -29,6 +29,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `debug.ts` | Debug utilities (conditional logging) |
 | `appUrl.ts` | App URL helpers (deep links) |
 | `share.ts` | Cross-platform share helper — native sheet via `@capacitor/share`, Web Share API, clipboard fallback |
+| `rateApp.ts` | Play-listing bridge for the Profile "Rate us" row — native `market://`, Browser-plugin/web HTTPS fallback, never throws |
 | `nativeAd.ts` | Web-safe bridge for the bounded Android Native Advanced AdMob view |
 | `webAds.ts` | Web-only AdSense helper (env-gated IDs, best-effort push, never throws) |
 | `capacitorAuth.ts` | Capacitor-specific auth bridge |
@@ -48,6 +49,10 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - `@supabase/supabase-js`, `chess.js`, `@capacitor/*` (optional)
 
 ## Recent Changes
+- **2026-09-16**: New `rateApp.ts` — web-safe Play-listing bridge (`PLAY_APP_ID`,
+  `PLAY_LISTING_URL`, `PLAY_MARKET_URI`, best-effort `openPlayListing()` that never
+  throws; native `market://` first, Capacitor Browser HTTPS fallback, new-tab web
+  fallback). Consumed by the Profile "Rate ChessDuo" row. Tests: `rateApp.test.ts`.
 - **2026-09-13**: New `webAds.ts` — web-only AdSense counterpart to `nativeAd.ts` (env-gated IDs, `canUseWebAds()` true only on non-native, best-effort `pushWebAd()` that never throws). See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Native-ad preload is now single-flight and reuses an unconsumed loaded ad, preventing provider preload and game-over preload calls from destroying each other. Successful `show` consumes the ad; native Android callbacks log `[ADS][GAMEOVER]` load failures, including AdMob error code/message, and render/destruction state.
 - **2026-09-04**: Added `nativeAd.ts`, a best-effort Capacitor bridge that preloads and positions Android Native Advanced ads without blocking game-over UI. Web builds and missing configuration are no-ops.

@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
+import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Star, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { fetchProfile, invalidateProfileCache } from '@/lib/profileService'
 import { getProfileLink } from '@/lib/friends'
 import { shareLink } from '@/lib/share'
+import { openPlayListing } from '@/lib/rateApp'
 import { RealtimeService } from '@/lib/realtimeService'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
@@ -27,6 +28,7 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [recentGames, setRecentGames] = useState<CompletedGame[]>([])
   const [profileCopied, setProfileCopied] = useState(false)
+  const [openingStore, setOpeningStore] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
   const [checkingPremium, setCheckingPremium] = useState(true)
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionInfo | null>(null)
@@ -84,6 +86,18 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
   useEffect(() => {
     return () => clearTimeout(timerRef.current)
   }, [])
+
+  const handleRateApp = async () => {
+    setOpeningStore(true)
+    try {
+      await openPlayListing()
+    } finally {
+      // Brief feedback like the Share row's "Link copied!" — the Play
+      // Store app now owns the flow, so always reset the label.
+      clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setOpeningStore(false), 2000)
+    }
+  }
 
   const copyProfileLink = async () => {
     const url = getProfileLink(playerId)
@@ -167,6 +181,20 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
           <div className="flex-1 text-left min-w-0">
             <p className="text-sm font-semibold text-amber-400">{profileCopied ? 'Link copied!' : 'Share Profile'}</p>
             <p className="text-xs text-slate-400">Share your profile with friends</p>
+          </div>
+          <span className="text-slate-500 shrink-0">&rsaquo;</span>
+        </button>
+
+        <button
+          onClick={handleRateApp}
+          className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+        >
+          <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+            <Star size={20} className="text-amber-400" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-semibold text-amber-400">{openingStore ? 'Opening Play Store…' : 'Rate ChessDuo'}</p>
+            <p className="text-xs text-slate-400">Enjoying the game? Leave us a rating</p>
           </div>
           <span className="text-slate-500 shrink-0">&rsaquo;</span>
         </button>
