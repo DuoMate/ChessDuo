@@ -45,7 +45,6 @@ let lastDiagnostic: BillingDiagnostic | null = null
 let nativeOperationQueue: Promise<void> = Promise.resolve()
 let traceStartedAt = Date.now()
 let billingTrace: BillingTraceEvent[] = []
-
 interface PluginDiagnosticInput {
   code: BillingDiagnosticCode
   platform: string
@@ -127,7 +126,6 @@ export function createPluginDiagnostic(input: PluginDiagnosticInput): BillingDia
     ].join(' '),
   }
 }
-
 function setDiagnostic(diagnostic: BillingDiagnostic | null): void {
   lastDiagnostic = diagnostic
     ? { ...diagnostic, details: [diagnostic.details, `trace=${formatBillingTrace(billingTrace)}`].filter(Boolean).join(' ') }
