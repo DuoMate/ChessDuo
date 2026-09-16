@@ -12,6 +12,9 @@ interface AccuracyBottomSheetProps {
   player1Id?: string | null
 }
 
+// Eval-scale colors are data-driven (computed from the live centipawn score),
+// so they flow through the style prop by necessity — see ARCHITECTURE.md
+// styling rule §5 (dynamic values). Hue families match Tailwind emerald/amber/rose.
 function getPositionLabel(score: number): { label: string; color: string; bg: string } {
   if (score < -300) return { label: 'Black is winning', color: '#1e1e1e', bg: 'bg-gray-900/60' }
   if (score < -100) return { label: 'Black has an advantage', color: '#9ca3af', bg: 'bg-gray-800/60' }

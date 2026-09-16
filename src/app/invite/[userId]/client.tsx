@@ -9,6 +9,7 @@ import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { PageLoading } from '@/components/PageLoading'
+import { Spinner } from '@/components/Spinner'
 import { ArrowLeft } from 'lucide-react'
 import InstallBanner from '@/components/InstallBanner'
 
@@ -195,7 +196,10 @@ export default function InvitePageClient() {
         <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'loading' && (
-            <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+            <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-4">
+              <Spinner size="md" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Loading invite…</p>
+            </div>
           )}
 
           {status === 'confirm' && (

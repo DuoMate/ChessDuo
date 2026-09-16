@@ -122,8 +122,8 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             )}
           </button>
           {onClose && (
-            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-              <span className="text-slate-400 text-lg">&times;</span>
+            <button onClick={onClose} aria-label="Close profile" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
             </button>
           )}
         </div>

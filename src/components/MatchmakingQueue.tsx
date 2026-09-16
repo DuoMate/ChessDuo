@@ -65,7 +65,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
         setStatus('error')
       } catch {
         if (!cancelled) {
-          setError('Something went wrong')
+          setError('Connection issue — please try again')
           setStatus('error')
         }
       }
@@ -182,7 +182,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
 
         {status === 'error' && (
           <div className="mt-6 space-y-4">
-            <p className="text-red-400 text-sm">{error || 'Something went wrong'}</p>
+            <p role="alert" className="text-red-400 text-sm">{error || 'Connection issue — please try again'}</p>
             <button
               onClick={() => setRetries(r => r + 1)}
               className="min-h-[44px] px-6 py-2 bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/10 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-200 dark:hover:bg-white/[0.08] transition-colors"

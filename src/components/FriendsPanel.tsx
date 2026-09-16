@@ -347,14 +347,16 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            id="friends-search"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name or username..."
+            aria-label="Search friends by name or username"
             className="w-full min-h-[44px] pl-10 pr-12 py-2 bg-slate-800/50 text-white rounded-xl border border-white/5 focus:border-blue-500/50 focus:outline-none text-sm placeholder:text-slate-500"
           />
-          <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors">
-            <SlidersHorizontal size={16} />
+          <button aria-label="Search filters" className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+            <SlidersHorizontal size={16} aria-hidden="true" />
           </button>
           {searching && (
             <p className="text-slate-500 text-xs mt-1 flex items-center gap-1.5">
@@ -410,8 +412,9 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
 
         {/* Tabs + Content */}
         {loading ? (
-          <div className="flex justify-center py-12">
+          <div className="flex flex-col items-center justify-center gap-2 py-12" role="status" aria-live="polite">
             <Spinner size="sm" />
+            <p className="text-slate-500 text-xs">Loading friends…</p>
           </div>
         ) : (
           <>

@@ -91,6 +91,14 @@ describe('PremiumPage Component — Web', () => {
     expect(screen.queryByText('Restore Purchases')).toBeNull()
   })
 
+  test('does not query Google Play plans on web', async () => {
+    const getPlans = SubscriptionService.getPlans as jest.Mock
+    getPlans.mockClear()
+    render(<PremiumPage />)
+    await screen.findByText('Premium on Android')
+    expect(getPlans).not.toHaveBeenCalled()
+  })
+
   test('renders feature list', async () => {
     render(<PremiumPage />)
     const feature = await screen.findByText('Unlimited Move Insights')
@@ -140,8 +148,8 @@ describe('PremiumPage Component — Native (Android)', () => {
     })
 
     render(<PremiumPage />)
-    const buttons = await screen.findAllByRole('button', { name: /Upgrade to Premium/ })
-    fireEvent.click(buttons[0])
+    const monthlyButton = await screen.findByRole('button', { name: 'Choose monthly plan' })
+    fireEvent.click(monthlyButton)
 
     await waitFor(() => expect(SubscriptionService.purchaseMonthly).toHaveBeenCalled())
     expect(screen.queryByText('Purchase cancelled. You can try again anytime.')).toBeNull()

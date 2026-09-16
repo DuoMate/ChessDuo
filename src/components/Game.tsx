@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { type PendingOverlay, type HighlightSquares } from './ChessBoard'
 import type { PromotionPiece } from '@/features/shared/gameTypes'
@@ -111,11 +111,12 @@ const PROMOTION_PIECES: { piece: PromotionPiece; symbol: string; label: string }
   { piece: 'n', symbol: '♞', label: 'Knight' }
 ]
 
-function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: string }) {
-  const sortedPieces = [...pieces].sort((a, b) => {
-    const order = ['q', 'r', 'b', 'n', 'p']
-    return order.indexOf(a) - order.indexOf(b)
-  })
+const CAPTURED_PIECE_ORDER = ['q', 'r', 'b', 'n', 'p']
+
+const CapturedPiecesDisplay = memo(function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: string }) {
+  const sortedPieces = useMemo(() => [...pieces].sort((a, b) => {
+    return CAPTURED_PIECE_ORDER.indexOf(a) - CAPTURED_PIECE_ORDER.indexOf(b)
+  }), [pieces])
   
   return (
     <div className="flex flex-col items-center">
@@ -136,7 +137,7 @@ function CapturedPiecesDisplay({ pieces, label }: { pieces: string[], label: str
       </div>
     </div>
   )
-}
+})
 
 function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => void }) {
   return (
@@ -297,12 +298,15 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     prevGameFenRef.current = gameState.fen
   }, [gameState.fen, gameState.status])
 
-  // Poll connection health for reconnection countdown display
+  // Poll connection health for reconnection countdown display.
+  // Change-guarded: while connected the engine reports a constant 0 and this
+  // skips setState, so the shell does NOT rerender 1 Hz. Only an actual
+  // disconnect-age change (reconnect countdown visible) re-renders.
   useEffect(() => {
     if (!isOnline) return
     const interval = setInterval(() => {
       const age = onlineGameRef.current?.disconnectedAgeMs ?? 0
-      setDisconnectedAge(age)
+      setDisconnectedAge((prev) => (prev === age ? prev : age))
     }, 1000)
     return () => clearInterval(interval)
   }, [isOnline])
@@ -2797,6 +2801,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           const myTeamEnabled = currentTurn === myTeamRef.current
           const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)) && !(isOnline && inputLockedRef.current))
           const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
+          // Lifecycle polish: name the wait when the board is disabled because
+          // the opponent/bot side is working — reads existing state only.
+          const waitingHint = gameState.status === GameStatus.PLAYING && !isBoardEnabled && overlayMode === 'none' && !playbackFen && gameState.isBotThinking
+            ? 'Opponent is thinking…'
+            : null
           return (
             <GameBoardSection
               boardKey={boardKey}
@@ -2810,7 +2819,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onMove={handleMove}
               onAnimationComplete={handleResolutionComplete}
               isMobile={isMobile}
+              // Per-surface board cap: full game keeps 720px (meta lives in
+              // top bar + bottom nav); replay uses 600px, coach 560px.
               maxWidth="min(95vw, 80vh, 720px)"
+              waitingHint={waitingHint}
             />
           )
         })()}

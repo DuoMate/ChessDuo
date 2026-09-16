@@ -58,6 +58,8 @@ export function TeamTimer({ seconds, isActive, currentTeam }: TeamTimerProps) {
           text-xs font-bold
           ${isActive ? (isWarning ? 'text-rose-500' : activeColorClass) : inactiveColorClass}
         `}
+        title={isActive ? `${seconds} seconds left` : 'Waiting for turn'}
+        aria-label={isActive ? `${seconds} seconds left` : 'Waiting for turn'}
         animate={isActive && isCritical ? {
           scale: [1, 1.15, 1],
         } : {}}
@@ -67,7 +69,7 @@ export function TeamTimer({ seconds, isActive, currentTeam }: TeamTimerProps) {
           repeatType: "loop"
         }}
       >
-        {isActive ? `${seconds}s` : '--'}
+        {isActive ? `${seconds}s` : 'WAIT'}
       </motion.div>
 
       {isActive && (
