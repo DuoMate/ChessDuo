@@ -91,6 +91,14 @@ describe('PremiumPage Component — Web', () => {
     expect(screen.queryByText('Restore Purchases')).toBeNull()
   })
 
+  test('does not query Google Play plans on web', async () => {
+    const getPlans = SubscriptionService.getPlans as jest.Mock
+    getPlans.mockClear()
+    render(<PremiumPage />)
+    await screen.findByText('Premium on Android')
+    expect(getPlans).not.toHaveBeenCalled()
+  })
+
   test('renders feature list', async () => {
     render(<PremiumPage />)
     const feature = await screen.findByText('Unlimited Move Insights')

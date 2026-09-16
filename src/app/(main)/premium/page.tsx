@@ -20,6 +20,20 @@ interface ErrorDetail {
   details?: string
 }
 
+// Platform check FIRST: native Android app vs web browser.
+// Uses the established window.Capacitor detection already present on this
+// screen (mirrored by isNativePlatform() in src/lib/share.ts). Google Play
+// Billing is Android-only — web must never initialize, query, or launch it.
+// On web the "Download on Google Play" CTA below is the upgrade path.
+function isNativeApp(): boolean {
+  try {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    return !!cap?.isNativePlatform?.()
+  } catch {
+    return false // web / SSR — no Capacitor bridge
+  }
+}
+
 export default function PremiumPage() {
   const [isPremium, setIsPremium] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
@@ -44,10 +58,7 @@ export default function PremiumPage() {
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
   useEffect(() => {
-    try {
-      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-      if (cap?.isNativePlatform?.()) setIsNative(true)
-    } catch { /* web */ }
+    if (isNativeApp()) setIsNative(true)
   }, [])
 
   const runLoad = useCallback(async () => {
@@ -69,6 +80,17 @@ export default function PremiumPage() {
       }
       const subStatus = await withUiTimeout(SubscriptionService.getStatus(), 9000, statusFallback)
       if (!mountedRef.current) return
+      if (!isNativeApp()) {
+        // Web: entitlement only. Never query Google Play ProductDetails here —
+        // billing is Android-only and the Download CTA below is the upgrade
+        // path. Skipping avoids plugin lookups, fetch failures, and the
+        // spurious "plans could not be loaded" error on web.
+        setStatus(subStatus)
+        setIsPremium(subStatus.isPremium)
+        setSubscriptionStatus(subStatus.subscriptionStatus)
+        setPlans([])
+        return
+      }
       const subPlans = await withUiTimeout(SubscriptionService.getPlans(), 9000, [] as SubscriptionPlan[])
       if (!mountedRef.current) return
       setStatus(subStatus)
@@ -143,6 +165,12 @@ export default function PremiumPage() {
   }, [])
 
   const handleSubscribe = useCallback(async (productId: string) => {
+    if (!isNativeApp()) {
+      // Web: Premium is available through the Android app (Download CTA on
+      // this screen). Never invoke Google Play Billing from the browser —
+      // no plugin call, no purchase attempt, no billing error.
+      return
+    }
     setSubscribing(true)
     setError(null)
     purchasePendingRef.current = true
@@ -214,6 +242,7 @@ export default function PremiumPage() {
   }, [])
 
   const handleRestore = useCallback(async () => {
+    if (!isNativeApp()) return // Web: no Google Play Billing — Download CTA is the path.
     setRestoring(true)
     setError(null)
     try {
