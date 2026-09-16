@@ -2797,6 +2797,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           const myTeamEnabled = currentTurn === myTeamRef.current
           const isBoardEnabled = overlayMode !== 'none' || playbackFen ? false : (gameState.status === GameStatus.PLAYING && myTeamEnabled && !gameState.isBotThinking && !gameState.pendingPromotion && !(isOnline && playerId && onlineGameRef.current?.getAllPendingMoves?.()?.has(playerId)) && !(isOnline && inputLockedRef.current))
           const boardOrientation = myTeamRef.current === 'BLACK' ? 'black' : 'white'
+          // Lifecycle polish: name the wait when the board is disabled because
+          // the opponent/bot side is working — reads existing state only.
+          const waitingHint = gameState.status === GameStatus.PLAYING && !isBoardEnabled && overlayMode === 'none' && !playbackFen && gameState.isBotThinking
+            ? 'Opponent is thinking…'
+            : null
           return (
             <GameBoardSection
               boardKey={boardKey}
@@ -2810,7 +2815,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onMove={handleMove}
               onAnimationComplete={handleResolutionComplete}
               isMobile={isMobile}
+              // Per-surface board cap: full game keeps 720px (meta lives in
+              // top bar + bottom nav); replay uses 600px, coach 560px.
               maxWidth="min(95vw, 80vh, 720px)"
+              waitingHint={waitingHint}
             />
           )
         })()}

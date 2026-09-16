@@ -317,7 +317,7 @@ export function FourPlayerLobby({
             e.dataTransfer.effectAllowed = 'move'
           }}
           onClick={() => isCreator && handleUnassign(p.playerId)}
-          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors cursor-default ${
+          className={`flex min-h-[44px] items-center justify-between gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors cursor-default ${
             p.playerId === playerId
               ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
               : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
@@ -464,7 +464,7 @@ export function FourPlayerLobby({
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onClick={() => handleClickCard(p)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors ${
+                    className={`flex min-h-[44px] items-center gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors ${
                       p.playerId === playerId
                         ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
                         : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
@@ -504,11 +504,14 @@ export function FourPlayerLobby({
                 ← Leave lobby
               </button>
 
-              {teamsReady && (
+              {isCreator && (
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleStart}
-                  className="min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500"
+                  onClick={teamsReady ? handleStart : undefined}
+                  disabled={!teamsReady}
+                  aria-disabled={!teamsReady}
+                  title={teamsReady ? 'Start the match' : 'Waiting for teams to be ready'}
+                  className="min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   ▶ Start Match
                 </motion.button>

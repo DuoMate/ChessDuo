@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { normalizeOtpType, isPkceVerifierMissing } from '@/lib/authError'
 import { PageLoading } from '@/components/PageLoading'
-import { BackButton } from '@/components/BackButton'
 import { logAuthDebug, correlationId } from '@/lib/authDebug'
 
 type Status = 'processing' | 'error' | 'recovery'
@@ -164,7 +163,7 @@ export default function AuthCallbackPage() {
   if (status === 'recovery') {
     return (
       <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
-        <div className="text-5xl mb-3">✅</div>
+        <div className="text-5xl mb-3" aria-hidden="true">✅</div>
         <h1 className="text-xl font-bold mb-2">Email confirmed</h1>
         <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">
           Your email address has been confirmed. For security, this sign-in link only works in the browser where you
@@ -176,7 +175,6 @@ export default function AuthCallbackPage() {
         >
           Go to Sign In
         </button>
-        <BackButton label="Go Home" onClick={() => router.replace('/')} />
       </div>
     )
   }
@@ -184,18 +182,35 @@ export default function AuthCallbackPage() {
   if (status === 'error') {
     return (
       <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
-        <div className="text-5xl mb-3">⚠️</div>
+        <div className="text-5xl mb-3" aria-hidden="true">⚠️</div>
         <h1 className="text-xl font-bold mb-2">{isOAuth ? 'Couldn&apos;t sign in' : "Couldn't confirm your email"}</h1>
-        <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">
-          {error?.message || 'Something went wrong. Please try signing in again.'}
+        <p role="alert" className="text-slate-400 text-sm mb-4 text-center max-w-xs">
+          {isOAuth
+            ? 'Google sign-in didn&apos;t complete. Please try again.'
+            : 'This confirmation link didn&apos;t work. Request a new one or try signing in.'}
         </p>
-        <button
-          onClick={() => router.replace('/')}
-          className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
-        >
-          Go to Sign In
-        </button>
-        <BackButton label="Go Home" onClick={() => router.replace('/')} />
+        {error?.message && (
+          <details className="mb-6 max-w-xs text-center">
+            <summary className="min-h-[44px] inline-flex items-center cursor-pointer text-xs text-slate-500 hover:text-slate-300">
+              Technical details
+            </summary>
+            <p className="mt-1 break-words text-xs text-slate-500">{error.message}</p>
+          </details>
+        )}
+        <div className="flex flex-col items-center gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => router.replace('/')}
+            className="min-h-[44px] px-6 py-2 text-sm text-slate-400 transition-colors hover:text-white"
+          >
+            Go to Sign In
+          </button>
+        </div>
       </div>
     )
   }

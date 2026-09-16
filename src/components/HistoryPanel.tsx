@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
+import { Spinner } from '@/components/Spinner'
 
 interface HistoryPanelProps {
   playerId: string
@@ -26,6 +27,8 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
   const [games, setGames] = useState<CompletedGame[]>([])
   const [playerStats, setPlayerStats] = useState<Awaited<ReturnType<typeof getPlayerStats>>>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (!playerId) return
@@ -36,8 +39,13 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
       setGames(g)
       setPlayerStats(s)
       setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [playerId])
+    }).catch(() => {
+      // History is best-effort: surface the failure with a retry instead of
+      // silently rendering an empty list.
+      setLoadError(true)
+      setLoading(false)
+    })
+  }, [playerId, retryKey])
 
   if (loading) {
     return (
@@ -50,13 +58,48 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
             <h2 className="text-lg font-bold text-white">Match History</h2>
           </div>
           {onClose && (
-            <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-              <span className="text-slate-400 text-lg">&times;</span>
+            <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
             </button>
           )}
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400 text-sm">Loading...</p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
+          <Spinner size="md" />
+          <p className="text-slate-400 text-sm">Loading match history…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <History size={18} className="text-white" aria-hidden="true" />
+            </div>
+            <h2 className="text-lg font-bold text-white">Match History</h2>
+          </div>
+          {onClose && (
+            <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+              <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
+            </button>
+          )}
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 px-4 text-center">
+          <p role="alert" className="text-sm font-medium text-slate-300">Couldn&apos;t load your match history.</p>
+          <p className="text-xs text-slate-500">Check your connection and try again.</p>
+          <button
+            onClick={() => {
+              setLoadError(false)
+              setLoading(true)
+              setRetryKey((k) => k + 1)
+            }}
+            className="mt-2 min-h-[44px] px-6 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-500"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -73,8 +116,8 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
           <h2 className="text-lg font-bold text-white">Match History</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span className="text-slate-400 text-lg">&times;</span>
+          <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+            <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
           </button>
         )}
       </div>
@@ -140,9 +183,9 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
               const resultBg = isDraw ? 'bg-amber-500/20' : isWin ? 'bg-emerald-500/20' : 'bg-rose-500/20'
               const resultColor = isDraw ? 'text-amber-400' : isWin ? 'text-emerald-400' : 'text-rose-400'
               const resultText = isDraw ? 'Draw' : isWin ? 'You Win' : 'You Lose'
-              const icon = isDraw ? (<Handshake size={14} className="text-amber-400" />)
-                : isWin ? (<Trophy size={14} className="text-emerald-400" />)
-                : (<Skull size={14} className="text-rose-400" />)
+              const icon = isDraw ? (<Handshake size={14} aria-hidden="true" className="text-amber-400" />)
+                : isWin ? (<Trophy size={14} aria-hidden="true" className="text-emerald-400" />)
+                : (<Skull size={14} aria-hidden="true" className="text-rose-400" />)
 
               return (
               <motion.div
@@ -166,7 +209,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                         {resultText}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>{game.is_online ? '🌐 Online' : '🤖 Offline'}</span>
+                        <span><span aria-hidden="true">{game.is_online ? '🌐' : '🤖'}</span> {game.is_online ? 'Online' : 'Offline'}</span>
                         <span>·</span>
                         <span>{new Date(game.played_at).toLocaleDateString()}</span>
                       </div>
@@ -177,10 +220,11 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                       e.stopPropagation()
                       router.push(`/replay/${game.id}`)
                     }}
-                    className="shrink-0 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
+                    aria-label={`Replay game ${i + 1}: ${resultText}`}
+                    className="shrink-0 min-h-[44px] px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
                   >
                     Replay
-                    <ChevronRight size={12} />
+                    <ChevronRight size={12} aria-hidden="true" />
                   </button>
                 </div>
 

@@ -102,9 +102,9 @@ const GridNode = memo(function GridNode({ highlighted, pulsing }: GridNodeProps)
       <span
         className={`block rounded-full w-[10px] h-[10px] transition-all duration-200 ${
           highlighted
-            ? 'bg-[#4DA3FF] scale-125 shadow-[0_0_8px_rgba(77,163,255,0.6)]'
+            ? 'bg-sky-400 scale-125 shadow-sky-400/60 shadow-[0_0_8px]'
             : pulsing
-            ? 'bg-[#4DA3FF]/40 scale-110 shadow-[0_0_6px_rgba(77,163,255,0.3)]'
+            ? 'bg-sky-400/40 scale-110 shadow-sky-400/30 shadow-[0_0_6px]'
             : 'bg-slate-300 dark:bg-white/20'
         }`}
       />

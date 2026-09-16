@@ -1,7 +1,8 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Trophy, Handshake, Home, LogOut, X, Eye } from 'lucide-react'
+import { useMemo } from 'react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { MODAL_SPRING } from './modalConstants'
@@ -18,14 +19,27 @@ interface GameOverModalProps {
 }
 
 function Particles() {
+  const reduceMotion = useReducedMotion()
+  const particles = useMemo(
+    () =>
+      [...Array(8)].map((_, i) => ({
+        id: i,
+        x: `${50 + (((i * 37) % 60) - 30)}%`,
+        y: `${45 + (((i * 53) % 40) - 20)}%`,
+        duration: 1.2 + ((i * 13) % 8) / 10,
+        delay: 0.3 + ((i * 7) % 5) / 10,
+      })),
+    [],
+  )
+  if (reduceMotion) return null
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {[...Array(8)].map((_, i) => (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      {particles.map((p) => (
         <motion.div
-          key={i}
+          key={p.id}
           initial={{ opacity: 1, x: '50%', y: '45%', scale: 0 }}
-          animate={{ opacity: 0, x: `${50 + (Math.random() - 0.5) * 60}%`, y: `${45 + (Math.random() - 0.5) * 40}%`, scale: [0, 1.5, 0] }}
-          transition={{ duration: 1.2 + Math.random() * 0.8, delay: 0.3 + Math.random() * 0.5, ease: 'easeOut' }}
+          animate={{ opacity: 0, x: p.x, y: p.y, scale: [0, 1.5, 0] }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeOut' }}
           className="absolute w-2 h-2 rounded-full bg-amber-400/60"
         />
       ))}
@@ -54,7 +68,7 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={MODAL_SPRING}
-            className="relative w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-[30px] border border-white/70 bg-white/90 p-6 text-center shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            className="relative w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-2xl border border-white/70 bg-white/90 p-6 text-center shadow-2xl backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
           >
             {onClose && (
               <button onClick={onClose} className="absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700" aria-label="Close">

@@ -165,7 +165,7 @@ function DeleteAccountContent() {
                 <span className="text-3xl text-red-600">✕</span>
               </div>
               <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-              <p className="text-gray-500 dark:text-slate-400 mb-4">{errorMsg}</p>
+              <p role="alert" className="text-gray-500 dark:text-slate-400 mb-4">{errorMsg}</p>
               <p className="text-sm text-gray-400 mb-8">
                 You can also email chessdoubles27@gmail.com to request manual deletion.
               </p>

@@ -25,6 +25,8 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'unlocked' | 'trial' | 'locked'>('loading')
   const [nextEligibleAt, setNextEligibleAt] = useState<string | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -43,18 +45,23 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
         setStatus('locked')
       })
       .catch(() => {
-        // Subscription lookup failed — treat as locked (fail closed).
-        if (active) setStatus('locked')
+        // Subscription lookup failed — stay locked (fail closed) but say so
+        // honestly instead of claiming the free game was consumed.
+        if (active) {
+          setLoadFailed(true)
+          setStatus('locked')
+        }
       })
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, retryKey])
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3" role="status" aria-live="polite">
         <Spinner size="lg" />
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Checking coach access…</p>
       </div>
     )
   }
@@ -81,17 +88,37 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
             <Lock size={24} className="text-blue-400" />
           </div>
           <h1 className="text-xl font-black uppercase tracking-wide">AI Coach</h1>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            Your free AI Coach game is complete. Unlock unlimited AI Coach games.
-            {countdown ? ` Or come back for your next free game in ${countdown}.` : ''}
-          </p>
-          <button
-            onClick={() => router.push('/premium')}
-            className="mt-5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-[0_4px_20px_rgba(59,130,246,0.35)] transition-all hover:from-blue-500 hover:to-cyan-400"
-          >
-            <Crown size={16} />
-            UPGRADE NOW
-          </button>
+          {loadFailed ? (
+            <>
+              <p role="alert" className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                We couldn&apos;t verify your coach access. Check your connection and try again.
+              </p>
+              <button
+                onClick={() => {
+                  setLoadFailed(false)
+                  setStatus('loading')
+                  setRetryKey((k) => k + 1)
+                }}
+                className="mt-5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-[0_4px_20px_rgba(59,130,246,0.35)] transition-all hover:from-blue-500 hover:to-cyan-400"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                Your free AI Coach game is complete. Unlock unlimited AI Coach games.
+                {countdown ? ` Or come back for your next free game in ${countdown}.` : ''}
+              </p>
+              <button
+                onClick={() => router.push('/premium')}
+                className="mt-5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-[0_4px_20px_rgba(59,130,246,0.35)] transition-all hover:from-blue-500 hover:to-cyan-400"
+              >
+                <Crown size={16} aria-hidden="true" />
+                UPGRADE NOW
+              </button>
+            </>
+          )}
           <button
             onClick={() => router.push('/')}
             className="mt-2 min-h-[44px] w-full rounded-xl text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"

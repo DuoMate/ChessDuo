@@ -905,9 +905,17 @@ export default function SetupPage() {
 
   const showTopBar = !gameMode
 
-  const authOverlay = showAuthOverlay && (
-    <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm">
-      <Auth
+  const authOverlay = (
+    <AnimatePresence>
+      {showAuthOverlay && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm"
+        >
+          <Auth
         onAuthComplete={handleAuthComplete}
         defaultSignup={searchParams.get('signup') === '1'}
         redirectUrl={redirectUrlRef.current || undefined}
@@ -928,9 +936,11 @@ export default function SetupPage() {
               window.history.replaceState(null, '', url.pathname)
             }
           }
-        }}
-      />
-    </div>
+          }}
+        />
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 
   const chooseUsernameScreen = needsUsername && (
@@ -1051,7 +1061,7 @@ export default function SetupPage() {
                 ))}
               </div>
               <div className="text-center mb-4">
-                <button type="button" onClick={() => router.push('/welcome?mode=offline')} className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
+                <button type="button" onClick={() => router.push('/welcome?mode=offline')} className="min-h-[44px] px-4 py-2 inline-flex items-center justify-center text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline font-medium">
                   How to play?
                 </button>
               </div>
@@ -1164,7 +1174,7 @@ if (!gameMode) {
             </div>
 
             {joinError && (
-              <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
+              <p role="alert" className="text-center text-xs font-medium text-red-400">{joinError}</p>
             )}
 
             {/* Configuration — slides in on Quick Play / Duo */}
@@ -1217,7 +1227,7 @@ if (!gameMode) {
 
           {/* Fixed Start Game button — stacked on top of the floating nav */}
           {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
-            <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4" style={{ bottom: '84px' }}>
+            <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4 bottom-[calc(84px+env(safe-area-inset-bottom,0px))]">
               <div className="w-full max-w-lg">
                 <button
                   onClick={handlePlay}
@@ -1338,7 +1348,7 @@ if (!gameMode) {
               </div>
 
               {joinError && (
-                <p className="text-center text-xs font-medium text-red-400">{joinError}</p>
+                <p role="alert" className="text-center text-xs font-medium text-red-400">{joinError}</p>
               )}
 
               {authOverlay}
@@ -1422,7 +1432,7 @@ function TimePills({ selectedTime, onSelect }: {
         <button
           key={opt.seconds}
           onClick={() => onSelect(opt.seconds)}
-          className={`flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap ${
+          className={`flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
             selectedTime === opt.seconds
               ? 'bg-blue-600 text-white shadow-[var(--shadow-glow-blue-strong)]'
               : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
@@ -1460,7 +1470,7 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left ${
+      className={`w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] ${
         selected
           ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'

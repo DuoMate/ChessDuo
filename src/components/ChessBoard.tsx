@@ -405,6 +405,10 @@ function ChessBoardInner({
             animate={{ opacity: 0.4 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute flex items-center justify-center font-bold select-none will-change-transform"
+            // Dynamic piece-contrast colors: pending-move glyphs must render in
+            // literal piece white/black with an inverted halo so they stay
+            // legible on either square color — Tailwind tokens can't express
+            // this per-piece inversion, hence the style prop.
             style={{ 
               left: toPos.left,
               top: toPos.top,
@@ -434,6 +438,10 @@ function ChessBoardInner({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute flex items-center justify-center font-bold select-none will-change-transform"
+            // Dynamic piece-contrast colors: pending-move glyphs must render in
+            // literal piece white/black with an inverted halo so they stay
+            // legible on either square color — Tailwind tokens can't express
+            // this per-piece inversion, hence the style prop.
             style={{ 
               left: myPos.left,
               top: myPos.top,

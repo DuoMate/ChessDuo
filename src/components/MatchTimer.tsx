@@ -19,7 +19,12 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
   const progress = (seconds / totalSeconds) * circumference
 
   return (
-    <div className="flex items-center justify-center">
+    <div
+      className="flex items-center justify-center"
+      role="timer"
+      aria-label={isCritical ? `${display} remaining — time almost up` : isWarning ? `${display} remaining — final minute` : `${display} remaining`}
+      title={isCritical ? 'Time almost up!' : isWarning ? 'Final minute' : 'Match time remaining'}
+    >
       <motion.div
         className="relative w-11 h-11 md:w-[52px] md:h-[52px] lg:w-14 lg:h-14"
         animate={isCritical ? { scale: [1, 1.05, 1] } : { scale: 1 }}

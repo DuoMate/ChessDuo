@@ -140,8 +140,8 @@ describe('PremiumPage Component — Native (Android)', () => {
     })
 
     render(<PremiumPage />)
-    const buttons = await screen.findAllByRole('button', { name: /Upgrade to Premium/ })
-    fireEvent.click(buttons[0])
+    const monthlyButton = await screen.findByRole('button', { name: 'Choose monthly plan' })
+    fireEvent.click(monthlyButton)
 
     await waitFor(() => expect(SubscriptionService.purchaseMonthly).toHaveBeenCalled())
     expect(screen.queryByText('Purchase cancelled. You can try again anytime.')).toBeNull()

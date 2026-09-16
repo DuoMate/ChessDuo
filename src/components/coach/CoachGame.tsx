@@ -311,6 +311,8 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
 
       {/* Board + coach panel */}
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-8 pt-3">
+        {/* Per-surface board cap: coach keeps 560px (coach panel sits below
+            the board); full game uses 720px, replay 600px. */}
         <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
           {previewing && (
             <p className="mb-1 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -368,7 +370,13 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       {status === 'game_over' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 text-center">
-            <div className="mb-2 text-4xl">{state?.result?.startsWith('Win') ? '🏆' : state?.result?.startsWith('Draw') ? '🤝' : '♟️'}</div>
+            <div
+              className="mb-2 text-4xl"
+              role="img"
+              aria-label={state?.result?.startsWith('Win') ? 'Victory' : state?.result?.startsWith('Draw') ? 'Draw' : 'Game over'}
+            >
+              {state?.result?.startsWith('Win') ? '🏆' : state?.result?.startsWith('Draw') ? '🤝' : '♟️'}
+            </div>
             <h2 className="text-xl font-black text-white">{state?.result ?? 'Game over'}</h2>
             {state && (
               <p className="mt-2 text-xs text-slate-400">
@@ -387,16 +395,17 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                 <p className="text-sm font-bold text-white">Your free AI Coach game is complete.</p>
                 <p className="mt-1 text-xs text-slate-300">Unlock unlimited AI Coach games.</p>
                 <ul className="mt-2 space-y-1 text-xs text-slate-300">
-                  <li>♾️ Unlimited AI Coach games</li>
-                  <li>🎙️ Voice coaching</li>
-                  <li>🎯 Best-move guidance</li>
-                  <li>🚫 Ad-free experience</li>
+                  <li><span aria-hidden="true">♾️ </span>Unlimited AI Coach games</li>
+                  <li><span aria-hidden="true">🎙️ </span>Voice coaching</li>
+                  <li><span aria-hidden="true">🎯 </span>Best-move guidance</li>
+                  <li><span aria-hidden="true">🚫 </span>Ad-free experience</li>
                 </ul>
                 <button
                   onClick={() => router.push('/premium')}
+                  aria-label="Upgrade to Premium for unlimited coach games"
                   className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white transition-all hover:from-amber-400 hover:to-orange-400"
                 >
-                  <Crown size={16} />
+                  <Crown size={16} aria-hidden="true" />
                   Upgrade to Premium
                 </button>
               </div>

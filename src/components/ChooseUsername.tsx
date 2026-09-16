@@ -154,8 +154,12 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="choose-username">
+              Username
+            </label>
             <div className="relative">
               <input
+                id="choose-username"
                 type="text"
                 placeholder="Enter a username"
                 value={username}
@@ -191,10 +195,11 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
               </div>
             </div>
             {usernameMessage && username.trim() && (
-              <p className={`text-xs mt-1 ${
+              <p role="status" className={`text-xs mt-1 ${
                 usernameStatus === 'available' ? 'text-green-500' : 'text-red-500 dark:text-red-400'
               }`}>
                 {usernameMessage}
+                {usernameStatus === 'taken' && ' — try adding numbers or underscores.'}
               </p>
             )}
             {!usernameMessage && !username.trim() && (
@@ -205,7 +210,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
           </div>
 
           {error && (
-            <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+            <p role="alert" className="text-red-500 dark:text-red-400 text-sm">{error}</p>
           )}
 
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-3 min-h-[44px]">
@@ -217,10 +222,13 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
               type="button"
               role="switch"
               aria-checked={notifyEnabled}
+              aria-label="Notify me about game invites"
               onClick={() => setNotifyEnabled(!notifyEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+              className={`relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors`}
             >
-              <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </span>
             </button>
           </div>
 
