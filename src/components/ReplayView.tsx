@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
@@ -40,21 +40,48 @@ export function ReplayView({ game }: ReplayViewProps) {
   const [playbackFen, setPlaybackFen] = useState<string | null>(null)
   const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
-  const moves = parseMoveComparisons(game.move_comparisons)
+  // P3 perf: parse once per game (was re-filtering 100+ move entries on every
+  // scrub render); stable player arrays + noop move handler so the memoized
+  // BoardTopBar/ChessBoard comparators hold when only playback index changes.
+  // No visual/behavior change — same data, stable refs.
+  const moves = useMemo(() => parseMoveComparisons(game.move_comparisons), [game.move_comparisons])
   const initialFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
   const currentFen = playbackFen || (moves.length > 0 ? moves[moves.length - 1].fenAfter : initialFen)
 
   // Use saved player labels if available, otherwise fall back to generic names
-  const whiteLabels = game.player_labels?.white ?? ['Player 1']
-  const blackLabels = game.player_labels?.black ?? ['Player 2']
-
-  const whitePlayers: BoardTopBarPlayer[] = [
-    { id: 'p1', label: whiteLabels[0] || 'Player 1', type: 'human', isYou: game.winner === 'WHITE', online: true },
-  ]
-  const blackPlayers: BoardTopBarPlayer[] = [
-    { id: 'p2', label: blackLabels[0] || 'Player 2', type: 'human', isYou: game.winner === 'BLACK', online: true },
-  ]
+  const whiteLabel = game.player_labels?.white?.[0] || 'Player 1'
+  const blackLabel = game.player_labels?.black?.[0] || 'Player 2'
+  const whitePlayers: BoardTopBarPlayer[] = useMemo(() => [
+    { id: 'p1', label: whiteLabel, type: 'human', isYou: game.winner === 'WHITE', online: true },
+  ], [whiteLabel, game.winner])
+  const blackPlayers: BoardTopBarPlayer[] = useMemo(() => [
+    { id: 'p2', label: blackLabel, type: 'human', isYou: game.winner === 'BLACK', online: true },
+  ], [blackLabel, game.winner])
+  const handleReplayMove = useCallback(() => {}, [])
+  const handleReplayTabChange = useCallback(() => {}, [])
+  const handleReplayForward = useCallback(() => {}, [])
+  const handleReplayBackMove = useCallback(() => {
+    const current = playbackIndex ?? moves.length - 1
+    if (current <= 0) {
+      setPlaybackIndex(-1)
+      setPlaybackFen(initialFen)
+    } else {
+      setPlaybackIndex(current - 1)
+      setPlaybackFen(moves[current - 1]?.fenAfter || initialFen)
+    }
+  }, [playbackIndex, moves])
+  const handleReplayForwardMove = useCallback(() => {
+    if (playbackIndex === null) return
+    const current = playbackIndex ?? moves.length - 1
+    if (current >= moves.length - 1) {
+      setPlaybackIndex(null)
+      setPlaybackFen(null)
+    } else {
+      setPlaybackIndex(current + 1)
+      setPlaybackFen(moves[current + 1]?.fenAfter || '')
+    }
+  }, [playbackIndex, moves])
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
@@ -118,7 +145,7 @@ export function ReplayView({ game }: ReplayViewProps) {
               <MobileChessBoard
                 fen={currentFen}
                 enabled={false}
-                onMove={() => {}}
+                onMove={handleReplayMove}
               />
             ) : (
               <ChessBoard
@@ -127,7 +154,7 @@ export function ReplayView({ game }: ReplayViewProps) {
                 lastMove={null}
                 pendingOverlay={null}
                 myPendingOverlay={null}
-                onMove={() => {}}
+                onMove={handleReplayMove}
                 orientation="white"
               />
             )}
@@ -138,29 +165,10 @@ export function ReplayView({ game }: ReplayViewProps) {
 
         <BoardBottomNav
           activeTab="game"
-          onTabChange={() => {}}
-          onForward={() => {}}
-          onBackMove={() => {
-            const current = playbackIndex ?? moves.length - 1
-            if (current <= 0) {
-              setPlaybackIndex(-1)
-              setPlaybackFen(initialFen)
-            } else {
-              setPlaybackIndex(current - 1)
-              setPlaybackFen(moves[current - 1]?.fenAfter || initialFen)
-            }
-          }}
-          onForwardMove={() => {
-            if (playbackIndex === null) return
-            const current = playbackIndex ?? moves.length - 1
-            if (current >= moves.length - 1) {
-              setPlaybackIndex(null)
-              setPlaybackFen(null)
-            } else {
-              setPlaybackIndex(current + 1)
-              setPlaybackFen(moves[current + 1]?.fenAfter || '')
-            }
-          }}
+          onTabChange={handleReplayTabChange}
+          onForward={handleReplayForward}
+          onBackMove={handleReplayBackMove}
+          onForwardMove={handleReplayForwardMove}
         />
       </div>
     </div>

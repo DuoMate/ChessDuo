@@ -40,8 +40,27 @@ export default function Providers({ children }: { children: ReactNode }) {
     void preloadNativeAd()
 
     // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
-    // (especially critical when human plays as Black - White bots move first)
-    createEvaluator()
+    // (especially critical when human plays as Black - White bots move first).
+    // P2 perf: deferred to browser idle so worker spawn + ~340K WASM
+    // download/compile never contends with home-page TTI on mid-range WebView.
+    // Still warms in the background well before typical game entry (home →
+    // mode pick → lobby), preserving Black-first latency. Singleton in
+    // evaluatorFactory — game engines call createEvaluator() on construct too,
+    // so readiness for actual games is unchanged even if idle never fires.
+    const warmStockfish = () => { try { createEvaluator() } catch { /* worker unavailable — engine constructs lazily per game */ } }
+    let idleId: number | null = null
+    let fallbackId: ReturnType<typeof setTimeout> | null = null
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(warmStockfish, { timeout: 8000 })
+    } else {
+      fallbackId = setTimeout(warmStockfish, 3000)
+    }
+    return () => {
+      if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        (window as Window & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId)
+      }
+      if (fallbackId) clearTimeout(fallbackId)
+    }
   }, [router])
 
   useEffect(() => {

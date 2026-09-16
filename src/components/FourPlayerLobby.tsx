@@ -29,6 +29,26 @@ interface FourPlayerLobbyProps {
 
 type LobbyView = 'loading' | 'lobby' | 'starting' | 'error'
 
+// Shallow roster comparison for the lobby poll (see fetchPlayers).
+// Exported for unit testing — compares every visible field.
+// Compares every visible field — a ready/lock/slot/username change must still
+// re-render; only a byte-identical roster bails out.
+export function sameRoster(a: LobbyPlayer[], b: LobbyPlayer[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]
+    const y = b[i]
+    if (
+      x.playerId !== y.playerId ||
+      x.team !== y.team ||
+      x.slot !== y.slot ||
+      x.status !== y.status ||
+      x.username !== y.username
+    ) return false
+  }
+  return true
+}
+
 export function FourPlayerLobby({
   roomId,
   roomCode,
@@ -62,7 +82,11 @@ export function FourPlayerLobby({
   const fetchPlayers = useCallback(async () => {
     try {
       const result = await getLobbyPlayers(roomId)
-      setPlayers(result)
+      // P4 perf: the 2s lobby poll previously called setPlayers with a fresh
+      // array every tick, re-rendering the lobby even when nobody joined/left.
+      // Bail out (same ref) when the roster is shallow-equal — joins, leaves,
+      // and team changes still propagate. Room-status transition below is untouched.
+      setPlayers(prev => (sameRoster(prev, result) ? prev : result))
       return result
     } catch {
       return null
