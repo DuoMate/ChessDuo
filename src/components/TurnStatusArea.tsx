@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Timeline } from 'animejs'
 
@@ -120,7 +120,7 @@ function BotThinkingIndicator() {
   )
 }
 
-export function TurnStatusArea({ state, seconds, isActive, totalSeconds, selectedMove, isMobile }: TurnStatusAreaProps) {
+function TurnStatusAreaInner({ state, seconds, isActive, totalSeconds, selectedMove, isMobile }: TurnStatusAreaProps) {
   return (
     <div className={`flex items-center justify-center ${isMobile ? 'py-1' : 'py-1.5'}`}>
       <AnimatePresence mode="wait">
@@ -169,3 +169,7 @@ export function TurnStatusArea({ state, seconds, isActive, totalSeconds, selecte
     </div>
   )
 }
+
+// Memoized — currently unmounted in Game.tsx but kept cheap for any future
+// wiring; primitives-only props make shallow memo exact.
+export const TurnStatusArea = memo(TurnStatusAreaInner)

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Bot } from 'lucide-react'
 import type { CoachInsight, Suggestion } from '@/features/coach'
 
@@ -10,7 +11,7 @@ import type { CoachInsight, Suggestion } from '@/features/coach'
  * box, no Supabase, no Realtime, no persistence, no unread badges.
  * Strictly a view over data the coach already produced.
  */
-export function CoachTranscriptPanel({
+function CoachTranscriptPanelInner({
   history,
   suggestion,
 }: {
@@ -68,3 +69,6 @@ export function CoachTranscriptPanel({
     </div>
   )
 }
+
+// Memoized — read-only log; suggestion/history identity gates re-renders.
+export const CoachTranscriptPanel = memo(CoachTranscriptPanelInner)

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { CoachInsight } from '@/features/coach'
 import { VERDICT_STYLES } from './CoachPanel'
 
@@ -13,7 +14,7 @@ import { VERDICT_STYLES } from './CoachPanel'
  *
  * Pure presentational view over `feedbackHistory`. Read-only.
  */
-export function CoachInsightsPanel({ history }: { history: CoachInsight[] }) {
+function CoachInsightsPanelInner({ history }: { history: CoachInsight[] }) {
   if (history.length === 0) {
     return (
       <div className="px-4 py-8 text-center">
@@ -65,3 +66,7 @@ export function CoachInsightsPanel({ history }: { history: CoachInsight[] }) {
     </div>
   )
 }
+
+// Memoized — history is a stable ref (grows per analyzed move only);
+// analyzing ticks and suggestion text changes skip this timeline.
+export const CoachInsightsPanel = memo(CoachInsightsPanelInner)

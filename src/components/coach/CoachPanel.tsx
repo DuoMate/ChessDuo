@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Eye, EyeOff, Sparkles, Volume2, Trophy } from 'lucide-react'
 import type { Suggestion, CoachFeedback, MoveVerdict } from '@/features/coach'
 
@@ -22,7 +23,7 @@ interface CoachPanelProps {
   onToggleBestMove?: () => void
 }
 
-export function CoachPanel({
+function CoachPanelInner({
   suggestion,
   feedback,
   analyzing,
@@ -123,3 +124,7 @@ export function CoachPanel({
     </div>
   )
 }
+
+// Memoized — pure view over suggestion/feedback/analyzing flags. Board stays
+// mounted separately; analyzing ticks with unchanged suggestion skip this tree.
+export const CoachPanel = memo(CoachPanelInner)

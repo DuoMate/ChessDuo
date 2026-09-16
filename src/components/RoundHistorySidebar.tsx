@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCallback } from 'react'
+import { useCallback, memo } from 'react'
 import { X, History, Crown } from 'lucide-react'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
@@ -24,17 +24,56 @@ interface RoundHistorySidebarProps {
   onViewFullHistory?: () => void
 }
 
+const WHITE_PIECE_GLYPHS: Record<string, string> = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘' }
+const BLACK_PIECE_GLYPHS: Record<string, string> = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞' }
+
 function pieceFor(san: string, color: 'white' | 'black'): string {
   const first = san[0]
   if (['K','Q','R','B','N'].includes(first)) {
     return color === 'white'
-      ? { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘' }[first] || '♙'
-      : { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞' }[first] || '♟'
+      ? WHITE_PIECE_GLYPHS[first] || '♙'
+      : BLACK_PIECE_GLYPHS[first] || '♟'
   }
   return color === 'white' ? '♙' : '♟'
 }
 
-export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory }: RoundHistorySidebarProps) {
+// Memoized row — sidebar re-renders only when its entry object changes;
+// glyph lookup uses module-level maps (no per-row allocation).
+const RoundHistoryRow = memo(function RoundHistoryRow({ e }: { e: RoundHistoryEntry }) {
+  const isWhite = e.pieceColor === 'white'
+  void isWhite
+  return (
+    <div
+      className={`flex items-center gap-3 p-2.5 rounded-xl border ${
+        e.isCurrent
+          ? 'border-blue-500/40 bg-blue-500/10'
+          : 'border-slate-700/60 bg-slate-800/40'
+      }`}
+    >
+      <div className="flex flex-col items-center min-w-[44px]">
+        <span className="text-xs font-bold uppercase text-slate-400">Round</span>
+        <span className="text-base font-extrabold text-slate-100">{e.round}</span>
+      </div>
+      <div className="w-9 h-9 rounded-lg bg-slate-800/80 flex items-center justify-center text-lg">
+        {pieceFor(e.moveSan, e.pieceColor)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-slate-400 truncate">{e.playerLabel}</p>
+        <p className="text-sm font-bold text-slate-100">{e.moveSan}</p>
+      </div>
+      <div className={`text-xs font-bold ${e.evalDelta > 0 ? 'text-emerald-300' : e.evalDelta < 0 ? 'text-rose-300' : 'text-slate-400'}`}>
+        {e.evalDelta > 0 ? '+' : ''}{e.evalDelta.toFixed(2)}
+      </div>
+      {e.isCurrent && (
+        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+          Current
+        </span>
+      )}
+    </div>
+  )
+})
+
+function RoundHistorySidebarInner({ open, entries, onClose, onViewFullHistory }: RoundHistorySidebarProps) {
   useEscapeKey(onClose, open)
   useScrollLock(open)
 
@@ -85,39 +124,12 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
               {entries.length === 0 && (
                 <p className="text-center text-sm text-slate-500 py-8">No rounds yet.</p>
               )}
-              {entries.map((e) => {
-                const isWhite = e.pieceColor === 'white'
-                return (
-                  <div
-                    key={`${e.round}-${e.moveSan}-${e.pieceColor}`} // pieceColor ensures uniqueness when both teams play to the same square
-                    className={`flex items-center gap-3 p-2.5 rounded-xl border ${
-                      e.isCurrent
-                        ? 'border-blue-500/40 bg-blue-500/10'
-                        : 'border-slate-700/60 bg-slate-800/40'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center min-w-[44px]">
-                      <span className="text-xs font-bold uppercase text-slate-400">Round</span>
-                      <span className="text-base font-extrabold text-slate-100">{e.round}</span>
-                    </div>
-                    <div className="w-9 h-9 rounded-lg bg-slate-800/80 flex items-center justify-center text-lg">
-                      {pieceFor(e.moveSan, e.pieceColor)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] text-slate-400 truncate">{e.playerLabel}</p>
-                      <p className="text-sm font-bold text-slate-100">{e.moveSan}</p>
-                    </div>
-                    <div className={`text-xs font-bold ${e.evalDelta > 0 ? 'text-emerald-300' : e.evalDelta < 0 ? 'text-rose-300' : 'text-slate-400'}`}>
-                      {e.evalDelta > 0 ? '+' : ''}{e.evalDelta.toFixed(2)}
-                    </div>
-                    {e.isCurrent && (
-                      <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        Current
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
+              {entries.map((e) => (
+                <RoundHistoryRow
+                  key={`${e.round}-${e.moveSan}-${e.pieceColor}`} // pieceColor ensures uniqueness when both teams play to the same square
+                  e={e}
+                />
+              ))}
             </div>
 
             {onViewFullHistory && (
@@ -137,3 +149,14 @@ export function RoundHistorySidebar({ open, entries, onClose, onViewFullHistory 
     </AnimatePresence>
   )
 }
+
+// Memoized — entries are stable refs from callers (useMemo on move count);
+// open/entries/onClose gate re-renders so chat/timer ticks skip the sidebar.
+export const RoundHistorySidebar = memo(RoundHistorySidebarInner, (prev, next) => {
+  return (
+    prev.open === next.open &&
+    prev.entries === next.entries &&
+    prev.onClose === next.onClose &&
+    prev.onViewFullHistory === next.onViewFullHistory
+  )
+})
