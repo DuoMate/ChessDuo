@@ -1039,7 +1039,7 @@ export default function SetupPage() {
             <div className="max-w-md w-full">
               <div className="text-center mb-6">
                 <div className="mb-2 flex items-center justify-center">
-                  <PlayerIcons left={['human','bot']} right={['bot','bot']} />
+                  <PlayerIcons left={['human','bot']} right={['bot']} />
                 </div>
                 <h1 className="text-2xl font-black tracking-wider text-amber-600 dark:text-amber-500">QUICK PLAY</h1>
                 <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">Select opponent skill level</p>
@@ -1124,17 +1124,17 @@ if (!gameMode) {
                   onClick={() => handleGameModeClick('quick')}
                   selected={selectedGameMode === 'quick'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                  rightIcons={[{ type: 'bot' }]}
                   title="Quick Play"
-                  subtitle="You + Bot vs Bots"
+                  subtitle="You + Bot vs Bot"
                 />
                 <GameModeCard
                   onClick={() => handleGameModeClick('duo')}
                   selected={selectedGameMode === 'duo'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                  rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                  rightIcons={[{ type: 'bot' }]}
                   title="Duo"
-                  subtitle="You + Friend vs Bots"
+                  subtitle="You + Friend vs Bot"
                 />
                 <GameModeCard
                   onClick={() => handleGameModeClick('four')}
@@ -1276,17 +1276,17 @@ if (!gameMode) {
                     onClick={() => handleGameModeClick('quick')}
                     selected={selectedGameMode === 'quick'}
                     leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'bot' }]}
-                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    rightIcons={[{ type: 'bot' }]}
                     title="Quick Play"
-                    subtitle="You + Bot vs Bots"
+                    subtitle="You + Bot vs Bot"
                   />
                   <GameModeCard
                     onClick={() => handleGameModeClick('duo')}
                     selected={selectedGameMode === 'duo'}
                     leftIcons={[{ type: 'human', avatar: 'ace' }, { type: 'human', avatar: 'nova' }]}
-                    rightIcons={[{ type: 'bot' }, { type: 'bot' }]}
+                    rightIcons={[{ type: 'bot' }]}
                     title="Duo"
-                    subtitle="You + Friend vs Bots"
+                    subtitle="You + Friend vs Bot"
                   />
                   <GameModeCard
                     onClick={() => handleGameModeClick('four')}
