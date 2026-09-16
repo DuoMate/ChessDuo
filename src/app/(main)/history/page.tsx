@@ -37,6 +37,8 @@ function HistoryContent({ playerId }: { playerId: string }) {
   const [games, setGames] = useState<CompletedGame[]>([])
   const [playerStats, setPlayerStats] = useState<Awaited<ReturnType<typeof getPlayerStats>>>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
   const mountedRef = useRef(true)
 
   useEffect(() => {
@@ -45,6 +47,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
   }, [])
 
   useEffect(() => {
+    if (!mountedRef.current) return
     Promise.all([
       getMatchHistory(50, playerId),
       getPlayerStats(playerId),
@@ -57,12 +60,42 @@ function HistoryContent({ playerId }: { playerId: string }) {
       if (!mountedRef.current) return
       setGames([])
       setPlayerStats(null)
+      setLoadError(true)
       setLoading(false)
     })
-  }, [playerId])
+  }, [playerId, retryKey])
 
   if (loading) {
-    return <PageLoading />
+    return <PageLoading label="Loading match history…" />
+  }
+
+  if (loadError) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold">Match History</h1>
+              <BackButton alwaysFallback />
+            </div>
+            <div className="text-center py-12">
+              <p role="alert" className="text-slate-300 text-lg font-medium mb-1">Couldn&apos;t load your match history</p>
+              <p className="text-slate-500 text-sm mb-4">Check your connection and try again</p>
+              <button
+                onClick={() => {
+                  setLoadError(false)
+                  setLoading(true)
+                  setRetryKey((k) => k + 1)
+                }}
+                className="min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </ErrorBoundary>
+    )
   }
 
   return (
@@ -121,7 +154,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
               <p className="text-slate-500 text-sm mb-4">Complete a game to see it here</p>
               <button
                 onClick={() => router.push('/')}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors"
+                className="min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors"
               >
                 Play a Game
               </button>
@@ -139,9 +172,9 @@ function HistoryContent({ playerId }: { playerId: string }) {
                 const resultBg = isDraw ? 'bg-amber-500/20' : isWin ? 'bg-emerald-500/20' : 'bg-rose-500/20'
                 const resultColor = isDraw ? 'text-amber-400' : isWin ? 'text-emerald-400' : 'text-rose-400'
                 const resultText = isDraw ? 'Draw' : isWin ? 'You Win' : 'You Lose'
-                const icon = isDraw ? (<Handshake size={18} className="text-amber-400" />)
-                  : isWin ? (<Trophy size={18} className="text-emerald-400" />)
-                  : (<Skull size={18} className="text-rose-400" />)
+                const icon = isDraw ? (<Handshake size={18} aria-hidden="true" className="text-amber-400" />)
+                  : isWin ? (<Trophy size={18} aria-hidden="true" className="text-emerald-400" />)
+                  : (<Skull size={18} aria-hidden="true" className="text-rose-400" />)
 
                 return (
                 <motion.div
@@ -161,7 +194,7 @@ function HistoryContent({ playerId }: { playerId: string }) {
                           {resultText}
                         </span>
                         <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>{game.is_online ? '🌐 Online' : '🤖 Offline'}</span>
+                          <span><span aria-hidden="true">{game.is_online ? '🌐' : '🤖'}</span> {game.is_online ? 'Online' : 'Offline'}</span>
                           <span>·</span>
                           <span>{new Date(game.played_at).toLocaleDateString()}</span>
                         </div>
@@ -172,10 +205,11 @@ function HistoryContent({ playerId }: { playerId: string }) {
                         e.stopPropagation()
                         router.push(`/replay/${game.id}`)
                       }}
-                      className="shrink-0 px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
+                      aria-label={`Replay game: ${resultText}`}
+                      className="shrink-0 min-h-[44px] px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
                     >
                       Replay
-                      <ChevronRight size={12} />
+                      <ChevronRight size={12} aria-hidden="true" />
                     </button>
                   </div>
 

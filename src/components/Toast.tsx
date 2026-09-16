@@ -79,7 +79,7 @@ interface ToastContainerProps {
 
 function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed right-4 z-50 flex max-w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}>
+    <div className="fixed right-4 top-[max(16px,env(safe-area-inset-top,16px))] z-50 flex max-w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2">
       <AnimatePresence>
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />

@@ -18,6 +18,9 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
   const humanWon = comparison?.winnerId === 'player1'
   const isSync = comparison?.isSync ?? false
 
+  // Category colors arrive with the engine data (per-move verdict color), so
+  // they flow through the style prop by necessity — see ARCHITECTURE.md
+  // styling rule §5 (dynamic values).
   const humanCategory = comparison?.player1Category ?? { label: '', color: 'gray', emoji: '' }
   const teammateCategory = comparison?.player2Category ?? { label: '', color: 'gray', emoji: '' }
 

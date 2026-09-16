@@ -48,13 +48,14 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
   const crownSize = isMobile ? 64 : 80
 
   useEffect(() => {
+    if (!iconRef.current || !dot1Ref.current || !dot2Ref.current || !dot3Ref.current) return
     const tl = new Timeline({ loop: true, autoplay: true })
     timelineRef.current = tl
 
-    tl.add(iconRef.current!, { scale: [1, 1.08, 1], duration: 2000, easing: 'spring(1, 80, 10, 0)' }, 0)
-    tl.add(dot1Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 0)
-    tl.add(dot2Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 150)
-    tl.add(dot3Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 300)
+    tl.add(iconRef.current, { scale: [1, 1.08, 1], duration: 2000, easing: 'spring(1, 80, 10, 0)' }, 0)
+    tl.add(dot1Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 0)
+    tl.add(dot2Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 150)
+    tl.add(dot3Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 300)
 
     return () => {
       tl.pause()
@@ -170,13 +171,11 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 </div>
               </div>
 
-              {/* Lobby timeout countdown */}
-              {remaining < 30 && (
-                <div className="mb-4 inline-flex items-center gap-1.5 text-xs text-slate-500">
+              {/* Lobby timeout countdown — always visible so waiting never looks frozen */}
+                <div className="mb-4 inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <Clock size={12} />
-                  <span>Auto-leaving in {remaining}s</span>
+                  <span>Waiting for teammate · auto-leaves in {remaining}s</span>
                 </div>
-              )}
             </>
           )}
 
@@ -213,7 +212,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 Send this code to your friend to join
               </p>
 
-              <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-[#151c2e] p-4">
+              <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-50 dark:bg-slate-900/60 p-4">
                 <div className="flex items-center justify-between gap-2 min-h-[44px]">
                   <p className="min-w-0 select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
                     {roomCode}
@@ -255,7 +254,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 Or share the invite link
               </p>
 
-              <div className="w-full overflow-hidden rounded-2xl border border-slate-700/40 bg-[#151c2e] p-4">
+              <div className="w-full overflow-hidden rounded-2xl border border-slate-700/40 bg-slate-50 dark:bg-slate-900/60 p-4">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleShare}
@@ -267,6 +266,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                     onClick={handleCopyLink}
                     className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/60 text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-700/60 hover:text-white"
                     title={linkCopied ? 'Copied' : 'Copy link'}
+                    aria-label={linkCopied ? 'Invite link copied' : 'Copy invite link'}
                   >
                     {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}
                   </button>

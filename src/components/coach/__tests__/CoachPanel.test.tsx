@@ -64,10 +64,10 @@ describe('CoachPanel best move presentation', () => {
       <TestPanel />,
     )
 
-    expect(screen.getByRole('button', { name: 'Show Best Move' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Show Best Move' }))
+    expect(screen.getByRole('button', { name: /Show Best Move/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Show Best Move/ }))
     expect(screen.getByRole('button', { name: 'Hide Best Move' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Hide Best Move' }))
-    expect(screen.getByRole('button', { name: 'Show Best Move' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show Best Move/ })).toBeInTheDocument()
   })
 })

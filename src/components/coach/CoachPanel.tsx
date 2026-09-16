@@ -40,16 +40,16 @@ export function CoachPanel({
         <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">
-              <Sparkles size={14} className="text-blue-400" /> Coach recommends
+              <Sparkles size={14} aria-hidden="true" className="text-blue-400" /> Coach recommends
             </span>
             <span className="text-xs font-semibold text-blue-400">{suggestion.evaluationDisplay}</span>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" role="list" aria-label="Top recommended moves">
             {suggestion.topMoves.length === 0 ? (
               <p className="text-xs text-slate-500">{analyzing ? 'Analyzing position…' : 'No recommendation available'}</p>
             ) : (
               suggestion.topMoves.map((m, i) => (
-                <div key={m.uci} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/40 bg-slate-800/40 px-3 py-2">
+                <div key={m.uci} role="listitem" aria-label={`Option ${i + 1}: ${m.san}, ${m.display}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-700/40 bg-slate-800/40 px-3 py-2">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-700/70 text-[11px] font-bold text-slate-300">{i + 1}</span>
                     <span className="min-w-0 truncate text-sm font-bold text-slate-100">{m.san}</span>
@@ -60,14 +60,19 @@ export function CoachPanel({
             )}
           </div>
           {currentBestMove && onToggleBestMove && (
-            <button
-              onClick={onToggleBestMove}
-              aria-label={showBestMove ? 'Hide Best Move' : 'Show Best Move'}
-              className="mt-3 flex min-h-[44px] min-w-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-[var(--shadow-glow-emerald)] transition-colors hover:bg-emerald-400"
-            >
-              {showBestMove ? <EyeOff size={16} /> : <Eye size={16} />}
-              {showBestMove ? 'Hide Best Move' : 'Show Best Move'}
-            </button>
+            <>
+              <button
+                onClick={onToggleBestMove}
+                aria-label={showBestMove ? 'Hide Best Move' : `Show Best Move ${currentBestMove.san} on the board`}
+                className="mt-3 flex min-h-[44px] min-w-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-[var(--shadow-glow-emerald)] transition-colors hover:bg-emerald-400"
+              >
+                {showBestMove ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                {showBestMove ? 'Hide Best Move' : 'Show Best Move'}
+              </button>
+              <p className="mt-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
+                Preview {currentBestMove.san} on the board, then play it when ready.
+              </p>
+            </>
           )}
         </section>
       )}
@@ -77,12 +82,14 @@ export function CoachPanel({
         <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${VERDICT_STYLES[feedback.verdict].badge}`}>
-              {feedback.verdict === 'best' && <Trophy size={12} />}
+              {feedback.verdict === 'best' && <Trophy size={12} aria-hidden="true" />}
               {VERDICT_STYLES[feedback.verdict].label}
             </span>
             <div className="flex items-center gap-2">
               {feedback.centipawnLoss !== null && (
-                <span className="text-[11px] text-slate-400">−{feedback.centipawnLoss.toFixed(0)}cp</span>
+                <span className="text-[11px] text-slate-400" title="Estimated centipawns lost on your last move">
+                  −{feedback.centipawnLoss.toFixed(0)}cp lost
+                </span>
               )}
               {onSpeak && (
                 <button
@@ -90,7 +97,7 @@ export function CoachPanel({
                   aria-label="Read AI Coach feedback aloud"
                   className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-blue-400"
                 >
-                  <Volume2 size={16} />
+                  <Volume2 size={16} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -104,8 +111,14 @@ export function CoachPanel({
         </section>
       )}
 
+      {!isPlayerTurn && !feedback && !analyzing && (
+        <p className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 text-center text-xs text-slate-400">
+          Waiting for the opponent… the coach returns on your turn.
+        </p>
+      )}
+
       {analyzing && (
-        <p className="text-center text-[11px] text-slate-500">Coach is thinking…</p>
+        <p role="status" className="text-center text-[11px] text-slate-400 dark:text-slate-400">Coach is thinking…</p>
       )}
     </div>
   )

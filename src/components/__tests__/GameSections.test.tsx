@@ -152,4 +152,17 @@ describe('GameSections memo (P0/P5 regression lock)', () => {
     const outer = container.firstChild as HTMLElement
     expect(outer.className).toBe('flex justify-center')
   })
+
+  test('Lifecycle polish: waitingHint renders a status pill only when set', () => {
+    const { container, rerender } = render(React.createElement(GameBoardSection, {
+      ...boardProps(),
+    }))
+    expect(container.querySelector('[role="status"]')).toBeNull()
+    rerender(React.createElement(GameBoardSection, {
+      ...boardProps(),
+      waitingHint: 'Opponent is thinking…',
+    }))
+    const pill = container.querySelector('[role="status"]')
+    expect(pill?.textContent).toBe('Opponent is thinking…')
+  })
 })

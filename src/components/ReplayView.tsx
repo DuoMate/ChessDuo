@@ -113,7 +113,11 @@ export function ReplayView({ game }: ReplayViewProps) {
           className="bg-slate-900/70 border border-slate-700/70 rounded-xl p-3 mb-3 backdrop-blur-xl"
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl">
+            <span
+              className="text-xl"
+              role="img"
+              aria-label={game.winner === 'WHITE' ? 'White wins' : game.winner === 'DRAW' ? 'Draw' : 'Black wins'}
+            >
               {game.winner === 'WHITE' ? '🏆' : game.winner === 'DRAW' ? '🤝' : '💀'}
             </span>
             <span className="font-bold text-base">
@@ -134,10 +138,17 @@ export function ReplayView({ game }: ReplayViewProps) {
             <span>·</span>
             <span>P2: {Math.round(game.player2_accuracy)}%</span>
           </div>
+          {moves.length === 0 && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              No moves were recorded for this game — showing the starting position.
+            </p>
+          )}
         </motion.div>
 
         <div
           className="relative w-full mx-auto aspect-square mb-3"
+          // Per-surface board cap: replay keeps 600px (result + meta cards sit
+          // above the board); full game uses 720px, coach 560px.
           style={{ maxWidth: 'min(95vw, 80vh, 600px)' }}
         >
           <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
@@ -169,6 +180,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           onForward={handleReplayForward}
           onBackMove={handleReplayBackMove}
           onForwardMove={handleReplayForwardMove}
+          disabledTabs={['moves', 'chat', 'insights']}
         />
       </div>
     </div>

@@ -122,7 +122,9 @@ export function ChatPanel({ currentUserId, friendId, friendName, currentUserName
       </div>
 
       <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200 dark:border-white/8 bg-gray-50 dark:bg-white/[0.02]">
+        <label htmlFor="chat-message-input" className="sr-only">Type a message</label>
         <input
+          id="chat-message-input"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}

@@ -155,10 +155,10 @@ export default function WelcomePage() {
             <div className="relative mx-auto aspect-square w-full max-w-[140px] sm:max-w-[180px] onboarding-board">
               <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
               <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-                <span className="inline-block rounded-full bg-green-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-[0_0_4px_rgba(34,197,94,0.5)] sm:text-[11px]">You</span>
+                <span className="inline-block rounded-full bg-green-500/90 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[0_0_4px_rgba(34,197,94,0.5)]">You</span>
               </div>
               <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-                <span className="inline-block rounded-full bg-violet-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-[0_0_4px_rgba(139,92,246,0.5)] sm:text-[11px]">{partnerLabel}</span>
+                <span className="inline-block rounded-full bg-violet-500/90 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[0_0_4px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
               </div>
             </div>
             <div className="mt-2 flex items-center justify-center gap-4">
@@ -185,7 +185,7 @@ export default function WelcomePage() {
                 <div className="flex flex-1 flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/30 p-2">
                   {step.icon}
                   <span className="mt-1.5 text-xs font-bold text-white">{step.word}</span>
-                  <span className="mt-0.5 text-center text-[10px] leading-tight text-slate-400">{step.desc}</span>
+                  <span className="mt-0.5 text-center text-[11px] leading-tight text-slate-400">{step.desc}</span>
                 </div>
                 {index < steps.length - 1 && <Chevron />}
               </div>

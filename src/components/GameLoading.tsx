@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Timeline } from 'animejs'
 import { Team } from '@/features/game-engine/gameState'
 import { Crown, Copy, Loader2, CheckCircle2, XCircle, AlertTriangle, Share2 } from 'lucide-react'
@@ -24,15 +24,18 @@ export function GameLoading({
   const dot2Ref = useRef<HTMLDivElement>(null)
   const dot3Ref = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<Timeline | null>(null)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
 
   useEffect(() => {
+    if (!iconRef.current || !dot1Ref.current || !dot2Ref.current || !dot3Ref.current) return
     const tl = new Timeline({ loop: true, autoplay: true })
     timelineRef.current = tl
 
-    tl.add(iconRef.current!, { scale: [1, 1.08, 1], duration: 2000, easing: 'spring(1, 80, 10, 0)' }, 0)
-    tl.add(dot1Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 0)
-    tl.add(dot2Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 150)
-    tl.add(dot3Ref.current!, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 300)
+    tl.add(iconRef.current, { scale: [1, 1.08, 1], duration: 2000, easing: 'spring(1, 80, 10, 0)' }, 0)
+    tl.add(dot1Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 0)
+    tl.add(dot2Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 150)
+    tl.add(dot3Ref.current, { translateY: [0, -8, 0], opacity: [0.5, 1, 0.5], duration: 600 }, 300)
 
     return () => {
       tl.pause()
@@ -61,10 +64,23 @@ export function GameLoading({
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Room code</p>
           <p className="select-all font-mono text-xl font-bold tracking-[0.25em] text-amber-600 dark:text-amber-400">{roomCode}</p>
           <button
-            onClick={() => navigator.clipboard.writeText(roomCode)}
+            onClick={() => {
+              navigator.clipboard.writeText(roomCode)
+              setCopiedCode(true)
+              setTimeout(() => setCopiedCode(false), 2000)
+            }}
+            aria-label={copiedCode ? 'Room code copied' : 'Copy room code'}
             className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-xs text-slate-500 transition-colors hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400"
           >
-            <Copy size={12} /> Copy code
+            {copiedCode ? (
+              <>
+                <CheckCircle2 size={12} className="text-emerald-500" /> Copied
+              </>
+            ) : (
+              <>
+                <Copy size={12} /> Copy code
+              </>
+            )}
           </button>
         </div>
       )}
@@ -86,11 +102,16 @@ export function GameLoading({
               <Share2 size={14} /> Share link
             </button>
             <button
-              onClick={() => navigator.clipboard.writeText(inviteUrl)}
+              onClick={() => {
+                navigator.clipboard.writeText(inviteUrl)
+                setCopiedLink(true)
+                setTimeout(() => setCopiedLink(false), 2000)
+              }}
               className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white"
-              title="Copy link to clipboard"
+              title={copiedLink ? 'Copied' : 'Copy link to clipboard'}
+              aria-label={copiedLink ? 'Invite link copied' : 'Copy invite link'}
             >
-              <Copy size={14} />
+              {copiedLink ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
             </button>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400">Room code: <span className="font-mono text-amber-700 dark:text-amber-400">{roomCode}</span></p>

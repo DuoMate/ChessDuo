@@ -45,7 +45,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-gray-700 overflow-hidden w-full">
       <div className="p-2 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-gray-400">Moves</h3>
+        <h3 className="text-xs font-bold text-slate-500 dark:text-gray-400">Moves</h3>
         <div className="flex items-center gap-1">
           {!isLive && (
             <button
@@ -57,7 +57,8 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
           )}
           <button
             onClick={() => setShowAll(!showAll)}
-            className="text-xs text-gray-500 hover:text-gray-400 px-1"
+            className="text-xs text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-300 px-2 min-h-[44px] min-w-[44px]"
+            aria-label={showAll ? 'Show compact move list' : 'Show all moves'}
           >
             {showAll ? 'compact' : 'all'}
           </button>
@@ -105,7 +106,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
         </div>
       ) : (
         <div className="border-b border-gray-700/50">
-          <p className="px-2 pt-1.5 text-xs text-gray-500">
+          <p className="px-2 pt-1.5 text-xs text-slate-500 dark:text-gray-400">
             {isLive ? `${moves.length} moves` : activeIndex === -1 ? 'Start' : `${activeIndex + 1}/${moves.length}`}
           </p>
           <div
@@ -142,12 +143,14 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
         <button
           onClick={() => goTo(activeIndex - 1)}
           disabled={activeIndex === -1}
+          aria-label="Previous move"
           className="min-h-[44px] min-w-[44px] rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors"
         >
           ←
         </button>
         <button
           onClick={onReset}
+          aria-label="Back to live position"
           className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center text-xs transition-colors ${
             isLive
               ? 'bg-yellow-500/30 text-yellow-400 ring-1 ring-yellow-400/50'
@@ -159,6 +162,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
         <button
           onClick={() => goTo(activeIndex + 1)}
           disabled={activeIndex >= moves.length - 1}
+          aria-label="Next move"
           className="min-h-[44px] min-w-[44px] rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors"
         >
           →

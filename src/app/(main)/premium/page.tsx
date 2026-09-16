@@ -20,6 +20,20 @@ interface ErrorDetail {
   details?: string
 }
 
+// Platform check FIRST: native Android app vs web browser.
+// Uses the established window.Capacitor detection already present on this
+// screen (mirrored by isNativePlatform() in src/lib/share.ts). Google Play
+// Billing is Android-only — web must never initialize, query, or launch it.
+// On web the "Download on Google Play" CTA below is the upgrade path.
+function isNativeApp(): boolean {
+  try {
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    return !!cap?.isNativePlatform?.()
+  } catch {
+    return false // web / SSR — no Capacitor bridge
+  }
+}
+
 export default function PremiumPage() {
   const [isPremium, setIsPremium] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
@@ -44,10 +58,7 @@ export default function PremiumPage() {
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
 
   useEffect(() => {
-    try {
-      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
-      if (cap?.isNativePlatform?.()) setIsNative(true)
-    } catch { /* web */ }
+    if (isNativeApp()) setIsNative(true)
   }, [])
 
   const runLoad = useCallback(async () => {
@@ -69,6 +80,17 @@ export default function PremiumPage() {
       }
       const subStatus = await withUiTimeout(SubscriptionService.getStatus(), 9000, statusFallback)
       if (!mountedRef.current) return
+      if (!isNativeApp()) {
+        // Web: entitlement only. Never query Google Play ProductDetails here —
+        // billing is Android-only and the Download CTA below is the upgrade
+        // path. Skipping avoids plugin lookups, fetch failures, and the
+        // spurious "plans could not be loaded" error on web.
+        setStatus(subStatus)
+        setIsPremium(subStatus.isPremium)
+        setSubscriptionStatus(subStatus.subscriptionStatus)
+        setPlans([])
+        return
+      }
       const subPlans = await withUiTimeout(SubscriptionService.getPlans(), 9000, [] as SubscriptionPlan[])
       if (!mountedRef.current) return
       setStatus(subStatus)
@@ -143,6 +165,12 @@ export default function PremiumPage() {
   }, [])
 
   const handleSubscribe = useCallback(async (productId: string) => {
+    if (!isNativeApp()) {
+      // Web: Premium is available through the Android app (Download CTA on
+      // this screen). Never invoke Google Play Billing from the browser —
+      // no plugin call, no purchase attempt, no billing error.
+      return
+    }
     setSubscribing(true)
     setError(null)
     purchasePendingRef.current = true
@@ -214,6 +242,7 @@ export default function PremiumPage() {
   }, [])
 
   const handleRestore = useCallback(async () => {
+    if (!isNativeApp()) return // Web: no Google Play Billing — Download CTA is the path.
     setRestoring(true)
     setError(null)
     try {
@@ -253,16 +282,27 @@ export default function PremiumPage() {
             ) : (
               <>
                 {error && (
-                  <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">{error}</div>
+                  <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">
+                    <p>{error}</p>
+                    <button
+                      onClick={() => runLoad()}
+                      className="mt-2 min-h-[44px] px-4 py-2 text-xs font-bold text-rose-300 underline underline-offset-2 transition-colors hover:text-rose-200"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 )}
 
-                {subscribing ? (
-                  <div className="py-12"><PageLoading className="min-h-0 bg-transparent" /></div>
-                ) : isNative ? (
+                {subscribing && (
+                  <div role="status" aria-live="polite" className="mb-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm text-center">
+                    Contacting Google Play… please don&apos;t close this screen.
+                  </div>
+                )}
+                {isNative ? (
                   <>
                     {/* Native pricing cards */}
                     {!plansLoading && plans.length === 0 && (
-                      <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
+                      <div role="alert" className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
                     )}
                     <div className="relative rounded-[24px] border border-slate-700/70 bg-slate-800/50 p-5 mb-4 overflow-hidden">
                       <div className="relative z-10">
@@ -282,12 +322,13 @@ export default function PremiumPage() {
                         </div>
                         <button
                           onClick={() => handleSubscribe('premium_monthly')}
-                          disabled={plansLoading}
+                          disabled={plansLoading || subscribing}
+                          aria-label="Choose monthly plan"
                           className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
-                          <Crown size={16} />
+                          <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
-                          <ChevronRight size={16} />
+                          <ChevronRight size={16} aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -314,12 +355,13 @@ export default function PremiumPage() {
                         )}
                         <button
                           onClick={() => handleSubscribe('premium_yearly')}
-                          disabled={plansLoading}
+                          disabled={plansLoading || subscribing}
+                          aria-label="Choose annual plan"
                           className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
-                          <Crown size={16} />
+                          <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
-                          <ChevronRight size={16} />
+                          <ChevronRight size={16} aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -481,7 +523,7 @@ function FeatureIcon({ icon, title, subtitle }: { icon: React.ReactNode; title: 
       <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">{icon}</div>
       <div className="text-center">
         <p className="text-white text-xs font-semibold leading-tight">{title}</p>
-        <p className="text-slate-400 text-[10px] leading-tight">{subtitle}</p>
+        <p className="text-slate-400 text-[11px] leading-tight">{subtitle}</p>
       </div>
     </div>
   )
@@ -495,7 +537,7 @@ function BenefitRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
         <p className="text-white text-sm font-semibold">{title}</p>
         <p className="text-slate-400 text-xs">{desc}</p>
       </div>
-      <ChevronRight size={16} className="text-slate-500 flex-shrink-0" />
+      <Check size={16} aria-hidden="true" className="text-emerald-400 flex-shrink-0" />
     </div>
   )
 }

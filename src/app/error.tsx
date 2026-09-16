@@ -1,7 +1,6 @@
 'use client'
 
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string }
@@ -9,10 +8,10 @@ export default function Error({
 }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[var(--color-page-bg)] text-slate-100 px-4">
-      <div className="flex flex-col items-center gap-2 max-w-md text-center">
+      <div role="alert" className="flex flex-col items-center gap-2 max-w-md text-center">
         <h2 className="text-lg font-bold">Something went wrong</h2>
         <p className="text-sm text-slate-400">
-          {error.message || 'An unexpected error occurred.'}
+          The page ran into a problem. Try again, or head home — your games are safe.
         </p>
       </div>
       <div className="flex gap-3 mt-2">

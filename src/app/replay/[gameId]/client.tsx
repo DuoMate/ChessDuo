@@ -23,6 +23,7 @@ export default function ReplayPageClient() {
   const gameId = params.gameId as string
   const [game, setGame] = useState<CompletedGame | null | undefined>(undefined)
   const [error, setError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
   const [authState, setAuthState] = useState<'checking' | 'signed_out' | 'signed_in'>('checking')
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -59,7 +60,7 @@ export default function ReplayPageClient() {
     }
     load()
     return () => { cancelled = true }
-  }, [gameId, authState, userId])
+  }, [gameId, authState, userId, retryKey])
 
   const handleAuthComplete = (uid: string) => {
     setUserId(uid)
@@ -115,8 +116,24 @@ export default function ReplayPageClient() {
   if (!game || error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-        <h1 className="text-xl font-bold mb-2">Game Not Found</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">This replay is no longer available.</p>
+        <h1 className="text-xl font-bold mb-2">{error ? "Couldn't load replay" : 'Game Not Found'}</h1>
+        <p role={error ? 'alert' : undefined} className="text-slate-500 dark:text-slate-400 text-sm mb-4 text-center max-w-xs">
+          {error
+            ? 'Check your connection and try again.'
+            : 'This replay is no longer available.'}
+        </p>
+        {error && (
+          <button
+            onClick={() => {
+              setError(false)
+              setGame(undefined)
+              setRetryKey((k) => k + 1)
+            }}
+            className="min-h-[44px] px-6 py-2.5 mb-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+          >
+            Retry
+          </button>
+        )}
         <BackButton label="Back to History" fallbackHref="/history" />
       </div>
     )

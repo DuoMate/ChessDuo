@@ -439,8 +439,9 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
                   </div>
                 </div>
                 {usernameMessage && username.trim() && (
-                  <p className={`mt-1 text-xs ${usernameStatus === 'available' ? 'text-emerald-500' : 'text-rose-500 dark:text-rose-400'}`}>
+                  <p role="status" className={`mt-1 text-xs ${usernameStatus === 'available' ? 'text-emerald-500' : 'text-rose-500 dark:text-rose-400'}`}>
                     {usernameMessage}
+                    {usernameStatus === 'taken' && ' — try adding numbers or underscores.'}
                   </p>
                 )}
                 {!usernameMessage && !username.trim() && (
@@ -491,8 +492,8 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
-                <ShieldCheck size={15} />
+              <div role="alert" className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-sm text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                <ShieldCheck size={15} aria-hidden="true" />
                 <span>{error}</span>
               </div>
             )}
@@ -505,8 +506,8 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading...</span>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>{isLogin ? 'Signing in…' : 'Creating account…'}</span>
                 </>
               ) : (
                 <>
