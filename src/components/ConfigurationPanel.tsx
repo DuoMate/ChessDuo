@@ -47,10 +47,10 @@ export function ConfigurationPanel({
                 aria-label={`${label} difficulty`}
                 onClick={() => onSelectLevel(level)}
                 className={[
-                  'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-1',
+                  'focus-ring min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-1',
                   'rounded-xl border-2 px-1 py-2 transition-all duration-200',
                   selected
-                    ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
+                    ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] shadow-[var(--shadow-glow-blue-strong)]'
                     : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/60',
                 ].join(' ')}
               >

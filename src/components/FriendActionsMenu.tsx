@@ -27,7 +27,9 @@ export function FriendActionsMenu({ onDelete, onMessage, onChallenge, onBlock }:
     <>
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(true) }}
-        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/[0.05]"
+        aria-label="Friend actions"
+        aria-expanded={open}
+        className="focus-ring min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.05]"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <circle cx="8" cy="3" r="1.5" />
@@ -50,34 +52,34 @@ export function FriendActionsMenu({ onDelete, onMessage, onChallenge, onBlock }:
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 max-h-[80svh] overflow-y-auto bg-gray-800 border border-white/10 rounded-2xl shadow-2xl py-2"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 max-h-[80svh] overflow-y-auto bg-white border border-slate-200 dark:bg-gray-800 dark:border-white/10 rounded-2xl shadow-2xl py-2"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => handleAction(onMessage)}
-                className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/[0.05] transition-colors flex items-center gap-2 min-h-[44px]"
+                className="focus-ring w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors flex items-center gap-2 min-h-[44px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Send Message
               </button>
               <button
                 onClick={() => handleAction(onChallenge)}
-                className="w-full text-left px-4 py-3 text-sm text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
+                className="focus-ring w-full text-left px-4 py-3 text-sm text-amber-600 hover:bg-amber-500/10 dark:text-amber-400 transition-colors flex items-center gap-2 min-h-[44px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/></svg>
                 Challenge
               </button>
               <button
                 onClick={() => handleAction(onDelete)}
-                className="w-full text-left px-4 py-3 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-2 min-h-[44px]"
+                className="focus-ring w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-500/10 dark:text-rose-400 transition-colors flex items-center gap-2 min-h-[44px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 Delete Friend
               </button>
-              <div className="border-t border-white/8 my-1" />
+              <div className="border-t border-slate-200 dark:border-white/8 my-1" />
               <button
                 onClick={() => handleAction(onBlock)}
-                className="w-full text-left px-4 py-3 text-sm text-gray-500 hover:text-gray-400 hover:bg-white/[0.03] transition-colors flex items-center gap-2 min-h-[44px]"
+                className="focus-ring w-full text-left px-4 py-3 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-gray-500 dark:hover:text-gray-400 dark:hover:bg-white/[0.03] transition-colors flex items-center gap-2 min-h-[44px]"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                 Block User

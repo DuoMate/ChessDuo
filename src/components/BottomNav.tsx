@@ -77,7 +77,7 @@ function NavButton({
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
       disabled={disabled}
-      className={`flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-2xl px-3 py-1.5 transition-all ${
+      className={`focus-ring flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-2xl px-3 py-1.5 transition-all ${
         disabled
           ? 'cursor-not-allowed text-slate-400'
           : active
