@@ -342,7 +342,7 @@ export function FourPlayerLobby({
   )
 
   return (
-    <div className="flex min-h-screen justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4 overflow-y-auto">
+    <div className="flex min-h-screen justify-center bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(99,102,241,0.16),_transparent_24%)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

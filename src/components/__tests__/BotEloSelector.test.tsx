@@ -23,12 +23,12 @@ describe('BotEloSelector', () => {
     expect(screen.getByText('Master')).toBeDefined()
   })
 
-  it('highlights selected level with yellow border', () => {
+  it('highlights selected level with brand border', () => {
     const { container } = render(<BotEloSelector selectedLevel={6} onSelect={jest.fn()} />)
     const masterButton = screen.getByText('Master').closest('button')
-    expect(masterButton?.className).toContain('border-yellow-500')
+    expect(masterButton?.className).toContain('border-[var(--color-brand)]')
     const beginnerButton = screen.getByText('Beginner').closest('button')
-    expect(beginnerButton?.className).not.toContain('border-yellow-500')
+    expect(beginnerButton?.className).not.toContain('border-[var(--color-brand)]')
   })
 
   it('calls onSelect with the selected level when clicked', () => {

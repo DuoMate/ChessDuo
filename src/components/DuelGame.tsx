@@ -478,7 +478,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   if (waiting) {
     return (
-      <div className={`min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-16' : ''}`}>
+      <div className={`min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 ${isMobile ? 'pb-24' : ''}`}>
         <div className="text-center space-y-4">
           <div className="animate-pulse text-5xl flex justify-center">
             <Swords size={48} className="text-amber-600 dark:text-amber-400" />
@@ -491,7 +491,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           <p className="text-gray-500 text-sm">The game starts when your opponent joins</p>
           <button
             onClick={onLeave}
-            className="mt-4 px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors min-h-[44px]"
+            className="focus-ring mt-4 px-6 py-3 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors min-h-[44px]"
           >
             Cancel
           </button>
