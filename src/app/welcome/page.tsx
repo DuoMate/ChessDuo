@@ -46,7 +46,7 @@ export default function WelcomePage() {
       word: 'Pick',
       desc: isOffline ? 'You & bot submit moves' : 'Each player submits a move',
       icon: (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-green-500/30 bg-green-500/15 text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.25)] sm:h-10 sm:w-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-green-500/30 bg-green-500/15 text-green-600 dark:text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.25)] sm:h-10 sm:w-10">
           <Pointer size={16} strokeWidth={2} className="sm:size-[18]" />
         </div>
       ),
@@ -55,7 +55,7 @@ export default function WelcomePage() {
       word: 'Compare',
       desc: 'Engine compares both moves',
       icon: (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/15 text-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.25)] sm:h-10 sm:w-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/15 text-blue-600 dark:text-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.25)] sm:h-10 sm:w-10">
           <Scale size={16} strokeWidth={2} className="sm:size-[18]" />
         </div>
       ),
@@ -64,7 +64,7 @@ export default function WelcomePage() {
       word: 'Play',
       desc: 'Best move gets played',
       icon: (
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)] sm:h-10 sm:w-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/15 text-purple-600 dark:text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)] sm:h-10 sm:w-10">
           <PawnIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
       ),
@@ -116,7 +116,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col">
+    <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col">
       {/* Top bar with back button */}
       <div className="w-full px-4 pt-3 flex justify-start">
         <BackButton label="Back" onClick={() => {
@@ -132,26 +132,26 @@ export default function WelcomePage() {
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-          className="relative w-full max-w-md rounded-[24px] border border-slate-700/50 bg-[var(--color-page-bg)] p-4 sm:p-5 shadow-2xl"
+          className="relative w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5 shadow-2xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]"
         >
           {/* Header — compact single block */}
           <div className="mb-3 text-center">
             <div className="flex items-center justify-center gap-0 text-2xl font-black tracking-tight">
-              <span className="text-white">Chess</span>
-              <span className="relative text-blue-500">
+              <span className="text-slate-900 dark:text-white">Chess</span>
+              <span className="relative text-blue-600 dark:text-blue-500">
                 Duo
-                <Crown size={16} className="absolute -left-0.5 -top-3 text-blue-400" fill="currentColor" strokeWidth={0} />
+                <Crown size={16} className="absolute -left-0.5 -top-3 text-blue-500 dark:text-blue-400" fill="currentColor" strokeWidth={0} />
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400">
-              <span className="text-blue-400/70">&#9670;</span>
+            <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-blue-500/70 dark:text-blue-400/70">&#9670;</span>
               <span>How it works</span>
-              <span className="text-blue-400/70">&#9670;</span>
+              <span className="text-blue-500/70 dark:text-blue-400/70">&#9670;</span>
             </div>
           </div>
 
           {/* Board — compact */}
-          <div className="mb-3 rounded-xl border border-slate-700/50 bg-slate-800/30 p-3">
+          <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/30 p-3">
             <div className="relative mx-auto aspect-square w-full max-w-[140px] sm:max-w-[180px] onboarding-board">
               <ChessBoard fen={TOUR_FEN} onMove={() => {}} enabled={false} orientation="white" highlightSquares={TOUR_HIGHLIGHT} lastMove={TOUR_LAST_MOVE} />
               <div className="pointer-events-none absolute z-10" style={{ left: '56.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
@@ -164,17 +164,17 @@ export default function WelcomePage() {
             <div className="mt-2 flex items-center justify-center gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
-                <span className="text-[11px] font-semibold text-slate-200">Your Move</span>
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Your Move</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full bg-violet-500 shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-                <span className="text-[11px] font-semibold text-slate-200">{partnerLabel}</span>
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{partnerLabel}</span>
               </div>
             </div>
-            <p className="mt-2 text-center text-xs font-medium leading-snug text-slate-300">
+            <p className="mt-2 text-center text-xs font-medium leading-snug text-slate-600 dark:text-slate-300">
               {isOffline
-                ? <>You and your botmate — <span className="font-semibold text-amber-400">the best move wins.</span></>
-                : <>Two players, one board — <span className="font-semibold text-amber-400">the best move wins.</span></>}
+                ? <>You and your botmate — <span className="font-semibold text-amber-600 dark:text-amber-400">the best move wins.</span></>
+                : <>Two players, one board — <span className="font-semibold text-amber-600 dark:text-amber-400">the best move wins.</span></>}
             </p>
           </div>
 
@@ -182,10 +182,10 @@ export default function WelcomePage() {
           <div className="mb-3 flex items-stretch justify-between">
             {steps.map((step, index) => (
               <div key={step.word} className="flex flex-1 items-center">
-                <div className="flex flex-1 flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/30 p-2">
+                <div className="flex flex-1 flex-col items-center rounded-xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/30 p-2">
                   {step.icon}
-                  <span className="mt-1.5 text-xs font-bold text-white">{step.word}</span>
-                  <span className="mt-0.5 text-center text-[11px] leading-tight text-slate-400">{step.desc}</span>
+                  <span className="mt-1.5 text-xs font-bold text-slate-900 dark:text-white">{step.word}</span>
+                  <span className="mt-0.5 text-center text-[11px] leading-tight text-slate-500 dark:text-slate-400">{step.desc}</span>
                 </div>
                 {index < steps.length - 1 && <Chevron />}
               </div>
@@ -193,16 +193,16 @@ export default function WelcomePage() {
           </div>
 
           {/* Don't show again */}
-          <label className="flex cursor-pointer items-center gap-2.5">
-            <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0" />
-            <span className="text-sm text-slate-400">Don&apos;t show this again</span>
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5">
+            <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-4 w-4 shrink-0 rounded border-slate-300 bg-white text-amber-500 focus:ring-amber-500/40 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-800" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Don&apos;t show this again</span>
           </label>
         </motion.div>
       </div>
 
       {/* Fixed bottom action bar */}
       <div
-        className="w-full px-4 pb-4 pt-2 border-t border-slate-700/30 bg-[var(--color-page-bg)]/95 backdrop-blur-sm"
+        className="w-full px-4 pb-4 pt-2 border-t border-slate-200 dark:border-slate-700/30 bg-white/95 dark:bg-[var(--color-page-bg)]/95 backdrop-blur-sm"
         style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
       >
         <div className="max-w-md mx-auto">
@@ -210,7 +210,7 @@ export default function WelcomePage() {
             type="button"
             onClick={handleDismiss}
             disabled={navigating}
-            className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-base font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:from-amber-400 hover:to-orange-400 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="focus-ring w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-base font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:from-amber-400 hover:to-orange-400 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {navigating ? <Loader2 size={18} className="animate-spin" /> : 'Got it!'}
           </button>
