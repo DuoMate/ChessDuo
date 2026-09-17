@@ -77,12 +77,14 @@ export function GameOverModal({ open, winner, onPlayAgain, onClose, gameResult, 
             )}
             {winner !== 'DRAW' && !isAbandoned && <Particles />}
             <motion.div initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.2, type: 'spring', stiffness: 300 }} className="relative z-10">
-              {isAbandoned && <LogOut size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
-              {!isAbandoned && winner === 'WHITE' && <Trophy size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
-              {!isAbandoned && winner === 'BLACK' && <Trophy size={72} className="mx-auto text-slate-400 dark:text-slate-500" strokeWidth={1.5} />}
-              {!isAbandoned && winner === 'DRAW' && <Handshake size={72} className="mx-auto text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
+              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                {isAbandoned && <LogOut size={48} className="text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
+                {!isAbandoned && winner === 'WHITE' && <Trophy size={48} className="text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
+                {!isAbandoned && winner === 'BLACK' && <Trophy size={48} className="text-slate-400 dark:text-slate-500" strokeWidth={1.5} />}
+                {!isAbandoned && winner === 'DRAW' && <Handshake size={48} className="text-amber-600 dark:text-amber-400" strokeWidth={1.5} />}
+              </div>
             </motion.div>
-            <h2 className={`relative z-10 mt-4 mb-1 text-2xl font-bold ${isAbandoned ? 'text-amber-500 dark:text-amber-400' : winner === 'WHITE' ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'} font-game`}>
+            <h2 className={`relative z-10 mt-4 mb-1 text-2xl font-bold tracking-tight ${isAbandoned ? 'text-amber-500 dark:text-amber-400' : winner === 'WHITE' ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'} font-game`}>
               {isAbandoned && 'Match Abandoned'}
               {!isAbandoned && winner === 'WHITE' && 'White Team Wins!'}
               {!isAbandoned && winner === 'BLACK' && 'Black Team Wins!'}

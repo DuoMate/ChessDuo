@@ -193,7 +193,7 @@ function BoardTopBarInner({
                   <circle cx="12" cy="12" r="9" />
                   <polyline points="12 7 12 12 15 14" />
                 </svg>
-                <span className="font-game text-sm font-bold">
+                <span className="font-game text-sm font-bold tabular-nums">
                   {Math.floor(matchTimeRemaining / 60)}:{(matchTimeRemaining % 60).toString().padStart(2, '0')}
                 </span>
               </div>
@@ -228,7 +228,7 @@ function BoardTopBarInner({
               ))}
             </div>
             {advantage > 0 && (
-              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 ml-0.5">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
                 +{advantage}
               </span>
             )}
@@ -236,7 +236,7 @@ function BoardTopBarInner({
           <div className="shrink-0" />
           <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
             {advantage < 0 && (
-              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 mr-0.5">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mr-0.5">
                 +{Math.abs(advantage)}
               </span>
             )}
@@ -290,7 +290,7 @@ function BoardTopBarInner({
               className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm bg-[var(--color-surface)] dark:bg-[var(--color-muted-bg)] text-slate-600 dark:text-slate-300 border-[var(--color-border)] will-change-transform"
               style={{ willChange: 'transform, opacity' }}
             >
-              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shrink-0" />
+              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse motion-reduce:animate-none shrink-0" />
               <span className="truncate max-w-[min(90vw,480px)]">Opponent is thinking…</span>
             </motion.div>
           )}
