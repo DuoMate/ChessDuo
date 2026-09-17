@@ -26,13 +26,13 @@ describe('ColorPicker', () => {
     expect(onChange).toHaveBeenCalledWith('random')
   })
 
-  it('applies the blue-glow selected class only to the selected card', () => {
+  it('applies the brand-token selected class only to the selected card', () => {
     render(<ColorPicker value="white" onChange={jest.fn()} />)
     const white = screen.getByRole('radio', { name: /white pieces/i })
     const black = screen.getByRole('radio', { name: /black pieces/i })
-    expect(white.className).toContain('border-blue-500')
+    expect(white.className).toContain('border-[var(--color-brand)]')
     expect(white.className).toContain('shadow-[var(--shadow-glow-blue-strong)]')
-    expect(black.className).not.toContain('border-blue-500')
+    expect(black.className).not.toContain('border-[var(--color-brand)]')
   })
 
   it('handles all three values without crashing', () => {
