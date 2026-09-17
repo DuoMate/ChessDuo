@@ -317,11 +317,21 @@ export function FourPlayerLobby({
             e.dataTransfer.effectAllowed = 'move'
           }}
           onClick={() => isCreator && handleUnassign(p.playerId)}
+          role={isCreator ? 'button' : undefined}
+          tabIndex={isCreator ? 0 : undefined}
+          aria-label={isCreator ? `Unassign ${p.username || 'player'} from ${team} team` : undefined}
+          onKeyDown={(e) => {
+            if (!isCreator) return
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleUnassign(p.playerId)
+            }
+          }}
           className={`flex min-h-[44px] items-center justify-between gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors cursor-default ${
             p.playerId === playerId
               ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
               : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
-          } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          } ${isCreator ? 'cursor-grab active:cursor-grabbing focus-ring' : ''}`}
           title={isCreator ? 'Drag to other team or click to unassign' : ''}
         >
           <span className="min-w-0 flex-1 font-medium text-slate-900 dark:text-white truncate">
@@ -361,7 +371,7 @@ export function FourPlayerLobby({
             <p className="mb-3 text-sm font-medium text-rose-700 dark:text-rose-400">{error || 'Failed to load lobby'}</p>
             <button
               onClick={() => router.replace('/')}
-              className="min-h-[44px] rounded-2xl bg-rose-100 px-6 py-2 font-medium text-rose-700 transition-colors hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/30"
+              className="focus-ring min-h-[44px] rounded-2xl bg-rose-100 px-6 py-2 font-medium text-rose-700 transition-colors hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/30"
             >
               Back to Home
             </button>
@@ -382,7 +392,7 @@ export function FourPlayerLobby({
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
               className="mb-3 inline-block"
             >
-              <Crown size={36} className="text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
+              <Crown size={36} className="text-amber-500 dark:text-amber-400 drop-shadow-lg" strokeWidth={1.5} />
             </motion.div>
 
             <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-700 shadow-sm dark:text-amber-300">
@@ -407,7 +417,7 @@ export function FourPlayerLobby({
               <div className="mt-2 flex flex-wrap justify-center gap-2">
                 <button
                   onClick={handleCopyCode}
-                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-amber-400"
+                  className="focus-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-slate-200/70 bg-slate-50/80 px-5 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-amber-600 dark:border-slate-700/70 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-amber-400"
                 >
                   {copied ? (
                     <>
@@ -422,7 +432,7 @@ export function FourPlayerLobby({
                 {inviteUrl && (
                   <button
                     onClick={handleShare}
-                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
+                    className="focus-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-2 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
                   >
                     <Share2 size={14} /> Share link
                   </button>
@@ -464,11 +474,21 @@ export function FourPlayerLobby({
                       e.dataTransfer.effectAllowed = 'move'
                     }}
                     onClick={() => handleClickCard(p)}
+                    role={isCreator && p.playerId !== playerId ? 'button' : undefined}
+                    tabIndex={isCreator && p.playerId !== playerId ? 0 : undefined}
+                    aria-label={isCreator && p.playerId !== playerId ? `Assign ${p.username || 'player'} to a team` : undefined}
+                    onKeyDown={(e) => {
+                      if (!isCreator || p.playerId === playerId) return
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleClickCard(p)
+                      }
+                    }}
                     className={`flex min-h-[44px] items-center gap-2 px-3 py-2 rounded-2xl mb-1.5 text-sm transition-colors ${
                       p.playerId === playerId
                         ? 'bg-indigo-500/10 border border-indigo-300 dark:border-indigo-500/30'
                         : 'bg-white/80 border border-slate-200/80 dark:bg-slate-800/70 dark:border-slate-700/70'
-                    } ${isCreator ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    } ${isCreator ? 'cursor-grab active:cursor-grabbing focus-ring' : ''}`}
                   >
                     <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                     <span className="min-w-0 flex-1 font-medium text-slate-900 dark:text-white truncate">
@@ -499,7 +519,7 @@ export function FourPlayerLobby({
             <div className="flex flex-wrap justify-center gap-3">
               <button
                 onClick={handleLeave}
-                className="min-h-[44px] rounded-2xl px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                className="focus-ring min-h-[44px] rounded-2xl px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 ← Leave lobby
               </button>
@@ -511,7 +531,7 @@ export function FourPlayerLobby({
                   disabled={!teamsReady}
                   aria-disabled={!teamsReady}
                   title={teamsReady ? 'Start the match' : 'Waiting for teams to be ready'}
-                  className="min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  className="focus-ring min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   ▶ Start Match
                 </motion.button>
