@@ -14,9 +14,9 @@ export function TeamTimer({ seconds, isActive, currentTeam }: TeamTimerProps) {
   const isWarning = isActive && seconds <= 3
   const isCritical = isActive && seconds <= 2
   const teamColor = currentTeam === Team.WHITE ? 'yellow' : 'red'
-  const activeColorClass = teamColor === 'yellow' ? 'text-amber-500' : 'text-rose-500'
-  const inactiveColorClass = teamColor === 'yellow' ? 'text-slate-400 dark:text-slate-500' : 'text-slate-400 dark:text-slate-500'
-  const inactiveBorderClass = teamColor === 'yellow' ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200 dark:border-slate-700'
+  const activeColorClass = teamColor === 'yellow' ? 'text-amber-600 dark:text-amber-500' : 'text-rose-600 dark:text-rose-500'
+  const inactiveColorClass = 'text-slate-400 dark:text-slate-500'
+  const inactiveBorderClass = 'border-slate-200 dark:border-slate-700'
 
   const circumference = 2 * Math.PI * 18
   const progress = (seconds / 10) * circumference
@@ -56,7 +56,7 @@ export function TeamTimer({ seconds, isActive, currentTeam }: TeamTimerProps) {
         className={`
           absolute inset-0 flex items-center justify-center
           text-xs font-bold
-          ${isActive ? (isWarning ? 'text-rose-500' : activeColorClass) : inactiveColorClass}
+          ${isActive ? (isWarning ? 'text-rose-600 dark:text-rose-500' : activeColorClass) : inactiveColorClass}
         `}
         title={isActive ? `${seconds} seconds left` : 'Waiting for turn'}
         aria-label={isActive ? `${seconds} seconds left` : 'Waiting for turn'}
