@@ -66,10 +66,12 @@ Risk: many panels are dark-only (no `dark:` = base dark classes), so they break 
 | Team timers | YELLOW/amber | ROSE/red | `TeamTimer:16-19` |
 | Winner/loser (AI-selected vs rejected) | EMERALD `emerald-500` | ROSE `rose-500` | `MoveComparison`, `AccuracyBottomSheet`, `MoveResolvedInline` |
 
-**Recommendation (per owner: recommend in audit):** codify live BLUE vs PURPLE as canonical
-Duo pair (it's the real game path); migrate onboarding/markers/timers to the same pair in the
-revamp. Blue + white brand remains the product identity; Duo pair is a game-semantic layer
-inside it, always paired with icon + label + position (never color alone).
+**LOCKED DECISION (owner review, prototype checkpoint): BLUE + WHITE ONLY for Duo —
+purple dropped.** `team-b` tokens repointed to neutral slate (light `#475569`, dark
+`#cbd5e1`, with matching soft/border washes). Team distinction now rides on icon +
+label + position + border weight, never color alone. `coach-voice` violet is retained
+as AI-identity (not a team signal). CTA standard locked to the green gradient;
+brand blue reserved for selection/links/information.
 
 ## 4. Existing shared colors
 
@@ -134,16 +136,16 @@ Immersive/competitive/focused; board dominant; comfortable for long play.
 | INFO | sky/indigo | informational, thinking, hints |
 | PREMIUM | amber/gold (subtle) | premium features only |
 | AI | blue/violet accent | AI-generated info (inside global theme) |
-| TEAM | blue vs purple | teammate/team info (with icon+label) |
+| TEAM | blue (yours) vs neutral slate (opponents) | teammate/team info (with icon+label) |
 
 Chess-specific: selected (blue ring), legal move (dot), last move (dot/frame), check/checkmate
 (new: board-legible treatment TBD), promotion (existing modal shells unified), shadow move
-(teammate, violet family), AI-selected (emerald), rejected (rose), best (emerald/blue),
-inaccurate (yellow/amber), player vs opponent turn (team pair + pill).
+(teammate, neutral-slate family + label), AI-selected (emerald), rejected (rose), best (emerald/blue),
+inaccurate (yellow/amber), player vs opponent turn (blue-vs-neutral pill + glyph + label).
 
 ## 11. Duo/team color mapping
 
-YOUR TEAM = Team A blue · OPPOSING TEAM = Team B purple. YOUR MOVE vs TEAMMATE MOVE vs
+YOUR TEAM = brand blue · OPPOSING TEAM = neutral slate (locked: no purple). YOUR MOVE vs TEAMMATE MOVE vs
 OPPONENT MOVE vs AI-SELECTED vs REJECTED distinguished by color + icon + label + border +
 position. No color-only signaling.
 
