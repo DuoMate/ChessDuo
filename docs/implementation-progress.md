@@ -77,7 +77,19 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 15. `51243a4` ui: coach panel light-mode support + focus states (PHASE 10a)
 16. `c142d44` ui: auth + premium CTA focus states (PHASE 13-14a)
 17. `5902241` ui: lobby safe-area + bottom clearance; test: BotEloSelector brand assertion (PHASE 15a + 6b follow-up)
-18. (pending) docs: progress + final report (PHASE 17 close)
+18. `0a30d46` ui: history panel light-mode support + focus states (PHASE 12a)
+19. `ef4a5ce` ui: history page light-mode support + focus states (PHASE 12b)
+20. `d644d7d` ui: profile panel light-mode support + focus states (PHASE 12c)
+21. `06d2c5c` ui: friends panel light-mode support + focus states (PHASE 12d)
+22. `0408d5f` ui: profile + friends pages light-mode parity (PHASE 12e)
+23. `425c290` ui: board team pair on semantic tokens (PHASE 7c)
+24. `f621850` ui: move comparison light-mode + teammate headline icon (PHASE 8b)
+25. `5f98d73` ui: move resolved light-mode + blunder/focus pairs (PHASE 8c)
+26. `fa93092` ui: move insights light-mode + selected/rejected badges (PHASE 8d)
+27. `7e53ab3` ui: 4-player lobby keyboard cards + focus states (PHASE 9a)
+28. `501d204` ui: settings focus states + chat contrast fix (PHASE 13b)
+29. `dae1537` ui: premium page light-mode support + focus states (PHASE 13b)
+30. docs: breakpoint doc drift (`hooks/CONTEXT.md` 640px → 768px), `DESIGN.md` stale `#060816` → `#0a0e1a` (close-out)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
