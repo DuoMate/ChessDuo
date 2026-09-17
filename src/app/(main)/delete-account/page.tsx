@@ -105,7 +105,7 @@ function DeleteAccountContent() {
 
               <button
                 onClick={() => setStep('confirm')}
-                className="w-full min-h-[44px] py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
+                className="focus-ring w-full min-h-[44px] py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
               >
                 Delete My Account
               </button>
@@ -121,13 +121,13 @@ function DeleteAccountContent() {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={handleDelete}
-                  className="w-full min-h-[44px] py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
+                  className="focus-ring w-full min-h-[44px] py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
                 >
                   Yes, Permanently Delete Everything
                 </button>
                 <button
                   onClick={() => setStep('info')}
-                  className="w-full min-h-[44px] py-3 rounded-xl bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold transition-colors"
+                  className="focus-ring w-full min-h-[44px] py-3 rounded-xl bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold transition-colors"
                 >
                   No, Keep My Account
                 </button>
@@ -152,7 +152,7 @@ function DeleteAccountContent() {
               </p>
               <button
                 onClick={() => router.push('/')}
-                className="inline-block min-h-[44px] py-3 px-6 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors"
+                className="focus-ring inline-block min-h-[44px] py-3 px-6 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors"
               >
                 Return Home
               </button>
@@ -171,7 +171,7 @@ function DeleteAccountContent() {
               </p>
               <button
                 onClick={() => setStep('info')}
-                className="inline-block min-h-[44px] py-3 px-6 rounded-xl bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold transition-colors"
+                className="focus-ring inline-block min-h-[44px] py-3 px-6 rounded-xl bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 font-semibold transition-colors"
               >
                 Try Again
               </button>
