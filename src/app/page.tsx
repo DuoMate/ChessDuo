@@ -1432,7 +1432,7 @@ function TimePills({ selectedTime, onSelect }: {
         <button
           key={opt.seconds}
           onClick={() => onSelect(opt.seconds)}
-          className={`flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
+          className={`focus-ring flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
             selectedTime === opt.seconds
               ? 'bg-blue-600 text-white shadow-[var(--shadow-glow-blue-strong)]'
               : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
@@ -1470,7 +1470,7 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] ${
+      className={`focus-ring w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] ${
         selected
           ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
@@ -1559,7 +1559,7 @@ function BotDifficultySelector({
             aria-label={`${label} difficulty`}
             onClick={() => onSelect(level)}
             className={[
-              'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-0.5',
+              'focus-ring min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-0.5',
               'rounded-xl border-2 px-1 py-2 transition-all duration-200',
               selected
                 ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
