@@ -19,9 +19,9 @@ function getMoveImpact(san: string): string {
 }
 
 function getBlunderWarning(loss: number): { label: string; colorClass: string; Icon: typeof XCircle } | null {
-  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', colorClass: 'text-rose-400', Icon: XCircle }
-  if (loss >= 200) return { label: 'Blunder — costly mistake', colorClass: 'text-amber-400', Icon: AlertTriangle }
-  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', colorClass: 'text-yellow-400', Icon: AlertTriangle }
+  if (loss >= 500) return { label: 'Critical blunder — lost a piece!', colorClass: 'text-rose-600 dark:text-rose-400', Icon: XCircle }
+  if (loss >= 200) return { label: 'Blunder — costly mistake', colorClass: 'text-amber-600 dark:text-amber-400', Icon: AlertTriangle }
+  if (loss >= 100) return { label: 'Inaccuracy — missed a better move', colorClass: 'text-yellow-600 dark:text-yellow-400', Icon: AlertTriangle }
   return null
 }
 
@@ -109,23 +109,23 @@ function MoveColumn({
   tone: 'blue' | 'slate' | 'green'
 }) {
   const labelClass = {
-    blue: 'text-blue-300',
-    slate: 'text-slate-300',
-    green: 'text-emerald-300',
+    blue: 'text-blue-600 dark:text-blue-300',
+    slate: 'text-slate-500 dark:text-slate-300',
+    green: 'text-emerald-600 dark:text-emerald-300',
   }[tone]
   const accClass = {
-    blue: 'text-blue-400',
-    slate: 'text-slate-400',
-    green: 'text-emerald-400',
+    blue: 'text-blue-600 dark:text-blue-400',
+    slate: 'text-slate-500 dark:text-slate-400',
+    green: 'text-emerald-600 dark:text-emerald-400',
   }[tone]
   const borderClass = {
-    blue: 'border-blue-500/30',
-    slate: 'border-slate-600/30',
-    green: 'border-emerald-500/30',
+    blue: 'border-blue-200 dark:border-blue-500/30',
+    slate: 'border-slate-200 dark:border-slate-600/30',
+    green: 'border-emerald-200 dark:border-emerald-500/30',
   }[tone]
   const bgClass = {
     blue: 'bg-blue-500/5',
-    slate: 'bg-slate-800/40',
+    slate: 'bg-slate-100 dark:bg-slate-800/40',
     green: 'bg-emerald-500/5',
   }[tone]
 
@@ -134,14 +134,14 @@ function MoveColumn({
       <span className={`text-xs font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
       <div className="flex min-w-0 max-w-full items-center gap-1.5">
         <span className="shrink-0 text-2xl leading-none">{pieceChar(move.piece, move.color)}</span>
-        <span className="min-w-0 truncate text-lg font-extrabold text-slate-100" title={move.san}>{move.san}</span>
+        <span className="min-w-0 truncate text-lg font-extrabold text-slate-900 dark:text-slate-100" title={move.san}>{move.san}</span>
       </div>
-      <span className={`text-xs font-semibold uppercase tracking-wider text-slate-400`}>Accuracy</span>
+      <span className={`text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400`}>Accuracy</span>
       <span className={`text-2xl font-extrabold ${accClass}`}>{accuracy.toFixed(1)}</span>
       <div className={`mt-1 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
-        outcome === 'won' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-          : outcome === 'lost' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-          : 'bg-slate-700/40 text-slate-300 border border-slate-600/30'
+        outcome === 'won' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+          : outcome === 'lost' ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+          : 'bg-slate-200 text-slate-600 dark:bg-slate-700/40 dark:text-slate-300 border border-slate-300 dark:border-slate-600/30'
       }`}>
         {outcome === 'won' && <Check size={10} />}
         {outcome === 'lost' && <X size={10} />}
@@ -160,23 +160,23 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
     const moveImpact = getMoveImpact(san)
     let headline = ''
     let HeadlineIcon: typeof Sparkles = Sparkles
-    let headlineColor = 'text-amber-300'
+    let headlineColor = 'text-amber-600 dark:text-amber-300'
     if (data.isSync) {
       headline = 'Both played exactly the same move!'
       HeadlineIcon = Sparkles
-      headlineColor = 'text-amber-300'
+      headlineColor = 'text-amber-600 dark:text-amber-300'
     } else if (data.youMatchedEngine && data.teammateMatchedEngine) {
       headline = 'Perfect — both matched the engine\u2019s best move!'
       HeadlineIcon = Sparkles
-      headlineColor = 'text-amber-300'
+      headlineColor = 'text-amber-600 dark:text-amber-300'
     } else if (data.youMatchedEngine) {
       headline = 'You found the engine\u2019s top move!'
       HeadlineIcon = Target
-      headlineColor = 'text-emerald-300'
+      headlineColor = 'text-emerald-600 dark:text-emerald-300'
     } else if (data.teammateMatchedEngine) {
       headline = 'Teammate found the engine\u2019s best move'
       HeadlineIcon = Lightbulb
-      headlineColor = 'text-blue-300'
+      headlineColor = 'text-blue-600 dark:text-blue-300'
     }
     const isYouWinner = data.result === 'you_won'
     const loserLoss = isYouWinner ? data.teammateLoss : data.yourLoss
@@ -193,12 +193,12 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-      className="w-full max-w-3xl mx-auto rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl will-change-transform"
+      className="w-full max-w-3xl mx-auto rounded-2xl border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-xl will-change-transform dark:border-blue-500/30 dark:bg-slate-900/90 dark:shadow-2xl"
       style={{ willChange: 'transform, opacity' }}
     >
       <div className="flex items-center justify-center gap-2 mb-3">
-        <Zap size={14} className="text-blue-400" />
-        <span className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-100">
+        <Zap size={14} className="text-blue-500 dark:text-blue-400" />
+        <span className="text-sm font-extrabold uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100">
           Move Resolved
         </span>
       </div>
@@ -211,13 +211,13 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
           outcome={data.result === 'you_won' ? 'won' : data.result === 'teammate_won' ? 'lost' : 'tied'}
           tone="blue"
         />
-        <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-3 min-w-[64px] rounded-xl border border-blue-500/40 bg-blue-500/5">
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-300">Engine Chose</span>
-          <Trophy size={22} className="text-amber-400" />
-          <span className="max-w-full truncate text-2xl font-extrabold text-blue-300" title={data.engineChoseMove.san}>
+        <div className="flex min-w-0 flex-col items-center justify-center gap-2 px-2 py-3 min-w-[64px] rounded-xl border border-blue-200 bg-blue-500/5 dark:border-blue-500/40">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-300">Engine Chose</span>
+          <Trophy size={22} className="text-amber-500 dark:text-amber-400" />
+          <span className="max-w-full truncate text-2xl font-extrabold text-blue-600 dark:text-blue-300" title={data.engineChoseMove.san}>
             {data.engineChoseMove.san}
           </span>
-          <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+          <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30">
             Played
           </span>
         </div>
@@ -230,7 +230,7 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
         />
       </div>
 
-      <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-700/60 bg-slate-900/50 space-y-1.5">
+      <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900/50 space-y-1.5">
         {insight.headline && (
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-medium">
             <insight.HeadlineIcon size={14} className={insight.headlineColor} />
@@ -238,7 +238,7 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
           </div>
         )}
         {insight.moveImpact && (
-          <p className="text-center text-[11px] text-slate-300">
+          <p className="text-center text-[11px] text-slate-600 dark:text-slate-300">
             {insight.moveImpact}
           </p>
         )}
@@ -251,20 +251,20 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
           <div className="flex items-center justify-center gap-1.5 text-xs flex-wrap">
             <span
               className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                insight.verdict.color === '#22c55e' ? 'bg-emerald-500/10 text-emerald-400' :
-                insight.verdict.color === '#84cc16' ? 'bg-lime-500/10 text-lime-400' :
-                insight.verdict.color === '#eab308' ? 'bg-yellow-500/10 text-yellow-400' :
-                insight.verdict.color === '#ef4444' ? 'bg-rose-500/10 text-rose-400' :
-                'bg-slate-700/40 text-slate-300'
+                insight.verdict.color === '#22c55e' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                insight.verdict.color === '#84cc16' ? 'bg-lime-500/10 text-lime-600 dark:text-lime-400' :
+                insight.verdict.color === '#eab308' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                insight.verdict.color === '#ef4444' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                'bg-slate-200 text-slate-600 dark:bg-slate-700/40 dark:text-slate-300'
               }`}
             >
               {insight.verdict.emoji}{insight.verdict.label} move
             </span>
-            <span className="text-slate-500">·</span>
-            <span className="text-slate-400">{insight.loserLoss}cp lost</span>
+            <span className="text-slate-400 dark:text-slate-500">·</span>
+            <span className="text-slate-500 dark:text-slate-400">{insight.loserLoss}cp lost</span>
           </div>
         )}
-        <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="text-base leading-none" aria-hidden>{insight.moveClass.icon}</span>
           <span>{insight.moveClass.description}</span>
         </div>
@@ -273,7 +273,7 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
       <button
         type="button"
         onClick={onNext}
-        className="mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[var(--shadow-glow-emerald-strong)] transition-[background-color,opacity,transform] duration-150 ease-out"
+        className="focus-ring mt-4 w-full min-h-[52px] rounded-xl font-bold text-base flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white shadow-[var(--shadow-glow-emerald-strong)] transition-[background-color,opacity,transform] duration-150 ease-out"
       >
         Continue
         <ChevronRight size={18} />
