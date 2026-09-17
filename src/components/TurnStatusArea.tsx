@@ -65,7 +65,7 @@ function TimerDisplay({ seconds, isActive, totalSeconds }: { seconds: number; is
     <motion.span
       className={`text-xs font-bold font-game ${
         !isActive ? 'text-slate-400 dark:text-slate-500' :
-        isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-slate-400 dark:text-slate-300'
+        isCritical ? 'text-rose-600 dark:text-rose-500' : isWarning ? 'text-amber-600 dark:text-amber-500' : 'text-slate-400 dark:text-slate-300'
       }`}
       animate={isCritical ? { scale: [1, 1.08, 1] } : { scale: 1 }}
       transition={{ duration: 0.8, repeat: isCritical ? Infinity : 0 }}

@@ -278,19 +278,19 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         <button
           onClick={() => (status === 'playing' ? setShowLeave(true) : onLeave())}
           aria-label="Back to home"
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+          className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="flex items-center gap-2">
-          <Crown size={16} className="text-amber-400" />
+          <Crown size={16} className="text-amber-500 dark:text-amber-400" />
           <h1 className="text-base font-black uppercase tracking-[0.15em] text-slate-900 dark:text-white">AI Coach</h1>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={toggleVoice}
             aria-label="Toggle AI Coach voice"
-            className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${voiceEnabled ? 'text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+            className={`focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors ${voiceEnabled ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
           >
             {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
           </button>
@@ -298,7 +298,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             <button
               onClick={() => setShowResignConfirm(true)}
               aria-label="Resign"
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-rose-400 transition-colors hover:text-rose-500"
+              className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-rose-600 dark:text-rose-400 transition-colors hover:text-rose-500"
             >
               <Flag size={18} />
             </button>
@@ -349,19 +349,19 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       {/* Leave confirmation */}
       {showLeave && status === 'playing' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-700/60 bg-slate-900 p-5 text-center">
-            <h2 className="text-lg font-bold text-white">Leave the game?</h2>
-            <p className="mt-1 text-xs text-slate-400">Your coach session will end.</p>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-xl dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-none">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Leave the game?</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Your coach session will end.</p>
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => setShowLeave(false)}
-                className="min-h-[44px] flex-1 rounded-xl bg-slate-800 text-sm font-bold text-slate-200 transition-colors hover:bg-slate-700"
+                className="focus-ring min-h-[44px] flex-1 rounded-xl bg-slate-100 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Keep Playing
               </button>
               <button
                 onClick={onLeave}
-                className="min-h-[44px] flex-1 rounded-xl bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-500"
+                className="focus-ring min-h-[44px] flex-1 rounded-xl bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-500"
               >
                 Leave
               </button>
@@ -375,7 +375,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           legitimate terminal outcome reaches the same ad + offer flow. */}
       {status === 'game_over' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-700/60 bg-slate-900 p-6 text-center">
+          <div className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-none">
             <div
               className="mb-2 text-4xl"
               role="img"
@@ -383,9 +383,9 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             >
               {state?.result?.startsWith('Win') ? '🏆' : state?.result?.startsWith('Draw') ? '🤝' : '♟️'}
             </div>
-            <h2 className="text-xl font-black text-white">{state?.result ?? 'Game over'}</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">{state?.result ?? 'Game over'}</h2>
             {state && (
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 Accuracy {state.accuracy}% · Blunders {state.blunders} · Mistakes {state.mistakes}
               </p>
             )}
@@ -398,9 +398,9 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             <AdSenseSlot open={status === 'game_over'} gameOverReason={state?.gameOverReason} />
             {showMonetization && (
               <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-left">
-                <p className="text-sm font-bold text-white">Your free AI Coach game is complete.</p>
-                <p className="mt-1 text-xs text-slate-300">Unlock unlimited AI Coach games.</p>
-                <ul className="mt-2 space-y-1 text-xs text-slate-300">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">Your free AI Coach game is complete.</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Unlock unlimited AI Coach games.</p>
+                <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
                   <li><span aria-hidden="true">♾️ </span>Unlimited AI Coach games</li>
                   <li><span aria-hidden="true">🎙️ </span>Voice coaching</li>
                   <li><span aria-hidden="true">🎯 </span>Best-move guidance</li>
@@ -409,7 +409,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                 <button
                   onClick={() => router.replace('/premium')}
                   aria-label="Upgrade to Premium for unlimited coach games"
-                  className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white transition-all hover:from-amber-400 hover:to-orange-400"
+                  className="focus-ring mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white transition-all hover:from-amber-400 hover:to-orange-400"
                 >
                   <Crown size={16} aria-hidden="true" />
                   Upgrade to Premium
@@ -419,7 +419,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             <div className="mt-5 flex flex-col gap-2">
               <button
                 onClick={onLeave}
-                className="min-h-[44px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-500"
+                className="focus-ring min-h-[44px] w-full rounded-xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-500"
               >
                 Back to Home
               </button>
