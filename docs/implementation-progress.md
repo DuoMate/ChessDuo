@@ -90,6 +90,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 28. `501d204` ui: settings focus states + chat contrast fix (PHASE 13b)
 29. `dae1537` ui: premium page light-mode support + focus states (PHASE 13b)
 30. docs: breakpoint doc drift (`hooks/CONTEXT.md` 640px → 768px), `DESIGN.md` stale `#060816` → `#0a0e1a` (close-out)
+31. `ca1c583` ui: game lobby light-mode support + focus states (PHASE 14b)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
