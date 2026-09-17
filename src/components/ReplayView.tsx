@@ -84,7 +84,7 @@ export function ReplayView({ game }: ReplayViewProps) {
   }, [playbackIndex, moves])
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
         <div className="relative">
           <BoardTopBar
@@ -98,7 +98,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           <div className="absolute right-3 top-2 flex items-center gap-2">
             <button
               onClick={() => router.push('/history')}
-              className="min-h-[44px] px-3 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 flex items-center gap-1 text-slate-300 text-xs"
+              className="focus-ring min-h-[44px] px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 dark:bg-slate-800/70 dark:hover:bg-slate-700/70 dark:border-slate-700/60 flex items-center gap-1 text-slate-600 dark:text-slate-300 text-xs"
               aria-label="Back to history"
             >
               <ArrowLeft size={14} /> Back
@@ -110,7 +110,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-slate-900/70 border border-slate-700/70 rounded-xl p-3 mb-3 backdrop-blur-xl"
+          className="bg-white border border-slate-200 shadow-sm dark:bg-slate-900/70 dark:border-slate-700/70 rounded-xl p-3 mb-3 backdrop-blur-xl dark:shadow-none"
         >
           <div className="flex items-center gap-2 mb-2">
             <span
@@ -120,11 +120,11 @@ export function ReplayView({ game }: ReplayViewProps) {
             >
               {game.winner === 'WHITE' ? '🏆' : game.winner === 'DRAW' ? '🤝' : '💀'}
             </span>
-            <span className="font-bold text-base">
+            <span className="font-bold text-base text-slate-900 dark:text-slate-100">
               {game.winner === 'WHITE' ? 'White Wins' : game.winner === 'DRAW' ? 'Draw' : 'Black Wins'}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mb-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
             {game.game_result || (game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over')}
           </p>
           <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
@@ -151,7 +151,7 @@ export function ReplayView({ game }: ReplayViewProps) {
           // above the board); full game uses 720px, coach 560px.
           style={{ maxWidth: 'min(95vw, 80vh, 600px)' }}
         >
-          <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-slate-200 dark:ring-white/10 shadow-[0_0_40px_rgba(15,23,42,0.12)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-100 dark:bg-slate-900/30">
             {isMobile ? (
               <MobileChessBoard
                 fen={currentFen}

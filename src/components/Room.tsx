@@ -218,7 +218,7 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
           <button
             onClick={createRoom}
             disabled={loading}
-            className="w-full min-h-[44px] p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
+            className="focus-ring w-full min-h-[44px] p-4 bg-yellow-500 text-gray-900 font-bold rounded hover:bg-yellow-400 disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create New Room'}
           </button>
@@ -241,20 +241,20 @@ export function RoomManager({ playerId, username, onRoomJoined }: RoomProps) {
             <button
               onClick={joinRoom}
               disabled={loading || joinCode.length < 6}
-              className="min-h-[44px] p-2 md:p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50 text-sm md:text-base"
+              className="focus-ring min-h-[44px] p-2 md:p-3 bg-blue-600 text-white font-bold rounded hover:bg-blue-500 disabled:opacity-50 text-sm md:text-base"
             >
               Join
             </button>
           </div>
 
           {error && (
-            <p className="text-red-400 text-center">{error}</p>
+            <p className="text-red-600 dark:text-red-400 text-center">{error}</p>
           )}
 
           {myRoomCode && (
             <div className="mt-6 p-4 bg-gray-100 dark:bg-slate-700 rounded">
               <p className="text-gray-500 dark:text-slate-400 text-center mb-2">Share this code with your teammate:</p>
-              <p className="text-3xl font-bold text-center text-yellow-400 tracking-widest font-mono">
+              <p className="text-3xl font-bold text-center text-yellow-600 dark:text-yellow-400 tracking-widest font-mono">
                 {myRoomCode}
               </p>
             </div>
