@@ -8,6 +8,7 @@ import { fetchProfile } from '@/lib/profileService'
 import { RealtimeService } from '@/lib/realtimeService'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
+import { RateChessDuoRow } from '@/components/RateChessDuoRow'
 import { BackButton } from '@/components/BackButton'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
@@ -172,6 +173,8 @@ function ProfileContent({ playerId }: { playerId: string }) {
               </div>
               <span className="text-slate-500 shrink-0">&rsaquo;</span>
             </button>
+
+            <RateChessDuoRow />
 
             {/* Upgrade to Premium */}
             {checkingPremium ? (

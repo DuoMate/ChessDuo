@@ -32,6 +32,11 @@ interface BoardTopBarProps {
   capturedBlack?: string[]
   /** When provided, renders this node instead of the static timer — used for isolated 1 Hz timer that doesn't rerender the parent */
   timerNode?: React.ReactNode
+  /**
+   * In-flow thinking hint rendered below the turn pill (never over the board).
+   * Boolean keeps the memo stable. Callers that omit it see no change.
+   */
+  isThinking?: boolean
 }
 
 const PIECE_VALUES: Record<string, number> = {
@@ -152,6 +157,7 @@ function BoardTopBarInner({
   roundLabel,
   currentTurn,
   timerNode,
+  isThinking = false,
 }: BoardTopBarProps) {
   const whiteMaterial = useMemo(() => computeMaterial(capturedWhite), [capturedWhite])
   const blackMaterial = useMemo(() => computeMaterial(capturedBlack), [capturedBlack])
@@ -267,6 +273,29 @@ function BoardTopBarInner({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* In-flow thinking hint below the turn pill — never overlaps the board.
+          Reserved min-height avoids layout shift when it appears/disappears. */}
+      <div className="flex items-center justify-center mt-1.5 min-h-[28px] px-3">
+        <AnimatePresence mode="wait">
+          {isThinking && (
+            <motion.div
+              key="thinking"
+              role="status"
+              aria-live="polite"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm bg-[var(--color-surface)] dark:bg-[var(--color-muted-bg)] text-slate-600 dark:text-slate-300 border-[var(--color-border)] will-change-transform"
+              style={{ willChange: 'transform, opacity' }}
+            >
+              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shrink-0" />
+              <span className="truncate max-w-[min(90vw,480px)]">Opponent is thinking…</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </>
   )
 }
@@ -282,6 +311,7 @@ export const BoardTopBar = memo(BoardTopBarInner, (prev, next) => {
     prev.capturedBlack === next.capturedBlack &&
     prev.whitePlayers === next.whitePlayers &&
     prev.blackPlayers === next.blackPlayers &&
-    prev.timerNode === next.timerNode
+    prev.timerNode === next.timerNode &&
+    prev.isThinking === next.isThinking
   )
 })

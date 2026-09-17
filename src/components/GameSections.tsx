@@ -36,6 +36,8 @@ interface GameTopBarSectionProps {
   roundLabel?: string
   currentTurn: Team
   timerNode: ReactNode
+  /** In-flow thinking hint below the turn pill — boolean keeps the memo stable. */
+  isThinking?: boolean
   resignVisible: boolean
   onResign: () => void
   onOpenSettings: () => void
@@ -60,6 +62,7 @@ function GameTopBarSectionInner({
   roundLabel,
   currentTurn,
   timerNode,
+  isThinking = false,
   resignVisible,
   onResign,
   onOpenSettings,
@@ -83,6 +86,7 @@ function GameTopBarSectionInner({
             roundLabel={roundLabel}
             currentTurn={currentTurn}
             timerNode={timerNode}
+            isThinking={isThinking}
           />
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -116,12 +120,6 @@ interface GameBoardSectionProps {
   maxWidth: string
   /** P7: outer flex wrapper differs per mode (Game has px-3, DuelGame does not). */
   outerClassName?: string
-  /**
-   * Lifecycle polish: short non-interactive hint shown as an overlay pill when
-   * the board is disabled for a known reason (e.g. opponent thinking).
-   * String-or-null keeps the memo stable. Callers that omit it see no change.
-   */
-  waitingHint?: string | null
 }
 
 function GameBoardSectionInner({
@@ -138,7 +136,6 @@ function GameBoardSectionInner({
   isMobile,
   maxWidth,
   outerClassName = 'flex justify-center px-3',
-  waitingHint = null,
 }: GameBoardSectionProps) {
   return (
     <div className={outerClassName}>
@@ -175,14 +172,6 @@ function GameBoardSectionInner({
             />
           )}
         </div>
-        {waitingHint && (
-          <p
-            role="status"
-            className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-medium text-slate-200 backdrop-blur-sm"
-          >
-            {waitingHint}
-          </p>
-        )}
       </div>
     </div>
   )

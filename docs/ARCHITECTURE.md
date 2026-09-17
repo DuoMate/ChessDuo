@@ -68,11 +68,13 @@ src/
 │   ├── SidebarNav.tsx            # Legacy narrow sidebar (80-88px) — kept for reference
 │   ├── BottomNav.tsx             # Mobile bottom navigation (used by DuelGame/ReplayView)
 │   ├── MobileStatusBar.tsx       # Mobile safe-area wrapper
-│   ├── ProfilePanel.tsx          # Profile + stats view — dark theme redesign
+│   ├── ProfilePanel.tsx          # Profile + stats view — dark theme redesign (in-game slide-over; shares RateChessDuoRow with /profile)
+│   ├── RateChessDuoRow.tsx       # Shared Rate ChessDuo row — Play Store rating entry (ProfilePanel + /profile)
 │   ├── HistoryPanel.tsx          # Match history list — dark theme redesign
 │   ├── FriendsPanel.tsx          # Friends list + requests + chat — dark theme redesign
 │   ├── ChatPanel.tsx             # In-app messenger
-│   ├── BoardTopBar.tsx           # Board-page revamp — team avatars row + center timer card
+│   ├── BoardTopBar.tsx           # Board-page revamp — team avatars row + center timer card + turn pill + in-flow thinking hint (isThinking, never over board)
+│   ├── GameSections.tsx          # Memoized GameTopBarSection (isThinking passthrough) + GameBoardSection (board only, no overlay)
 │   ├── TeamHexagon.tsx           # Board-page revamp — decorative team-position hexagon
 │   ├── PendingMovesRow.tsx       # Board-page revamp — Your Move / Teammate status cards
 │   ├── ConfirmMoveButton.tsx     # Board-page revamp — gated by `useSettings().confirmMove`
