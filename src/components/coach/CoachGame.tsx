@@ -236,17 +236,23 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeave(true),
     onOverlayBack: () => {
-      if (!showResignConfirmRef.current) return false
-      setShowResignConfirm(false)
+      if (!showResignConfirmRef.current && activePanel === null) return false
+      if (showResignConfirmRef.current) setShowResignConfirm(false)
+      else setActivePanel(null)
       return true
     },
-    hasOpenOverlay: showResignConfirm,
+    hasOpenOverlay: showResignConfirm || activePanel !== null,
   })
 
   useCapacitorBackButton(
     () => {
       if (showResignConfirmRef.current) {
         setShowResignConfirm(false)
+        return true
+      }
+      // Overlays close first — board/engine state untouched (REQ-E).
+      if (activePanel !== null) {
+        setActivePanel(null)
         return true
       }
       if (status === 'playing') {
@@ -401,7 +407,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                   <li><span aria-hidden="true">🚫 </span>Ad-free experience</li>
                 </ul>
                 <button
-                  onClick={() => router.push('/premium')}
+                  onClick={() => router.replace('/premium')}
                   aria-label="Upgrade to Premium for unlimited coach games"
                   className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-sm font-bold text-white transition-all hover:from-amber-400 hover:to-orange-400"
                 >

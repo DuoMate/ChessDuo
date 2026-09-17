@@ -13,6 +13,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import InstallBanner from '@/components/InstallBanner'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 export default function ChallengePageClient() {
   const params = useParams()
@@ -32,6 +33,10 @@ export default function ChallengePageClient() {
   } | null>(null)
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
+
+  // Same rationale as invite landing: no layout HW handler on this route.
+  // Disabled while the join is in flight so Back can't interrupt room setup.
+  useCapacitorBackButton(() => { router.replace('/'); return true }, status !== 'joining')
 
   useEffect(() => {
     mountedRef.current = true

@@ -233,6 +233,23 @@ const { confirmLeave } = useNavigationGuard({
 })
 ```
 
+**Back-navigation rules (2026-09-17 audit):**
+- Prefer the app router (`router.back()` / `router.replace()`). Never blind
+  `window.history.back()` or `window.location = "/home"`.
+- `router.back()` only via `canGoBackSafely()` (`src/lib/navigation.ts`: `history.length > 2`
+  plus same-origin `document.referrer` check) so Back never lands on Google OAuth
+  consent, auth callbacks, or external pages. Fall back to an in-app route (usually `/`).
+- Every full-screen route must have a hardware-back handler or inherit
+  `(main)/layout` — an empty `useCapacitorBackButton` stack calls `App.exitApp()`.
+- Upgrade / Back-to-Home / auth-follow use `router.replace` (no history pollution,
+  so `Upgrade → Back → Home`). Game entry from lobby/challenge uses `replace`;
+  `History → Replay` uses `push` so Back returns to History.
+- Active-match Back/Leave + resignation converge on the terminal game-over
+  lifecycle (§9) before navigation; lobby leave may navigate immediately.
+- In-game overlays (Moves/Insights/Chat/Settings/Resign) close first on Back —
+  web via `useNavigationGuard(hasOpenOverlay + onOverlayBack)`, Android via
+  `useCapacitorBackButton` — without touching board/engine state.
+
 ### 5. Network Detection
 
 **RULE**: The `NetworkOverlay` component is rendered globally in `providers.tsx`. No page needs to add its own offline banner.
