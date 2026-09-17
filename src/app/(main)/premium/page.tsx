@@ -324,7 +324,7 @@ export default function PremiumPage() {
                           onClick={() => handleSubscribe('premium_monthly')}
                           disabled={plansLoading || subscribing}
                           aria-label="Choose monthly plan"
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
+                          className="focus-ring w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
                           <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
@@ -357,7 +357,7 @@ export default function PremiumPage() {
                           onClick={() => handleSubscribe('premium_yearly')}
                           disabled={plansLoading || subscribing}
                           aria-label="Choose annual plan"
-                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
+                          className="focus-ring w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
                           <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
