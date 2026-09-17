@@ -101,6 +101,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 39. `35ee6ec` ui: insights gate light-mode + focus states (PHASE 12g)
 40. `b5f907f` ui: round history light-mode + focus states (PHASE 12h)
 41. `6862c17` ui: timer warning/critical light contrast + dead-code cleanup (PHASE 7d)
+42. `6c3a99e` ui: evaluating loader contrast + install banner targets (PHASE 16a)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
