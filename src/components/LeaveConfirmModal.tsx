@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEscapeKey } from '@/hooks/useEscapeKey'
 import { useScrollLock } from '@/hooks/useScrollLock'
+import { MODAL_SPRING, MODAL_BACKDROP } from './modalConstants'
 
 interface LeaveConfirmModalProps {
   open: boolean
@@ -23,14 +24,14 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className={`fixed inset-0 z-50 flex items-center justify-center ${MODAL_BACKDROP} p-4`}
           onClick={onCancel}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={MODAL_SPRING}
             onClick={(e) => e.stopPropagation()}
             className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-xs w-full mx-4 max-h-[90svh] overflow-y-auto border border-gray-200 dark:border-slate-700 shadow-2xl"
           >
