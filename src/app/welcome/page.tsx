@@ -158,7 +158,7 @@ export default function WelcomePage() {
                 <span className="inline-block rounded-full bg-green-500/90 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[0_0_4px_rgba(34,197,94,0.5)]">You</span>
               </div>
               <div className="pointer-events-none absolute z-10" style={{ left: '31.25%', top: '38%', transform: 'translate(-50%, -50%)' }}>
-                <span className="inline-block rounded-full bg-violet-500/90 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[0_0_4px_rgba(139,92,246,0.5)]">{partnerLabel}</span>
+                <span className="inline-block rounded-full bg-slate-500/90 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[0_0_4px_rgba(100,116,139,0.5)]">{partnerLabel}</span>
               </div>
             </div>
             <div className="mt-2 flex items-center justify-center gap-4">
@@ -167,7 +167,7 @@ export default function WelcomePage() {
                 <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Your Move</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full bg-violet-500 shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
+                <div className="h-2.5 w-2.5 rounded-full bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,0.6)]" />
                 <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{partnerLabel}</span>
               </div>
             </div>
