@@ -37,6 +37,8 @@ All React components — co-located by feature, not by type. Components handle r
 | `ChessDuoLogo.tsx` | In-app logo — renders image mark from `/logo.png` + "ChessDuo" text |
 | `InitialsAvatar.tsx` | **NEW** — Shared initials avatar component (sm/md/lg sizes, online indicator, premium variant) |
 | `ColorPicker.tsx` | **NEW** — 3-card White/Black/Random selector with Lucide icons. Used inline on the home screen configuration panel. |
+| `BotDifficultyGrid.tsx` | Shared 5-card Easy/Medium/Hard/Expert/Master grid (extracted from home; consumed by home + AI Coach setup). |
+| `difficultyLevels.ts` | Shared `DIFFICULTY_LEVELS` (single source of truth) + `SELECTED_LEVEL_KEY` (shared with home). |
 | `DesktopSidebar.tsx` | **NEW** — Left vertical navigation for browser viewports (Home/History/Friends/Profile, 220-240px wide, fixed). Replaces `SidebarNav` on `md:`+ breakpoints across all `(main)/` pages. |
 | `SidebarNav.tsx` | **LEGACY** — Narrow left vertical navigation (80-88px icons only). Kept for reference; replaced by `DesktopSidebar` on all `(main)/` pages. |
 | `BottomNav.tsx` | Mobile bottom navigation (used by DuelGame/ReplayView) |
@@ -138,6 +140,7 @@ All React components — co-located by feature, not by type. Components handle r
 - `cm-chessboard` for board rendering, `chess.js` for move validation
 
 ## Recent Changes
+- **2026-09-17**: AI Coach setup consistency — new `BotDifficultyGrid.tsx` (extracted verbatim from the home selector, visuals unchanged) + `difficultyLevels.ts` (`DIFFICULTY_LEVELS` single source of truth, `SELECTED_LEVEL_KEY` shared with home). Home `page.tsx` consumes both (local `DIFFICULTY_LEVELS`/`BotDifficultySelector` deleted; `ConfigurationPanel` takes the shared type). New `components/coach/CoachSetup.tsx` (ColorPicker + grid + description + "Start AI Coach" CTA, light/dark, 44px targets). No game/backend/billing/ad/auth changes.
 - **2026-09-17**: Board thinking hint moved below turn pill — removed the absolute
 	`GameBoardSection.waitingHint` overlay pill (covered rank 1/8 squares) and added
 	`BoardTopBar.isThinking` in-flow hint (`role=status`, reserved `min-h-[28px]`,

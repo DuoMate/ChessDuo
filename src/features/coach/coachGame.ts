@@ -77,6 +77,9 @@ export class CoachGame {
 
   constructor(options: CoachGameOptions = {}) {
     this.chess = new Chess()
+    // Production passes explicit values from the CoachSetup selection
+    // (playerColor already resolved, botLevel 1-5 from DIFFICULTY_LEVELS).
+    // Fallbacks are defensive only (tests / direct instantiation).
     this.playerColor = options.playerColor ?? 'w'
     this.botLevel = options.botLevel ?? 3
     this.engine = options.engine ?? new CoachEngine()

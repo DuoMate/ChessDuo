@@ -80,6 +80,21 @@ describe('CoachGame', () => {
     expect(game.getState().result).toBe('Loss by resignation')
   })
 
+  it.each([1, 2, 3, 4, 5])('carries the selected setup botLevel %i into game state', async (botLevel) => {
+    const game = new CoachGame({ playerColor: 'w', botLevel, engine: mockEngine(), bot: mockBot() })
+    await game.start()
+
+    expect(game.getState().botLevel).toBe(botLevel)
+  })
+
+  it('carries the selected setup color into game state (black)', async () => {
+    const game = new CoachGame({ playerColor: 'b', botLevel: 2, engine: mockEngine(), bot: mockBot() })
+    await game.start()
+
+    expect(game.getState().playerColor).toBe('b')
+    expect(game.getState().botLevel).toBe(2)
+  })
+
   it('destroys the engine on destroy()', () => {
     const engine = mockEngine()
     const game = new CoachGame({ playerColor: 'w', botLevel: 3, engine, bot: mockBot() })
