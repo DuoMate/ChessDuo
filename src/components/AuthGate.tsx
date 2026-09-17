@@ -103,16 +103,16 @@ export function AuthGate({
     if (loadingTimedOut) {
       return (
         <ErrorBoundary>
-          <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="text-5xl mb-3">⚠️</div>
             <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
-            <p className="text-slate-400 text-sm mb-6 text-center max-w-xs">We couldn&apos;t verify your session. Please try again.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center max-w-xs">We couldn&apos;t verify your session. Please try again.</p>
             <button
               onClick={() => {
                 setLoadingTimedOut(false)
                 window.location.reload()
               }}
-              className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
+              className="focus-ring min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
             >
               Try Again
             </button>
@@ -127,7 +127,7 @@ export function AuthGate({
   if (needsUsername) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white p-4 pb-20">
           <div className="max-w-md mx-auto">
             <div className="mb-6">
               <BackButton label="Back" onClick={onBack} />
@@ -151,13 +151,13 @@ export function AuthGate({
   if (authDismissed) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-[var(--color-page-bg)] text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
           {pageEmoji && <div className="text-5xl mb-3">{pageEmoji}</div>}
           <h1 className="text-2xl font-bold mb-4">{pageTitle || ''}</h1>
-          <p className="text-slate-400 mb-6">{subtitle || 'Sign in to access this page'}</p>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{subtitle || 'Sign in to access this page'}</p>
           <button
             onClick={() => setAuthDismissed(false)}
-            className="min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
+            className="focus-ring min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors mb-4"
           >
             Sign In
           </button>
@@ -192,7 +192,7 @@ export function AuthGate({
             <div className="relative w-full max-w-sm">
               <button
                 onClick={onBack}
-                className="absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                className="focus-ring absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
                 aria-label="Close sign in"
               >
                 <span className="text-lg">✕</span>
@@ -207,7 +207,7 @@ export function AuthGate({
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[var(--color-page-bg)] text-white pb-20">
+      <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white pb-20">
         <div className="px-4 pt-4">
           <BackButton label="Back" onClick={onBack} />
         </div>
