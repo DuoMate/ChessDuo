@@ -92,6 +92,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 30. docs: breakpoint doc drift (`hooks/CONTEXT.md` 640px → 768px), `DESIGN.md` stale `#060816` → `#0a0e1a` (close-out)
 31. `ca1c583` ui: game lobby light-mode support + focus states (PHASE 14b)
 32. `94ed6c9` ui: challenge picker focus states + selected icon contrast (PHASE 14c)
+33. `528f61d` ui: auth gate light-mode + focus states (PHASE 14d)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
