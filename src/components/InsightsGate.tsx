@@ -58,7 +58,7 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
   }
 
   if (loading) {
-    return <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-center"><Spinner size="sm" /></div>
+    return <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex justify-center"><Spinner size="sm" /></div>
   }
 
   if (isPremium || showInsights) {
@@ -78,23 +78,23 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
         className="space-y-3"
       >
         {/* Premium upsell card */}
-        <div className="rounded-2xl border border-slate-700/60 bg-gradient-to-b from-slate-800/80 to-slate-900/80 p-4 backdrop-blur-xl">
+        <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 shadow-sm dark:border-slate-700/60 dark:from-slate-800/80 dark:to-slate-900/80 dark:shadow-none p-4 backdrop-blur-xl">
           <div className="flex items-start gap-3">
             <div className="shrink-0 w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-              <Lock size={20} className="text-blue-400" />
+              <Lock size={20} className="text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">
-                UNLOCK <span className="text-blue-400">PREMIUM</span> INSIGHTS
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wide">
+                UNLOCK <span className="text-blue-600 dark:text-blue-400">PREMIUM</span> INSIGHTS
               </h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Get in-depth analysis, move accuracy, mistakes, best moves and more.
               </p>
             </div>
           </div>
           <button
             onClick={onUpgradeClick}
-            className="mt-3 w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 active:scale-[0.98] transition-all"
+            className="focus-ring mt-3 w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold shadow-[0_4px_20px_rgba(59,130,246,0.35)] hover:from-blue-500 hover:to-cyan-400 active:scale-[0.98] transition-all"
           >
             <Crown size={16} className="text-white" />
             UPGRADE NOW
@@ -102,16 +102,16 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
         </div>
 
         {/* Bottom premium teaser banner */}
-        <div className="rounded-xl border border-slate-700/40 bg-slate-800/50 px-3 py-2.5 flex items-center justify-between gap-2">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/40 dark:bg-slate-800/50 dark:shadow-none px-3 py-2.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Crown size={14} className="shrink-0 text-amber-400" />
-            <span className="text-[11px] text-slate-400 leading-snug">
+            <Crown size={14} className="shrink-0 text-amber-500 dark:text-amber-400" />
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
               Premium members get real-time insights and win more games.
             </span>
           </div>
           <button
             onClick={onUpgradeClick}
-            className="shrink-0 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-400 text-[11px] font-bold hover:bg-blue-500/10 transition-colors min-h-[44px] flex items-center"
+            className="focus-ring shrink-0 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[11px] font-bold hover:bg-blue-500/10 transition-colors min-h-[44px] flex items-center"
           >
             VIEW PLANS
           </button>
@@ -125,15 +125,15 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-        className="mt-3 pt-3 border-t border-slate-700/50 text-center"
+        className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 text-center"
     >
-      <div className="flex items-center justify-center gap-2 text-xs text-slate-400 mb-2">
+      <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
         <BarChart3 size={14} strokeWidth={2} />
         <span>{revealsRemaining ?? 3}/3 free insights remaining</span>
       </div>
       <button
         onClick={handleReveal}
-        className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg border border-slate-600 transition-colors min-h-[44px]"
+        className="focus-ring px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 transition-colors min-h-[44px]"
       >
         Reveal Move Insights
       </button>
