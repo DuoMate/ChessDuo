@@ -94,6 +94,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 32. `94ed6c9` ui: challenge picker focus states + selected icon contrast (PHASE 14c)
 33. `528f61d` ui: auth gate light-mode + focus states (PHASE 14d)
 34. `8d6acce` ui: username + welcome light-mode, contrast, focus (PHASE 14e)
+35. `448fab3` ui: welcome page light-mode + focus states (PHASE 14f)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
