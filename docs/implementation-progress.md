@@ -52,3 +52,39 @@ Only UI/presentation rendering and animation performance was optimized.
 - `src/components/coach/CoachTranscriptPanel.tsx`
 - `docs/game-ui-performance-audit.md`
 - `docs/implementation-progress.md`
+
+---
+
+# UI/UX Revamp — Progress (branch `UI-UX-refactoring`, base `ebb0541`)
+
+Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads changes.
+
+## Commits (one per phase slice)
+1. `0a74e71` docs: UI/UX revamp audit + theme audit (PHASE 1-2)
+2. `a3d9c32` ui: semantic presentation-only design tokens + focus-ring + reduced-motion (PHASE 3)
+3. `9cb6d06` ui: shared focus-visible states + toast live region (PHASE 4a)
+4. `875dfc3` ui: error fallback touch targets + focus states (PHASE 4b)
+5. `52fb567` ui: bottom nav focus-visible states (PHASE 4c)
+6. `db79ccd` ui: home selection controls focus-visible states (PHASE 5a)
+7. `09bb3c9` ui: home selected states on brand tokens (PHASE 5b)
+8. `773cc03` ui: color picker brand tokens + focus states (PHASE 6a, incl. test update)
+9. `7889451` ui: bot difficulty selector brand tokens + focus states (PHASE 6b)
+10. `7f6fc21` ui: confirm bar keyboard focus states (PHASE 7a)
+11. `59269cb` ui: game menu focus states + expanded semantics (PHASE 7b)
+12. `87db549` ui: duo move cards light-mode support (PHASE 8a)
+13. `4561a9b` ui: game-over modal focus states (PHASE 11a)
+14. `01fb70e` ui: resign/leave confirm focus states (PHASE 11b)
+15. `51243a4` ui: coach panel light-mode support + focus states (PHASE 10a)
+16. `c142d44` ui: auth + premium CTA focus states (PHASE 13-14a)
+17. `5902241` ui: lobby safe-area + bottom clearance; test: BotEloSelector brand assertion (PHASE 15a + 6b follow-up)
+18. (pending) docs: progress + final report (PHASE 17 close)
+
+## What was intentionally NOT changed
+Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
+Stockfish/eval, billing/ads, push, persistence, APIs. All edits are className/ARIA-only
+except `globals.css` token additions and two audit docs.
+
+## Validation per commit
+`npx tsc --noEmit` before every commit; targeted jest suites where they exist
+(Toast, BackButton, ColorPicker incl. assertion update, PendingMovesRow, coach);
+production `npm run build` green after PHASE 3. Full suite + build + safety sweep at close.
