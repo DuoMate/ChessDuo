@@ -105,6 +105,8 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 43. `1607dbb` ui: route-level error/invite/duel/callback/replay pairing + focus (PHASE 15c)
 44. `91def1f` ui: menus/nav/config pairing + focus (PHASE 4e)
 45. `f2e7367` ui: coach game modals pairing + board frame + timer contrast (PHASE 10b)
+46. `2fa6112` ui: team-b neutral slate tokens + lock Duo/CTA decisions (W1)
+47. `c2af2d5` ui: Duo de-purple to neutral slate markers + legend (W2)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
