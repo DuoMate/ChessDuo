@@ -8,7 +8,11 @@ game menu + confirm bar, Duo move cards + comparison + resolved + insights,
 coach panel, game-over/resign/leave modals, 4-player lobby (keyboard cards),
 history (panel + page), profile (panel + page), friends (panel + page),
 premium page + success states, auth + premium CTAs, settings, chat,
-duel/four-player lobby spacing. Board, flows, and copy unchanged.
+username, welcome (modal + page), auth gate, lobby, route-level
+error/invite/duel/callback/replay shells, menus/nav/config, round history,
+insights gate, move playback, timers (contrast), loaders, install banner,
+game chrome (tabular timers, result well), responsive dvh shells,
+reduced-motion guards. Board, flows, and copy unchanged.
 
 ## 2. Shared components redesigned
 `Toast` (live region), `BackButton`, `SlideOver`, navs, `GameMenu`, `ErrorBoundary`

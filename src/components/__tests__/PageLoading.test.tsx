@@ -133,21 +133,21 @@ describe('PageLoading', () => {
   it('does NOT add pb-20 on /game path', () => {
     mockUsePathname.mockReturnValue('/game')
     render(<PageLoading />)
-    const outer = screen.getByAltText('ChessDuo').closest('.min-h-screen')
+    const outer = screen.getByAltText('ChessDuo').closest('.min-h-dvh')
     expect(outer?.className).not.toContain('pb-20')
   })
 
   it('does NOT add pb-20 on /duel path', () => {
     mockUsePathname.mockReturnValue('/duel')
     render(<PageLoading />)
-    const outer = screen.getByAltText('ChessDuo').closest('.min-h-screen')
+    const outer = screen.getByAltText('ChessDuo').closest('.min-h-dvh')
     expect(outer?.className).not.toContain('pb-20')
   })
 
   it('does NOT add pb-20 on / (home) path', () => {
     mockUsePathname.mockReturnValue('/')
     render(<PageLoading />)
-    const outer = screen.getByAltText('ChessDuo').closest('.min-h-screen')
+    const outer = screen.getByAltText('ChessDuo').closest('.min-h-dvh')
     expect(outer?.className).not.toContain('pb-20')
   })
 

@@ -108,6 +108,9 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 46. `2fa6112` ui: team-b neutral slate tokens + lock Duo/CTA decisions (W1)
 47. `c2af2d5` ui: Duo de-purple to neutral slate markers + legend (W2)
 48. `234850d` ui: home hierarchy + locked green CTA + label contrast (W3)
+49. `a4fb60a` ui: responsive dvh shells across routes (W4)
+50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
+51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
