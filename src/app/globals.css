@@ -52,6 +52,10 @@
   /* GAME STATES — single meaning everywhere */
   --color-team-a: #2563eb;
   --color-team-b: #7c3aed;
+  --color-team-a-soft: rgba(37, 99, 235, 0.1);
+  --color-team-a-border: rgba(37, 99, 235, 0.4);
+  --color-team-b-soft: rgba(124, 58, 237, 0.1);
+  --color-team-b-border: rgba(124, 58, 237, 0.4);
   --color-turn-active: #2563eb;
   --color-selected: #2563eb;
   --color-valid-move: #16a34a;
@@ -130,6 +134,10 @@
   --color-border-divider: rgba(255, 255, 255, 0.08);
   --color-team-a: #60a5fa;
   --color-team-b: #a78bfa;
+  --color-team-a-soft: rgba(59, 130, 246, 0.15);
+  --color-team-a-border: rgba(59, 130, 246, 0.3);
+  --color-team-b-soft: rgba(167, 139, 250, 0.15);
+  --color-team-b-border: rgba(167, 139, 250, 0.3);
   --color-turn-active: #60a5fa;
   --color-selected: #60a5fa;
   --color-valid-move: #22c55e;

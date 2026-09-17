@@ -60,11 +60,11 @@ function sortPieces(pieces: string[]): string[] {
 const AvatarTile = memo(function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE' | 'BLACK' }) {
   const isWhite = team === 'WHITE'
   const ringClass = isWhite
-    ? 'ring-blue-500/70'
-    : 'ring-purple-500/70'
+    ? 'ring-[var(--color-team-a)]'
+    : 'ring-[var(--color-team-b)]'
   const dotClass = isWhite
-    ? 'bg-blue-400'
-    : 'bg-purple-400'
+    ? 'bg-[var(--color-team-a)]'
+    : 'bg-[var(--color-team-b)]'
   const checkClass = 'bg-emerald-500 text-white'
 
   const GRACE_PERIOD = 5000
@@ -262,11 +262,11 @@ function BoardTopBarInner({
             className="flex items-center justify-center mt-1 will-change-transform"
             style={{ willChange: 'transform, opacity' }}
           >
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-400/40 bg-blue-400/10 dark:border-blue-500/30 dark:bg-blue-500/15' : 'border-purple-400/40 bg-purple-400/10 dark:border-purple-500/30 dark:bg-purple-500/15'}`}>
-              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-600 dark:text-blue-300' : 'text-purple-600 dark:text-purple-300'}`}>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-[var(--color-team-a-border)] bg-[var(--color-team-a-soft)]' : 'border-[var(--color-team-b-border)] bg-[var(--color-team-b-soft)]'}`}>
+              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? '♔' : '♚'}
               </span>
-              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-600 dark:text-blue-300' : 'text-purple-600 dark:text-purple-300'}`}>
+              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
               </span>
             </div>
