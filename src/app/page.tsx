@@ -17,7 +17,7 @@ import { createFourPlayerRoom, joinFourPlayerByCode } from '@/lib/fourPlayerActi
 import { createChallenge, getChallengeUrl } from '@/lib/challenges'
 import { BackButton } from '@/components/BackButton'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Swords, ChevronRight, Play, ChessPawn, ChessKnight, ChessBishop, ChessRook, Crown } from 'lucide-react'
+import { Swords, ChevronRight, Play, Crown } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { useSettings } from '@/hooks/useSettings'
 import { DEFAULT_TEAM_TIMER_SECONDS, PlayerColor, SELECTED_COLOR_KEY, DEFAULT_PLAYER_COLOR } from '@/features/shared/gameConstants'
@@ -31,6 +31,8 @@ import { PageLoading } from '@/components/PageLoading'
 import { ColorPicker } from '@/components/ColorPicker'
 import { DesktopSidebar } from '@/components/DesktopSidebar'
 import { ConfigurationPanel } from '@/components/ConfigurationPanel'
+import { BotDifficultyGrid } from '@/components/BotDifficultyGrid'
+import { DIFFICULTY_LEVELS, SELECTED_LEVEL_KEY } from '@/components/difficultyLevels'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export const dynamic = 'force-dynamic'
@@ -50,13 +52,8 @@ const TIME_OPTIONS: TimeOption[] = [
   { seconds: 1800, label: '30 min' },
 ]
 
-const DIFFICULTY_LEVELS = [
-  { level: 1, label: 'Easy',   Icon: ChessPawn, description: 'Great for learning. Bots make occasional mistakes and miss tactical opportunities.' },
-  { level: 2, label: 'Medium', Icon: ChessKnight, description: 'Balanced play that does not punish mistakes too harshly. Good for casual games.' },
-  { level: 3, label: 'Hard',   Icon: ChessBishop, description: 'Bots play solid chess and capitalize on obvious errors. Expect a challenge.' },
-  { level: 4, label: 'Expert', Icon: ChessRook, description: 'Strong positional moves and punishing tactics. Recommended for experienced players.' },
-  { level: 5, label: 'Master', Icon: Crown, description: 'Near-perfect play with deep calculation. Only for the most skilled players.' },
-]
+// Bot-difficulty options now live in `@/components/difficultyLevels` (shared with
+// AI Coach setup). Imported above — do not redefine here.
 
 type HumanAvatar = 'ace' | 'nova' | 'rex' | 'zee' | 'blaze' | 'pixel' | 'kai'
 type TeamIcon = { type: 'human'; avatar: HumanAvatar } | { type: 'bot' }
@@ -73,7 +70,7 @@ const HUMAN_AVATARS: Record<HumanAvatar, string> = {
 const BOT_AVATAR = '/avatars/bot.webp'
 
 const SELECTED_TIME_KEY = 'chessduo_selected_time'
-const SELECTED_LEVEL_KEY = 'chessduo_selected_level'
+// SELECTED_LEVEL_KEY is shared (@/components/difficultyLevels) with AI Coach setup.
 
 // Preserve the ?debug=1 diagnostics flag across client-side navigation. The
 // diagnostics (src/lib/debug.ts) are read once at module load, so a flag that
@@ -1192,7 +1189,7 @@ if (!gameMode) {
                     {/* Bot Difficulty */}
                     <section className="mb-4">
                       <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>
-                      <BotDifficultySelector
+                      <BotDifficultyGrid
                         selectedLevel={selectedLevel}
                         onSelect={setSelectedLevel}
                       />
@@ -1533,57 +1530,9 @@ function GameModeCard({
   )
 }
 
-// ============================================
-// Bot Difficulty Selector Component
-// 5-card grid with Lucide chess-piece icons (Easy/Medium/Hard/Expert/Master).
-// See spec § 5.4 for the canonical pattern.
-// ============================================
-function BotDifficultySelector({
-  selectedLevel,
-  onSelect,
-}: {
-  selectedLevel: number
-  onSelect: (level: number) => void
-}) {
-  return (
-    <div>
-      <div className="grid grid-cols-5 gap-1" role="radiogroup" aria-label="Bot difficulty">
-      {DIFFICULTY_LEVELS.map(({ level, label, Icon }) => {
-        const selected = level === selectedLevel
-        return (
-          <button
-            key={level}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            aria-label={`${label} difficulty`}
-            onClick={() => onSelect(level)}
-            className={[
-              'min-h-[64px] min-w-[44px] flex flex-col items-center justify-center gap-0.5',
-              'rounded-xl border-2 px-1 py-2 transition-all duration-200',
-              selected
-                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10 shadow-[var(--shadow-glow-blue-strong)]'
-                : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-900/60',
-            ].join(' ')}
-          >
-            <Icon
-              size={18}
-              strokeWidth={1.8}
-              className={selected
-                ? 'text-blue-600 dark:text-blue-300'
-                : 'text-slate-700 dark:text-slate-300'}
-              aria-hidden="true"
-            />
-            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-              {label}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-    </div>
-  )
-}
+// Bot difficulty grid now lives in `@/components/BotDifficultyGrid` (shared with
+// AI Coach setup). Imported above — the local definition was removed to keep
+// ONE SOURCE OF TRUTH for difficulty options.
 
 // ============================================
 // ============================================
