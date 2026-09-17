@@ -12,6 +12,8 @@ export function EvaluatingLoader() {
   const timelineRef = useRef<Timeline | null>(null)
 
   useEffect(() => {
+    // Respect reduced-motion: render the static loader without looping animation.
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const tl = new Timeline({ loop: true, autoplay: true })
     timelineRef.current = tl
 

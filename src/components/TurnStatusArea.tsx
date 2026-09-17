@@ -25,6 +25,8 @@ function EvaluatingPulse() {
   const tlRef = useRef<Timeline | null>(null)
 
   useEffect(() => {
+    // Respect reduced-motion: render the static glyph row without looping animation.
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const tl = new Timeline({ loop: true, autoplay: true })
     tlRef.current = tl
     tl.add(leftRef.current!, { translateY: [0, -3, 0], scale: [1, 1.08, 1], duration: 1000, easing: 'easeInOutSine' }, 0)
