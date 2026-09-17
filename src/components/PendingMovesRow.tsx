@@ -35,7 +35,7 @@ function pieceChar(piece?: string, color?: 'white' | 'black'): string {
 
 const SubmittedBadge = memo(function SubmittedBadge() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-green-500/30 bg-green-500/20 px-2 py-0.5 text-[11px] font-semibold leading-4 text-green-300">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-green-500/30 bg-green-500/20 px-2 py-0.5 text-[11px] font-semibold leading-4 text-green-700 dark:text-green-300">
       <Check size={10} className="shrink-0" strokeWidth={3} aria-hidden />
       <span>Submitted</span>
     </span>
@@ -83,19 +83,19 @@ function MoveCardInner({
           ? 'border-green-500/40 bg-green-500/10'
           : accentSubmitted
             ? 'border-amber-500/40 bg-amber-500/10'
-            : 'border-slate-700/60 bg-slate-800/50'
+            : 'border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-800/50'
       }`}
     >
       <div className="flex w-7 shrink-0 items-center justify-center self-center">{icon}</div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className={`min-w-0 truncate text-xs font-bold uppercase tracking-wider ${submitted ? 'text-green-400' : 'text-slate-400'}`}>
+        <p className={`min-w-0 truncate text-xs font-bold uppercase tracking-wider ${submitted ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'}`}>
           {label}
         </p>
         {name ? (
-          <p className="min-w-0 truncate text-[11px] leading-4 text-slate-300">{name}</p>
+          <p className="min-w-0 truncate text-[11px] leading-4 text-slate-600 dark:text-slate-300">{name}</p>
         ) : null}
-        <p className="min-w-0 truncate text-sm font-bold text-slate-100">{status}</p>
+        <p className="min-w-0 truncate text-sm font-bold text-slate-900 dark:text-slate-100">{status}</p>
       </div>
 
       {submitted && <SubmittedBadge />}
