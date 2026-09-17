@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Crown, Lock } from 'lucide-react'
 import { formatTrialCountdown, getCoachTrialState } from '@/features/coach/coachTrial'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { Spinner } from '../Spinner'
 
 interface CoachGateProps {
@@ -56,6 +57,17 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
       active = false
     }
   }, [playerId, retryKey])
+
+  // Locked screen owns no game shell, so without its own handler the Android
+  // hardware Back would fall through to App.exitApp(). Route-level replace
+  // keeps Home → Coach → Home free of history pollution.
+  useCapacitorBackButton(
+    () => {
+      router.replace('/')
+      return true
+    },
+    status === 'locked',
+  )
 
   if (status === 'loading') {
     return (
@@ -111,7 +123,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
                 {countdown ? ` Or come back for your next free game in ${countdown}.` : ''}
               </p>
               <button
-                onClick={() => router.push('/premium')}
+                onClick={() => router.replace('/premium')}
                 className="mt-5 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-[0_4px_20px_rgba(59,130,246,0.35)] transition-all hover:from-blue-500 hover:to-cyan-400"
               >
                 <Crown size={16} aria-hidden="true" />
@@ -120,7 +132,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
             </>
           )}
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.replace('/')}
             className="mt-2 min-h-[44px] w-full rounded-xl text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             Back to Home

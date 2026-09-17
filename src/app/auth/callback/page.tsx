@@ -7,6 +7,7 @@ import { AuthService } from '@/lib/authService'
 import { normalizeOtpType, isPkceVerifierMissing } from '@/lib/authError'
 import { PageLoading } from '@/components/PageLoading'
 import { logAuthDebug, correlationId } from '@/lib/authDebug'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 type Status = 'processing' | 'error' | 'recovery'
 
@@ -29,6 +30,11 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<CallbackError | null>(null)
   const [isOAuth, setIsOAuth] = useState(false)
   const ranRef = useRef(false)
+
+  // Transient route with no layout HW handler. HW Back goes Home via replace
+  // so the one-time code/token never stays in history; the in-flight exchange
+  // is best-effort and the session restore continues on Home.
+  useCapacitorBackButton(() => { router.replace('/'); return true }, true)
 
   useEffect(() => {
     if (ranRef.current) return

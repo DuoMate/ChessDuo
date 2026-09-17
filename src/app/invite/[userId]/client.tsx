@@ -12,6 +12,7 @@ import { PageLoading } from '@/components/PageLoading'
 import { Spinner } from '@/components/Spinner'
 import { ArrowLeft } from 'lucide-react'
 import InstallBanner from '@/components/InstallBanner'
+import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 function GoHomeButton() {
   const router = useRouter()
@@ -39,6 +40,10 @@ export default function InvitePageClient() {
   const [errorMsg, setErrorMsg] = useState('')
   const [needsUsername, setNeedsUsername] = useState<{ userId: string; suggestedName: string; avatarUrl?: string | null } | null>(null)
   const mountedRef = useRef(true)
+
+  // Deep-link landing has no layout HW handler; without this the hardware Back
+  // would fall through to App.exitApp(). Replace keeps no invite history.
+  useCapacitorBackButton(() => { router.replace('/'); return true }, true)
 
   useEffect(() => {
     mountedRef.current = true

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
+import { canGoBackSafely } from '@/lib/navigation'
 
 interface BackButtonProps {
   label?: string
@@ -21,7 +22,7 @@ export function BackButton({ label = 'Back', fallbackHref = '/', alwaysFallback 
       onClick()
       return
     }
-    if (!alwaysFallback && window.history.length > 2) {
+    if (!alwaysFallback && canGoBackSafely()) {
       router.back()
     } else {
       router.push(fallbackHref)

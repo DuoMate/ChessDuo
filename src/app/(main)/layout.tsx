@@ -10,6 +10,7 @@ import { DesktopSidebar } from '@/components/DesktopSidebar'
 import { useBadgeCount } from '@/hooks/useBadgeCount'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { canGoBackSafely } from '@/lib/navigation'
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -28,7 +29,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }, [])
 
   useCapacitorBackButton(() => {
-    if (window.history.length > 2) { router.back(); return true }
+    if (canGoBackSafely()) { router.back(); return true }
     router.push('/')
     return true
   }, true)

@@ -426,10 +426,16 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       setShowLeaveModal(true)
       return true
     }
+    // Terminal state: GameOverModal owns the ad/result lifecycle (§9); HW Back
+    // goes Home without touching browser/auth history.
+    if (gameState.status === GameStatus.GAME_OVER) {
+      router.replace('/')
+      return true
+    }
     return false
-  }, [gameState.status, showRoundHistory, showInsights, showChat, showSettings, showResignConfirm, showLeaveModal])
+  }, [gameState.status, showRoundHistory, showInsights, showChat, showSettings, showResignConfirm, showLeaveModal, router])
 
-  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING)
+  useCapacitorBackButton(handleHardwareBack, gameState.status === GameStatus.PLAYING || gameState.status === GameStatus.READY || gameState.status === GameStatus.WAITING || gameState.status === GameStatus.GAME_OVER)
 
   useEffect(() => {
     let active = true
