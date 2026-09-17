@@ -102,6 +102,9 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 40. `b5f907f` ui: round history light-mode + focus states (PHASE 12h)
 41. `6862c17` ui: timer warning/critical light contrast + dead-code cleanup (PHASE 7d)
 42. `6c3a99e` ui: evaluating loader contrast + install banner targets (PHASE 16a)
+43. `1607dbb` ui: route-level error/invite/duel/callback/replay pairing + focus (PHASE 15c)
+44. `91def1f` ui: menus/nav/config pairing + focus (PHASE 4e)
+45. `f2e7367` ui: coach game modals pairing + board frame + timer contrast (PHASE 10b)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
