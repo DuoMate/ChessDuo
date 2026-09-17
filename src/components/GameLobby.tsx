@@ -108,7 +108,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md overflow-hidden rounded-[24px] border border-white/[0.06] bg-[var(--color-surface-alt)] p-6 shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
+        className="w-full max-w-md overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] dark:border-white/[0.06] dark:bg-[var(--color-surface-alt)] dark:shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
       >
         <div className="flex flex-col items-center">
 
@@ -126,10 +126,10 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
           </div>
 
           {/* Title */}
-          <h1 className="mb-2 text-center text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-            READY <span className="text-amber-400">TO PLAY?</span>
+          <h1 className="mb-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            READY <span className="text-amber-500 dark:text-amber-400">TO PLAY?</span>
           </h1>
-          <p className="mb-5 text-center text-sm text-slate-400">
+          <p className="mb-5 text-center text-sm text-slate-500 dark:text-slate-400">
             Invite your teammate and start your match
           </p>
 
@@ -141,7 +141,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 <motion.div ref={dot2Ref} className="h-3 w-3 rounded-full bg-amber-500" />
                 <motion.div ref={dot3Ref} className="h-3 w-3 rounded-full bg-amber-500" />
               </div>
-              <p className="mb-4 text-base text-slate-400">Connecting to room...</p>
+              <p className="mb-4 text-base text-slate-500 dark:text-slate-400">Connecting to room...</p>
             </>
           )}
 
@@ -150,21 +150,21 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
             <>
               {/* Connected badge */}
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-                <span className="text-sm font-medium text-emerald-400">Connected</span>
+                <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Connected</span>
               </div>
 
               {/* Player status row */}
               <div className="mb-5 flex flex-wrap items-center justify-center gap-3">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
-                    <User size={12} className="text-amber-400" />
+                    <User size={12} className="text-amber-600 dark:text-amber-400" />
                   </div>
-                  <span className="min-w-0 truncate text-sm font-medium text-white" title={username || 'You'}>{username || 'You'}</span>
+                  <span className="min-w-0 truncate text-sm font-medium text-slate-900 dark:text-white" title={username || 'You'}>{username || 'You'}</span>
                 </div>
-                <span className="text-sm text-slate-500">{'\u2192'}</span>
+                <span className="text-sm text-slate-400 dark:text-slate-500">{'\u2192'}</span>
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-600/40 bg-slate-700/30">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-100 dark:border-slate-600/40 dark:bg-slate-700/30">
                     <Spinner size="sm" />
                   </div>
                   <span className="text-sm text-slate-500">Waiting for your teammate</span>
@@ -183,16 +183,16 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
           {timedOut && (
             <div className="mb-5 flex flex-col items-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3.5 py-1">
-                <Clock size={14} className="text-amber-400" />
-                <span className="text-sm font-medium text-amber-400">Connection Timed Out</span>
+                <Clock size={14} className="text-amber-600 dark:text-amber-400" />
+                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">Connection Timed Out</span>
               </div>
-              <p className="text-sm text-slate-400 text-center">
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
                 Could not connect with another player. They may have disconnected or been unable to join.
               </p>
               {onTimeoutLeave && (
                 <button
                   onClick={onTimeoutLeave}
-                  className="mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-5 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-rose-500/30 hover:bg-slate-700/60 hover:text-rose-400"
+                  className="focus-ring mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-rose-500/30 hover:bg-slate-50 hover:text-rose-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-700/60 dark:hover:text-rose-400"
                 >
                   <LogOut size={14} /> Leave Room
                 </button>
@@ -202,7 +202,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
 
           {/* Dotted separator */}
           {roomCode && (
-            <div className="mb-5 w-full border-t border-dashed border-slate-700/60" />
+            <div className="mb-5 w-full border-t border-dashed border-slate-200 dark:border-slate-700/60" />
           )}
 
           {/* Room code */}
@@ -212,19 +212,19 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 Send this code to your friend to join
               </p>
 
-              <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-slate-50 dark:bg-slate-900/60 p-4">
+              <div className="mb-4 w-full overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] dark:bg-slate-900/60 p-4">
                 <div className="flex items-center justify-between gap-2 min-h-[44px]">
-                  <p className="min-w-0 select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-400 sm:text-3xl">
+                  <p className="min-w-0 select-all font-mono text-2xl font-extrabold tracking-[0.2em] text-amber-600 dark:text-amber-400 sm:text-3xl">
                     {roomCode}
                   </p>
                   <button
                     onClick={handleCopyCode}
-                    className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-xl border border-slate-700/60 bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:border-amber-500/30 hover:bg-slate-700/60 hover:text-amber-400"
+                    className="focus-ring shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-amber-500/30 hover:bg-slate-50 hover:text-amber-600 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-700/60 dark:hover:text-amber-400"
                   >
                     {copied ? (
                       <>
-                        <CheckCircle2 size={14} className="text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
+                        <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
                       </>
                     ) : (
                       <>
@@ -241,9 +241,9 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
           {/* OR divider */}
           {inviteUrl && roomCode && (
             <div className="mb-4 flex w-full items-center gap-3">
-              <div className="h-px flex-1 bg-slate-700/50" />
+              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700/50" />
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Or</span>
-              <div className="h-px flex-1 bg-slate-700/50" />
+              <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700/50" />
             </div>
           )}
 
@@ -254,21 +254,21 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 Or share the invite link
               </p>
 
-              <div className="w-full overflow-hidden rounded-2xl border border-slate-700/40 bg-slate-50 dark:bg-slate-900/60 p-4">
+              <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700/40 dark:bg-slate-900/60 p-4">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleShare}
-                    className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-500/15"
+                    className="focus-ring flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 text-sm font-medium text-amber-600 dark:text-amber-400 transition-colors hover:bg-amber-500/15"
                   >
                     <Share2 size={15} /> Share Invite Link
                   </button>
                   <button
                     onClick={handleCopyLink}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/60 text-slate-400 transition-colors hover:border-slate-600 hover:bg-slate-700/60 hover:text-white"
+                    className="focus-ring inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700/60 dark:hover:text-white"
                     title={linkCopied ? 'Copied' : 'Copy link'}
                     aria-label={linkCopied ? 'Invite link copied' : 'Copy invite link'}
                   >
-                    {linkCopied ? <CheckCircle2 size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                    {linkCopied ? <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={15} />}
                   </button>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
           <div className="mt-5 w-full rounded-2xl border border-purple-500/15 bg-purple-500/[0.06] px-4 py-3">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-500/15">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 dark:text-purple-400">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -287,8 +287,8 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-200">Your friend can join using</p>
-                <p className="text-xs text-slate-400">the code or the invite link</p>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Your friend can join using</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">the code or the invite link</p>
               </div>
             </div>
           </div>
