@@ -264,7 +264,7 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen flex-col pb-20 bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
+      <div className="flex min-h-dvh flex-col pb-20 bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
         <div className="flex-1 p-4">
           <div className="max-w-md mx-auto flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">

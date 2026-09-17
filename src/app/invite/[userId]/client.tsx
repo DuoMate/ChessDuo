@@ -150,7 +150,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-4">
               <div className="text-5xl mb-2">⚠️</div>
               <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Cannot Add Yourself</h1>
@@ -177,7 +177,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-6">
               <div className="text-5xl mb-2">👥</div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
@@ -198,7 +198,7 @@ export default function InvitePageClient() {
     <>
       <InstallBanner />
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'loading' && (
             <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-4">

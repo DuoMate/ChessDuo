@@ -49,6 +49,8 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
 
   useEffect(() => {
     if (!iconRef.current || !dot1Ref.current || !dot2Ref.current || !dot3Ref.current) return
+    // Respect reduced-motion: render the static lobby without looping animation.
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const tl = new Timeline({ loop: true, autoplay: true })
     timelineRef.current = tl
 
@@ -103,7 +105,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
   const phase = isLoading ? 'joining' : 'waiting'
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-page-bg)] p-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-page-bg)] p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

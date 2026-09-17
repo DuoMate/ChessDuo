@@ -168,7 +168,7 @@ export default function AuthCallbackPage() {
 
   if (status === 'recovery') {
     return (
-      <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-5xl mb-3" aria-hidden="true">✅</div>
         <h1 className="text-xl font-bold mb-2">Email confirmed</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center max-w-xs">
@@ -187,7 +187,7 @@ export default function AuthCallbackPage() {
 
   if (status === 'error') {
     return (
-      <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-5xl mb-3" aria-hidden="true">⚠️</div>
         <h1 className="text-xl font-bold mb-2">{isOAuth ? 'Couldn&apos;t sign in' : "Couldn't confirm your email"}</h1>
         <p role="alert" className="text-slate-500 dark:text-slate-400 text-sm mb-4 text-center max-w-xs">

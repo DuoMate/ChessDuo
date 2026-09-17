@@ -61,7 +61,7 @@ function DeleteAccountContent() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
+      <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
         <div className="max-w-lg mx-auto px-4 py-12 pb-20">
           <div className="mb-6">
             <BackButton label="Back to ChessDuo" />

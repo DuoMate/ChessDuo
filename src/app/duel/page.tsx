@@ -43,7 +43,7 @@ function DuelContent() {
   if (!roomId || !roomCode || !playerId || !team) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">⚠️</div>
             <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Invalid Duel Link</h1>
@@ -60,7 +60,7 @@ function DuelContent() {
   if (!isValidSession) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">🔒</div>
             <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Session Expired</h1>

@@ -944,7 +944,7 @@ export default function SetupPage() {
   )
 
   const chooseUsernameScreen = needsUsername && (
-    <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+    <div className="min-h-dvh bg-[var(--color-page-bg)] text-white p-4 pb-20">
       <div className="max-w-md mx-auto">
         <div className="mb-6">
           <BackButton label="Back" onClick={() => { setNeedsUsername(null); clearPendingAction(); router.push('/') }} />
@@ -968,7 +968,7 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
+        <div className="min-h-dvh bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -1033,7 +1033,7 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
+        <div className="min-h-dvh bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -1095,7 +1095,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex min-h-screen flex-col bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white md:pl-[220px] lg:pl-[240px]">
+      <div className="relative flex min-h-dvh flex-col bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
         {isMobile ? (

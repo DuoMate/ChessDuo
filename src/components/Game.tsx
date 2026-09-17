@@ -2760,7 +2760,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   // Show loading state for offline mode while game initializes
   if (gameState.isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-dvh bg-[var(--color-page-bg)] flex items-center justify-center">
         <GameLoading
           message="Initializing game..."
         />
@@ -2769,7 +2769,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
+    <div className="min-h-dvh flex flex-col bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
       {commonModals}
 
       {showGameOn && (

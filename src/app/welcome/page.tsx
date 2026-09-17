@@ -116,7 +116,7 @@ export default function WelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col">
+    <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col">
       {/* Top bar with back button */}
       <div className="w-full px-4 pt-3 flex justify-start">
         <BackButton label="Back" onClick={() => {

@@ -84,7 +84,7 @@ export function ReplayView({ game }: ReplayViewProps) {
   }, [playbackIndex, moves])
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
+    <div className="min-h-dvh flex flex-col bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
       <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3">
         <div className="relative">
           <BoardTopBar

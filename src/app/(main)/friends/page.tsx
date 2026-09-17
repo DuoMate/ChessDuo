@@ -30,7 +30,7 @@ function FriendsContent({ playerId }: { playerId: string }) {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[var(--color-page-bg)] text-slate-900 dark:text-white p-4 pb-20">
+      <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white p-4 pb-20">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Friends</h1>
