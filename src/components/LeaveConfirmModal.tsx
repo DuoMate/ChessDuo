@@ -46,13 +46,13 @@ export function LeaveConfirmModal({ open, onCancel, onConfirm, title, message, d
             <div className="flex gap-3">
               <button
                 onClick={onCancel}
-                className="flex-1 min-h-[44px] rounded-xl border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="focus-ring flex-1 min-h-[44px] rounded-xl border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 min-h-[44px] rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-500 transition-colors"
+                className="focus-ring flex-1 min-h-[44px] rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-500 transition-colors"
               >
                 Leave
               </button>

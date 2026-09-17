@@ -42,10 +42,10 @@ export function ResignConfirmModal({ open, onConfirm, onCancel }: ResignConfirmM
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Resign Game</h2>
             <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">Are you sure you want to resign? This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-white font-medium text-sm transition-colors min-h-[44px]">
+              <button onClick={onCancel} className="focus-ring flex-1 py-3 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-white font-medium text-sm transition-colors min-h-[44px]">
                 Cancel
               </button>
-              <button onClick={onConfirm} className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition-colors min-h-[44px]">
+              <button onClick={onConfirm} className="focus-ring flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm transition-colors min-h-[44px]">
                 Resign
               </button>
             </div>
