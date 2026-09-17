@@ -98,6 +98,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 36. `530cd96` ui: confirm modals on shared backdrop/spring + focus (PHASE 4d)
 37. `db5c198` ui: settings root pairing + delete-account focus states (PHASE 15b)
 38. `f38e972` ui: move playback slate pairing + keyboard + focus (PHASE 12f)
+39. `35ee6ec` ui: insights gate light-mode + focus states (PHASE 12g)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
