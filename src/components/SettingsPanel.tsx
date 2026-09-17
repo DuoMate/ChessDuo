@@ -52,7 +52,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200/70 p-4 dark:border-slate-700/70">
-              <button onClick={onClose} className="flex items-center gap-1.5 text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 min-h-[44px] min-w-[44px]">
+              <button onClick={onClose} className="focus-ring flex items-center gap-1.5 text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 min-h-[44px] min-w-[44px]">
                 <ArrowLeft size={16} />
                 <span className="text-sm">Back</span>
               </button>
@@ -66,7 +66,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   <p className="text-sm font-medium text-slate-900 dark:text-white">Theme</p>
                   <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
                 </div>
-                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 min-h-[44px] min-w-[44px]" aria-label="Toggle theme">
+                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="focus-ring flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 min-h-[44px] min-w-[44px]" aria-label="Toggle theme">
                   {theme === 'dark' ? <Sun size={18} className="text-yellow-600 dark:text-yellow-400" /> : <Moon size={18} className="text-gray-600" />}
                 </button>
               </div>
@@ -83,7 +83,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={autoQueen}
                   onClick={() => setAutoQueen(!autoQueen)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoQueen ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoQueen ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoQueen ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -101,7 +101,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={lowTimeWarning}
                   onClick={() => setLowTimeWarning(!lowTimeWarning)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${lowTimeWarning ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${lowTimeWarning ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${lowTimeWarning ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -119,7 +119,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={confirmMove}
                   onClick={() => setConfirmMove(!confirmMove)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${confirmMove ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${confirmMove ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -137,7 +137,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                   role="switch"
                   aria-checked={soundEnabled}
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${soundEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${soundEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
@@ -166,7 +166,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
                       localStorage.setItem('chessduo_push_disabled', 'true')
                     }
                   }}
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${notifsEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}
                 >
                   <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
