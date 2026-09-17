@@ -96,6 +96,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 34. `8d6acce` ui: username + welcome light-mode, contrast, focus (PHASE 14e)
 35. `448fab3` ui: welcome page light-mode + focus states (PHASE 14f)
 36. `530cd96` ui: confirm modals on shared backdrop/spring + focus (PHASE 4d)
+37. `db5c198` ui: settings root pairing + delete-account focus states (PHASE 15b)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
