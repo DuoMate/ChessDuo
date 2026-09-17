@@ -138,6 +138,17 @@ All React components — co-located by feature, not by type. Components handle r
 - `cm-chessboard` for board rendering, `chess.js` for move validation
 
 ## Recent Changes
+- **2026-09-17**: Board thinking hint moved below turn pill — removed the absolute
+	`GameBoardSection.waitingHint` overlay pill (covered rank 1/8 squares) and added
+	`BoardTopBar.isThinking` in-flow hint (`role=status`, reserved `min-h-[28px]`,
+	`text-xs`, `truncate max-w-[min(90vw,480px)]`, `bg-[var(--color-surface)]`
+	`dark:bg-[var(--color-muted-bg)]`). `Game.tsx` passes boolean `isThinking`;
+	`DuelGame` unchanged. No game/backend/billing/ad/auth changes.
+- **2026-09-17**: Shared `RateChessDuoRow` — single source of truth for the Profile
+	"Rate ChessDuo" row, consumed by both `ProfilePanel` (in-game slide-over) and
+	`/profile` full page (fixes prod missing row from duplicated surfaces).
+	Opens `market://` listing on native with HTTPS fallback via `lib/rateApp.ts`.
+	No game/backend/billing/ad/auth changes.
 - **2026-09-16**: Profile "Rate ChessDuo" row — user-initiated Play Store rating entry
 	point (amber navigational row after Share Profile, `Star` icon, transient
 	"Opening Play Store…" feedback). Opens `market://` listing on native with

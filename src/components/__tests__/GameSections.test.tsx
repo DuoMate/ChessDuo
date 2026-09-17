@@ -153,16 +153,24 @@ describe('GameSections memo (P0/P5 regression lock)', () => {
     expect(outer.className).toBe('flex justify-center')
   })
 
-  test('Lifecycle polish: waitingHint renders a status pill only when set', () => {
+  test('Lifecycle polish: board never overlays a status pill (hint lives below turn pill)', () => {
     const { container, rerender } = render(React.createElement(GameBoardSection, {
       ...boardProps(),
     }))
     expect(container.querySelector('[role="status"]')).toBeNull()
+    // Extra unknown props must not render an overlay either.
     rerender(React.createElement(GameBoardSection, {
       ...boardProps(),
-      waitingHint: 'Opponent is thinking…',
     }))
-    const pill = container.querySelector('[role="status"]')
-    expect(pill?.textContent).toBe('Opponent is thinking…')
+    expect(container.querySelector('[role="status"]')).toBeNull()
+    expect(container.firstChild?.childNodes[0].textContent ?? '').not.toContain('Opponent is thinking')
+  })
+
+  test('Lifecycle polish: GameTopBarSection accepts isThinking without breaking memo', () => {
+    const props = { ...topBarProps(), isThinking: true as boolean }
+    const { rerender } = render(React.createElement(GameTopBarSection, props))
+    expect(mockRenderCounts.topBar).toBe(1)
+    rerender(React.createElement(GameTopBarSection, props))
+    expect(mockRenderCounts.topBar).toBe(1)
   })
 })
