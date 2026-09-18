@@ -55,6 +55,75 @@ Only UI/presentation rendering and animation performance was optimized.
 
 ---
 
+# UI/UX Revamp — Progress (branch `UI-UX-refactoring`, base `ebb0541`)
+
+Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads changes.
+
+## Commits (one per phase slice)
+1. `0a74e71` docs: UI/UX revamp audit + theme audit (PHASE 1-2)
+2. `a3d9c32` ui: semantic presentation-only design tokens + focus-ring + reduced-motion (PHASE 3)
+3. `9cb6d06` ui: shared focus-visible states + toast live region (PHASE 4a)
+4. `875dfc3` ui: error fallback touch targets + focus states (PHASE 4b)
+5. `52fb567` ui: bottom nav focus-visible states (PHASE 4c)
+6. `db79ccd` ui: home selection controls focus-visible states (PHASE 5a)
+7. `09bb3c9` ui: home selected states on brand tokens (PHASE 5b)
+8. `773cc03` ui: color picker brand tokens + focus states (PHASE 6a, incl. test update)
+9. `7889451` ui: bot difficulty selector brand tokens + focus states (PHASE 6b)
+10. `7f6fc21` ui: confirm bar keyboard focus states (PHASE 7a)
+11. `59269cb` ui: game menu focus states + expanded semantics (PHASE 7b)
+12. `87db549` ui: duo move cards light-mode support (PHASE 8a)
+13. `4561a9b` ui: game-over modal focus states (PHASE 11a)
+14. `01fb70e` ui: resign/leave confirm focus states (PHASE 11b)
+15. `51243a4` ui: coach panel light-mode support + focus states (PHASE 10a)
+16. `c142d44` ui: auth + premium CTA focus states (PHASE 13-14a)
+17. `5902241` ui: lobby safe-area + bottom clearance; test: BotEloSelector brand assertion (PHASE 15a + 6b follow-up)
+18. `0a30d46` ui: history panel light-mode support + focus states (PHASE 12a)
+19. `ef4a5ce` ui: history page light-mode support + focus states (PHASE 12b)
+20. `d644d7d` ui: profile panel light-mode support + focus states (PHASE 12c)
+21. `06d2c5c` ui: friends panel light-mode support + focus states (PHASE 12d)
+22. `0408d5f` ui: profile + friends pages light-mode parity (PHASE 12e)
+23. `425c290` ui: board team pair on semantic tokens (PHASE 7c)
+24. `f621850` ui: move comparison light-mode + teammate headline icon (PHASE 8b)
+25. `5f98d73` ui: move resolved light-mode + blunder/focus pairs (PHASE 8c)
+26. `fa93092` ui: move insights light-mode + selected/rejected badges (PHASE 8d)
+27. `7e53ab3` ui: 4-player lobby keyboard cards + focus states (PHASE 9a)
+28. `501d204` ui: settings focus states + chat contrast fix (PHASE 13b)
+29. `dae1537` ui: premium page light-mode support + focus states (PHASE 13b)
+30. docs: breakpoint doc drift (`hooks/CONTEXT.md` 640px → 768px), `DESIGN.md` stale `#060816` → `#0a0e1a` (close-out)
+31. `ca1c583` ui: game lobby light-mode support + focus states (PHASE 14b)
+32. `94ed6c9` ui: challenge picker focus states + selected icon contrast (PHASE 14c)
+33. `528f61d` ui: auth gate light-mode + focus states (PHASE 14d)
+34. `8d6acce` ui: username + welcome light-mode, contrast, focus (PHASE 14e)
+35. `448fab3` ui: welcome page light-mode + focus states (PHASE 14f)
+36. `530cd96` ui: confirm modals on shared backdrop/spring + focus (PHASE 4d)
+37. `db5c198` ui: settings root pairing + delete-account focus states (PHASE 15b)
+38. `f38e972` ui: move playback slate pairing + keyboard + focus (PHASE 12f)
+39. `35ee6ec` ui: insights gate light-mode + focus states (PHASE 12g)
+40. `b5f907f` ui: round history light-mode + focus states (PHASE 12h)
+41. `6862c17` ui: timer warning/critical light contrast + dead-code cleanup (PHASE 7d)
+42. `6c3a99e` ui: evaluating loader contrast + install banner targets (PHASE 16a)
+43. `1607dbb` ui: route-level error/invite/duel/callback/replay pairing + focus (PHASE 15c)
+44. `91def1f` ui: menus/nav/config pairing + focus (PHASE 4e)
+45. `f2e7367` ui: coach game modals pairing + board frame + timer contrast (PHASE 10b)
+46. `2fa6112` ui: team-b neutral slate tokens + lock Duo/CTA decisions (W1)
+47. `c2af2d5` ui: Duo de-purple to neutral slate markers + legend (W2)
+48. `234850d` ui: home hierarchy + locked green CTA + label contrast (W3)
+49. `a4fb60a` ui: responsive dvh shells across routes (W4)
+50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
+51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
+52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
+
+## What was intentionally NOT changed
+Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
+Stockfish/eval, billing/ads, push, persistence, APIs. All edits are className/ARIA-only
+except `globals.css` token additions and two audit docs.
+
+## Validation per commit
+`npx tsc --noEmit` before every commit; targeted jest suites where they exist
+(Toast, BackButton, ColorPicker incl. assertion update, PendingMovesRow, coach);
+production `npm run build` green after PHASE 3. Full suite + build + safety sweep at close.
+---
+
 # AI Coach Setup + OAuth PKCE Fix — Implementation Progress (2026-09-17)
 
 ## Status legend

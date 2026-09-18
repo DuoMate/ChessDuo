@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Check, Crown, XCircle } from 'lucide-react'
 import { classifyMove, MoveClassification } from '@/lib/moveClassifier'
 
 interface MoveInsightsProps {
@@ -33,10 +34,12 @@ export function MoveInsights({
       <motion.div
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
-        className="mt-3 pt-3 border-t border-slate-700/50"
+        className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50"
       >
         <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-center">
-          <p className="text-emerald-400 text-sm font-medium">✓ Both players synchronized</p>
+          <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium inline-flex items-center justify-center gap-1.5">
+            <Check size={14} aria-hidden="true" /> Both players synchronized
+          </p>
           <p className="text-slate-500 text-xs mt-1">You and your teammate chose the same move</p>
         </div>
       </motion.div>
@@ -61,16 +64,16 @@ export function MoveInsights({
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
-      className="mt-3 pt-3 border-t border-slate-700/50 space-y-2"
+      className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 space-y-2"
     >
       {bestEngineMove && (
-        <div className="bg-slate-800/60 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+        <div className="bg-blue-500/5 border border-blue-200 dark:border-blue-500/30 dark:bg-slate-800/60 rounded-lg p-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-slate-400 shrink-0">Engine best:</span>
-            <span className="min-w-0 truncate text-slate-100 text-sm font-bold">{bestEngineMove}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Engine best:</span>
+            <span className="min-w-0 truncate text-slate-900 dark:text-slate-100 text-sm font-bold">{bestEngineMove}</span>
           </div>
           {bestEngineScore != null && (
-            <span className="shrink-0 text-xs text-blue-400">+{Math.round(bestEngineScore)}cp</span>
+            <span className="shrink-0 text-xs text-blue-600 dark:text-blue-400">+{Math.round(bestEngineScore)}cp</span>
           )}
         </div>
       )}
@@ -115,14 +118,23 @@ function InsightCard({
   return (
     <div className={`p-2 rounded-lg border text-sm ${isWinner ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
       <div className="flex items-center gap-1 mb-1">
-        <span className="min-w-0 truncate text-slate-100 font-bold">{move}</span>
+        <span className="min-w-0 truncate text-slate-900 dark:text-slate-100 font-bold">{move}</span>
         <span className="shrink-0 text-xs">{classification.icon}</span>
+        {isWinner ? (
+          <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-500 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-white">
+            <Crown size={9} aria-hidden="true" /> Selected
+          </span>
+        ) : (
+          <span className="ml-auto inline-flex shrink-0 items-center gap-0.5 rounded-full border border-rose-500/40 bg-rose-500/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-rose-600 dark:text-rose-300">
+            <XCircle size={9} aria-hidden="true" /> Rejected
+          </span>
+        )}
       </div>
-      <p className="text-xs text-slate-400 leading-tight">{classification.description}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{classification.description}</p>
       <div className="mt-1 flex items-center justify-between">
         <span className="text-xs text-slate-500">{accuracy.toFixed(0)}% · {loss.toFixed(0)}cp loss</span>
         {!isWinner && scoreDiff > 0 && (
-          <span className="text-xs text-amber-400">{scoreDiff.toFixed(0)}cp worse</span>
+          <span className="text-xs text-amber-600 dark:text-amber-400">{scoreDiff.toFixed(0)}cp worse</span>
         )}
       </div>
     </div>

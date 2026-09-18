@@ -47,15 +47,15 @@ export function MatchTimer({ seconds, isActive, totalSeconds }: MatchTimerProps)
             animate={{ strokeDashoffset: circumference - progress }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
             strokeLinecap="round"
-            className={isCritical ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-amber-600'}
+            className={isCritical ? 'text-rose-600 dark:text-rose-500' : isWarning ? 'text-amber-600 dark:text-amber-500' : 'text-amber-600'}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.span
             className={`text-[11px] md:text-xs font-bold font-game ${
               !isActive ? 'text-slate-400 dark:text-slate-500' :
-              isCritical ? 'text-rose-500' :
-              isWarning ? 'text-amber-500' :
+              isCritical ? 'text-rose-600 dark:text-rose-500' :
+              isWarning ? 'text-amber-600 dark:text-amber-500' :
               'text-amber-600'
             }`}
             animate={isCritical ? { opacity: [1, 0.6, 1] } : { opacity: 1 }}

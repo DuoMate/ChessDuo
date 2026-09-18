@@ -59,7 +59,7 @@ export function CoachSetup({ initialLevel, initialColor, onStart, onBack }: Coac
         type="button"
         onClick={() => onStart(level, color)}
         aria-label="Start AI Coach"
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-400 text-sm font-bold text-white shadow-[0_4px_24px_rgba(59,130,246,0.35)] transition-all duration-200 hover:from-blue-400 hover:to-blue-300 active:scale-[0.97]"
+        className="focus-ring flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-sm font-bold text-white shadow-[0_4px_24px_rgba(16,185,129,0.35)] transition-all duration-200 hover:from-emerald-400 hover:to-green-500 active:scale-[0.97]"
       >
         <Play size={20} strokeWidth={2.5} fill="currentColor" aria-hidden="true" />
         Start AI Coach
@@ -67,7 +67,7 @@ export function CoachSetup({ initialLevel, initialColor, onStart, onBack }: Coac
       <button
         type="button"
         onClick={onBack}
-        className="min-h-[44px] w-full rounded-xl text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+        className="focus-ring min-h-[44px] w-full rounded-xl text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
       >
         Back
       </button>

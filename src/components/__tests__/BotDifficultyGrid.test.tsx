@@ -47,12 +47,12 @@ describe('BotDifficultyGrid', () => {
     expect(onSelect).toHaveBeenCalledWith(5)
   })
 
-  it('applies the blue-glow selected class only to the selected card', () => {
+  it('applies the brand-token selected class only to the selected card', () => {
     render(<BotDifficultyGrid selectedLevel={1} onSelect={jest.fn()} />)
     const easy = screen.getByRole('radio', { name: /easy difficulty/i })
     const hard = screen.getByRole('radio', { name: /hard difficulty/i })
-    expect(easy.className).toContain('border-blue-500')
-    expect(hard.className).not.toContain('border-blue-500')
+    expect(easy.className).toContain('border-[var(--color-brand)]')
+    expect(hard.className).not.toContain('border-[var(--color-brand)]')
   })
 
   it('renders inside a radiogroup for screen readers', () => {

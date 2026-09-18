@@ -49,23 +49,23 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
 
   if (loading) {
     return (
-    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <History size={18} className="text-white" />
             </div>
-            <h2 className="text-lg font-bold text-white">Match History</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Match History</h2>
           </div>
           {onClose && (
-            <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-              <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
+            <button onClick={onClose} aria-label="Close match history" className="focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              <span className="text-slate-500 dark:text-slate-400 text-lg" aria-hidden="true">&times;</span>
             </button>
           )}
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
           <Spinner size="md" />
-          <p className="text-slate-400 text-sm">Loading match history…</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Loading match history…</p>
         </div>
       </div>
     )
@@ -73,22 +73,22 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
 
   if (loadError) {
     return (
-    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <History size={18} className="text-white" aria-hidden="true" />
             </div>
-            <h2 className="text-lg font-bold text-white">Match History</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Match History</h2>
           </div>
           {onClose && (
-            <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-              <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
+            <button onClick={onClose} aria-label="Close match history" className="focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              <span className="text-slate-500 dark:text-slate-400 text-lg" aria-hidden="true">&times;</span>
             </button>
           )}
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-2 px-4 text-center">
-          <p role="alert" className="text-sm font-medium text-slate-300">Couldn&apos;t load your match history.</p>
+          <p role="alert" className="text-sm font-medium text-slate-700 dark:text-slate-300">Couldn&apos;t load your match history.</p>
           <p className="text-xs text-slate-500">Check your connection and try again.</p>
           <button
             onClick={() => {
@@ -96,7 +96,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
               setLoading(true)
               setRetryKey((k) => k + 1)
             }}
-            className="mt-2 min-h-[44px] px-6 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-500"
+            className="focus-ring mt-2 min-h-[44px] px-6 py-2 rounded-xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-500"
           >
             Retry
           </button>
@@ -106,18 +106,18 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-white">
+    <div className="flex flex-col h-full min-h-full bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <History size={18} className="text-white" />
           </div>
-          <h2 className="text-lg font-bold text-white">Match History</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Match History</h2>
         </div>
         {onClose && (
-          <button onClick={onClose} aria-label="Close match history" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span className="text-slate-400 text-lg" aria-hidden="true">&times;</span>
+          <button onClick={onClose} aria-label="Close match history" className="focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+            <span className="text-slate-500 dark:text-slate-400 text-lg" aria-hidden="true">&times;</span>
           </button>
         )}
       </div>
@@ -131,32 +131,32 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-3 gap-2"
           >
-            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-white border border-slate-200 shadow-sm dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <Target size={14} className="text-blue-400" />
+                <Target size={14} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <p className="text-lg font-bold text-white">{playerStats.totalGames}</p>
-              <p className="text-xs text-slate-400">Games</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{playerStats.totalGames}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Games</p>
             </div>
-            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-white border border-slate-200 shadow-sm dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <TrendingUp size={14} className="text-emerald-400" />
+                <TrendingUp size={14} className="text-emerald-600 dark:text-emerald-400" />
               </div>
               <p className="text-sm font-bold">
-                <span className="text-emerald-400">{playerStats.wins}</span>
-                <span className="text-slate-500">/</span>
-                <span className="text-rose-400">{playerStats.losses}</span>
-                <span className="text-slate-500">/</span>
-                <span className="text-amber-400">{playerStats.draws}</span>
+                <span className="text-emerald-600 dark:text-emerald-400">{playerStats.wins}</span>
+                <span className="text-slate-400 dark:text-slate-500">/</span>
+                <span className="text-rose-600 dark:text-rose-400">{playerStats.losses}</span>
+                <span className="text-slate-400 dark:text-slate-500">/</span>
+                <span className="text-amber-600 dark:text-amber-400">{playerStats.draws}</span>
               </p>
-              <p className="text-xs text-slate-400">W/L/D</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">W/L/D</p>
             </div>
-            <div className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl text-center">
+            <div className="bg-white border border-slate-200 shadow-sm dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none p-3 rounded-2xl text-center">
               <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <Clock size={14} className="text-purple-400" />
+                <Clock size={14} className="text-purple-600 dark:text-purple-400" />
               </div>
-              <p className="text-lg font-bold text-white">{Math.round(playerStats.avgSyncRate * 100)}%</p>
-              <p className="text-xs text-slate-400">Avg Sync</p>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{Math.round(playerStats.avgSyncRate * 100)}%</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Avg Sync</p>
             </div>
           </motion.div>
         )}
@@ -164,15 +164,15 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
         {/* Games List */}
         {games.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-700/50 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center">
               <History size={24} className="text-slate-400" />
             </div>
-            <p className="text-slate-300 text-sm font-medium mb-1">No matches yet</p>
+            <p className="text-slate-700 dark:text-slate-300 text-sm font-medium mb-1">No matches yet</p>
             <p className="text-slate-500 text-xs">Complete a game to see it here</p>
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">Recent Games</p>
+            <p className="text-xs font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">Recent Games</p>
             {games.map((game, i) => {
               const playerLabel = game.player_labels
               const playerColor = playerLabel
@@ -181,11 +181,11 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
               const isDraw = game.winner === 'DRAW'
               const isWin = playerColor ? game.winner === playerColor : game.winner === 'WHITE'
               const resultBg = isDraw ? 'bg-amber-500/20' : isWin ? 'bg-emerald-500/20' : 'bg-rose-500/20'
-              const resultColor = isDraw ? 'text-amber-400' : isWin ? 'text-emerald-400' : 'text-rose-400'
+              const resultColor = isDraw ? 'text-amber-600 dark:text-amber-400' : isWin ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               const resultText = isDraw ? 'Draw' : isWin ? 'You Win' : 'You Lose'
-              const icon = isDraw ? (<Handshake size={14} aria-hidden="true" className="text-amber-400" />)
-                : isWin ? (<Trophy size={14} aria-hidden="true" className="text-emerald-400" />)
-                : (<Skull size={14} aria-hidden="true" className="text-rose-400" />)
+              const icon = isDraw ? (<Handshake size={14} aria-hidden="true" className="text-amber-600 dark:text-amber-400" />)
+                : isWin ? (<Trophy size={14} aria-hidden="true" className="text-emerald-600 dark:text-emerald-400" />)
+                : (<Skull size={14} aria-hidden="true" className="text-rose-600 dark:text-rose-400" />)
 
               return (
               <motion.div
@@ -197,7 +197,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                 // animations alive on open. Offscreen rows skip layout/paint via
                 // content-visibility until scrolled into view — order/appearance identical.
                 transition={{ delay: Math.min(i, 8) * 0.03 }}
-                className="bg-slate-800/50 border border-white/5 p-3 rounded-2xl hover:bg-slate-800/70 transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_80px]"
+                className="bg-white border border-slate-200 shadow-sm hover:bg-slate-50 dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none dark:hover:bg-slate-800/70 p-3 rounded-2xl transition-colors [content-visibility:auto] [contain-intrinsic-size:auto_80px]"
               >
                 <div className="flex items-center justify-between mb-2 gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -208,7 +208,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                       <span className={`text-sm font-semibold truncate block ${resultColor}`}>
                         {resultText}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <span><span aria-hidden="true">{game.is_online ? '🌐' : '🤖'}</span> {game.is_online ? 'Online' : 'Offline'}</span>
                         <span>·</span>
                         <span>{new Date(game.played_at).toLocaleDateString()}</span>
@@ -221,19 +221,19 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                       router.push(`/replay/${game.id}`)
                     }}
                     aria-label={`Replay game ${i + 1}: ${resultText}`}
-                    className="shrink-0 min-h-[44px] px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
+                    className="focus-ring shrink-0 min-h-[44px] px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-lg hover:bg-amber-500/20 transition-colors flex items-center gap-1 whitespace-nowrap"
                   >
                     Replay
                     <ChevronRight size={12} aria-hidden="true" />
                   </button>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-slate-400">
+                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                   <span>{game.game_over_reason ? reasonLabels[game.game_over_reason] || game.game_over_reason : 'Game Over'}</span>
                   <span>·</span>
                   <span>{game.white_moves} moves</span>
                   <span>·</span>
-                  <span className="text-emerald-400">
+                  <span className="text-emerald-600 dark:text-emerald-400">
                     Sync {(game.white_sync_rate * 100).toFixed(0)}%
                   </span>
                 </div>

@@ -17,7 +17,7 @@
 | `--color-success` | `#10b981` (emerald) |
 | `--color-danger` | `#ef4444` (red) |
 
-Same variables in dark mode use darker values (e.g. `--color-page-bg: #060816`).
+Same variables in dark mode use darker values (e.g. `--color-page-bg: #0a0e1a`).
 
 ## Tailwind Theme Extensions (`@theme inline`)
 - `--font-sans`: Geist Sans
@@ -79,5 +79,7 @@ Same variables in dark mode use darker values (e.g. `--color-page-bg: #060816`).
 - Focus rings on interactive elements
 
 ## Recent Changes
+- **2026-09-17**: UI revamp close-out — History/HistoryPage/Profile/ProfilePage/Friends/FriendsPage panels + premium page light-mode pairing; settings/chat/lobby focus states; chat own-message light contrast fix; 4-player lobby keyboard-operable cards; Duo resolution surfaces (comparison/resolved/insights) with SELECTED/REJECTED badges. Fixed stale dark `--color-page-bg` reference (`#060816` → `#0a0e1a`).
+- **2026-09-17**: UI revamp PHASE 3 — semantic presentation-only tokens added to `src/app/globals.css` (BRAND/TEXT/SURFACES/BORDERS/GAME-STATES/PREMIUM/AI-COACH roles, light + dark pairs, radius L-sm–pill, elevation subtle/card/modal). New `.focus-ring` shared utility + `prefers-reduced-motion` guard for loading bar. Existing variables preserved. Consume via `bg-[var(--color-…)]` pattern.
 - **2026-07-19**: Logo replacement — HeaderBar logo changed from Crown icon to image mark (`/logo.png`).
 - **2026-07-11**: Home page UI revamp — new dark theme (#0a0e1a), blue accent for selected states, green gradient Play button, horizontal time pills, game mode cards with team icons, bot difficulty selector with dot indicators, bottom navigation bar (Home/History/Friends/Profile).

@@ -25,7 +25,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
   const isDisabled = (tab: BoardTab) => disabledTabs.includes(tab)
   const inactiveTab = 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
   const tabClass = (tab: BoardTab, activeStyles: string, inactiveStyles: string = inactiveTab) =>
-    `relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color,opacity,transform] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 ${
+    `focus-ring relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color,opacity,transform] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 ${
       isDisabled(tab)
         ? 'text-slate-500 dark:text-slate-600 opacity-40 cursor-not-allowed'
         : activeTab === tab
@@ -92,7 +92,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
         <button
           type="button"
           onClick={onBackMove}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="focus-ring flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           aria-label="Previous move"
         >
           <ChevronLeft size={18} strokeWidth={2.5} />
@@ -103,7 +103,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
         <button
           type="button"
           onClick={onForwardMove}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="focus-ring flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           aria-label="Next move"
         >
           <ChevronRight size={18} strokeWidth={2.5} />

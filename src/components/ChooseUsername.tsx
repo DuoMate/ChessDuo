@@ -143,7 +143,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[var(--color-page-bg)] p-4">
+    <div className="min-h-dvh flex items-center justify-center bg-[radial-gradient(ellipse_at_top,rgba(245,158,11,0.16),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(99,102,241,0.14),transparent_24%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.12),transparent_28%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.1),transparent_24%)] bg-gray-50 dark:bg-[var(--color-page-bg)] p-4">
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/70 dark:border-slate-700/70 p-6 sm:p-8 rounded-[30px] shadow-[0_24px_90px_rgba(2,6,23,0.25)] w-full max-w-md">
         <div className="flex flex-col items-center mb-2">
           <ChessDuoLogo size="lg" />
@@ -196,7 +196,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
             </div>
             {usernameMessage && username.trim() && (
               <p role="status" className={`text-xs mt-1 ${
-                usernameStatus === 'available' ? 'text-green-500' : 'text-red-500 dark:text-red-400'
+                usernameStatus === 'available' ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-400'
               }`}>
                 {usernameMessage}
                 {usernameStatus === 'taken' && ' — try adding numbers or underscores.'}
@@ -210,7 +210,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
           </div>
 
           {error && (
-            <p role="alert" className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+            <p role="alert" className="text-red-600 dark:text-red-400 text-sm">{error}</p>
           )}
 
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-3 min-h-[44px]">
@@ -224,7 +224,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
               aria-checked={notifyEnabled}
               aria-label="Notify me about game invites"
               onClick={() => setNotifyEnabled(!notifyEnabled)}
-              className={`relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors`}
+              className={`focus-ring relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl transition-colors`}
             >
               <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifyEnabled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
                 <div className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifyEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -235,7 +235,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
           <button
             type="submit"
             disabled={loading || usernameStatus !== 'available'}
-            className="w-full min-h-[44px] p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 hover:-translate-y-0.5"
+            className="focus-ring w-full min-h-[44px] p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 hover:-translate-y-0.5"
           >
             {loading ? 'Creating profile...' : 'Continue'}
           </button>

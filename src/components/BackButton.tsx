@@ -33,7 +33,7 @@ export function BackButton({ label = 'Back', fallbackHref = '/', alwaysFallback 
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={handleClick}
-      className="flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+      className="focus-ring flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
       aria-label={label}
     >
       <ArrowLeft size={18} strokeWidth={2} />

@@ -19,7 +19,7 @@ function GoHomeButton() {
   return (
     <button
       onClick={() => router.push('/')}
-      className="flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+      className="focus-ring flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-2xl px-3 py-1.5 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
     >
       <ArrowLeft size={18} strokeWidth={2} />
       <span className="text-[11px] font-medium leading-none">Go Home</span>
@@ -150,10 +150,10 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-4">
               <div className="text-5xl mb-2">⚠️</div>
-              <h1 className="text-xl font-bold text-red-400">Cannot Add Yourself</h1>
+              <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Cannot Add Yourself</h1>
               <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
               <GoHomeButton />
             </div>
@@ -177,7 +177,7 @@ export default function InvitePageClient() {
       <>
         <InstallBanner />
         <ErrorBoundary>
-          <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+          <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-6">
               <div className="text-5xl mb-2">👥</div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
@@ -198,7 +198,7 @@ export default function InvitePageClient() {
     <>
       <InstallBanner />
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'loading' && (
             <div role="status" aria-live="polite" className="flex flex-col items-center gap-3 py-4">
@@ -217,7 +217,7 @@ export default function InvitePageClient() {
               <button
                 onClick={handleSendRequest}
                 disabled={sending}
-                className="min-h-[44px] w-full rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="focus-ring min-h-[44px] w-full rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {sending ? 'Sending...' : 'Send Friend Request'}
               </button>
@@ -228,7 +228,7 @@ export default function InvitePageClient() {
           {status === 'already_friends' && (
             <>
               <div className="text-5xl mb-2">🤝</div>
-              <h1 className="text-2xl font-bold text-yellow-400">Already Friends!</h1>
+              <h1 className="text-2xl font-bold text-amber-600 dark:text-yellow-400">Already Friends!</h1>
               <p className="text-gray-500 dark:text-gray-400">
                 {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
               </p>
@@ -239,7 +239,7 @@ export default function InvitePageClient() {
           {status === 'sent' && (
             <>
               <div className="text-5xl mb-2">✉️</div>
-              <h1 className="text-2xl font-bold text-yellow-400">Friend Request Sent!</h1>
+              <h1 className="text-2xl font-bold text-amber-600 dark:text-yellow-400">Friend Request Sent!</h1>
               <p className="text-gray-500 dark:text-gray-400">
                 {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
               </p>
@@ -251,7 +251,7 @@ export default function InvitePageClient() {
           {status === 'error' && (
             <>
               <div className="text-5xl mb-2">⚠️</div>
-              <h1 className="text-xl font-bold text-red-400">Something went wrong</h1>
+              <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Something went wrong</h1>
               <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
               <GoHomeButton />
             </>

@@ -109,20 +109,20 @@ function ProfileContent({ playerId }: { playerId: string }) {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+      <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white p-4 pb-20">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Profile</h1>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                className="focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? (
                   <Sun size={20} className="text-amber-400" />
                 ) : (
-                  <Moon size={20} className="text-sky-400" />
+                  <Moon size={20} className="text-sky-500" />
                 )}
               </button>
               <BackButton alwaysFallback />
@@ -136,11 +136,11 @@ function ProfileContent({ playerId }: { playerId: string }) {
           >
             {/* Profile Card */}
             {editingProfile ? (
-              <div className="p-4 bg-slate-800/50 border border-white/5 rounded-2xl">
+              <div className="p-4 bg-white border border-slate-200 shadow-sm dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none rounded-2xl">
                 <ProfileEditor playerId={playerId} />
                 <button
                   onClick={() => setEditingProfile(false)}
-                  className="mt-3 w-full min-h-[44px] text-sm text-slate-400 hover:text-white transition-colors"
+                  className="focus-ring mt-3 w-full min-h-[44px] text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
                 >
                   Done
                 </button>
@@ -148,64 +148,64 @@ function ProfileContent({ playerId }: { playerId: string }) {
             ) : (
               <button
                 onClick={() => setEditingProfile(true)}
-                className="w-full p-4 bg-slate-800/50 border border-white/5 rounded-2xl flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
+                className="focus-ring w-full p-4 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 dark:bg-slate-800/50 dark:border-white/5 dark:shadow-none dark:hover:bg-slate-800/70 rounded-2xl flex items-center gap-3 transition-colors"
               >
                 <InitialsAvatar username={username || 'U'} size="sm" src={avatarUrl} premium={isPremium} />
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{username || 'Player'}</p>
-                  <p className="text-xs text-slate-400">Tap to edit profile</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{username || 'Player'}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Tap to edit profile</p>
                 </div>
-                <Pencil size={16} className="text-slate-500 flex-shrink-0" />
+                <Pencil size={16} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
               </button>
             )}
 
             {/* Share Profile */}
             <button
               onClick={copyProfileLink}
-              className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+              className="focus-ring w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <Share2 size={20} className="text-amber-400" />
+                <Share2 size={20} className="text-amber-600 dark:text-amber-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-amber-400">{profileCopied ? 'Link copied!' : 'Share Profile'}</p>
-                <p className="text-xs text-slate-400">Share your profile with friends</p>
+                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{profileCopied ? 'Link copied!' : 'Share Profile'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Share your profile with friends</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             <RateChessDuoRow />
 
             {/* Upgrade to Premium */}
             {checkingPremium ? (
-              <div className="w-full p-4 bg-slate-800/30 border border-white/5 rounded-2xl flex justify-center">
+              <div className="w-full p-4 bg-white border border-slate-200 shadow-sm dark:bg-slate-800/30 dark:border-white/5 dark:shadow-none rounded-2xl flex justify-center">
                 <Spinner size="sm" />
               </div>
             ) : !isPremium ? (
               <button
                 onClick={() => router.push('/premium')}
-                className="w-full p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl flex items-center gap-3 hover:from-purple-500/15 hover:to-indigo-500/15 transition-all"
+                className="focus-ring w-full p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl flex items-center gap-3 hover:from-purple-500/15 hover:to-indigo-500/15 transition-all"
               >
                 <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                  <Crown size={20} className="text-purple-400" />
+                  <Crown size={20} className="text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-semibold text-purple-400">Upgrade to Premium</p>
-                  <p className="text-xs text-slate-400">Unlock powerful features</p>
+                  <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">Upgrade to Premium</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Unlock powerful features</p>
                 </div>
-                <span className="text-slate-500 shrink-0">&rsaquo;</span>
+                <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
               </button>
             ) : (
               <button
                 onClick={() => router.push('/premium')}
-                className="w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+                className="focus-ring w-full p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                  <Crown size={20} className="text-amber-400" />
+                  <Crown size={20} className="text-amber-600 dark:text-amber-400" />
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-semibold text-amber-400">Premium Active</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Premium Active</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     {subscriptionStatus?.subscriptionPlan === 'yearly' ? 'Annual plan' : 'Monthly plan'}
                     {subscriptionStatus?.subscriptionExpiryDate && (
                       <> · Renews {new Date(subscriptionStatus.subscriptionExpiryDate).toLocaleDateString()}</>
@@ -213,83 +213,83 @@ function ProfileContent({ playerId }: { playerId: string }) {
                     · View premium features
                   </p>
                 </div>
-                <span className="text-slate-500 shrink-0">&rsaquo;</span>
+                <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
               </button>
             )}
 
             {/* View All Match History */}
             <button
               onClick={() => router.push('/history')}
-              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+              className="focus-ring w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <History size={20} className="text-blue-400" />
+                <History size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-blue-400">View All Match History</p>
-                <p className="text-xs text-slate-400">Check your past games</p>
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">View All Match History</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Check your past games</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Settings */}
             <button
               onClick={() => router.push('/settings')}
-              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+              className="focus-ring w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={20} className="text-blue-400" />
+                <ShieldCheck size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-blue-400">Settings</p>
-                <p className="text-xs text-slate-400">Sound, theme &amp; preferences</p>
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Settings</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Sound, theme &amp; preferences</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Manage Account */}
             <button
               onClick={() => router.push('/delete-account')}
-              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+              className="focus-ring w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={20} className="text-blue-400" />
+                <ShieldCheck size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-blue-400">Manage Account</p>
-                <p className="text-xs text-slate-400">Security, privacy &amp; delete</p>
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Manage Account</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Security, privacy &amp; delete</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Legal */}
             <button
               onClick={() => router.push('/privacy')}
-              className="w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
+              className="focus-ring w-full p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3 hover:bg-blue-500/10 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={20} className="text-blue-400" />
+                <ShieldCheck size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-blue-400">Legal</p>
-                <p className="text-xs text-slate-400">Privacy policy &amp; terms of service</p>
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Legal</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Privacy policy &amp; terms of service</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
 
             {/* Sign Out */}
             <button
               onClick={handleSignOut}
-              className="w-full p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 hover:bg-rose-500/15 transition-colors"
+              className="focus-ring w-full p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 hover:bg-rose-500/15 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center flex-shrink-0">
-                <LogOut size={20} className="text-rose-400" />
+                <LogOut size={20} className="text-rose-600 dark:text-rose-400" />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-rose-400">Sign Out</p>
-                <p className="text-xs text-slate-400">Log out from your account</p>
+                <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">Sign Out</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Log out from your account</p>
               </div>
-              <span className="text-slate-500 shrink-0">&rsaquo;</span>
+              <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
           </motion.div>
         </div>

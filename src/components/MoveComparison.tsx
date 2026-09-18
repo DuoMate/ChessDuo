@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Crown, XCircle, Swords } from 'lucide-react'
+import { Crown, XCircle, Swords, Users } from 'lucide-react'
 import { MoveComparison } from '@/features/shared/gameTypes'
 import { InsightsGate } from './InsightsGate'
 
@@ -34,7 +34,7 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           className="w-full"
         >
-          <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl p-4 shadow-xl border border-slate-700/50 w-full">
+          <div className="bg-white border border-slate-200 shadow-xl dark:bg-slate-900/80 dark:border-slate-700/50 dark:shadow-xl backdrop-blur-sm rounded-xl p-4 w-full">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -56,14 +56,17 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                   >
                     <Crown size={20} className="text-amber-600 dark:text-amber-400" />
                   </motion.div>
-                  <h3 className="text-emerald-400 font-semibold text-sm uppercase tracking-wider">
+                  <h3 className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm uppercase tracking-wider">
                     You Won This Turn!
                   </h3>
                 </div>
               ) : (
-                <h3 className="text-blue-400 font-semibold text-sm uppercase tracking-wider">
-                  Teammate Won This Turn!
-                </h3>
+                <div className="flex items-center justify-center gap-2">
+                  <Users size={18} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                  <h3 className="text-blue-600 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">
+                    Teammate Won This Turn!
+                  </h3>
+                </div>
               )}
             </motion.div>
 
@@ -77,12 +80,12 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                     ? 'bg-emerald-500/10 border-emerald-500/40'
                     : !humanWon && !isSync
                     ? 'bg-rose-500/10 border-rose-500/40'
-                    : 'bg-slate-800/40 border-slate-700/40'
+                    : 'bg-slate-100 border-slate-200 dark:bg-slate-800/40 dark:border-slate-700/40'
                 }`}
               >
                 <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-slate-100 font-bold text-sm">You</span>
+                    <span className="text-slate-900 dark:text-slate-100 font-bold text-sm">You</span>
                     {isSync ? null : humanWon ? (
                       <motion.span
                         initial={{ scale: 0 }}
@@ -111,9 +114,9 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                   </span>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-slate-100 text-base font-bold font-mono">{comparison.player1Move}</span>
+                  <span className="text-slate-900 dark:text-slate-100 text-base font-bold font-mono">{comparison.player1Move}</span>
                   <motion.span
-                    className={`font-bold text-xl font-game ${humanWon ? 'text-emerald-400' : 'text-slate-500'}`}
+                    className={`font-bold text-xl font-game ${humanWon ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}
                     key={humanAccuracy}
                     initial={{ scale: 1.3 }}
                     animate={{ scale: 1 }}
@@ -132,12 +135,12 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                     ? 'bg-emerald-500/10 border-emerald-500/40'
                     : humanWon && !isSync
                     ? 'bg-rose-500/10 border-rose-500/40'
-                    : 'bg-slate-800/40 border-slate-700/40'
+                    : 'bg-slate-100 border-slate-200 dark:bg-slate-800/40 dark:border-slate-700/40'
                 }`}
               >
                 <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-slate-300 font-bold text-sm">Teammate</span>
+                    <span className="text-slate-600 dark:text-slate-300 font-bold text-sm">Teammate</span>
                     {isSync ? null : !humanWon ? (
                       <motion.span
                         initial={{ scale: 0 }}
@@ -166,9 +169,9 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                   </span>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-slate-300 text-base font-bold font-mono">{comparison.player2Move}</span>
+                  <span className="text-slate-600 dark:text-slate-300 text-base font-bold font-mono">{comparison.player2Move}</span>
                   <motion.span
-                    className={`font-bold text-xl font-game ${!humanWon ? 'text-emerald-400' : 'text-slate-500'}`}
+                    className={`font-bold text-xl font-game ${!humanWon ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}
                     key={teammateAccuracy}
                     initial={{ scale: 1.3 }}
                     animate={{ scale: 1 }}
@@ -187,12 +190,12 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
               </div>
             )}
 
-            <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center justify-center gap-2">
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-center gap-2">
               <span className="text-xs text-slate-500">Centipawn Loss</span>
-              <span className="text-xs text-slate-400">
-                You: <span className="text-slate-100 font-medium">{comparison.player1Loss}cp</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                You: <span className="text-slate-900 dark:text-slate-100 font-medium">{comparison.player1Loss}cp</span>
                 {' \u00B7 '}
-                Teammate: <span className="text-slate-100 font-medium">{comparison.player2Loss}cp</span>
+                Teammate: <span className="text-slate-900 dark:text-slate-100 font-medium">{comparison.player2Loss}cp</span>
               </span>
             </div>
 

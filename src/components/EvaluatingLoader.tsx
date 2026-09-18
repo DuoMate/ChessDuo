@@ -12,13 +12,15 @@ export function EvaluatingLoader() {
   const timelineRef = useRef<Timeline | null>(null)
 
   useEffect(() => {
+    // Respect reduced-motion: render the static loader without looping animation.
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const tl = new Timeline({ loop: true, autoplay: true })
     timelineRef.current = tl
 
     tl.add(leftPieceRef.current!, { translateY: [0, -4, 0], scale: [1, 1.05, 1], duration: 1200, easing: 'easeInOutSine' }, 0)
     tl.add(rightPieceRef.current!, { translateY: [0, -4, 0], scale: [1, 1.05, 1], duration: 1200, easing: 'easeInOutSine' }, 300)
     tl.add(swordRef.current!, { rotate: [0, 360], scale: [1, 1.12, 1], duration: 2000, easing: 'linear' }, 0)
-    tl.add(titleRef.current!, { color: [{ value: '#facc15' }, { value: '#fbbf24' }], duration: 3000, easing: 'easeInOutSine' }, 0)
+    tl.add(titleRef.current!, { color: [{ value: '#d97706' }, { value: '#f59e0b' }], duration: 3000, easing: 'easeInOutSine' }, 0)
     tl.add(subtitleRef.current!, { opacity: [0.35, 1, 0.35], duration: 2800, easing: 'easeInOutSine' }, 0)
 
     return () => {
@@ -28,7 +30,7 @@ export function EvaluatingLoader() {
   }, [])
 
   return (
-    <div className="w-full bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-yellow-500/20 p-5 text-center overflow-hidden">
+    <div className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-yellow-500/20 p-5 text-center overflow-hidden">
       <div className="flex items-center justify-center gap-3 mb-3">
         <span
           ref={leftPieceRef}
@@ -53,11 +55,11 @@ export function EvaluatingLoader() {
         </span>
       </div>
 
-      <p ref={titleRef} className="text-yellow-400 text-sm font-medium mb-1.5">
+      <p ref={titleRef} className="text-amber-600 dark:text-yellow-400 text-sm font-medium mb-1.5">
         Evaluating moves...
       </p>
 
-      <p ref={subtitleRef} className="text-gray-400 dark:text-gray-500 text-xs mt-2">
+      <p ref={subtitleRef} className="text-slate-500 dark:text-slate-400 text-xs mt-2">
         Who made the better choice?
       </p>
     </div>

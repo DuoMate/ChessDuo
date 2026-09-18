@@ -47,25 +47,25 @@ const RoundHistoryRow = memo(function RoundHistoryRow({ e }: { e: RoundHistoryEn
       className={`flex items-center gap-3 p-2.5 rounded-xl border ${
         e.isCurrent
           ? 'border-blue-500/40 bg-blue-500/10'
-          : 'border-slate-700/60 bg-slate-800/40'
+          : 'border-slate-200 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-800/40 dark:shadow-none'
       }`}
     >
       <div className="flex flex-col items-center min-w-[44px]">
-        <span className="text-xs font-bold uppercase text-slate-400">Round</span>
-        <span className="text-base font-extrabold text-slate-100">{e.round}</span>
+        <span className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Round</span>
+        <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">{e.round}</span>
       </div>
-      <div className="w-9 h-9 rounded-lg bg-slate-800/80 flex items-center justify-center text-lg">
+      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800/80 flex items-center justify-center text-lg text-slate-900 dark:text-slate-100">
         {pieceFor(e.moveSan, e.pieceColor)}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-slate-400 truncate">{e.playerLabel}</p>
-        <p className="text-sm font-bold text-slate-100">{e.moveSan}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{e.playerLabel}</p>
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{e.moveSan}</p>
       </div>
-      <div className={`text-xs font-bold ${e.evalDelta > 0 ? 'text-emerald-300' : e.evalDelta < 0 ? 'text-rose-300' : 'text-slate-400'}`}>
+      <div className={`text-xs font-bold ${e.evalDelta > 0 ? 'text-emerald-600 dark:text-emerald-300' : e.evalDelta < 0 ? 'text-rose-600 dark:text-rose-300' : 'text-slate-500 dark:text-slate-400'}`}>
         {e.evalDelta > 0 ? '+' : ''}{e.evalDelta.toFixed(2)}
       </div>
       {e.isCurrent && (
-        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30">
           Current
         </span>
       )}
@@ -98,22 +98,22 @@ function RoundHistorySidebarInner({ open, entries, onClose, onViewFullHistory }:
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-slate-900/95 border-l border-slate-700/70 backdrop-blur-xl flex flex-col"
+            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white/95 border-l border-slate-200 dark:bg-slate-900/95 dark:border-slate-700/70 backdrop-blur-xl flex flex-col"
           >
-            <header className="flex items-center justify-between p-4 border-b border-slate-700/60">
+            <header className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700/60">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
                   <History size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-white">Round History</h3>
-                  <p className="text-xs text-slate-400">View past rounds</p>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">Round History</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">View past rounds</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-white/10 transition-colors text-slate-400"
+                className="focus-ring min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-slate-500 dark:text-slate-400"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -133,11 +133,11 @@ function RoundHistorySidebarInner({ open, entries, onClose, onViewFullHistory }:
             </div>
 
             {onViewFullHistory && (
-              <footer className="p-3 border-t border-slate-700/60">
+              <footer className="p-3 border-t border-slate-200 dark:border-slate-700/60">
                 <button
                   type="button"
                   onClick={onViewFullHistory}
-                  className="w-full min-h-[44px] rounded-xl text-sm font-bold text-slate-200 bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/60 transition-colors"
+                  className="focus-ring w-full min-h-[44px] rounded-xl text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:text-slate-200 dark:bg-slate-800/70 dark:hover:bg-slate-700/70 dark:border-slate-700/60 transition-colors"
                 >
                   View Full History
                 </button>

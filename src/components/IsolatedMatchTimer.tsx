@@ -74,7 +74,7 @@ function IsolatedMatchTimerInner({ getTimeRemaining, isActive }: IsolatedMatchTi
           <circle cx="12" cy="12" r="9" />
           <polyline points="12 7 12 12 15 14" />
         </svg>
-        <span className="font-game text-sm font-bold" aria-live="off">
+        <span className="font-game text-sm font-bold tabular-nums" aria-live="off">
           {mins}:{secs}
         </span>
       </div>

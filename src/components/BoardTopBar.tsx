@@ -60,11 +60,11 @@ function sortPieces(pieces: string[]): string[] {
 const AvatarTile = memo(function AvatarTile({ player, team }: { player: BoardTopBarPlayer; team: 'WHITE' | 'BLACK' }) {
   const isWhite = team === 'WHITE'
   const ringClass = isWhite
-    ? 'ring-blue-500/70'
-    : 'ring-purple-500/70'
+    ? 'ring-[var(--color-team-a)]'
+    : 'ring-[var(--color-team-b)]'
   const dotClass = isWhite
-    ? 'bg-blue-400'
-    : 'bg-purple-400'
+    ? 'bg-[var(--color-team-a)]'
+    : 'bg-[var(--color-team-b)]'
   const checkClass = 'bg-emerald-500 text-white'
 
   const GRACE_PERIOD = 5000
@@ -193,7 +193,7 @@ function BoardTopBarInner({
                   <circle cx="12" cy="12" r="9" />
                   <polyline points="12 7 12 12 15 14" />
                 </svg>
-                <span className="font-game text-sm font-bold">
+                <span className="font-game text-sm font-bold tabular-nums">
                   {Math.floor(matchTimeRemaining / 60)}:{(matchTimeRemaining % 60).toString().padStart(2, '0')}
                 </span>
               </div>
@@ -228,7 +228,7 @@ function BoardTopBarInner({
               ))}
             </div>
             {advantage > 0 && (
-              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 ml-0.5">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
                 +{advantage}
               </span>
             )}
@@ -236,7 +236,7 @@ function BoardTopBarInner({
           <div className="shrink-0" />
           <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
             {advantage < 0 && (
-              <span className="text-[11px] font-bold text-emerald-500 dark:text-emerald-400 mr-0.5">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mr-0.5">
                 +{Math.abs(advantage)}
               </span>
             )}
@@ -262,11 +262,11 @@ function BoardTopBarInner({
             className="flex items-center justify-center mt-1 will-change-transform"
             style={{ willChange: 'transform, opacity' }}
           >
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-blue-400/40 bg-blue-400/10 dark:border-blue-500/30 dark:bg-blue-500/15' : 'border-purple-400/40 bg-purple-400/10 dark:border-purple-500/30 dark:bg-purple-500/15'}`}>
-              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-blue-600 dark:text-blue-300' : 'text-purple-600 dark:text-purple-300'}`}>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-[var(--color-team-a-border)] bg-[var(--color-team-a-soft)]' : 'border-[var(--color-team-b-border)] bg-[var(--color-team-b-soft)]'}`}>
+              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? '♔' : '♚'}
               </span>
-              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-blue-600 dark:text-blue-300' : 'text-purple-600 dark:text-purple-300'}`}>
+              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
               </span>
             </div>
@@ -290,7 +290,7 @@ function BoardTopBarInner({
               className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm bg-[var(--color-surface)] dark:bg-[var(--color-muted-bg)] text-slate-600 dark:text-slate-300 border-[var(--color-border)] will-change-transform"
               style={{ willChange: 'transform, opacity' }}
             >
-              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse shrink-0" />
+              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse motion-reduce:animate-none shrink-0" />
               <span className="truncate max-w-[min(90vw,480px)]">Opponent is thinking…</span>
             </motion.div>
           )}

@@ -68,7 +68,7 @@ export function DesktopSidebar({ unreadMessages }: DesktopSidebarProps) {
               onClick={() => handleNavigate(path)}
               disabled={!!navigatingTo}
               aria-current={active(path) ? 'page' : undefined}
-              className={`relative w-full min-h-[48px] flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
+              className={`focus-ring relative w-full min-h-[48px] flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${
                 active(path)
                   ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold'
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800/60 dark:hover:text-slate-200'

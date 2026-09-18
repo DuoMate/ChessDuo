@@ -92,7 +92,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
                 whileTap={{ scale: 0.97 }}
                 key={opt.seconds}
                 onClick={() => setSelectedTime(opt.seconds)}
-                className={`min-h-[60px] rounded-2xl border p-4 text-center transition-all ${
+                className={`focus-ring min-h-[60px] rounded-2xl border p-4 text-center transition-all ${
                   selectedTime === opt.seconds
                     ? 'border-amber-400 bg-amber-500/10 shadow-sm'
                     : 'border-slate-200/80 bg-slate-50/80 hover:border-slate-300 dark:border-slate-700/70 dark:bg-slate-800/70 dark:hover:border-slate-600'
@@ -100,9 +100,9 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
               >
                 <div className="mb-1 flex justify-center">
                   {opt.seconds <= 600 ? (
-                    <Zap size={24} className={selectedTime === opt.seconds ? 'text-amber-400' : 'text-gray-500'} />
+                    <Zap size={24} className={selectedTime === opt.seconds ? 'text-amber-500 dark:text-amber-400' : 'text-gray-500'} />
                   ) : (
-                    <Timer size={24} className={selectedTime === opt.seconds ? 'text-amber-400' : 'text-gray-500'} />
+                    <Timer size={24} className={selectedTime === opt.seconds ? 'text-amber-500 dark:text-amber-400' : 'text-gray-500'} />
                   )}
                 </div>
                 <div className="text-sm font-bold text-gray-900 dark:text-white">{opt.label}</div>
@@ -115,13 +115,13 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
               whileTap={{ scale: 0.97 }}
               onClick={handleCreate}
               disabled={creating}
-              className="flex-1 min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="focus-ring flex-1 min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {creating ? 'Creating...' : 'Send Challenge'}
             </motion.button>
             <button
               onClick={onClose}
-              className="min-h-[44px] rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="focus-ring min-h-[44px] rounded-2xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               Cancel
             </button>

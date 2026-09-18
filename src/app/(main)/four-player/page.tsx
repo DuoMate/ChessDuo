@@ -65,7 +65,7 @@ function FourPlayerContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
+      <div className="min-h-dvh bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-center space-y-4">
           <div className="text-5xl">⚠️</div>
           <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Error</h1>

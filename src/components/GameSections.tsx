@@ -143,7 +143,7 @@ function GameBoardSectionInner({
         className="w-full aspect-square flex-shrink-0 relative"
         style={{ maxWidth }}
       >
-        <div className="absolute inset-0 rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-900/30">
+        <div className="absolute inset-0 rounded-2xl ring-1 ring-slate-200 dark:ring-white/10 shadow-[0_0_40px_rgba(15,23,42,0.12)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-100 dark:bg-slate-900/30">
           {isMobile ? (
             <MobileChessBoard
               key={boardKey}

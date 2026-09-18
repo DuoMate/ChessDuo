@@ -952,7 +952,7 @@ export default function SetupPage() {
   )
 
   const chooseUsernameScreen = needsUsername && (
-    <div className="min-h-screen bg-[var(--color-page-bg)] text-white p-4 pb-20">
+    <div className="min-h-dvh bg-[var(--color-page-bg)] text-white p-4 pb-20">
       <div className="max-w-md mx-auto">
         <div className="mb-6">
           <BackButton label="Back" onClick={() => { setNeedsUsername(null); clearPendingAction(); router.push('/') }} />
@@ -976,7 +976,7 @@ export default function SetupPage() {
   if (gameMode === 'duel' && !duelFriend) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
+        <div className="min-h-dvh bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -1041,7 +1041,7 @@ export default function SetupPage() {
   if (gameMode === 'offline') {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
+        <div className="min-h-dvh bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white flex flex-col">
           <HeaderBar />
           <div className="flex-1 flex flex-col items-center justify-center p-4">
             <div className="max-w-md w-full">
@@ -1103,7 +1103,7 @@ export default function SetupPage() {
 if (!gameMode) {
   return (
     <ErrorBoundary>
-      <div className="relative flex min-h-screen flex-col bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white md:pl-[220px] lg:pl-[240px]">
+      <div className="relative flex min-h-dvh flex-col bg-white text-slate-900 dark:bg-[var(--color-page-bg)] dark:text-white md:pl-[220px] lg:pl-[240px]">
         <HeaderBar />
 
         {isMobile ? (
@@ -1111,13 +1111,13 @@ if (!gameMode) {
           <div className="md:hidden flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
             {/* Time Control */}
             <div className="mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Time Control</p>
               <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
             </div>
 
             {/* Game Mode */}
             <div className="mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Game Mode</p>
               <div className="space-y-1.5">
                 <GameModeCard
                   onClick={() => handleGameModeClick('coach')}
@@ -1158,7 +1158,7 @@ if (!gameMode) {
 
             {/* Join by Code */}
             <div className="mt-1 mb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Join by Code</p>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1183,7 +1183,7 @@ if (!gameMode) {
             </div>
 
             {joinError && (
-              <p role="alert" className="text-center text-xs font-medium text-red-400">{joinError}</p>
+              <p role="alert" className="text-center text-xs font-medium text-red-600 dark:text-red-400">{joinError}</p>
             )}
 
             {/* Configuration — slides in on Quick Play / Duo / AI Coach */}
@@ -1196,7 +1196,7 @@ if (!gameMode) {
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                   className="overflow-hidden mb-2"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Configuration</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Configuration</p>
                   <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[var(--color-page-bg)] p-5 shadow-2xl">
                     {/* Bot Difficulty */}
                     <section className="mb-4">
@@ -1241,11 +1241,7 @@ if (!gameMode) {
                 <button
                   onClick={handlePlay}
                   disabled={!!creatingTime}
-                  className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                    selectedGameMode === 'four'
-                      ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
-                      : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                  } ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  className={`focus-ring w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)] ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   {creatingTime ? (
                     <Spinner size="sm" className="border-white/30 border-t-white" />
@@ -1264,13 +1260,13 @@ if (!gameMode) {
             <div className="flex-1 flex flex-col px-4 pb-24 pt-2 max-w-lg mx-auto w-full min-h-0 overflow-y-auto">
               {/* Time Control */}
               <div className="mb-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Time Control</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Time Control</p>
                 <TimePills selectedTime={selectedTime} onSelect={setSelectedTime} />
               </div>
 
               {/* Game Mode */}
               <div className="mb-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Game Mode</p>
                 <div className="space-y-1.5">
                   <GameModeCard
                     onClick={() => handleGameModeClick('coach')}
@@ -1315,11 +1311,7 @@ if (!gameMode) {
                   <button
                     onClick={handlePlay}
                     disabled={!!creatingTime}
-                    className={`w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] ${
-                      selectedGameMode === 'four'
-                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)]'
-                        : 'bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-400 hover:to-blue-300 shadow-[0_4px_24px_rgba(59,130,246,0.35)]'
-                    } ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className={`focus-ring w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl text-white font-bold text-sm transition-all duration-200 active:scale-[0.97] bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-500 shadow-[0_4px_24px_rgba(16,185,129,0.35)] ${creatingTime ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
                     {creatingTime ? (
                       <Spinner size="sm" className="border-white/30 border-t-white" />
@@ -1333,7 +1325,7 @@ if (!gameMode) {
 
               {/* Join by Code */}
               <div className="mt-1 mb-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Join by Code</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Join by Code</p>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1346,7 +1338,7 @@ if (!gameMode) {
                   <button
                     onClick={handleJoinByCode}
                     disabled={joinLoading || !joinCode.trim()}
-                    className="min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
+                    className="focus-ring min-h-[44px] min-w-[80px] rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white font-bold text-sm transition-colors disabled:cursor-not-allowed"
                   >
                     {joinLoading ? (
                       <Spinner size="sm" className="border-white/30 border-t-white mx-auto" />
@@ -1358,7 +1350,7 @@ if (!gameMode) {
               </div>
 
               {joinError && (
-                <p role="alert" className="text-center text-xs font-medium text-red-400">{joinError}</p>
+                <p role="alert" className="text-center text-xs font-medium text-red-600 dark:text-red-400">{joinError}</p>
               )}
 
               {authOverlay}
@@ -1442,9 +1434,9 @@ function TimePills({ selectedTime, onSelect }: {
         <button
           key={opt.seconds}
           onClick={() => onSelect(opt.seconds)}
-          className={`flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
+          className={`focus-ring flex-1 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-[0.98] ${
             selectedTime === opt.seconds
-              ? 'bg-blue-600 text-white shadow-[var(--shadow-glow-blue-strong)]'
+              ? 'bg-[var(--color-brand)] text-white shadow-[var(--shadow-glow-blue-strong)]'
               : 'bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
           }`}
         >
@@ -1480,9 +1472,9 @@ function GameModeCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full min-h-[56px] flex items-center gap-2 p-2 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] ${
+      className={`focus-ring w-full min-h-[60px] flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left active:scale-[0.98] ${
         selected
-          ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10'
+          ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]'
           : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/40 hover:border-slate-400 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/60'
       }`}
     >
@@ -1526,7 +1518,7 @@ function GameModeCard({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
-          <span className="font-bold text-sm text-slate-900 dark:text-white">{title}</span>
+          <span className="font-bold text-[15px] text-slate-900 dark:text-white">{title}</span>
           {showStar && <span className="text-amber-500 text-xs shrink-0">★</span>}
           {premium && (
             <span className="inline-flex shrink-0 items-center justify-center rounded-md border border-amber-400/40 bg-gradient-to-br from-amber-400/20 to-amber-500/10 px-1.5 py-0.5">

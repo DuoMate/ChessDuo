@@ -43,12 +43,12 @@ function DuelContent() {
   if (!roomId || !roomCode || !playerId || !team) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">⚠️</div>
-            <h1 className="text-xl font-bold text-red-400">Invalid Duel Link</h1>
-            <p className="text-slate-400">Missing required parameters</p>
-            <button onClick={() => router.push('/')} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
+            <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Invalid Duel Link</h1>
+            <p className="text-slate-500 dark:text-slate-400">Missing required parameters</p>
+            <button onClick={() => router.push('/')} className="focus-ring min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
               Go Home
             </button>
           </div>
@@ -60,12 +60,12 @@ function DuelContent() {
   if (!isValidSession) {
     return (
       <ErrorBoundary>
-        <div className="min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
+        <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
             <div className="text-5xl">🔒</div>
-            <h1 className="text-xl font-bold text-red-400">Session Expired</h1>
-            <p className="text-slate-400">Please sign in again to continue.</p>
-            <button onClick={() => router.push('/')} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
+            <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Session Expired</h1>
+            <p className="text-slate-500 dark:text-slate-400">Please sign in again to continue.</p>
+            <button onClick={() => router.push('/')} className="focus-ring min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
               Go Home
             </button>
           </div>

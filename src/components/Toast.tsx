@@ -79,7 +79,11 @@ interface ToastContainerProps {
 
 function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed right-4 top-[max(16px,env(safe-area-inset-top,16px))] z-50 flex max-w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed right-4 top-[max(16px,env(safe-area-inset-top,16px))] z-50 flex max-w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2"
+    >
       <AnimatePresence>
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
@@ -115,7 +119,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       <p className="min-w-0 flex-1 break-words text-sm">{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-xl leading-none text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+        className="focus-ring flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center text-xl leading-none text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         aria-label="Dismiss"
       >
         ×

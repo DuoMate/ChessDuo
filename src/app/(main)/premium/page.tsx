@@ -264,7 +264,7 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-screen flex-col pb-20 bg-[var(--color-page-bg)] text-white">
+      <div className="flex min-h-dvh flex-col pb-20 bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
         <div className="flex-1 p-4">
           <div className="max-w-md mx-auto flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
@@ -272,7 +272,7 @@ export default function PremiumPage() {
                 <BackButton fallbackHref="/profile" alwaysFallback={isPremium} />
                 <div className="flex items-center gap-2">
                   <ChessDuoLogo size="md" />
-                  <span className="text-2xl font-black text-amber-400">Premium</span>
+                  <span className="text-2xl font-black text-amber-500 dark:text-amber-400">Premium</span>
                 </div>
               </div>
             </div>
@@ -282,11 +282,11 @@ export default function PremiumPage() {
             ) : (
               <>
                 {error && (
-                  <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">
+                  <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm text-center">
                     <p>{error}</p>
                     <button
                       onClick={() => runLoad()}
-                      className="mt-2 min-h-[44px] px-4 py-2 text-xs font-bold text-rose-300 underline underline-offset-2 transition-colors hover:text-rose-200"
+                      className="focus-ring mt-2 min-h-[44px] px-4 py-2 text-xs font-bold text-rose-600 dark:text-rose-300 underline underline-offset-2 transition-colors hover:text-rose-500 dark:hover:text-rose-200"
                     >
                       Retry
                     </button>
@@ -294,7 +294,7 @@ export default function PremiumPage() {
                 )}
 
                 {subscribing && (
-                  <div role="status" aria-live="polite" className="mb-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm text-center">
+                  <div role="status" aria-live="polite" className="mb-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 text-sm text-center">
                     Contacting Google Play… please don&apos;t close this screen.
                   </div>
                 )}
@@ -302,29 +302,29 @@ export default function PremiumPage() {
                   <>
                     {/* Native pricing cards */}
                     {!plansLoading && plans.length === 0 && (
-                      <div role="alert" className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
+                      <div role="alert" className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
                     )}
-                    <div className="relative rounded-[24px] border border-slate-700/70 bg-slate-800/50 p-5 mb-4 overflow-hidden">
+                    <div className="relative rounded-[24px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-5 mb-4 overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex flex-col items-center gap-3 mb-3">
-                          <h3 className="text-lg font-bold text-white">Monthly</h3>
-                          <p className="text-xs text-slate-400">Flexible &amp; cancel anytime</p>
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Monthly</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Flexible &amp; cancel anytime</p>
                         </div>
                         <div className="mb-4 text-center">
                           {plansLoading ? (
-                            <div className="h-10 w-32 bg-slate-700/50 rounded-lg animate-pulse mx-auto" />
+                            <div className="h-10 w-32 bg-slate-200 dark:bg-slate-700/50 rounded-lg animate-pulse mx-auto" />
                           ) : (
-                            <span className="text-3xl font-black text-blue-400">
+                            <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
                               {monthlyPlan?.price || '$1.99'}
                             </span>
                           )}
-                          <span className="text-slate-400 text-sm ml-2">per month</span>
+                          <span className="text-slate-500 dark:text-slate-400 text-sm ml-2">per month</span>
                         </div>
                         <button
                           onClick={() => handleSubscribe('premium_monthly')}
                           disabled={plansLoading || subscribing}
                           aria-label="Choose monthly plan"
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
+                          className="focus-ring w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
                           <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
@@ -333,31 +333,31 @@ export default function PremiumPage() {
                       </div>
                     </div>
 
-                    <div className="relative rounded-[24px] border border-emerald-500/30 bg-slate-800/50 p-5 mb-6">
+                    <div className="relative rounded-[24px] border border-emerald-500/30 bg-white shadow-sm dark:bg-slate-800/50 dark:shadow-none p-5 mb-6">
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold">Best Value</div>
                       <div className="relative z-10">
                         <div className="flex flex-col items-center gap-3 mb-3 mt-2">
-                          <h3 className="text-lg font-bold text-white">Annual</h3>
-                          <p className="text-xs text-slate-400">Most popular choice</p>
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Annual</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Most popular choice</p>
                         </div>
                         <div className="mb-1 text-center">
                           {plansLoading ? (
-                            <div className="h-10 w-32 bg-slate-700/50 rounded-lg animate-pulse mx-auto" />
+                            <div className="h-10 w-32 bg-slate-200 dark:bg-slate-700/50 rounded-lg animate-pulse mx-auto" />
                           ) : (
-                            <span className="text-3xl font-black text-emerald-400">
+                            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
                               {yearlyPlan?.price || '$14.99'}
                             </span>
                           )}
-                          <span className="text-slate-400 text-sm ml-2">per year</span>
+                          <span className="text-slate-500 dark:text-slate-400 text-sm ml-2">per year</span>
                         </div>
                         {!plansLoading && yearlyPlan && (
-                          <p className="text-xs text-emerald-400 font-semibold mb-4">Save with annual billing</p>
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-4">Save with annual billing</p>
                         )}
                         <button
                           onClick={() => handleSubscribe('premium_yearly')}
                           disabled={plansLoading || subscribing}
                           aria-label="Choose annual plan"
-                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
+                          className="focus-ring w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 min-h-[44px] disabled:opacity-50"
                         >
                           <Crown size={16} aria-hidden="true" />
                           Upgrade to Premium
@@ -368,19 +368,19 @@ export default function PremiumPage() {
                   </>
                 ) : (
                   /* Web: download app CTA */
-                  <div className="rounded-[24px] border border-slate-700/70 bg-slate-800/50 p-6 mb-6 text-center">
+                  <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-6 mb-6 text-center">
                     <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-                      <Smartphone size={28} className="text-blue-400" />
+                      <Smartphone size={28} className="text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Premium on Android</h3>
-                    <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Premium on Android</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 max-w-xs mx-auto">
                       Premium subscriptions are available exclusively on the ChessDuo Android app. Download it from Google Play to unlock all premium features.
                     </p>
                     <a
                       href="https://play.google.com/store/apps/details?id=com.navron.chessduo"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors min-h-[44px]"
+                      className="focus-ring inline-flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors min-h-[44px]"
                     >
                       <ExternalLink size={16} />
                       Download on Google Play
@@ -398,9 +398,9 @@ export default function PremiumPage() {
                 {/* Premium Benefits */}
                 <div className="text-center mb-4">
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-400">✦</span>
-                    <h3 className="text-lg font-bold text-white">Premium Benefits</h3>
-                    <span className="text-amber-400">✦</span>
+                    <span className="text-amber-500 dark:text-amber-400">✦</span>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Premium Benefits</h3>
+                    <span className="text-amber-500 dark:text-amber-400">✦</span>
                   </div>
                 </div>
 
@@ -413,12 +413,12 @@ export default function PremiumPage() {
 
                 {/* Restore (native only) */}
                 {isNative && (
-                  <div className="text-center text-xs text-slate-400 space-y-2">
+                  <div className="text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
                     <p>3 free insights per account. No payment required to play.</p>
                     <button
                       onClick={handleRestore}
                       disabled={restoring}
-                      className="text-blue-400 hover:text-blue-300 transition-colors min-h-[44px] px-4 py-2 inline-flex items-center gap-1 disabled:opacity-50"
+                      className="focus-ring text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors min-h-[44px] px-4 py-2 inline-flex items-center gap-1 disabled:opacity-50"
                     >
                       <RefreshCw size={12} className={restoring ? 'animate-spin' : ''} />
                       {restoring ? 'Restoring...' : 'Restore Purchases'}
@@ -450,12 +450,12 @@ function PremiumSuccess({
   return (
     <div className="flex flex-col flex-1">
       <div className="text-center mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">Welcome to Premium!</h1>
-        <p className="text-slate-400 text-sm">Unlock the best tools.<br />Play smarter. Win more.</p>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mb-2">Welcome to Premium!</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">Unlock the best tools.<br />Play smarter. Win more.</p>
       </div>
 
       <div className="flex-1 flex flex-col justify-center">
-        <div className="rounded-[28px] border border-slate-700/70 bg-slate-800/50 p-6 sm:p-8 text-center">
+        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-6 sm:p-8 text-center">
           <div className="relative inline-flex mb-5">
             <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.35)]">
               <Check size={40} className="text-white" strokeWidth={3} />
@@ -464,22 +464,22 @@ function PremiumSuccess({
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-3">
-            <span className="text-blue-400 text-xl">&#127793;</span>
-            <h2 className="text-2xl sm:text-3xl font-black text-blue-400">You&apos;re Premium!</h2>
-            <span className="text-blue-400 text-xl">&#127793;</span>
+            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">You&apos;re Premium!</h2>
+            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
           </div>
 
-          <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-400 text-sm font-semibold mb-4">
+          <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-sm font-semibold mb-4">
             {isYearly ? 'Annual Plan' : 'Monthly Plan'}
           </div>
 
-          <p className="text-slate-300 text-sm mb-6 max-w-xs mx-auto">
+          <p className="text-slate-600 dark:text-slate-300 text-sm mb-6 max-w-xs mx-auto">
             Unlimited move insights, AI analysis,<br className="hidden sm:block" />
             and all premium features.
           </p>
 
           {subscriptionStatus === 'cancelling' && (
-            <p className="text-amber-400 text-xs mb-4">Your subscription will end at the current billing period.</p>
+            <p className="text-amber-600 dark:text-amber-400 text-xs mb-4">Your subscription will end at the current billing period.</p>
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -506,7 +506,7 @@ function PremiumSuccess({
           </p>
           <button
             onClick={onGoToProfile}
-            className="flex-shrink-0 px-5 py-3 bg-white text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2 min-h-[44px] hover:bg-blue-50 transition-colors"
+            className="focus-ring flex-shrink-0 px-5 py-3 bg-white text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2 min-h-[44px] hover:bg-blue-50 transition-colors"
           >
             Go to Dashboard
             <ArrowRight size={18} />
@@ -519,11 +519,11 @@ function PremiumSuccess({
 
 function FeatureIcon({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-900/40 border border-white/5">
-      <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">{icon}</div>
+    <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-slate-100 border border-slate-200 dark:bg-slate-900/40 dark:border-white/5">
+      <div className="w-11 h-11 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-600 dark:text-blue-400">{icon}</div>
       <div className="text-center">
-        <p className="text-white text-xs font-semibold leading-tight">{title}</p>
-        <p className="text-slate-400 text-[11px] leading-tight">{subtitle}</p>
+        <p className="text-slate-900 dark:text-white text-xs font-semibold leading-tight">{title}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-tight">{subtitle}</p>
       </div>
     </div>
   )
@@ -531,13 +531,13 @@ function FeatureIcon({ icon, title, subtitle }: { icon: React.ReactNode; title: 
 
 function BenefitRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-[18px] border border-slate-700/50 bg-slate-800/30">
-      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-400">{icon}</div>
+    <div className="flex items-center gap-3 p-3 rounded-[18px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/30 dark:shadow-none">
+      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">{icon}</div>
       <div className="flex-1 min-w-0 text-center">
-        <p className="text-white text-sm font-semibold">{title}</p>
-        <p className="text-slate-400 text-xs">{desc}</p>
+        <p className="text-slate-900 dark:text-white text-sm font-semibold">{title}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-xs">{desc}</p>
       </div>
-      <Check size={16} aria-hidden="true" className="text-emerald-400 flex-shrink-0" />
+      <Check size={16} aria-hidden="true" className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
     </div>
   )
 }

@@ -263,7 +263,7 @@ export function PageLoading({ label, className = '' }: PageLoadingProps) {
 
   return (
     <div
-      className={`min-h-screen bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center ${padding} ${className}`}
+      className={`min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex items-center justify-center ${padding} ${className}`}
     >
       <div className="flex flex-col items-center justify-center py-12 select-none">
         <img

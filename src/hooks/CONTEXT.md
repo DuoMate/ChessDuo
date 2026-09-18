@@ -6,7 +6,7 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `useIsMobile.ts` | Viewport breakpoint detection (640px) |
+| `useIsMobile.ts` | Viewport breakpoint detection (768px, matches Tailwind `md:`) |
 | `useNavigationGuard.ts` | Prevent accidental navigation during active game |
 | `useNetworkStatus.ts` | Online/offline connectivity detection |
 | `useCapacitorBackButton.ts` | Android hardware back-button handler |

@@ -39,8 +39,9 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-slate-200/80 bg-white/80 transition-colors hover:bg-slate-100 dark:border-slate-700/70 dark:bg-slate-900/80 dark:hover:bg-slate-800"
+        className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-slate-200/80 bg-white/80 transition-colors hover:bg-slate-100 dark:border-slate-700/70 dark:bg-slate-900/80 dark:hover:bg-slate-800"
         aria-label="Menu"
+        aria-expanded={open}
       >
         {open ? <X size={18} className="text-slate-500 dark:text-slate-400" /> : <Menu size={18} className="text-slate-500 dark:text-slate-400" />}
       </button>
@@ -58,7 +59,7 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
               <>
                 <button
                   onClick={() => { onToggleSound(); setOpen(false) }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
+                  className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
                 >
                   {soundEnabled ? <Volume2 size={16} className="text-slate-500 dark:text-slate-400" /> : <VolumeX size={16} className="text-slate-500 dark:text-slate-400" />}
                   {soundEnabled ? 'Sound On' : 'Sound Off'}
@@ -70,7 +71,7 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
               <>
                 <button
                   onClick={() => { onOpenProfile(); setOpen(false) }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
+                  className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
                 >
                   <User size={16} className="text-slate-500 dark:text-slate-400" />
                   Profile
@@ -80,7 +81,7 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
             )}
             <button
               onClick={() => { onOpenSettings(); setOpen(false) }}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
+              className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
             >
               <Settings size={16} className="text-slate-500 dark:text-slate-400" />
               Settings
@@ -90,7 +91,7 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
                 <div className="h-px bg-slate-200 dark:bg-slate-700" />
                 <button
                   onClick={() => { onResign(); setOpen(false) }}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10 min-h-[44px]"
+                  className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10 min-h-[44px]"
                 >
                   <Flag size={16} className="text-rose-500 dark:text-rose-400" />
                   Resign
