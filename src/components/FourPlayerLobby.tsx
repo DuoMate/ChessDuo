@@ -358,7 +358,7 @@ export function FourPlayerLobby({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="my-auto w-full max-w-lg overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+        className="my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[var(--shadow-modal)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[var(--shadow-modal)] sm:p-8"
       >
         {view === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">

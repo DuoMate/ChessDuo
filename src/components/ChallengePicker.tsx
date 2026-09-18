@@ -72,7 +72,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
           initial={{ opacity: 0, y: 20, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.98 }}
-          className={`w-full ${isMobile ? 'max-w-full rounded-t-[28px] max-h-[92svh] overflow-y-auto' : 'max-w-sm rounded-[28px] max-h-[90vh] overflow-y-auto'} border border-white/70 bg-white/90 p-6 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90`}
+          className={`w-full ${isMobile ? 'max-w-full rounded-t-3xl max-h-[92svh] overflow-y-auto' : 'max-w-sm rounded-3xl max-h-[90vh] overflow-y-auto'} border border-white/70 bg-white/90 p-6 shadow-[var(--shadow-modal)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90`}
           onClick={(e) => e.stopPropagation()}
           style={isMobile ? { paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' } : undefined}
         >

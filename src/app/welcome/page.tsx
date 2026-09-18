@@ -132,7 +132,7 @@ export default function WelcomePage() {
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-          className="relative w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5 shadow-2xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]"
+          className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xl dark:border-slate-700/50 dark:bg-[var(--color-page-bg)]"
         >
           {/* Header — compact single block */}
           <div className="mb-3 text-center">

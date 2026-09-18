@@ -48,7 +48,7 @@ export function SettingsPanel({ open = true, onClose }: SettingsPanelProps) {
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={MODAL_SPRING}
-            className="w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-[30px] border border-white/70 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.25)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
+            className="w-full max-w-sm max-h-[90svh] overflow-y-auto overflow-x-hidden rounded-3xl border border-white/70 bg-white/90 shadow-[var(--shadow-modal)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/90"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200/70 p-4 dark:border-slate-700/70">

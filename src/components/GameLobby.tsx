@@ -110,7 +110,7 @@ export function GameLobby({ roomCode, inviteUrl, isLoading, username, lobbyTimeo
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md overflow-hidden rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] dark:border-white/[0.06] dark:bg-[var(--color-surface-alt)] dark:shadow-[0_20px_80px_rgba(2,6,23,0.5)] sm:p-8"
+        className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-modal)] dark:border-white/[0.06] dark:bg-[var(--color-surface-alt)] dark:shadow-[var(--shadow-modal)] sm:p-8"
       >
         <div className="flex flex-col items-center">
 
