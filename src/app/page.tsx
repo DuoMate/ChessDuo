@@ -167,13 +167,13 @@ export default function SetupPage() {
     if (!playerId) return
     let active = true
     import('@/features/coach/coachTrial')
-      .then(({ getCoachTrialState, formatTrialCountdown }) =>
+      .then(({ getCoachTrialState, formatTrialCountdown, getAiCoachRemainingMessage }) =>
         getCoachTrialState(playerId).then((trial) => {
           if (!active) return
           if (trial.isPremium) {
             setCoachSubtitle('Premium — unlimited coached games')
           } else if (trial.eligible) {
-            setCoachSubtitle('Try 1 free game daily')
+            setCoachSubtitle(getAiCoachRemainingMessage(trial.remainingToday) ?? 'Learn while you play')
           } else {
             const countdown = formatTrialCountdown(trial.nextEligibleAt, Date.now())
             setCoachSubtitle(countdown ? `Next free game in ${countdown}` : 'Premium — unlimited coached games')

@@ -11,7 +11,8 @@ Isolated, modular premium game mode: Player vs AI with an advisory Stockfish coa
 | `coachAnalysis.ts` | Pure analysis — top-3, blunder/miss classification, verdict, explanation text |
 | `coachVoice.ts` | Optional TTS (`coachVoice`) — web SpeechSynthesis + Capacitor TTS, graceful degrade |
 | `coachPersistence.ts` | Isolated `coach_games` persistence (save/list) |
-| `coachTrial.ts` | Daily-trial layer (rolling 24h): eligibility, idempotent claim, server + local mirror |
+| `coachTrial.ts` | Daily quota layer (N per UTC day): eligibility, idempotent claim, server + local mirror, central messages |
+| `__tests__/coachDailyLimit.test.ts` | Config single-source-of-truth contract (limit value, derived messages, day math) |
 | `index.ts` | Public API re-exports |
 
 ## Logic & Decisions
@@ -28,6 +29,7 @@ Isolated, modular premium game mode: Player vs AI with an advisory Stockfish coa
 - `lib/supabase` (persistence)
 
 ## Recent Changes
+- **2026-09-18**: Central daily allowance (`AI_COACH_FREE_DAILY_LIMIT = 3`, `AI_COACH_FREE_DAILY_LIMIT_ENABLED`, single source of truth in `shared/gameConstants.ts`): `coachTrial.ts` rewritten to N-games-per-UTC-calendar-day (`coach_free_day` + `coach_free_count`, legacy timestamp tolerated; local mirror `{day,count}` with legacy-shape compat; idempotent per-session claim; UTC-midnight reset; fail-closed). Central messages (`getAiCoachDailyLimitMessage` / `getAiCoachRemainingMessage` / `getAiCoachLimitReachedMessage`) feed `CoachGate` (remaining banner, limit-reached block) and home subtitle. Server `subscription/status` computes used/remaining from the same limit. New migration `supabase/migrations/2026-09-18_coach_daily_limit.sql` (manual apply; tolerant pre-migration). Tests: `coachDailyLimit.test.ts` (contract) + rewritten `coachTrial.test.ts`. No engine/analysis/billing/game changes.
 - **2026-09-17**: Explicit setup contract — `CoachGame`/`CoachGameEngine` now always receive explicit `{playerColor (resolved), botLevel (1-5)}` from the `CoachSetup` selection; `?? 'w'` / `?? 3` remain as defensive fallbacks only. Opponent still reuses `ChessBot` + `difficulty.ts` read-only (same mapping as Quick Play/Duo). No engine/analysis/billing changes.
 - **2026-09-12 (nav)**: In-game bottom nav (Moves/Chat/Insights + view-only Back/Fwd) via shared `BoardBottomNav` (unmodified). Engine appends `feedbackHistory` snapshots (`CoachInsight`) per analyzed move; `CoachInsightsPanel` (history timeline, best move inline, no reveal) + `CoachTranscriptPanel` (read-only coach-notes log, no backend) + `coachHistoryAdapters` (sidebar entries, SAN→fen replay). Top 3 stays current-position in `CoachPanel`. No engine/backend/schema/billing/ads changes.
 - **2026-09-12**: Daily free game (1 per rolling 24h, `COACH_TRIAL_WINDOW_MS`): `coachTrial.ts` (pure eligibility/countdown + idempotent per-session claim; `profiles.coach_last_free_game_at` authoritative with localStorage mirror pre-migration/offline), `CoachGate` trial-aware (premium unlimited / trial pass / hard block + countdown + `/premium` CTA), `CoachGame` claims at START only and embeds the existing `NativeAdSlot`/`AdSenseSlot` pair plus premium offer in the inline Game Over modal for trial games. Requires migration `supabase/migrations/2026-09-12_coach_daily_trial.sql` (manual apply; code is tolerant pre-migration).

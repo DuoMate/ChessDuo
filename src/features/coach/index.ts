@@ -15,8 +15,15 @@ export type { CoachGameRecord, CoachGameResult } from './coachPersistence'
 export {
   getCoachTrialState,
   claimCoachDailyTrial,
-  isTrialEligible,
-  nextEligibleAt,
   formatTrialCountdown,
+  getAiCoachDailyLimit,
+  isAiCoachLimitEnabled,
+  getAiCoachDailyLimitMessage,
+  getAiCoachRemainingMessage,
+  getAiCoachLimitReachedMessage,
+  getCoachDayKey,
+  getRemainingToday,
+  isEligibleToday,
+  nextMidnightUtc,
 } from './coachTrial'
 export type { CoachTrialState } from './coachTrial'

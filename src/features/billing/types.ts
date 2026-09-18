@@ -37,10 +37,16 @@ export interface SubscriptionInfo {
   subscriptionStatus: string | null
   /** ISO timestamp of the last consumed AI Coach daily free game (server time). Optional until migration is applied. */
   coachLastFreeGameAt?: string | null
-  /** Server-computed rolling-24h eligibility for the AI Coach daily free game. */
+  /** Server-computed eligibility for the AI Coach daily free quota (`AI_COACH_FREE_DAILY_LIMIT` per UTC day). */
   coachFreeEligible?: boolean
   /** ISO timestamp when the next daily free game becomes available (server time). */
   coachNextEligibleAt?: string | null
+  /** Games consumed today (UTC day) — populated when the status route knows the daily-count columns. */
+  coachFreeUsedToday?: number
+  /** Games left today — populated when the status route knows the daily-count columns. */
+  coachFreeRemaining?: number
+  /** Configured daily allowance echoed by the server (`AI_COACH_FREE_DAILY_LIMIT`). */
+  coachDailyLimit?: number
 }
 
 export interface PurchaseResult {

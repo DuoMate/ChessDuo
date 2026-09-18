@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Crown, Lock } from 'lucide-react'
-import { formatTrialCountdown, getCoachTrialState } from '@/features/coach/coachTrial'
+import { formatTrialCountdown, getAiCoachLimitReachedMessage, getAiCoachRemainingMessage, getCoachTrialState } from '@/features/coach/coachTrial'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { Spinner } from '../Spinner'
 
@@ -26,6 +26,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'unlocked' | 'trial' | 'locked'>('loading')
   const [nextEligibleAt, setNextEligibleAt] = useState<string | null>(null)
+  const [remainingToday, setRemainingToday] = useState<number | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
 
@@ -39,6 +40,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
           return
         }
         if (trial.eligible) {
+          setRemainingToday(trial.remainingToday)
           setStatus('trial')
           return
         }
@@ -79,11 +81,12 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
   }
 
   if (status === 'trial') {
+    const remainingCopy = remainingToday !== null ? getAiCoachRemainingMessage(remainingToday) : null
     return (
       <>
         <div className="mx-auto w-full max-w-md px-4 pt-3">
           <p className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-300">
-            Free daily game — enjoy your AI Coach session
+            {remainingCopy ? `${remainingCopy} — enjoy your AI Coach session` : 'Free daily game — enjoy your AI Coach session'}
           </p>
         </div>
         {children}
@@ -119,7 +122,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
           ) : (
             <>
               <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                Your free AI Coach game is complete. Unlock unlimited AI Coach games.
+                {getAiCoachLimitReachedMessage()} Unlock unlimited AI Coach games.
                 {countdown ? ` Or come back for your next free game in ${countdown}.` : ''}
               </p>
               <button

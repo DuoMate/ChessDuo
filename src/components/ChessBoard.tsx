@@ -247,17 +247,14 @@ function ChessBoardInner({
 
     const coachMoves = highlightSquares?.coachMoves ?? null
     if (coachMoves && coachMoves.length > 0) {
-      // Ranked Top-3 preview: distinct marker TYPES per rank (frame /
-      // framePrimary / circle) so rank never depends on color alone. Custom
-      // colored borders + numbered badges render in the overlay below.
-      for (const move of coachMoves.slice(0, 3)) {
-        const marker =
-          move.rank === 2 ? MARKER_TYPE.framePrimary
-          : move.rank === 3 ? MARKER_TYPE.circle
-          : MARKER_TYPE.frame
-        boardRef.current.addMarker(marker, move.from)
-        boardRef.current.addMarker(marker, move.to)
-      }
+      // Ranked Top-3 preview renders ONLY via the custom overlay below
+      // (paired origin + destination frames sharing the same rank color).
+      // No cm-chessboard default markers: frame (black corner brackets) looked
+      // like a camera shutter, framePrimary (pure blue) mismatched the sky-blue
+      // destination and read as purple, and circle (faint black ring) left the
+      // rank-3 origin effectively invisible. Markers stay cleared so the
+      // overlay is the single source of truth; lastMove dots stay hidden while
+      // coaching so the beginner trace stays unambiguous.
       return
     }
 
@@ -624,51 +621,106 @@ function ChessBoardInner({
 
       {highlightSquares?.coachMoves && highlightSquares.coachMoves.length > 0 && !showRetraction && (
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          {highlightSquares.coachMoves.slice(0, 3).map((move) => {
-            // Same-destination overlap: stack badges diagonally so no rank hides another.
-            const sameToCount = highlightSquares.coachMoves!
-              .slice(0, 3)
-              .filter((m) => m.to === move.to)
-              .findIndex((m) => m.from === move.from && m.rank === move.rank)
-            const borderVar =
-              move.rank === 2 ? 'var(--color-coach-insight)'
-              : move.rank === 3 ? 'var(--color-coach-alt)'
-              : 'var(--color-coach-best)'
-            return (
-              <motion.div
-                key={`coach-${move.rank}-${move.from}-${move.to}`}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="absolute rounded-lg border-4 will-change-transform"
-                // Dynamic square geometry + rank color: position derives from
-                // the move square/orientation, color from the rank token —
-                // Tailwind cannot express either statically.
-                style={{
-                  width: '12.5%',
-                  height: '12.5%',
-                  left: `${((move.to.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
-                  top: `${((parseInt(move.to[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
-                  borderColor: borderVar,
-                  // z-20s: rank 1 paints above 2/3 on shared squares, all below overlays (>50 never used).
-                  zIndex: 24 - move.rank,
-                  willChange: 'transform, opacity',
-                }}
-              >
-                <span
-                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-white ring-2 ring-white dark:ring-slate-900"
-                  // Dynamic per-rank fill + diagonal nudge for shared squares.
+          {(() => {
+            const moves = highlightSquares.coachMoves!.slice(0, 3)
+            const squarePos = (square: string) => ({
+              left: `${((square.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
+              top: `${((parseInt(square[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
+            })
+            // Badge nudge when several frames share one square (e.g. shared
+            // destinations): index among frames on that square → 20px steps.
+            // Origin badges sit top-left, destinations top-right, so cross
+            // origin↔destination sharing never collides; nudge only stacks
+            // same-corner badges.
+            return moves.flatMap((move) => {
+              const borderVar =
+                move.rank === 2 ? 'var(--color-coach-insight)'
+                : move.rank === 3 ? 'var(--color-coach-alt)'
+                : 'var(--color-coach-best)'
+              const fromPos = squarePos(move.from)
+              const toPos = squarePos(move.to)
+              // Overlap nudge: count same-square frames so stacked badges cascade.
+              const sameFrom = moves.filter((m) => m.from === move.from || m.to === move.from)
+                .findIndex((m) => (m.from === move.from && m.rank === move.rank) || (m.to === move.from && m.rank === move.rank))
+              const sameTo = moves.filter((m) => m.to === move.to || m.from === move.to)
+                .findIndex((m) => (m.to === move.to && m.rank === move.rank && m.from === move.from))
+              return [
+                <motion.div
+                  key={`coach-origin-${move.rank}-${move.from}-${move.to}`}
+                  data-coach-origin={move.rank}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute rounded-lg border-[3px] border-dashed will-change-transform"
+                  // Dynamic square geometry + rank color: position derives from
+                  // the origin square/orientation, color from the rank token —
+                  // Tailwind cannot express either statically. Dashed (origin)
+                  // vs solid (destination) keeps the ends distinct while the
+                  // shared color + number pairs them. Glow is subtle
+                  // (10px, -2px spread) so light/dark boards stay dominant.
                   style={{
-                    backgroundColor: borderVar,
-                    marginTop: `${Math.max(0, sameToCount) * 20}px`,
-                    zIndex: 24 - move.rank,
+                    width: '12.5%',
+                    height: '12.5%',
+                    left: fromPos.left,
+                    top: fromPos.top,
+                    borderColor: borderVar,
+                    boxShadow: `0 0 10px -2px ${borderVar}`,
+                    // Origins paint below destinations on shared squares, all
+                    // below overlays (>50 never used).
+                    zIndex: 20 - move.rank,
+                    willChange: 'transform, opacity',
                   }}
                 >
-                  {move.rank}
-                </span>
-              </motion.div>
-            )
-          })}
+                  <span
+                    className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-white ring-2 ring-white dark:ring-slate-900"
+                    // Dynamic per-rank fill + cascade for shared squares.
+                    // Top-left (origin) vs top-right (destination) mirrors the
+                    // pairing without covering the piece.
+                    style={{
+                      backgroundColor: borderVar,
+                      marginTop: `${Math.max(0, sameFrom) * 20}px`,
+                      zIndex: 20 - move.rank,
+                    }}
+                  >
+                    {move.rank}
+                  </span>
+                </motion.div>,
+                <motion.div
+                  key={`coach-dest-${move.rank}-${move.from}-${move.to}`}
+                  data-coach-dest={move.rank}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="absolute rounded-lg border-4 will-change-transform"
+                  // Dynamic square geometry + rank color: position derives from
+                  // the destination square/orientation, color from the rank token.
+                  style={{
+                    width: '12.5%',
+                    height: '12.5%',
+                    left: toPos.left,
+                    top: toPos.top,
+                    borderColor: borderVar,
+                    boxShadow: `0 0 10px -2px ${borderVar}`,
+                    // z-20s: rank 1 paints above 2/3 on shared squares, all below overlays (>50 never used).
+                    zIndex: 24 - move.rank,
+                    willChange: 'transform, opacity',
+                  }}
+                >
+                  <span
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-white ring-2 ring-white dark:ring-slate-900"
+                    // Dynamic per-rank fill + diagonal nudge for shared squares.
+                    style={{
+                      backgroundColor: borderVar,
+                      marginTop: `${Math.max(0, sameTo) * 20}px`,
+                      zIndex: 24 - move.rank,
+                    }}
+                  >
+                    {move.rank}
+                  </span>
+                </motion.div>,
+              ]
+            })
+          })()}
         </div>
       )}
 

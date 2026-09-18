@@ -12,8 +12,46 @@ export const DEFAULT_POLLING_INTERVAL_MS = 2000
 
 export const INSIGHTS_FREE_LIMIT = 3
 
-/** Rolling window for the AI Coach daily free game (1 free game per 24h). */
+/**
+ * @deprecated Superseded by `AI_COACH_FREE_DAILY_LIMIT` (N games per UTC
+ * calendar day). Retained only to avoid breaking stray imports — new code
+ * must use the central daily-limit config above.
+ */
 export const COACH_TRIAL_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * AI Coach daily free allowance — SINGLE SOURCE OF TRUTH.
+ *
+ * Purpose:
+ * Maximum number of AI Coach games a free user may start per calendar day
+ * (UTC). Premium users are always unlimited.
+ *
+ * Current launch value:
+ * 3
+ *
+ * How to change:
+ * Change this value only. Quota enforcement (`coachTrial.ts`), the
+ * `/api/subscription/status` server computation, and all derived
+ * user-facing messaging (`getAiCoachDailyLimitMessage`,
+ * `getAiCoachRemainingMessage`, `getAiCoachLimitReachedMessage`, home +
+ * gate copy) read this constant — e.g. setting it to 5 automatically
+ * yields "5 free games every day" with a quota of 5. No UI/business-logic
+ * edits required for the normal case.
+ *
+ * Do NOT hard-code "3 free games" / "limit === 3" / "count >= 3" anywhere —
+ * always derive from this constant.
+ */
+export const AI_COACH_FREE_DAILY_LIMIT = 3
+
+/**
+ * Master switch for the AI Coach free daily quota.
+ *
+ * When false: free users are not quota-limited (no enforcement, no
+ * "remaining games" / limit-reached messaging); premium users remain
+ * unlimited. Allows the product team to lift the limit without removing
+ * the implementation.
+ */
+export const AI_COACH_FREE_DAILY_LIMIT_ENABLED = true
 
 /** Google Play subscription product IDs (must match Play Console). */
 export const PREMIUM_MONTHLY_PRODUCT_ID = 'premium_monthly'
