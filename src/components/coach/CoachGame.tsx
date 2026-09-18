@@ -11,6 +11,7 @@ import type { PromotionPiece } from '@/features/shared/gameTypes'
 import { CoachGame as CoachGameEngine, coachVoice, saveCoachGame, claimCoachDailyTrial } from '@/features/coach'
 import type { CoachGameState } from '@/features/coach'
 import { CoachPanel } from './CoachPanel'
+import { toCoachHighlights } from './coachMoveRanks'
 import { CoachInsightsPanel } from './CoachInsightsPanel'
 import { CoachTranscriptPanel } from './CoachTranscriptPanel'
 import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
@@ -45,7 +46,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const settings = useSettings()
   const [state, setState] = useState<CoachGameState | null>(null)
   const [voiceEnabled, setVoiceEnabled] = useState(coachVoice.isEnabled())
-  const [showBestMove, setShowBestMove] = useState(false)
+  const [showBestMoves, setShowBestMoves] = useState(false)
   const [showLeave, setShowLeave] = useState(false)
   const [showResignConfirm, setShowResignConfirm] = useState(false)
   // Bottom-nav panel: at most one open. Panels are pure views — opening or
@@ -172,7 +173,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   }, [state?.feedback])
 
   useEffect(() => {
-    setShowBestMove(false)
+    setShowBestMoves(false)
   }, [state?.fen])
 
   useEffect(() => {
@@ -268,10 +269,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   )
 
   const orientation = playerColor === 'black' ? 'black' : 'white'
-  const currentBestMove = isPlayerTurn ? state?.suggestion?.topMoves[0] : undefined
-  const bestMoveHighlight = showBestMove && currentBestMove
-    ? { winnerFrom: currentBestMove.uci.slice(0, 2), winnerTo: currentBestMove.uci.slice(2, 4) }
-    : null
+  // Ranked Top-3 preview — presentation only. Gated by the toggle +
+  // player-turn (stale feedback never visualizes); FEN change resets the
+  // toggle above. Memoized so ChessBoard's shallow memo holds.
+  const bestMoveHighlight = useMemo(() => {
+    if (!showBestMoves || !isPlayerTurn) return null
+    const topMoves = state?.suggestion?.topMoves ?? []
+    const coachMoves = toCoachHighlights(topMoves)
+    if (coachMoves.length === 0) return null
+    return { coachMoves }
+  }, [showBestMoves, isPlayerTurn, state?.suggestion])
 
   return (
     <div className="min-h-dvh bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
@@ -343,8 +350,8 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           analyzing={!!state?.analyzing}
           isPlayerTurn={isPlayerTurn}
           onSpeak={(text) => coachVoice.speak(text)}
-          showBestMove={showBestMove}
-          onToggleBestMove={() => setShowBestMove((visible) => !visible)}
+          showBestMoves={showBestMoves}
+          onToggleBestMoves={() => setShowBestMoves((visible) => !visible)}
         />
       </div>
 
