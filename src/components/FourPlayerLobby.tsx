@@ -532,7 +532,7 @@ export function FourPlayerLobby({
                   disabled={!teamsReady}
                   aria-disabled={!teamsReady}
                   title={teamsReady ? 'Start the match' : 'Waiting for teams to be ready'}
-                  className="focus-ring min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  className="focus-ring min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   ▶ Start Match
                 </motion.button>

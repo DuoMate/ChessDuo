@@ -235,7 +235,7 @@ export function ChooseUsername({ userId, suggestedName, avatarUrl, displayName, 
           <button
             type="submit"
             disabled={loading || usernameStatus !== 'available'}
-            className="focus-ring w-full min-h-[44px] p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 hover:-translate-y-0.5"
+            className="focus-ring w-full min-h-[44px] p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-2xl hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
           >
             {loading ? 'Creating profile...' : 'Continue'}
           </button>

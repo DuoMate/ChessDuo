@@ -115,7 +115,7 @@ export function ChallengePicker({ currentUserId, friendId, friendName, currentUs
               whileTap={{ scale: 0.97 }}
               onClick={handleCreate}
               disabled={creating}
-              className="focus-ring flex-1 min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="focus-ring flex-1 min-h-[44px] rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-bold text-slate-950 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {creating ? 'Creating...' : 'Send Challenge'}
             </motion.button>
