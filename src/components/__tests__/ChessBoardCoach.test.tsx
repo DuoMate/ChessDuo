@@ -26,7 +26,7 @@ describe('ChessBoard coach top-3', () => {
     resetCaptured()
   })
 
-  test('renders ①②③ badges at origin + destination with paired rank colors', () => {
+  test('renders ①②③ badges on destinations only with paired rank colors', () => {
     render(
       <ChessBoard
         fen={START_FEN}
@@ -43,18 +43,19 @@ describe('ChessBoard coach top-3', () => {
       />,
     )
 
-    // Numbered badges at BOTH ends — beginner traces piece → destination.
-    // getAllByText because each rank appears twice (origin + destination).
-    expect(screen.getAllByText('1')).toHaveLength(2)
-    expect(screen.getAllByText('2')).toHaveLength(2)
-    expect(screen.getAllByText('3')).toHaveLength(2)
+    // Numbered badges live ONLY on destinations — the number ranks the
+    // destination (1 = Best, 2 = Strong alternative, 3 = Alternative).
+    // getAllByText finds exactly one per rank (the destination badge).
+    expect(screen.getAllByText('1')).toHaveLength(1)
+    expect(screen.getAllByText('2')).toHaveLength(1)
+    expect(screen.getAllByText('3')).toHaveLength(1)
 
     // Rank is never color-only (number + paired color), and no generic
     // cm-chessboard markers remain (shutter/purple/circle removed).
     expect(mockAddMarker).not.toHaveBeenCalled()
   })
 
-  test('origin and destination share the same rank color with numbered badges', () => {
+  test('origin and destination share the same rank color; badges on destinations only', () => {
     const { container } = render(
       <ChessBoard
         fen={START_FEN}
@@ -71,8 +72,8 @@ describe('ChessBoard coach top-3', () => {
       />,
     )
 
-    // Each rank renders an origin frame + a destination frame (beginner can
-    // trace piece → destination). Both share the same semantic color var.
+    // Each rank renders an origin frame (no badge) + a destination frame
+    // (badged). Both share the same semantic color var.
     const origins = container.querySelectorAll('[data-coach-origin]')
     const dests = container.querySelectorAll('[data-coach-dest]')
     expect(origins).toHaveLength(3)
@@ -93,8 +94,8 @@ describe('ChessBoard coach top-3', () => {
       // Same visual identity: same border color on origin + destination.
       expect((origin as HTMLElement).style.borderColor).toBe(colorFor(rank))
       expect((dest as HTMLElement).style.borderColor).toBe(colorFor(rank))
-      // Number is never color-only: rank appears at both ends.
-      expect(origin?.textContent).toContain(rank)
+      // Number lives ONLY on the destination; the origin frame is unbadged.
+      expect(origin?.textContent).not.toContain(rank)
       expect(dest?.textContent).toContain(rank)
     }
 
@@ -119,9 +120,9 @@ describe('ChessBoard coach top-3', () => {
         }}
       />,
     )
-    expect(screen.getAllByText('1')).toHaveLength(2)
-    expect(screen.getAllByText('2')).toHaveLength(2)
-    expect(screen.getAllByText('3')).toHaveLength(2)
+    expect(screen.getAllByText('1')).toHaveLength(1)
+    expect(screen.getAllByText('2')).toHaveLength(1)
+    expect(screen.getAllByText('3')).toHaveLength(1)
   })
 
   test('no coachMoves renders no rank badges', () => {

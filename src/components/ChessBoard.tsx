@@ -627,11 +627,10 @@ function ChessBoardInner({
               left: `${((square.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
               top: `${((parseInt(square[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
             })
-            // Badge nudge when several frames share one square (e.g. shared
-            // destinations): index among frames on that square → 20px steps.
-            // Origin badges sit top-left, destinations top-right, so cross
-            // origin↔destination sharing never collides; nudge only stacks
-            // same-corner badges.
+            // Badge nudge when several destination frames share one square
+            // (e.g. shared destinations): index among frames on that square →
+            // 20px steps. Origins carry no badge — the rank number lives only
+            // on the destination.
             return moves.flatMap((move) => {
               const borderVar =
                 move.rank === 2 ? 'var(--color-coach-insight)'
@@ -639,9 +638,7 @@ function ChessBoardInner({
                 : 'var(--color-coach-best)'
               const fromPos = squarePos(move.from)
               const toPos = squarePos(move.to)
-              // Overlap nudge: count same-square frames so stacked badges cascade.
-              const sameFrom = moves.filter((m) => m.from === move.from || m.to === move.from)
-                .findIndex((m) => (m.from === move.from && m.rank === move.rank) || (m.to === move.from && m.rank === move.rank))
+              // Overlap nudge: count same-square destinations so stacked badges cascade.
               const sameTo = moves.filter((m) => m.to === move.to || m.from === move.to)
                 .findIndex((m) => (m.to === move.to && m.rank === move.rank && m.from === move.from))
               return [
@@ -654,10 +651,10 @@ function ChessBoardInner({
                   className="absolute rounded-lg border-[3px] border-dashed will-change-transform"
                   // Dynamic square geometry + rank color: position derives from
                   // the origin square/orientation, color from the rank token —
-                  // Tailwind cannot express either statically. Dashed (origin)
-                  // vs solid (destination) keeps the ends distinct while the
-                  // shared color + number pairs them. Glow is subtle
-                  // (10px, -2px spread) so light/dark boards stay dominant.
+                  // Tailwind cannot express either statically. The origin frame
+                  // carries NO rank badge (numbers live only on destinations);
+                  // the shared color pairs it with its destination. Glow is
+                  // subtle (10px, -2px spread) so light/dark boards stay dominant.
                   style={{
                     width: '12.5%',
                     height: '12.5%',
@@ -670,21 +667,7 @@ function ChessBoardInner({
                     zIndex: 20 - move.rank,
                     willChange: 'transform, opacity',
                   }}
-                >
-                  <span
-                    className="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-white ring-2 ring-white dark:ring-slate-900"
-                    // Dynamic per-rank fill + cascade for shared squares.
-                    // Top-left (origin) vs top-right (destination) mirrors the
-                    // pairing without covering the piece.
-                    style={{
-                      backgroundColor: borderVar,
-                      marginTop: `${Math.max(0, sameFrom) * 20}px`,
-                      zIndex: 20 - move.rank,
-                    }}
-                  >
-                    {move.rank}
-                  </span>
-                </motion.div>,
+                />,
                 <motion.div
                   key={`coach-dest-${move.rank}-${move.from}-${move.to}`}
                   data-coach-dest={move.rank}
