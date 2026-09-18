@@ -98,9 +98,9 @@ function RoundHistorySidebarInner({ open, entries, onClose, onViewFullHistory }:
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white/95 border-l border-slate-200 dark:bg-slate-900/95 dark:border-slate-700/70 backdrop-blur-xl flex flex-col"
+            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white/95 border-l border-slate-200 dark:bg-slate-900/95 dark:border-slate-700/70 backdrop-blur-xl flex flex-col pb-[env(safe-area-inset-bottom,0px)]"
           >
-            <header className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700/60">
+            <header className="flex items-center justify-between px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top,0px))] border-b border-slate-200 dark:border-slate-700/60">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
                   <History size={18} className="text-white" />
@@ -133,7 +133,7 @@ function RoundHistorySidebarInner({ open, entries, onClose, onViewFullHistory }:
             </div>
 
             {onViewFullHistory && (
-              <footer className="p-3 border-t border-slate-200 dark:border-slate-700/60">
+              <footer className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] border-t border-slate-200 dark:border-slate-700/60">
                 <button
                   type="button"
                   onClick={onViewFullHistory}

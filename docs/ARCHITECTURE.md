@@ -336,6 +336,16 @@ SubscriptionService
 - The check runs async (never delays first paint), is throttled (no nagging every screen), and never fires during active games, auth/PKCE callbacks, or deep-link landings — React/hook, throttling, routing guards, and UI live outside `features/` (`src/hooks/useAppUpdate.ts`, `src/components/UpdatePrompt.tsx`).
 - Like all UI: `dark:` variants, ≥44px targets, `useGameToast()` for feedback, co-located `__tests__/`.
 
+### 11. Live-Game Picture-in-Picture (Android)
+
+**RULE**: PiP is a presentation layer over the existing game — never a second game implementation.
+
+- `android/` is generated; native PiP lives in the patch chain: `android-patches/PipPlugin.java` (`@CapacitorPlugin(name="Pip")`), installed by `scripts/install-pip.sh`, registered + forwarded in `scripts/patch-main-activity.sh`, manifest flags (`supportsPictureInPicture`, widened `configChanges`) in setup/build scripts. Never edit `android/` directly.
+- The plugin owns no chess state, no timers, no game logic. It tracks eligibility (set by web), enters PiP via framework APIs (auto-enter Android 12+), and emits `pipModeChanged` so React swaps the full shell for `PipOverlay`. Every method is fail-silent — PiP can never block moves, clocks, game-over, or navigation.
+- Web bridge `src/lib/pip.ts` mirrors `nativeAd.ts`: native-only, best-effort, never throws, change-suppressed traffic. `shouldEnablePip()` is the pure eligibility rule (only `PLAYING`/`playing` + no blocking modal); `src/hooks/usePip.ts` publishes it and tracks mode. `PipOverlay` renders the live FEN (parsed defensively), a mapped turn label, and the existing `IsolatedMatchTimer` (move-count footer for untimed Coach).
+- Eligibility call sites (`Game.tsx`, `DuelGame.tsx`, `CoachGame.tsx`) derive from existing status + existing overlay state only. `GAME_OVER` (any terminal) always revokes eligibility. No destructive PiP actions — tap returns to the existing game screen.
+- Like all UI: `dark:` variants, `text-xs` minimum, co-located `__tests__/`. New game methods still go through `GameInterface` (PiP adds none).
+
 ---
 
 ## Styling Conventions

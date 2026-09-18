@@ -53,6 +53,8 @@ import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
+import { PipOverlay } from './PipOverlay'
+import { usePipEligibility, usePipMode } from '@/hooks/usePip'
 import { Lock, BarChart3 } from 'lucide-react'
 
 // ============================================================
@@ -337,6 +339,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     onOverlayBack: closeTopmostOverlay,
     hasOpenOverlay,
   })
+
+  // Live-game PiP: eligible only while PLAYING with no blocking modal open
+  // (resign/leave confirm, insights, moves, chat, settings, profile/history).
+  // Consumes existing status only — never drives game state.
+  usePipEligibility(gameState.status === GameStatus.PLAYING && !hasOpenOverlay && !showLeaveModal)
+  const isPipMode = usePipMode()
 
   const handleUpgradeClick = useCallback(() => {
     router.push('/premium')
@@ -2577,6 +2585,27 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     <IsolatedMatchTimer getTimeRemaining={getTimeRemaining} isActive={isTimerActive} totalSeconds={timeLimitSeconds || 600} />
   ), [getTimeRemaining, isTimerActive, timeLimitSeconds])
 
+  // Compact PiP status mapped from existing state only — no new semantics.
+  const pipTurnLabel = useMemo(() => {
+    if (gameState.isBotThinking && !gameState.isMyTurn) return 'BOT THINKING'
+    switch (gameState.turnStatus) {
+      case 'your_turn':
+        return 'YOUR TURN'
+      case 'selecting':
+        return gameState.isMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN"
+      case 'waiting_for_teammate':
+      case 'teammate_locked':
+        return 'TEAMMATE THINKING'
+      case 'evaluating':
+        return 'RESOLVING MOVE'
+      case 'opponent_turn':
+        return "OPPONENT'S TURN"
+      default:
+        return 'WAITING'
+    }
+  }, [gameState.isBotThinking, gameState.isMyTurn, gameState.turnStatus])
+  const pipGameLabel = isFourPlayer ? '4 PLAYER' : isOnline ? 'DUO' : 'QUICK PLAY'
+
   // Presence mapping creates new objects per render; memoize so TopBar's
   // `prev.whitePlayers === next.whitePlayers` check holds when disconnectedAge
   // and base arrays are unchanged. Behavior identical — same mapping logic.
@@ -2740,7 +2769,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pb-24">
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pt-[env(safe-area-inset-top,0px)] pb-24">
         {/* Compact top bar — header + team avatars + timer + controls.
             P5: memoized section — skips reconciliation unless its own slice changed. */}
         <GameTopBarSection
@@ -3014,6 +3043,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onCancel={handleCancelHeldMove}
         />
       )}
+
+      {/* Live-game PiP compact presentation — covers the full shell only
+          while the activity is inside the PiP window. Reads live engine
+          state (fen/turn/clock) via existing getters; never writes state. */}
+      <PipOverlay
+        visible={isPipMode}
+        fen={gameState.fen}
+        orientation={myTeamRef.current === 'BLACK' ? 'black' : 'white'}
+        turnLabel={pipTurnLabel}
+        gameLabel={pipGameLabel}
+        lastMove={gameState.lastMove}
+        getTimeRemaining={getTimeRemaining}
+        isTimerActive={isTimerActive}
+        totalSeconds={timeLimitSeconds || 600}
+      />
     </div>
   )
 }

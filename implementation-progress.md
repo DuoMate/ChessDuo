@@ -349,3 +349,85 @@
   full-load flake passes alone. CoachPanel test aligned to new accessible name.
 - Touched-file lint: zero new errors (2 mid-phase `set-state-in-effect` fixed same-phase
   by moving resets into retry handlers).
+
+---
+
+# Android 15 Edge-to-Edge Safe-Area Fix (2026-09-18, branch `develop`)
+
+> Scope lock: UI/safe-area ONLY, aligned to `docs/ARCHITECTURE.md`.
+> Full report: `android-edge-to-edge-audit.md`.
+
+## Root cause: DONE (proved before fixing)
+- `targetSdk 36` enforces edge-to-edge on Android 15+; `EdgeToEdge.enable()` +
+  `viewportFit:'cover'` + Capacitor `SystemBars` passthrough are all correct.
+- Gap was web-only: top `env(safe-area-inset-top)` existed solely in
+  `(main)/layout.tsx`, so Home `HeaderBar`, Game/Duel/Replay shells, Coach
+  header, `RoundHistorySidebar`, `InstallBanner`, and Auth surfaces rendered
+  under the status bar. Bottom coverage was already good except `BottomNav`'s
+  `0px` floor and `ReplayView`'s missing `pb-24`.
+
+## Fix: DONE (11 files, Tailwind classes only, 19+/19-)
+- Top insets via existing `env()` + `max()` floors (desktop pixel-identical):
+  `page.tsx` (HeaderBar, config header, legal footer), `Game.tsx`,
+  `DuelGame.tsx` (shell + waiting), `ReplayView.tsx` (+ `pb-24` parity),
+  `coach/CoachGame.tsx`, `RoundHistorySidebar.tsx`, `InstallBanner.tsx`,
+  `AuthGate.tsx`.
+- `Auth.tsx`: cards `max-h-[90svh] overflow-y-auto` (matches `GameOverModal`);
+  overlay insets + scroll.
+- `BottomNav.tsx`: `0px` → `max(12px,env(bottom,12px))` floor via Tailwind
+  (inline `style` removed, per F2 precedent). `loading.tsx`: `min-h-dvh w-full`.
+- Untouched: routes, auth, game engine, Stockfish, Coach logic, billing, AdMob,
+  notifications, deep links, Supabase/Realtime, `capacitor.config.ts`,
+  `patch-main-activity.sh`, manifest/styles/gradle, `SlideOver`/`ChatPanel`/
+  `GameOverModal`/`Toast` (already inset-aware).
+
+## Verification: DONE
+- `npx tsc --noEmit`: clean.
+- `npm test`: 1470 passed; `server/engine` + `ConfirmMoveBar` fail identically
+  on clean-baseline stash run (pre-existing, unrelated); `BillingDiagnostics`
+  passes alone with these changes (full-run parallel flake).
+- `git diff --stat`: 11 UI files only, no logic/backend/native changes.
+
+## Remaining
+- Signed-device run (Android 15+ gesture/3-button, small + large screens,
+  scroll + game + modal) with before/after screenshots; production AAB build;
+  Play Console warning re-check after upload.
+
+---
+
+# Live-Game Picture-in-Picture (2026-09-18, branch `develop`)
+
+> Scope lock: Android presentation only, aligned to `docs/ARCHITECTURE.md §11`.
+> Zero changes to game authority: no engine/timer/sync/DB/auth/billing/ad/routing changes.
+
+## What shipped
+- Native (patch chain, `android/` untouched): `android-patches/PipPlugin.java`
+  (`@CapacitorPlugin(name="Pip")`: `setEligible`/`enter`/`isInPip` + `pipModeChanged`
+  events, 3:4 aspect, auto-enter API 31+, seamless resize) + `scripts/install-pip.sh`
+  (wired into setup/build-apk/build-aab) + `patch-main-activity.sh`
+  (`onPictureInPictureModeChanged` forward, pre-12 `onUserLeaveHint` gate) +
+  manifest (`supportsPictureInPicture`, `configChanges` widen).
+- Web (presentation-only): `src/lib/pip.ts` (best-effort bridge, `shouldEnablePip`
+  pure rule, change-suppressed native traffic) + `src/hooks/usePip.ts`
+  (`usePipEligibility`/`usePipMode`) + `src/components/PipOverlay.tsx`
+  (FEN mini-board + turn + `IsolatedMatchTimer` reuse; move-count footer for untimed Coach).
+- Wiring (eligibility + overlay mount only): `Game.tsx` (Quick/Duo/4P),
+  `DuelGame.tsx` (Duel), `CoachGame.tsx` (Coach). No Resign action in PiP —
+  tap returns to the existing game screen.
+- Constants: `PIP_ASPECT_NUM/DEN` in `gameConstants.ts` (mirror native aspect).
+
+## Verification
+- `npx tsc --noEmit`: clean.
+- New tests: `pip.test.ts` (eligibility active vs terminal, dedupe, web no-op,
+  event forwarding) + `PipOverlay.test.tsx` (board parse/orientation/malformed-FEN,
+  compact content, no menus/chat/insights) — 17/17 pass.
+- Full `npm test`: 1488 passed; failing suites identical to baseline
+  (`server/engine`, `ConfirmMoveBar`; `BillingDiagnostics` full-load flake passes
+  on re-run — all pre-existing, untouched by this diff).
+- New files lint-clean; touched-file lint counts identical to baseline.
+- Scope grep (engine/sync/supabase/billing/AdMob/auth/timer-logic additions): clean.
+
+## Remaining
+- Signed-device validation per test matrix (Quick/Duo/4P/Coach × enter PiP →
+  background move → PiP updates → return → game-over → PiP ineligible) on
+  Android 12/13/14/15/16; production AAB build; Play Console warning re-check.

@@ -27,7 +27,7 @@ export default function Loading() {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center min-h-screen w-screen bg-[var(--color-page-bg)] dark:bg-[var(--color-page-bg)] overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center min-h-dvh w-full bg-[var(--color-page-bg)] dark:bg-[var(--color-page-bg)] overflow-hidden">
       <div ref={logoRef}>
         <ChessDuoLogo size="xl" animate />
       </div>

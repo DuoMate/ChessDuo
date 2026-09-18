@@ -79,6 +79,18 @@ export const BILLING_AUTH_TIMEOUT_MS = 8000
 /** Bounded timeout for restore-purchases (native bridge may hang). */
 export const BILLING_RESTORE_TIMEOUT_MS = 15000
 
+/**
+ * Live-game Picture-in-Picture aspect ratio (numerator) — SINGLE SOURCE OF
+ * TRUTH for the web layer. Must match ASPECT_NUM in
+ * android-patches/PipPlugin.java (compact board + turn status + timer).
+ */
+export const PIP_ASPECT_NUM = 3
+
+/**
+ * Live-game Picture-in-Picture aspect ratio (denominator). See PIP_ASPECT_NUM.
+ */
+export const PIP_ASPECT_DEN = 4
+
 /** Timeout for the verify/status network calls. */
 export const BILLING_VERIFY_TIMEOUT_MS = 10000
 
