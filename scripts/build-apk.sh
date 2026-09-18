@@ -144,6 +144,9 @@ bash "$PROJECT_ROOT/scripts/verify-native-billing.sh"
 # ─── Install bounded Native AdMob plugin ─────────
 bash "$PROJECT_ROOT/scripts/install-native-ad.sh"
 
+# ─── Install live-game PiP plugin (presentation-only bridge) ──
+bash "$PROJECT_ROOT/scripts/install-pip.sh"
+
 # ─── Add deep link intent filters (App Links + custom schemes) ──
 bash "$PROJECT_ROOT/scripts/add-deep-link.sh"
 ok "Deep link intent filters added"
@@ -170,6 +173,17 @@ MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ] && ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null; then
   sed -i '/<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"
   ok "POST_NOTIFICATIONS permission added (required for Android 13+)"
+fi
+
+# ─── Live-game PiP manifest (supportsPictureInPicture + config) ──
+if [ -f "$MANIFEST" ] && ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
+  sed -i 's|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
+  ok "supportsPictureInPicture enabled on activity (live-game PiP)"
+fi
+if [ -f "$MANIFEST" ] && grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \
+    && ! grep -q 'smallestScreenSize' "$MANIFEST" 2>/dev/null; then
+  sed -i 's|android:configChanges="\([^"]*\)"|android:configChanges="\1\|smallestScreenSize\|screenLayout\|orientation"|' "$MANIFEST"
+  ok "activity configChanges extended for PiP (no recreation on enter/exit)"
 fi
 
 # ─── Apply version from android-version.properties ──

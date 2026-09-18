@@ -392,3 +392,42 @@
 - Signed-device run (Android 15+ gesture/3-button, small + large screens,
   scroll + game + modal) with before/after screenshots; production AAB build;
   Play Console warning re-check after upload.
+
+---
+
+# Live-Game Picture-in-Picture (2026-09-18, branch `develop`)
+
+> Scope lock: Android presentation only, aligned to `docs/ARCHITECTURE.md §11`.
+> Zero changes to game authority: no engine/timer/sync/DB/auth/billing/ad/routing changes.
+
+## What shipped
+- Native (patch chain, `android/` untouched): `android-patches/PipPlugin.java`
+  (`@CapacitorPlugin(name="Pip")`: `setEligible`/`enter`/`isInPip` + `pipModeChanged`
+  events, 3:4 aspect, auto-enter API 31+, seamless resize) + `scripts/install-pip.sh`
+  (wired into setup/build-apk/build-aab) + `patch-main-activity.sh`
+  (`onPictureInPictureModeChanged` forward, pre-12 `onUserLeaveHint` gate) +
+  manifest (`supportsPictureInPicture`, `configChanges` widen).
+- Web (presentation-only): `src/lib/pip.ts` (best-effort bridge, `shouldEnablePip`
+  pure rule, change-suppressed native traffic) + `src/hooks/usePip.ts`
+  (`usePipEligibility`/`usePipMode`) + `src/components/PipOverlay.tsx`
+  (FEN mini-board + turn + `IsolatedMatchTimer` reuse; move-count footer for untimed Coach).
+- Wiring (eligibility + overlay mount only): `Game.tsx` (Quick/Duo/4P),
+  `DuelGame.tsx` (Duel), `CoachGame.tsx` (Coach). No Resign action in PiP —
+  tap returns to the existing game screen.
+- Constants: `PIP_ASPECT_NUM/DEN` in `gameConstants.ts` (mirror native aspect).
+
+## Verification
+- `npx tsc --noEmit`: clean.
+- New tests: `pip.test.ts` (eligibility active vs terminal, dedupe, web no-op,
+  event forwarding) + `PipOverlay.test.tsx` (board parse/orientation/malformed-FEN,
+  compact content, no menus/chat/insights) — 17/17 pass.
+- Full `npm test`: 1488 passed; failing suites identical to baseline
+  (`server/engine`, `ConfirmMoveBar`; `BillingDiagnostics` full-load flake passes
+  on re-run — all pre-existing, untouched by this diff).
+- New files lint-clean; touched-file lint counts identical to baseline.
+- Scope grep (engine/sync/supabase/billing/AdMob/auth/timer-logic additions): clean.
+
+## Remaining
+- Signed-device validation per test matrix (Quick/Duo/4P/Coach × enter PiP →
+  background move → PiP updates → return → game-over → PiP ineligible) on
+  Android 12/13/14/15/16; production AAB build; Play Console warning re-check.

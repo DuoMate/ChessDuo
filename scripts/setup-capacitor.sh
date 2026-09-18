@@ -153,6 +153,7 @@ else
     else
         warn "Skipping Native AdMob setup; set NEXT_PUBLIC_ADMOB_APP_ID before building Android"
     fi
+    bash "$PROJECT_ROOT/scripts/install-pip.sh" || warn "PiP plugin install skipped (android/ not ready yet)"
     ok "Android project created"
 fi
 
@@ -165,6 +166,19 @@ if [ -f "$MANIFEST" ]; then
   if ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null; then
     sed -i '/<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/a\    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />' "$MANIFEST"
     ok "POST_NOTIFICATIONS permission added (required for Android 13+)"
+  fi
+
+  # ─── Live-game Picture-in-Picture (supportsPictureInPicture + config) ──
+  # Presentation only: lets the existing game activity enter PiP while a
+  # match is active. Entry is gated at runtime by PipPlugin eligibility.
+  if ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
+    sed -i 's|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
+    ok "supportsPictureInPicture enabled on activity (live-game PiP)"
+  fi
+  if grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \
+      && ! grep -q 'smallestScreenSize' "$MANIFEST" 2>/dev/null; then
+    sed -i 's|android:configChanges="\([^"]*\)"|android:configChanges="\1\|smallestScreenSize\|screenLayout\|orientation"|' "$MANIFEST"
+    ok "activity configChanges extended for PiP (no recreation on enter/exit)"
   fi
 fi
 

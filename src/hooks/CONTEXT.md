@@ -15,6 +15,7 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 | `useBadgeCount.ts` | Centralized badge count — unread messages + pending friend requests via Supabase Realtime |
 | `useAuthSession.ts` | Auth session lifecycle — initial session fetch, auth state changes, username gate |
 | `useSettings.ts` | User settings hook (autoQueen, lowTimeWarning, confirmMove, soundEnabled, theme) — localStorage-backed |
+| `usePip.ts` | Live-game PiP — `usePipEligibility(eligible)` publishes to native, `usePipMode()` tracks PiP window state |
 
 ## Logic & Decisions
 - `useNavigationGuard` uses `beforeunload` event + Next.js router events.
@@ -41,3 +42,4 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 - **2026-07-15**: `useScrollLock` refactored with module-level lock counter to prevent nested lock interference.
 - **2026-08-03**: Added `useSettings` — moved from `lib/settings.ts` to `hooks/useSettings.ts` (BV3 fix: React hook belongs in hooks/, not lib/). Pure localStorage utilities extracted to `lib/settingsStorage.ts`.
 - **2026-09-18**: Added `useGameOverAdPreload(active)` — warms the Game Over native ad during active play for eligible free native users only (premium/loading/web → no-op, fires once per active session, best-effort, never blocks game flow). Wired into `Game.tsx` (Quick/Duo/4P), `DuelGame.tsx`, and `CoachGame.tsx`. Tests: `useGameOverAdPreload.test.ts`.
+- **2026-09-18**: Added `usePip.ts` — `usePipEligibility(eligible)` publishes live-game PiP eligibility to the native `Pip` plugin (unmount revokes), `usePipMode()` tracks the PiP window for the compact overlay swap. Presentation-only, never drives game state.

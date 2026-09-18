@@ -31,6 +31,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `share.ts` | Cross-platform share helper — native sheet via `@capacitor/share`, Web Share API, clipboard fallback |
 | `rateApp.ts` | Play-listing bridge for the Profile "Rate us" row — native `market://`, Browser-plugin/web HTTPS fallback, never throws |
 | `nativeAd.ts` | Web-safe bridge for the bounded Android Native Advanced AdMob view |
+| `pip.ts` | Web-safe bridge for live-game Android PiP (`shouldEnablePip` pure rule, best-effort native calls, never throws) |
 | `webAds.ts` | Web-only AdSense helper (env-gated IDs, best-effort push, never throws) |
 | `capacitorAuth.ts` | Capacitor-specific auth bridge |
 | `capgo-stub.ts` | Capgo social login stub |
@@ -80,3 +81,4 @@ All utility modules, service integrations, and data access layers. Includes Supa
 - **2026-07-17**: Fixed `webPush.ts` HKDF key type bug — ECDH shared secret was imported as `{ name: 'HKDF' }` but `hkdf()` uses it for HMAC sign operations. Changed to import as `{ name: 'HMAC', hash: 'SHA-256' }` with `['sign']` usages. Added regression test (`webPush.test.ts`).
 - **2026-07-14**: `saveCompletedGame()` now also inserts into Supabase `completed_games` table for online games. `rateLimit.ts` added push route limits.
 - **2026-09-18**: `nativeAd.ts` cache TTL (`NATIVE_AD_TTL_MS` = 1h) — a preloaded-but-never-shown ad is discarded after expiry so a stale preload from a previous game can never serve; show still consumes on both success and failure. Tests: `nativeAd.test.ts` (TTL refresh + same-session reuse).
+- **2026-09-18**: Added `pip.ts` — web-safe Android PiP bridge mirroring `nativeAd.ts` (native-only, best-effort, never throws, change-suppressed traffic). Pure `shouldEnablePip(status, hasBlockingModal)` is the single eligibility rule (PLAYING only). Tests: `pip.test.ts`.

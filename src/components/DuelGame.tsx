@@ -14,6 +14,8 @@ import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { type BoardTopBarPlayer } from './BoardTopBar'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
+import { PipOverlay } from './PipOverlay'
+import { usePipEligibility, usePipMode } from '@/hooks/usePip'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -89,6 +91,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const prevStatusRef = useRef<'waiting' | 'playing' | 'game_over'>('waiting')
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
+  // Live-game PiP: eligible only while playing with no blocking modal open.
+  // Consumes existing status only — never drives game state.
+  usePipEligibility(status === 'playing' && !showSettings && !showResignConfirm && !showLeaveModal)
+  const isPipMode = usePipMode()
   // Warm the Game Over native ad for eligible free users while the duel is
   // active. Best-effort: never blocks gameplay, game-over, or navigation.
   useGameOverAdPreload(status === 'playing')
@@ -532,6 +538,10 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     <IsolatedMatchTimer getTimeRemaining={getDuelTimeRemaining} isActive={isDuelTimerActive} totalSeconds={totalSeconds} />
   ), [getDuelTimeRemaining, isDuelTimerActive, totalSeconds])
 
+  // Compact PiP status mapped from existing state only — no new semantics.
+  const pipIsMyTurn = (team === 'WHITE') === (currentTurn === 'w')
+  const pipTurnLabel = pipIsMyTurn ? 'YOUR TURN' : "OPPONENT'S TURN"
+
   // P0-1 perf: memoize presence mapping so BoardTopBar's referential comparator
   // holds when disconnectedAge/base arrays are unchanged.
   const whitePlayersWithPresence: BoardTopBarPlayer[] = useMemo(() => (
@@ -704,6 +714,21 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
         title="Abort Match"
         message="Are you sure you want to leave?"
         detail="You will forfeit this duel."
+      />
+
+      {/* Live-game PiP compact presentation — covers the full shell only
+          while the activity is inside the PiP window. Reads live engine
+          state (fen/turn/clock) via existing getters; never writes state. */}
+      <PipOverlay
+        visible={isPipMode}
+        fen={fen}
+        orientation={team === 'BLACK' ? 'black' : 'white'}
+        turnLabel={pipTurnLabel}
+        gameLabel="DUEL"
+        lastMove={lastMove}
+        getTimeRemaining={getDuelTimeRemaining}
+        isTimerActive={isDuelTimerActive}
+        totalSeconds={totalSeconds}
       />
     </div>
   )

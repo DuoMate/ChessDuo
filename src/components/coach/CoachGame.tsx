@@ -22,6 +22,8 @@ import { ResignConfirmModal } from '../ResignConfirmModal'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
+import { usePipEligibility, usePipMode } from '@/hooks/usePip'
+import { PipOverlay } from '../PipOverlay'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useSettings } from '@/hooks/useSettings'
@@ -276,6 +278,20 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     coachVoice.setEnabled(next)
     setVoiceEnabled(next)
   }
+
+  // Live-game PiP: eligible only while playing with no blocking modal or
+  // panel open. Consumes existing status only — never drives game state.
+  // Coach mode is untimed, so the overlay shows a move-count footer instead
+  // of reusing the match-clock display.
+  usePipEligibility(status === 'playing' && !showResignConfirm && !showLeave && activePanel === null)
+  const isPipMode = usePipMode()
+  const pipTurnLabel = !state || status !== 'playing'
+    ? 'WAITING'
+    : isPlayerTurn
+      ? 'YOUR TURN'
+      : state.analyzing
+        ? 'BOT THINKING'
+        : "COACH'S TURN"
 
   useNavigationGuard({
     enabled: status === 'playing',
@@ -546,6 +562,18 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       <SlideOver open={activePanel === 'chat'} onClose={() => setActivePanel(null)} title="Coach Notes">
         <CoachTranscriptPanel history={state?.feedbackHistory ?? []} suggestion={state?.suggestion ?? null} />
       </SlideOver>
+
+      {/* Live-game PiP compact presentation — covers the full shell only
+          while the activity is inside the PiP window. Reads live engine
+          state (fen/turn) via existing subscription; never writes state. */}
+      <PipOverlay
+        visible={isPipMode}
+        fen={state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
+        orientation={playerColor}
+        turnLabel={pipTurnLabel}
+        gameLabel="AI COACH"
+        footerLabel={`Move ${moveHistory.length + 1}`}
+      />
     </div>
   )
 }
