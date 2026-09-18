@@ -305,7 +305,8 @@ export function FourPlayerLobby({
       }`}
     >
       <p className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-2">
-        {team}
+        <span aria-hidden="true">{team === 'WHITE' ? '♔ ' : '♚ '}</span>
+        {team} · {(team === 'WHITE' ? whitePlayers : blackPlayers).length}/2
       </p>
       {(team === 'WHITE' ? whitePlayers : blackPlayers).map(p => (
         <div
