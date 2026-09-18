@@ -114,6 +114,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
 53. Merge `UI-UX-refactoring` → `develop` → `prod` (all pushed, builds green).
 54. `cfbaf21` ui: game chrome hierarchy - timer anchor + turn pill prominence (R1)
+55. `71ef84c` ui: pending cards presence + confirm bar emphasis (R2)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
