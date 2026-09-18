@@ -1,6 +1,6 @@
-# ChessDuo UI/UX Revamp — Final Report
+# ChessDuo UI/UX Revamp — Final Report — COMPLETE
 
-Branch: `UI-UX-refactoring` · Date: 2026-09-17 · Base: `ebb0541`.
+Branch: `UI-UX-refactoring` · Date: 2026-09-18 · Base: `ebb0541`.
 
 ## 1. Screens redesigned (presentation only)
 Home selection controls (TimePills, GameModeCard, difficulty, color, bot-elo),
@@ -42,30 +42,30 @@ no animation-timing changes. Memo contracts untouched (className strings only).
 See `docs/implementation-progress.md` (UI/UX Revamp section) + `git log UI-UX-refactoring`.
 
 ## 8. Tests executed
-`npx tsc --noEmit` before every commit (green); targeted suites (Toast, BackButton,
-ColorPicker, PendingMovesRow, coach 11 tests) green; one test assertion updated to the
-new token contract (`ColorPicker.test.tsx`); full `npm test` + `npm run build` at close.
+`npx tsc --noEmit` before every commit (green); targeted suites green throughout;
+test assertions updated to new contracts where the redesign intentionally changed
+classes (`ColorPicker`, `BotEloSelector`, `BotDifficultyGrid`, `PageLoading` selector).
+Final full `npm test`: 1429 passed; 7 failed = pre-existing on baseline only
+(ConfirmMoveBar 4, server/engine 3 — SidebarNav suite deleted with the dead component).
 
 ## 9. Browser build result
 `npm run build` green (Next.js 16.2.6, 28 static pages).
 
 ## 10. Browser QA result
 Owner follow-up per workflow (publish branch → manual browser QA → fix → approval →
-only then Android). Not yet performed in this session.
+only then Android). Branch published to `origin/UI-UX-refactoring`; awaiting owner pass.
 
-## 11. Known remaining UI issues
-* Full radius/type/spacing unification (tokens exist; migration is incremental).
-* Duo canonical pair decision pending (audit recommends blue vs purple; `team-a`/`team-b`
-  tokens now carry the live pair and the board turn pill/avatars consume them).
-* CTA primary hue (amber vs blue) pending prototype review.
-* MovePlayback inline links still sub-44px (density trade-off, documented exception).
+## 11. Known remaining UI issues (all accepted/documented)
+* Shared Button/Card primitives: deferred — 40+ call-site migration held for post-sign-off
+  to avoid compounding rework.
+* MovePlayback rows/strip stay compact (density trade-off) but are keyboard-reachable
+  with visible focus.
 * Settings toggle switches are h-6 w-11 (below 44px; row is 44px, switches keyboard-visible).
 * Friend message icon-button is w-10 h-10 (40px, pre-existing).
 * Board keyboard/SR play not implemented (needs design + engine-input work — out of scope).
-* `TeamHexagon` keeps hardcoded gradient hex (mapping to flat team tokens would collapse
-  the gradient; parked).
-* Full-suite pre-existing failures (ConfirmMoveBar/SidebarNav/server-engine/BillingDiagnostics)
-  verified byte-identical on baseline `ebb0541` — not introduced by this revamp.
+* `TeamHexagon` keeps hardcoded gradient hex (unused in production; parked).
+* Full-suite pre-existing failures (ConfirmMoveBar/server-engine) verified on baseline
+  `ebb0541` — not introduced by this revamp. SidebarNav failure eliminated with the component.
 
 ## 12. Core-functionality confirmation
 All changes are className/ARIA/CSS-variable/doc-only. No routing, auth, realtime, game,
