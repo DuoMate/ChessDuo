@@ -21,6 +21,11 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   const [isPremium, setIsPremium] = useState(false)
   const [loading, setLoading] = useState(true)
   const checkingRef = useRef(false)
+  // P1 perf: realtime effect must NOT resubscribe on every premium flip
+  // (was deps [isPremium] → re-getSession + resubscribe per flip).
+  // A ref carries the latest value into the stable subscription callback.
+  const isPremiumRef = useRef(isPremium)
+  isPremiumRef.current = isPremium
 
   const checkPremium = useCallback(async () => {
     if (checkingRef.current) return
@@ -70,7 +75,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         `id=eq.${session.user.id}`,
         (payload: { new: { is_premium?: boolean } }) => {
           const newPremium = payload.new?.is_premium
-          if (typeof newPremium === 'boolean' && newPremium !== isPremium) {
+          if (typeof newPremium === 'boolean' && newPremium !== isPremiumRef.current) {
             SubscriptionService.invalidate()
             setIsPremium(newPremium)
           }
@@ -83,7 +88,7 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
         RealtimeService.cleanupChannel(channel)
       }
     }
-  }, [isPremium])
+  }, [])
 
   return (
     <PremiumContext.Provider value={{ isPremium, loading }}>

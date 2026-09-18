@@ -78,8 +78,14 @@ describe('InsightsGate Component', () => {
   })
 
   test('shows MoveInsights immediately when user is premium', async () => {
-    const billing = require('@/features/billing')
-    billing.SubscriptionService.isPremium.mockResolvedValue(true)
+    // Component reads premium from getUserInsightsState (single call —
+    // the former standalone SubscriptionService.isPremium() was removed).
+    const insights = require('@/lib/insights')
+    insights.getUserInsightsState.mockResolvedValue({
+      revealsUsed: 0,
+      isPremium: true,
+      revealsRemaining: 3,
+    })
     render(<InsightsGate {...baseProps} />)
     await waitFor(() => {
       expect(screen.getByTestId('move-insights')).toBeDefined()

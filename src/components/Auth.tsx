@@ -199,15 +199,16 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
           return
         }
 
-        const { data: userData } = await supabase.auth.getUser()
+        // P0 perf: signInWithPassword already returns the user — reuse
+        // authData.user instead of a duplicate network getUser() verify.
         const session = await AuthService.getSession()
         logAuthDebug({
           stage: 'signInPostCheck',
           correlationId: cid,
-          hasUser: !!userData.user,
+          hasUser: !!authData.user,
           hasSession: !!session,
-          userId: userData.user?.id ?? null,
-          emailConfirmedAt: userData.user?.email_confirmed_at ?? null,
+          userId: authData.user?.id ?? null,
+          emailConfirmedAt: authData.user?.email_confirmed_at ?? null,
         })
 
         if (authData.user) {

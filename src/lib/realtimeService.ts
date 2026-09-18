@@ -26,7 +26,19 @@ export const RealtimeService = {
   },
 
   cleanupChannel(channel: RealtimeChannel): void {
-    channel.unsubscribe()
+    // P1 perf fix: previously only unsubscribed + removed from the manager,
+    // leaving the channel registered on the Supabase client (removeChannel
+    // is async) so remounts reused a stale joined channel. Fully detach.
+    try {
+      channel.unsubscribe()
+    } catch {
+      // Channel may already be closed — safe to ignore.
+    }
+    try {
+      void supabase.removeChannel(channel)
+    } catch {
+      // Removal is best-effort — manager removal below still runs.
+    }
     subscriptionManager.remove(channel)
   },
 

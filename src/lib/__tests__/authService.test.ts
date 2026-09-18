@@ -1,4 +1,4 @@
-import { AuthService } from '../authService'
+import { AuthService, clearSessionCache } from '../authService'
 
 const mockGetSession = jest.fn()
 const mockOnAuthStateChange = jest.fn()
@@ -15,6 +15,7 @@ jest.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
+  clearSessionCache()
   mockSubscription = { unsubscribe: jest.fn() }
 })
 
@@ -47,13 +48,16 @@ describe('AuthService', () => {
   })
 
   describe('onAuthChange', () => {
-    it('registers callback and returns unsubscribe function', () => {
+    it('registers a wrapper that forwards events and returns unsubscribe function', () => {
       mockOnAuthStateChange.mockReturnValue({ data: { subscription: mockSubscription } })
       const callback = jest.fn()
 
       const unsubscribe = AuthService.onAuthChange(callback)
 
-      expect(mockOnAuthStateChange).toHaveBeenCalledWith(callback)
+      expect(mockOnAuthStateChange).toHaveBeenCalledTimes(1)
+      const wrapper = mockOnAuthStateChange.mock.calls[0][0] as (event: string, session: null) => void
+      wrapper('SIGNED_IN', null)
+      expect(callback).toHaveBeenCalledWith('SIGNED_IN', null)
       expect(typeof unsubscribe).toBe('function')
     })
 
@@ -65,6 +69,19 @@ describe('AuthService', () => {
       unsubscribe()
 
       expect(mockSubscription.unsubscribe).toHaveBeenCalled()
+    })
+  })
+
+  describe('getSession cache (P0 perf)', () => {
+    it('collapses same-tick bursts into one supabase read', async () => {
+      const fakeSession = { user: { id: 'user-1' } }
+      mockGetSession.mockResolvedValue({ data: { session: fakeSession }, error: null })
+
+      const [a, b] = await Promise.all([AuthService.getSession(), AuthService.getSession()])
+
+      expect(a).toEqual(fakeSession)
+      expect(b).toEqual(fakeSession)
+      expect(mockGetSession).toHaveBeenCalledTimes(1)
     })
   })
 })

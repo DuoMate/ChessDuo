@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
+import { getHistoryPageWithStats, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
 import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight, Globe, Bot } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
@@ -32,10 +32,9 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
 
   useEffect(() => {
     if (!playerId) return
-    Promise.all([
-      getMatchHistory(50, playerId),
-      getPlayerStats(playerId),
-    ]).then(([g, s]) => {
+    // Single-bundle load: 1× room_players + 1× narrow completed_games serves
+    // both list and stats (was 2×(1+1) = 4 hops with move_comparisons JSONB).
+    getHistoryPageWithStats(playerId, 50).then(({ games: g, stats: s }) => {
       setGames(g)
       setPlayerStats(s)
       setLoading(false)

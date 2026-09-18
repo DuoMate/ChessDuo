@@ -3,9 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  getFriendsList,
-  getPendingRequests,
-  getBlockedUsers,
+  getFriendsBundle,
   searchUsers,
   sendFriendRequest,
   acceptFriendRequest,
@@ -25,6 +23,7 @@ import { ChatPanel } from './ChatPanel'
 import { ChallengePicker } from './ChallengePicker'
 import { getUnreadChallenges, markChallengeAsRead } from '@/lib/messages'
 import { FRIENDS_REFRESH_EVENT } from '@/lib/notificationRedirect'
+import { fetchProfile } from '@/lib/profileService'
 import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -79,12 +78,9 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', playerId)
-        .maybeSingle()
-      if (data?.username) setCurrentUserName(data.username)
+      // P0 perf: shared 60s profile cache (was a raw uncached SELECT per mount).
+      const profile = await fetchProfile(playerId)
+      if (profile?.username) setCurrentUserName(profile.username)
     } catch { /* profile fetch best-effort */ }
   }, [playerId])
 
@@ -109,15 +105,13 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
   const mountedRef = useRef(true)
 
   const loadData = useCallback(async () => {
-    const [f, p, b] = await Promise.all([
-      getFriendsList(playerId),
-      getPendingRequests(playerId),
-      getBlockedUsers(playerId),
-    ])
+    // P1 perf: single bundle (1× friendships + 1× profiles.in) instead of
+    // 3× (friendships→profiles.in) = 6 hops for accepted/pending/blocked.
+    const bundle = await getFriendsBundle(playerId)
     if (!mountedRef.current) return
-    setFriends(f)
-    setPending(p)
-    setBlocked(b)
+    setFriends(bundle.friends)
+    setPending({ incoming: bundle.incoming, outgoing: bundle.outgoing })
+    setBlocked(bundle.blocked)
     setLoading(false)
     loadChallenges()
   }, [playerId, loadChallenges])

@@ -6,7 +6,7 @@ export async function sendFriendRequest(senderId: string, receiverId: string): P
 
   const { data: existing } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`)
     .maybeSingle()
 
@@ -69,7 +69,7 @@ export async function deleteFriendship(userId: string, friendId: string): Promis
 export async function blockUser(userId: string, blockedUserId: string): Promise<{ error: string | null }> {
   const { data: existing } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`and(sender_id.eq.${userId},receiver_id.eq.${blockedUserId}),and(sender_id.eq.${blockedUserId},receiver_id.eq.${userId})`)
     .maybeSingle()
 
@@ -109,19 +109,105 @@ export interface FriendWithProfile extends Friendship {
   request_receiver_id: string
 }
 
+const FRIENDSHIP_LIST_COLUMNS = 'sender_id, receiver_id, status, created_at, updated_at'
+
+function toFriendWithProfile(f: Friendship, userId: string, profileMap: Map<string, string>, avatarMap: Map<string, string | null>): FriendWithProfile {
+  const friendId = f.sender_id === userId ? f.receiver_id : f.sender_id
+  return {
+    ...f,
+    friend_username: profileMap.get(friendId) || 'Unknown',
+    friend_avatar_url: avatarMap.get(friendId) || null,
+    friend_id: friendId,
+    direction: f.sender_id === userId ? 'sent' : 'received',
+    request_sender_id: f.sender_id,
+    request_receiver_id: f.receiver_id,
+  }
+}
+
+/**
+ * P1 perf: single-bundle friends load — ONE `friendships` SELECT (all rows
+ * involving the user, explicit columns) + ONE `profiles.in(union)` instead
+ * of 3× (friendships→profiles.in) = 6 hops for accepted/pending/blocked.
+ * Splitting is done in memory with identical semantics to
+ * getFriendsList/getPendingRequests/getBlockedUsers. Guards empty `.in()`
+ * (PostgREST rejects empty lists) and caps rows per status to bound payload.
+ */
+const FRIENDS_BUNDLE_LIMIT_PER_STATUS = 500
+
+export async function getFriendsBundle(userId: string): Promise<{
+  friends: FriendWithProfile[]
+  incoming: FriendWithProfile[]
+  outgoing: FriendWithProfile[]
+  blocked: FriendWithProfile[]
+}> {
+  const empty = { friends: [], incoming: [], outgoing: [], blocked: [] }
+  const { data: friendships } = await supabase
+    .from('friendships')
+    .select(FRIENDSHIP_LIST_COLUMNS)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .order('updated_at', { ascending: false })
+    .limit(FRIENDS_BUNDLE_LIMIT_PER_STATUS * 3)
+
+  if (!friendships || friendships.length === 0) return empty
+
+  const otherIds = [...new Set(friendships.map(f =>
+    f.sender_id === userId ? f.receiver_id : f.sender_id
+  ))]
+  if (otherIds.length === 0) return empty
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .in('id', otherIds)
+
+  const profileMap = new Map<string, string>(
+    profiles?.map((p: { id: string; username: string }) => [p.id, p.username] as [string, string]) || [],
+  )
+  const avatarMap = new Map<string, string | null>(
+    profiles?.map((p: { id: string; avatar_url: string | null }) => [p.id, p.avatar_url || null] as [string, string | null]) || [],
+  )
+
+  const friends: FriendWithProfile[] = []
+  const incoming: FriendWithProfile[] = []
+  const outgoing: FriendWithProfile[] = []
+  const blocked: FriendWithProfile[] = []
+
+  for (const f of friendships) {
+    const withProfile = toFriendWithProfile(f as Friendship, userId, profileMap, avatarMap)
+    if (f.status === 'accepted') {
+      if (friends.length < FRIENDS_BUNDLE_LIMIT_PER_STATUS) friends.push(withProfile)
+    } else if (f.status === 'pending') {
+      if (f.receiver_id === userId) {
+        if (incoming.length < FRIENDS_BUNDLE_LIMIT_PER_STATUS) incoming.push(withProfile)
+      } else {
+        if (outgoing.length < FRIENDS_BUNDLE_LIMIT_PER_STATUS) outgoing.push(withProfile)
+      }
+    } else if (f.status === 'blocked') {
+      // Preserve getBlockedUsers semantics: only rows the viewer sent.
+      if (f.sender_id === userId && blocked.length < FRIENDS_BUNDLE_LIMIT_PER_STATUS) {
+        blocked.push(withProfile)
+      }
+    }
+  }
+
+  return { friends, incoming, outgoing, blocked }
+}
+
 export async function getFriendsList(userId: string): Promise<FriendWithProfile[]> {
   const { data: friendships, error } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .eq('status', 'accepted')
     .order('updated_at', { ascending: false })
+    .limit(FRIENDS_BUNDLE_LIMIT_PER_STATUS)
 
   if (error || !friendships) return []
 
   const friendIds = friendships.map(f =>
     f.sender_id === userId ? f.receiver_id : f.sender_id
   )
+  if (friendIds.length === 0) return []
 
   const { data: profiles } = await supabase
     .from('profiles')
@@ -151,16 +237,18 @@ export async function getPendingRequests(userId: string): Promise<{
 }> {
   const { data: friendships } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
+    .limit(FRIENDS_BUNDLE_LIMIT_PER_STATUS * 2)
 
   if (!friendships) return { incoming: [], outgoing: [] }
 
   const allUserIds = friendships.map(f =>
     f.sender_id === userId ? f.receiver_id : f.sender_id
   )
+  if (allUserIds.length === 0) return { incoming: [], outgoing: [] }
 
   const { data: profiles } = await supabase
     .from('profiles')
@@ -197,13 +285,15 @@ export async function getPendingRequests(userId: string): Promise<{
 export async function getBlockedUsers(userId: string): Promise<FriendWithProfile[]> {
   const { data: friendships } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .eq('sender_id', userId)
     .eq('status', 'blocked')
+    .limit(FRIENDS_BUNDLE_LIMIT_PER_STATUS)
 
   if (!friendships) return []
 
   const blockedIds = friendships.map(f => f.receiver_id)
+  if (blockedIds.length === 0) return []
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, username, avatar_url')
@@ -239,7 +329,7 @@ export async function searchUsers(query: string, currentUserId: string): Promise
 export async function isFriend(userId: string, otherUserId: string): Promise<boolean> {
   const { data } = await supabase
     .from('friendships')
-    .select('*')
+    .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
     .neq('status', 'blocked')
     .maybeSingle()
@@ -264,9 +354,11 @@ export async function getFriendStats(friendId: string): Promise<{
   draws: number
   avgAccuracy: number
 } | null> {
+  // Narrow columns (was select('*') incl. unused fields); membership
+  // subselect + limit preserved — same rows, smaller payload.
   const { data, error } = await supabase
     .from('completed_games')
-    .select('*')
+    .select('winner, player1_accuracy, player2_accuracy')
     .or(`room_id.in.(select room_id from room_players where player_id.eq.${friendId})`)
     .limit(1000)
 

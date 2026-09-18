@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getAvailableSkillLevels, SkillLevel } from '@/features/bots/botConfig'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
+import { fetchProfile } from '@/lib/profileService'
 import { getFriendsList, FriendWithProfile } from '@/lib/friends'
 import { storePendingAction, consumePendingAction, clearPendingAction, type PendingAction } from '@/lib/pendingAction'
 import { Auth } from '@/components/Auth'
@@ -510,12 +511,12 @@ export default function SetupPage() {
   }, [gameMode, playerId, duelFriend])
 
   const fetchUsername = async (userId: string): Promise<string> => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', userId)
-      .maybeSingle()
-    if (data?.username) return data.username
+    // P0 perf: shared 60s profile cache (was a raw uncached profiles SELECT
+    // issued twice on every startup — here and in onAuthChange).
+    try {
+      const profile = await fetchProfile(userId)
+      if (profile?.username) return profile.username
+    } catch { /* profile fetch best-effort — fall through */ }
     return ''
   }
 

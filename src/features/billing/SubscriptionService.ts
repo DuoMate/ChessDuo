@@ -14,7 +14,16 @@ let provider: BillingProvider | null = null
 let initialized = false
 let cachedStatus: SubscriptionInfo | null = null
 let statusCheckedAt = 0
-const STATUS_CACHE_MS = 30_000
+// P0 perf: 5-minute TTL with realtime invalidation (was 30s — every
+// startup issued 1–3× GET /api/subscription/status, each costing
+// auth.getUser + 1–2× profiles SELECT server-side). Premium flips still
+// propagate immediately via SubscriptionService.invalidate() on the
+// profiles UPDATE realtime channel (usePremium) — TTL only skips
+// redundant polling, never blocks invalidation.
+const STATUS_CACHE_MS = 300_000
+// Single-flight: concurrent isPremium()/getStatus()/initialize() callers
+// share one network fetch instead of stacking duplicate GET /status calls.
+let pendingFetch: Promise<SubscriptionInfo> | null = null
 
 function getApiBase(): string {
   return getAppBaseUrl()
@@ -136,6 +145,7 @@ export const SubscriptionService = {
   invalidate(): void {
     cachedStatus = null
     statusCheckedAt = 0
+    pendingFetch = null
   },
 
   async initialize(): Promise<void> {
@@ -200,6 +210,7 @@ export const SubscriptionService = {
     if (anyRestored) {
       cachedStatus = null
       statusCheckedAt = 0
+      pendingFetch = null
       await this.isPremium()
     }
 
@@ -211,8 +222,10 @@ export const SubscriptionService = {
     if (cachedStatus && (now - statusCheckedAt) < STATUS_CACHE_MS) {
       return cachedStatus.isPremium
     }
-
-    cachedStatus = await fetchServerStatus()
+    if (!pendingFetch) {
+      pendingFetch = fetchServerStatus().finally(() => { pendingFetch = null })
+    }
+    cachedStatus = await pendingFetch
     statusCheckedAt = now
     return cachedStatus.isPremium
   },
@@ -254,7 +267,10 @@ export const SubscriptionService = {
     if (cachedStatus && (Date.now() - statusCheckedAt) < STATUS_CACHE_MS) {
       return cachedStatus
     }
-    cachedStatus = await fetchServerStatus()
+    if (!pendingFetch) {
+      pendingFetch = fetchServerStatus().finally(() => { pendingFetch = null })
+    }
+    cachedStatus = await pendingFetch
     statusCheckedAt = Date.now()
     return cachedStatus
   },

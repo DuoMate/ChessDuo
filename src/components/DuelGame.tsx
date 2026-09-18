@@ -22,6 +22,7 @@ import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useSettings } from '@/hooks/useSettings'
 import { saveCompletedGame, hasLocalHistoryForRoom } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
+import { fetchProfile } from '@/lib/profileService'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
@@ -267,14 +268,11 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
       return
     }
     let active = true
-    supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', playerId)
-      .maybeSingle()
-      .then(({ data, error }) => {
+    // P0 perf: shared 60s profile cache (was a raw uncached SELECT per mount).
+    fetchProfile(playerId)
+      .then((data) => {
         if (!active) return
-        if (error || !data) return
+        if (!data) return
         setUserProfile({ username: data.username || null, avatarUrl: data.avatar_url || null })
       })
       .catch(() => {})
@@ -288,12 +286,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
     if (!game) return
     const opp = team === 'WHITE' ? game.blackPlayer : game.whitePlayer
     if (!opp?.id) return
-    supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', opp.id)
-      .maybeSingle()
-      .then(({ data }) => {
+    // P0 perf: shared 60s profile cache (was a raw uncached SELECT per mount).
+    fetchProfile(opp.id)
+      .then((data) => {
         if (data?.username) setOpponentUsername(data.username)
         if (data?.avatar_url) setOpponentAvatar(data.avatar_url)
       }).catch(() => {})
