@@ -112,6 +112,8 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
 51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
 52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
+53. Merge `UI-UX-refactoring` → `develop` → `prod` (all pushed, builds green).
+54. `cfbaf21` ui: game chrome hierarchy - timer anchor + turn pill prominence (R1)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
