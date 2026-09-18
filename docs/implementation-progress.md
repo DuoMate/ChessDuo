@@ -123,6 +123,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 61. `a2f16ab` ui: shared PromotionModal for Game + DuelGame (S1)
 62. `ede2465` ui: normalize radii outliers to token scale (U1)
 63. `1974784` ui: restrain modal shadows to elevation token (U2)
+64. `0119ef8` ui: Lucide icon sweep - transport, close, status, badge glyphs (I1)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
