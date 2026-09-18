@@ -120,6 +120,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 58. `f659e0f` ui: 4-player team headers with glyphs + seat counts (R5)
 59. `5ab1844` ui: editor/rate/gameon/promotion pairing + focus + shared modal constants (P1)
 60. `a262203` ui: mobile status bar timer contrast (P2)
+61. `a2f16ab` ui: shared PromotionModal for Game + DuelGame (S1)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,

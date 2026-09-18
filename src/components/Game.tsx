@@ -52,7 +52,6 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Lock, BarChart3 } from 'lucide-react'
 
 // ============================================================
