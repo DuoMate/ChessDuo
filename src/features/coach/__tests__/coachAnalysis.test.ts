@@ -118,7 +118,10 @@ describe('coachAnalysis', () => {
 
   describe('explainMove', () => {
     it('produces natural-language coaching for each verdict', () => {
-      expect(explainMove({ verdict: 'best', playerMoveSan: 'e4', bestMoveSan: 'e4', centipawnLoss: 0 })).toContain('top choice')
+      const best = explainMove({ verdict: 'best', playerMoveSan: 'e4', bestMoveSan: 'e4', centipawnLoss: 0 })
+      expect(best).toContain('top choice')
+      // Calm tone: no superlatives in spoken feedback.
+      expect(best).not.toMatch(/excellent|brilliant|perfect|amazing|awesome|fantastic|incredible|outstanding|superb/i)
       expect(explainMove({ verdict: 'blunder', playerMoveSan: 'Qh5', bestMoveSan: 'e4', centipawnLoss: 600 })).toContain('blunder')
       expect(explainMove({ verdict: 'mistake', playerMoveSan: 'a3', bestMoveSan: 'e4', centipawnLoss: 200 })).toContain('mistake')
     })
