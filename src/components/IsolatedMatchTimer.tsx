@@ -68,13 +68,13 @@ function IsolatedMatchTimerInner({ getTimeRemaining, isActive }: IsolatedMatchTi
   const secs = (remaining % 60).toString().padStart(2, '0')
 
   return (
-    <div className="flex flex-col items-center justify-center px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[60px]">
-      <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+    <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border-2 border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[76px] shadow-sm dark:shadow-none">
+      <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx="12" cy="12" r="9" />
           <polyline points="12 7 12 12 15 14" />
         </svg>
-        <span className="font-game text-sm font-bold tabular-nums" aria-live="off">
+        <span className="font-game text-base font-extrabold tabular-nums" aria-live="off">
           {mins}:{secs}
         </span>
       </div>

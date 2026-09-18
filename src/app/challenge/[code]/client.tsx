@@ -14,6 +14,7 @@ import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
 import InstallBanner from '@/components/InstallBanner'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { Zap, Link2, Clock, TriangleAlert, Loader2 } from 'lucide-react'
 
 export default function ChallengePageClient() {
   const params = useParams()
@@ -196,7 +197,9 @@ export default function ChallengePageClient() {
         <ErrorBoundary>
           <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-6">
-              <div className="text-5xl mb-2">⚡</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15">
+                <Zap size={28} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              </div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Challenge Match</h1>
               <p className="text-gray-500 dark:text-gray-400">Sign in to accept this challenge</p>
 
@@ -216,8 +219,10 @@ export default function ChallengePageClient() {
         <div className="max-w-sm w-full text-center space-y-4">
           {status === 'invalid' && (
             <>
-              <div className="text-5xl mb-2">🔗</div>
-              <h1 className="text-xl font-bold text-red-400">Invalid Challenge</h1>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+                <Link2 size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+              </div>
+              <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Invalid Challenge</h1>
               <p className="text-gray-500 dark:text-gray-400">This challenge link is invalid or has already been used</p>
               <BackButton label="Go Home" />
             </>
@@ -225,8 +230,10 @@ export default function ChallengePageClient() {
 
           {status === 'expired' && (
             <>
-              <div className="text-5xl mb-2">⏰</div>
-              <h1 className="text-xl font-bold text-red-400">Challenge Expired</h1>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15">
+                <Clock size={28} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />
+              </div>
+              <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Challenge Expired</h1>
               <p className="text-gray-500 dark:text-gray-400">This challenge link has expired (24h limit)</p>
               <BackButton label="Go Home" />
             </>
@@ -234,7 +241,9 @@ export default function ChallengePageClient() {
 
           {status === 'joining' && (
             <>
-              <div className="animate-spin text-4xl mb-2">⚡</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15">
+                <Loader2 size={28} className="text-amber-600 dark:text-amber-400 animate-spin" aria-hidden="true" />
+              </div>
               <h1 className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Joining Challenge...</h1>
               <p className="text-gray-500 dark:text-gray-400">Setting up the game room</p>
             </>
@@ -242,8 +251,10 @@ export default function ChallengePageClient() {
 
           {status === 'error' && (
             <>
-              <div className="text-5xl mb-2">⚠️</div>
-              <h1 className="text-xl font-bold text-red-400">Error</h1>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+                <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+              </div>
+              <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Error</h1>
               <p className="text-gray-500 dark:text-gray-400">{errorMsg}</p>
               <BackButton label="Go Home" />
             </>

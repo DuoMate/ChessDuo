@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { normalizeOtpType, isPkceVerifierMissing } from '@/lib/authError'
 import { PageLoading } from '@/components/PageLoading'
+import { CheckCircle2, TriangleAlert } from 'lucide-react'
 import { logAuthDebug, correlationId } from '@/lib/authDebug'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
@@ -198,7 +199,9 @@ export default function AuthCallbackPage() {
   if (status === 'recovery') {
     return (
       <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-        <div className="text-5xl mb-3" aria-hidden="true">✅</div>
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15" aria-hidden="true">
+          <CheckCircle2 size={28} className="text-emerald-600 dark:text-emerald-400" />
+        </div>
         <h1 className="text-xl font-bold mb-2">Email confirmed</h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center max-w-xs">
           Your email address has been confirmed. For security, this sign-in link only works in the browser where you
@@ -217,7 +220,9 @@ export default function AuthCallbackPage() {
   if (status === 'error') {
     return (
       <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-        <div className="text-5xl mb-3" aria-hidden="true">⚠️</div>
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15" aria-hidden="true">
+          <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" />
+        </div>
         <h1 className="text-xl font-bold mb-2">{isOAuth ? "Couldn't sign in" : "Couldn't confirm your email"}</h1>
         <p role="alert" className="text-slate-500 dark:text-slate-400 text-sm mb-4 text-center max-w-xs">
           {isOAuth

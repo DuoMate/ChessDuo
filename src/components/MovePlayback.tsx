@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Circle } from 'lucide-react'
 
 export interface MoveEntry {
   turn: number
@@ -164,7 +165,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
           aria-label="Previous move"
           className="focus-ring min-h-[44px] min-w-[44px] rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 text-sm transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white"
         >
-          ←
+          <ChevronLeft size={18} />
         </button>
         <button
           onClick={onReset}
@@ -175,7 +176,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
               : 'bg-slate-200 text-slate-500 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
           }`}
         >
-          ●
+          <Circle size={14} fill="currentColor" aria-hidden="true" />
         </button>
         <button
           onClick={() => goTo(activeIndex + 1)}
@@ -183,7 +184,7 @@ export function MovePlayback({ moves, currentIndex, initialFen, onSelectMove, on
           aria-label="Next move"
           className="focus-ring min-h-[44px] min-w-[44px] rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 text-sm transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white"
         >
-          →
+          <ChevronRight size={18} />
         </button>
       </div>
     </div>

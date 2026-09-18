@@ -132,7 +132,7 @@ function TurnStatusAreaInner({ state, seconds, isActive, totalSeconds, selectedM
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="rounded-[22px] border border-amber-500/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl dark:border-amber-500/20 dark:bg-slate-900/70"
+            className="rounded-full border border-amber-500/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl dark:border-amber-500/20 dark:bg-slate-900/70"
           >
             <EvaluatingPulse />
           </motion.div>

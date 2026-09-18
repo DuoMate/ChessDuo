@@ -1197,7 +1197,7 @@ if (!gameMode) {
                   className="overflow-hidden mb-2"
                 >
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Configuration</p>
-                  <div className="rounded-[28px] border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[var(--color-page-bg)] p-5 shadow-2xl">
+                  <div className="rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-[var(--color-page-bg)] p-5 shadow-2xl">
                     {/* Bot Difficulty */}
                     <section className="mb-4">
                       <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-1.5">Bot Difficulty</p>

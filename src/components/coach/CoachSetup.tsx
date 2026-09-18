@@ -36,7 +36,7 @@ export function CoachSetup({ initialLevel, initialColor, onStart, onBack }: Coac
         </p>
       </div>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/70">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/70">
         <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
           Bot Difficulty
         </p>
@@ -48,7 +48,7 @@ export function CoachSetup({ initialLevel, initialColor, onStart, onBack }: Coac
         )}
       </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/70">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700/50 dark:bg-slate-900/70">
         <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
           Choose Your <span className="text-blue-500 dark:text-blue-400">Color</span>
         </p>

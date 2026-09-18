@@ -11,6 +11,7 @@ import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 import { PageLoading } from '@/components/PageLoading'
+import { TriangleAlert } from 'lucide-react'
 
 const FourPlayerLobbyComponent = dynamic(() => import('@/components/FourPlayerLobby').then(mod => ({ default: mod.FourPlayerLobby })), {
   loading: () => <PageLoading label="Loading lobby..." />,
@@ -67,7 +68,9 @@ function FourPlayerContent() {
     return (
       <div className="min-h-dvh bg-white dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-center space-y-4">
-          <div className="text-5xl">⚠️</div>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+            <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+          </div>
           <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Error</h1>
           <p className="text-gray-700 dark:text-gray-400 font-medium">{error}</p>
           <BackButton label="Go Home" />

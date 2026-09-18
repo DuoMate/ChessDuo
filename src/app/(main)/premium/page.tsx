@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
-import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink } from 'lucide-react'
+import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink, Sparkles } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { PageLoading } from '@/components/PageLoading'
 import { SubscriptionService } from '@/features/billing'
@@ -304,7 +304,7 @@ export default function PremiumPage() {
                     {!plansLoading && plans.length === 0 && (
                       <div role="alert" className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-sm text-center">Premium products could not be loaded from Google Play. Please check your Google Play account and region, then retry.</div>
                     )}
-                    <div className="relative rounded-[24px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-5 mb-4 overflow-hidden">
+                    <div className="relative glass-premium p-5 mb-4 overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex flex-col items-center gap-3 mb-3">
                           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Monthly</h3>
@@ -333,7 +333,7 @@ export default function PremiumPage() {
                       </div>
                     </div>
 
-                    <div className="relative rounded-[24px] border border-emerald-500/30 bg-white shadow-sm dark:bg-slate-800/50 dark:shadow-none p-5 mb-6">
+                    <div className="relative glass-premium p-5 mb-6">
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold">Best Value</div>
                       <div className="relative z-10">
                         <div className="flex flex-col items-center gap-3 mb-3 mt-2">
@@ -368,7 +368,7 @@ export default function PremiumPage() {
                   </>
                 ) : (
                   /* Web: download app CTA */
-                  <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-6 mb-6 text-center">
+                  <div className="glass-premium p-6 mb-6 text-center">
                     <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
                       <Smartphone size={28} className="text-blue-600 dark:text-blue-400" />
                     </div>
@@ -398,9 +398,9 @@ export default function PremiumPage() {
                 {/* Premium Benefits */}
                 <div className="text-center mb-4">
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-500 dark:text-amber-400">✦</span>
+                    <Sparkles size={14} className="text-amber-500 dark:text-amber-400" aria-hidden="true" />
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Premium Benefits</h3>
-                    <span className="text-amber-500 dark:text-amber-400">✦</span>
+                    <Sparkles size={14} className="text-amber-500 dark:text-amber-400" aria-hidden="true" />
                   </div>
                 </div>
 
@@ -455,7 +455,7 @@ function PremiumSuccess({
       </div>
 
       <div className="flex-1 flex flex-col justify-center">
-        <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/70 dark:bg-slate-800/50 dark:shadow-none p-6 sm:p-8 text-center">
+        <div className="glass-premium p-6 sm:p-8 text-center">
           <div className="relative inline-flex mb-5">
             <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center shadow-[0_0_40px_rgba(37,99,235,0.35)]">
               <Check size={40} className="text-white" strokeWidth={3} />
@@ -464,9 +464,9 @@ function PremiumSuccess({
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-3">
-            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
+            <Sparkles size={20} className="text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
             <h2 className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">You&apos;re Premium!</h2>
-            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
+            <Sparkles size={20} className="text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
           </div>
 
           <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-sm font-semibold mb-4">
@@ -531,7 +531,7 @@ function FeatureIcon({ icon, title, subtitle }: { icon: React.ReactNode; title: 
 
 function BenefitRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-[18px] border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/30 dark:shadow-none">
+    <div className="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/30 dark:shadow-none">
       <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400">{icon}</div>
       <div className="flex-1 min-w-0 text-center">
         <p className="text-slate-900 dark:text-white text-sm font-semibold">{title}</p>

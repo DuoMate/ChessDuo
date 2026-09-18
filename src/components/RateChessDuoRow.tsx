@@ -34,16 +34,16 @@ function RateChessDuoRowInner() {
   return (
     <button
       onClick={handleRateApp}
-      className="w-full min-h-[44px] p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
+      className="focus-ring w-full min-h-[44px] p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-3 hover:bg-amber-500/15 transition-colors"
     >
       <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-        <Star size={20} className="text-amber-400" />
+        <Star size={20} className="text-amber-600 dark:text-amber-400" />
       </div>
       <div className="flex-1 text-left min-w-0">
-        <p className="text-sm font-semibold text-amber-400 truncate">{openingStore ? 'Opening Play Store…' : 'Rate ChessDuo'}</p>
-        <p className="text-xs text-slate-400 truncate">Enjoying the game? Leave us a rating</p>
+        <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 truncate">{openingStore ? 'Opening Play Store…' : 'Rate ChessDuo'}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Enjoying the game? Leave us a rating</p>
       </div>
-      <span className="text-slate-500 shrink-0" aria-hidden="true">&rsaquo;</span>
+      <span className="text-slate-400 dark:text-slate-500 shrink-0" aria-hidden="true">&rsaquo;</span>
     </button>
   )
 }

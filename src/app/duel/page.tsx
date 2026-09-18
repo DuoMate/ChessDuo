@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { TriangleAlert, Lock } from 'lucide-react'
 import { PageLoading } from '@/components/PageLoading'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
@@ -45,7 +46,9 @@ function DuelContent() {
       <ErrorBoundary>
         <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
-            <div className="text-5xl">⚠️</div>
+            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+              <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+            </div>
             <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Invalid Duel Link</h1>
             <p className="text-slate-500 dark:text-slate-400">Missing required parameters</p>
             <button onClick={() => router.push('/')} className="focus-ring min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">
@@ -62,7 +65,9 @@ function DuelContent() {
       <ErrorBoundary>
         <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
           <div className="text-center space-y-4">
-            <div className="text-5xl">🔒</div>
+            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-slate-500/15">
+              <Lock size={28} className="text-slate-500 dark:text-slate-400" aria-hidden="true" />
+            </div>
             <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Session Expired</h1>
             <p className="text-slate-500 dark:text-slate-400">Please sign in again to continue.</p>
             <button onClick={() => router.push('/')} className="focus-ring min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors">

@@ -176,7 +176,7 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
           </div>
           {usernameMessage && username.trim() && username !== originalUsername && (
             <p className={`text-xs ${
-              usernameStatus === 'available' ? 'text-green-500' : 'text-red-500 dark:text-red-400'
+              usernameStatus === 'available' ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-400'
             }`}>
               {usernameMessage}
             </p>
@@ -185,13 +185,13 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
             <button
               onClick={handleSave}
               disabled={saving || (username !== originalUsername && usernameStatus !== 'available')}
-              className="flex-1 min-h-[44px] bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
+              className="focus-ring flex-1 min-h-[44px] bg-yellow-500 text-gray-900 font-bold rounded-xl hover:bg-yellow-400 disabled:opacity-50 transition-colors text-sm"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={handleCancel}
-              className="min-h-[44px] px-4 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-colors text-sm"
+              className="focus-ring min-h-[44px] px-4 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
             >
               Cancel
             </button>
@@ -201,8 +201,8 @@ export function ProfileEditor({ playerId }: { playerId: string }) {
         <p className="text-gray-900 dark:text-white font-semibold text-lg">{username}</p>
       )}
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
-      {saved && <p className="text-green-400 text-xs">Username saved!</p>}
+      {error && <p className="text-red-600 dark:text-red-400 text-xs">{error}</p>}
+      {saved && <p className="text-green-600 dark:text-green-400 text-xs">Username saved!</p>}
     </div>
   )
 }

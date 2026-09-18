@@ -232,6 +232,22 @@ body {
     @apply ring-1 ring-slate-200/70 dark:ring-slate-700/70;
   }
 
+  /* Premium glassmorphism treatment (both themes).
+     Reserved for premium surfaces only (pricing cards, success card) —
+     never for gameplay chrome, which stays calm and board-focused. */
+  .glass-premium {
+    @apply border backdrop-blur-xl rounded-3xl;
+    border-color: rgba(180, 130, 20, 0.35);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(245, 158, 11, 0.12));
+    box-shadow: 0 12px 40px rgba(180, 130, 20, 0.15), var(--shadow-card);
+  }
+
+  .dark .glass-premium {
+    border-color: rgba(251, 191, 36, 0.25);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(251, 191, 36, 0.1));
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 24px rgba(251, 191, 36, 0.08);
+  }
+
   /* Shared visible keyboard-focus treatment (a11y gap fix, presentation-only).
      Apply alongside interactive elements: className="... focus-ring" */
   .focus-ring {

@@ -53,7 +53,7 @@ export function MobileStatusBar({
         </div>
 
         {/* Timer */}
-        <div className={`flex items-center gap-2 ${timerActive ? 'text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
+        <div className={`flex items-center gap-2 ${timerActive ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`}>
           <motion.span
             animate={timerActive ? { scale: [1, 1.1, 1] } : {}}
             transition={{ repeat: Infinity, duration: 1 }}

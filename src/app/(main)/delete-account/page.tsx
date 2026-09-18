@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { X, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 import { getAppBaseUrl } from '@/lib/appUrl'
@@ -78,23 +79,23 @@ function DeleteAccountContent() {
                 <h2 className="font-semibold mb-3">What will be deleted:</h2>
                 <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X size={12} className="text-red-500 mt-0.5 shrink-0" aria-hidden="true" />
                     Profile information (username, stats)
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X size={12} className="text-red-500 mt-0.5 shrink-0" aria-hidden="true" />
                     Game history and match records
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X size={12} className="text-red-500 mt-0.5 shrink-0" aria-hidden="true" />
                     Friend list and chat messages
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X size={12} className="text-red-500 mt-0.5 shrink-0" aria-hidden="true" />
                     Active rooms and challenges
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <X size={12} className="text-red-500 mt-0.5 shrink-0" aria-hidden="true" />
                     Duel game records
                   </li>
                 </ul>
@@ -144,7 +145,7 @@ function DeleteAccountContent() {
           {step === 'done' && (
             <div className="text-center py-20">
               <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl text-green-600">✓</span>
+                <Check size={28} className="text-green-600" aria-hidden="true" />
               </div>
               <h1 className="text-2xl font-bold mb-2">Account Deleted</h1>
               <p className="text-gray-500 dark:text-slate-400 mb-8">
@@ -162,7 +163,7 @@ function DeleteAccountContent() {
           {step === 'error' && (
             <div className="text-center py-20">
               <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl text-red-600">✕</span>
+                <X size={28} className="text-red-600" aria-hidden="true" />
               </div>
               <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
               <p role="alert" className="text-gray-500 dark:text-slate-400 mb-4">{errorMsg}</p>

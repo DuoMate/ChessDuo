@@ -25,7 +25,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
   const isDisabled = (tab: BoardTab) => disabledTabs.includes(tab)
   const inactiveTab = 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
   const tabClass = (tab: BoardTab, activeStyles: string, inactiveStyles: string = inactiveTab) =>
-    `focus-ring relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color,opacity,transform] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 ${
+    `focus-ring relative flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 transition-[background-color,color,opacity,transform] duration-150 ease-out min-h-[48px] min-w-[44px] flex-1 ${
       isDisabled(tab)
         ? 'text-slate-500 dark:text-slate-600 opacity-40 cursor-not-allowed'
         : activeTab === tab
@@ -46,7 +46,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
           className={tabClass('moves', 'bg-blue-500/15 text-blue-300')}
           aria-label="Moves"
         >
-          <History size={18} strokeWidth={activeTab === 'moves' ? 2.5 : 2} />
+          <History size={20} strokeWidth={activeTab === 'moves' ? 2.5 : 2} />
           <span className="text-xs font-bold leading-none">Moves</span>
         </button>
 
@@ -59,7 +59,7 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
           className={tabClass('chat', 'bg-emerald-500/15 text-emerald-300')}
           aria-label="Chat"
         >
-          <MessageCircle size={18} strokeWidth={activeTab === 'chat' ? 2.5 : 2} />
+          <MessageCircle size={20} strokeWidth={activeTab === 'chat' ? 2.5 : 2} />
           <span className="text-xs font-bold leading-none">Chat</span>
           {unreadChat && unreadChat > 0 && (
             <span className="absolute top-1 right-1 min-w-[14px] h-3.5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
@@ -92,10 +92,10 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
         <button
           type="button"
           onClick={onBackMove}
-          className="focus-ring flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="focus-ring flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 transition-[background-color,color] duration-150 ease-out min-h-[48px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           aria-label="Previous move"
         >
-          <ChevronLeft size={18} strokeWidth={2.5} />
+          <ChevronLeft size={20} strokeWidth={2.5} />
           <span className="text-xs font-bold leading-none">Back</span>
         </button>
 
@@ -103,10 +103,10 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
         <button
           type="button"
           onClick={onForwardMove}
-          className="focus-ring flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-[background-color,color] duration-150 ease-out min-h-[44px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="focus-ring flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2.5 transition-[background-color,color] duration-150 ease-out min-h-[48px] min-w-[44px] flex-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           aria-label="Next move"
         >
-          <ChevronRight size={18} strokeWidth={2.5} />
+          <ChevronRight size={20} strokeWidth={2.5} />
           <span className="text-xs font-bold leading-none">Fwd</span>
         </button>
       </div>

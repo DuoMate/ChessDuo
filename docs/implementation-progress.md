@@ -112,6 +112,23 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
 51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
 52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
+53. Merge `UI-UX-refactoring` → `develop` → `prod` (all pushed, builds green).
+54. `cfbaf21` ui: game chrome hierarchy - timer anchor + turn pill prominence (R1)
+55. `71ef84c` ui: pending cards presence + confirm bar emphasis (R2)
+56. `720f383` ui: bottom navs presence - taller tabs, larger icons, active pill (R3)
+57. `6dc252f` ui: resolution hierarchy - larger moves, headlines, spacing (R4)
+58. `f659e0f` ui: 4-player team headers with glyphs + seat counts (R5)
+59. `5ab1844` ui: editor/rate/gameon/promotion pairing + focus + shared modal constants (P1)
+60. `a262203` ui: mobile status bar timer contrast (P2)
+61. `a2f16ab` ui: shared PromotionModal for Game + DuelGame (S1)
+62. `ede2465` ui: normalize radii outliers to token scale (U1)
+63. `1974784` ui: restrain modal shadows to elevation token (U2)
+64. `0119ef8` ui: Lucide icon sweep - transport, close, status, badge glyphs (I1)
+65. `9f68157` ui: empty-state illustration wells across routes (E1)
+66. `bb0d51b` ui: press-state feedback on lift buttons (E2)
+67. Owner confirms Option A green CTA (already implemented W3 + CoachSetup fix); recorded in theme audit.
+68. `f751f37` ui: premium glassmorphism treatment for pricing + success cards (G1)
+69. `8d64045` chore: remove dead SidebarNav + TeamIndicator (+ tests, doc refs)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,

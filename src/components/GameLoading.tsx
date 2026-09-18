@@ -44,7 +44,7 @@ export function GameLoading({
   }, [])
 
   return (
-    <div className="flex min-h-[min(600px,85vh)] flex-col items-center justify-center rounded-[32px] border border-white/70 bg-white/80 p-6 sm:p-8 shadow-[0_24px_90px_rgba(2,6,23,0.14)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/80">
+    <div className="flex min-h-[min(600px,85vh)] flex-col items-center justify-center rounded-3xl border border-white/70 bg-white/80 p-6 sm:p-8 shadow-[var(--shadow-modal)] backdrop-blur-2xl dark:border-slate-700/70 dark:bg-slate-900/80">
       {showChessIcon && (
         <div className="relative mb-8">
           <div ref={iconRef} className="inline-block">
@@ -60,7 +60,7 @@ export function GameLoading({
       </div>
       <p className="text-lg text-slate-600 dark:text-slate-300">{message}</p>
       {roomCode && (
-        <div className="mt-6 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
+        <div className="mt-6 rounded-3xl border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Room code</p>
           <p className="select-all font-mono text-xl font-bold tracking-[0.25em] text-amber-600 dark:text-amber-400">{roomCode}</p>
           <button
@@ -85,7 +85,7 @@ export function GameLoading({
         </div>
       )}
       {inviteUrl && (
-        <div className="mt-3 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
+        <div className="mt-3 rounded-3xl border border-slate-200/80 bg-slate-50/80 px-5 py-3 text-center shadow-sm dark:border-slate-700/70 dark:bg-slate-800/70">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Invite your friend</p>
           <div className="flex items-center gap-2 mb-2">
             <button

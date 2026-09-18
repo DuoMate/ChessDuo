@@ -95,7 +95,7 @@ export function CoachGate({ playerId, children }: CoachGateProps) {
     const countdown = formatTrialCountdown(nextEligibleAt, Date.now())
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--color-page-bg)] px-4 text-gray-900 dark:text-white">
-        <div className="w-full max-w-sm rounded-[24px] border border-slate-200 bg-white/80 p-6 text-center backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/70">
+        <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white/80 p-6 text-center backdrop-blur-xl dark:border-slate-700/60 dark:bg-slate-900/70">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15">
             <Lock size={24} className="text-blue-400" />
           </div>
