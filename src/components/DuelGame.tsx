@@ -22,6 +22,7 @@ import { saveCompletedGame, hasLocalHistoryForRoom } from '@/lib/matchHistory'
 import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
+import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { PromotionModal } from './PromotionModal'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playIllegalSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
@@ -88,6 +89,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   const prevStatusRef = useRef<'waiting' | 'playing' | 'game_over'>('waiting')
 
   const showAccuracy = moveAccuracy !== null || opponentAccuracy !== null
+  // Warm the Game Over native ad for eligible free users while the duel is
+  // active. Best-effort: never blocks gameplay, game-over, or navigation.
+  useGameOverAdPreload(status === 'playing')
 
   // Sync overlay refs with state — keeps onOverlayBack from seeing stale values
   useEffect(() => { showSettingsRef.current = showSettings }, [showSettings])

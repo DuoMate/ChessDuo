@@ -17,9 +17,11 @@ import { CoachTranscriptPanel } from './CoachTranscriptPanel'
 import { buildFenSequence, moveHistoryToRoundEntries } from './coachHistoryAdapters'
 import { NativeAdSlot } from '../NativeAdSlot'
 import { AdSenseSlot } from '../AdSenseSlot'
+import { ConfirmMoveBar } from '../ConfirmMoveBar'
 import { ResignConfirmModal } from '../ResignConfirmModal'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
+import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useSettings } from '@/hooks/useSettings'
@@ -55,6 +57,13 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   // View-only history preview: index into `positions` (see below), or null
   // for the live position. Board input is disabled while previewing.
   const [playbackIndex, setPlaybackIndex] = useState<number | null>(null)
+  // Confirm-move staging (mirrors Game/DuelGame): when the `confirmMove`
+  // setting is on, a drop is held here instead of reaching the engine —
+  // CoachGameEngine.applyPlayerMove mutates irreversibly (history, feedback,
+  // bot reply), so there is no post-hoc undo.
+  const [heldMove, setHeldMove] = useState<{ move: string; promotion?: PromotionPiece } | null>(null)
+  // Bump on cancel so the board remounts back to the live engine position.
+  const [boardKey, setBoardKey] = useState(0)
   // True when this mount consumed the non-premium daily free game. Drives the
   // post-game monetization section (native ad + premium offer). Premium users
   // never see it; the ad slot additionally enforces the premium ad-free rule.
@@ -72,6 +81,10 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const status = state?.status ?? 'idle'
   const isPlayerTurn = !!state && state.turn === state.playerColor && state.status === 'playing'
   const showMonetization = status === 'game_over' && isTrialGame && !premiumLoading && !isPremium
+
+  // Warm the Game Over native ad for eligible free users while the game is
+  // active. Best-effort: never blocks gameplay, resignation, or navigation.
+  useGameOverAdPreload(status === 'playing')
 
   // Position timeline: [initialFen, fenAfterPly0, ...]. Replayed from SANs —
   // the engine stores no per-ply fens, and this derivation never writes back.
@@ -208,7 +221,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     })
   }, [state?.status, state?.result, state?.fen, state?.moveHistory, state?.blunders, state?.mistakes, state?.accuracy, playerId, playerColor, botLevel])
 
-  const handleMove = useCallback(
+  const submitStagedMove = useCallback(
     (move: string, promotion?: PromotionPiece) => {
       const game = gameRef.current
       if (!game) return
@@ -225,6 +238,35 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     [settings.soundEnabled],
   )
 
+  const handleMove = useCallback(
+    (move: string, promotion?: PromotionPiece) => {
+      // Confirm mode: stage the drop for the ConfirmMoveBar — the engine
+      // stays untouched until Confirm. A second drop while holding is
+      // ignored (the bar is the only action).
+      if (settings.confirmMove) {
+        if (heldMove) return
+        setHeldMove({ move, promotion })
+        return
+      }
+      submitStagedMove(move, promotion)
+    },
+    [settings.confirmMove, heldMove, submitStagedMove],
+  )
+
+  const handleConfirmHeldMove = useCallback(() => {
+    if (!heldMove) return
+    const { move, promotion } = heldMove
+    setHeldMove(null)
+    submitStagedMove(move, promotion)
+  }, [heldMove, submitStagedMove])
+
+  const handleCancelHeldMove = useCallback(() => {
+    setHeldMove(null)
+    // Remount the board so the dropped piece snaps back to the live
+    // engine position (DuelGame semantics).
+    setBoardKey((k) => k + 1)
+  }, [])
+
   const toggleVoice = () => {
     if (!coachVoice.isSupported()) {
       toast.warning('Voice coaching is not available on this device')
@@ -239,18 +281,33 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
     enabled: status === 'playing',
     onAttemptLeave: () => setShowLeave(true),
     onOverlayBack: () => {
-      if (!showResignConfirmRef.current && activePanel === null) return false
-      if (showResignConfirmRef.current) setShowResignConfirm(false)
-      else setActivePanel(null)
-      return true
+      if (showResignConfirmRef.current) {
+        setShowResignConfirm(false)
+        return true
+      }
+      if (activePanel !== null) {
+        setActivePanel(null)
+        return true
+      }
+      // A held (unconfirmed) move cancels before anything navigates.
+      if (heldMove) {
+        handleCancelHeldMove()
+        return true
+      }
+      return false
     },
-    hasOpenOverlay: showResignConfirm || activePanel !== null,
+    hasOpenOverlay: showResignConfirm || activePanel !== null || heldMove !== null,
   })
 
   useCapacitorBackButton(
     () => {
       if (showResignConfirmRef.current) {
         setShowResignConfirm(false)
+        return true
+      }
+      // A held (unconfirmed) move cancels first — board/engine untouched.
+      if (heldMove) {
+        handleCancelHeldMove()
         return true
       }
       // Overlays close first — board/engine state untouched (REQ-E).
@@ -319,7 +376,12 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         open={showResignConfirm}
         onConfirm={() => {
           setShowResignConfirm(false)
-          void gameRef.current?.resign()
+          const game = gameRef.current
+          if (!game) {
+            toast.warning('Could not resign — please try again')
+            return
+          }
+          void game.resign()
         }}
         onCancel={() => setShowResignConfirm(false)}
       />
@@ -335,6 +397,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
             </p>
           )}
           <ChessBoard
+            key={boardKey}
             fen={playbackFen ?? state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
             onMove={handleMove}
             enabled={boardEnabled}
@@ -369,7 +432,15 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                 Keep Playing
               </button>
               <button
-                onClick={onLeave}
+                onClick={() => {
+                  // Active-game Leave converges on the existing game-over
+                  // modal (Match abandoned + ad + Back to Home), matching
+                  // Quick Play / Duo / Duel — never straight Home.
+                  setShowLeave(false)
+                  const game = gameRef.current
+                  if (game) void game.abandon()
+                  else onLeave()
+                }}
                 className="focus-ring min-h-[44px] flex-1 rounded-xl bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-500"
               >
                 Leave
@@ -439,6 +510,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
 
       {/* Mobile spacer hint — keep layout consistent with board pages */}
       <div className="h-24" />
+
+      {/* Confirm-move bar (setting ON only): the drop is staged in
+          `heldMove` until Confirm submits it — mirrors Game/DuelGame. */}
+      {status === 'playing' && (
+        <ConfirmMoveBar
+          visible={settings.confirmMove && heldMove !== null}
+          onConfirm={handleConfirmHeldMove}
+          onCancel={handleCancelHeldMove}
+        />
+      )}
 
       {/* Bottom navigation — same shared component as other game modes.
           Moves/Chat/Insights open read-only SlideOver panels; Back/Fwd step

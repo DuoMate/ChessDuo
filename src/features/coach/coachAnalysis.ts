@@ -151,7 +151,7 @@ export function explainMove(input: {
 }): string {
   switch (input.verdict) {
     case 'best':
-      return `${input.playerMoveSan} is the engine's top choice — excellent!`
+      return `${input.playerMoveSan} is the engine's top choice.`
     case 'great':
       return `${input.playerMoveSan} is a strong move.`
     case 'good':

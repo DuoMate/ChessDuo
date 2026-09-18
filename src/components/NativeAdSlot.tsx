@@ -12,14 +12,22 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
   const slotRef = useRef<HTMLDivElement>(null)
   const { isPremium, loading } = usePremium()
   const [ready, setReady] = useState(false)
+  // gameOverReason is display/logging-only: track it in a ref so a reason
+  // change while open never tears down a loaded ad or re-fires show (show
+  // consumes the ad, so a teardown + re-show without fresh fill would blank it).
+  const reasonRef = useRef(gameOverReason)
+  useEffect(() => {
+    reasonRef.current = gameOverReason
+  })
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (!open || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     let active = true
     DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
       surface,
-      reason: gameOverReason || 'unknown',
+      reason: reasonRef.current || 'unknown',
       popupMounted: true,
       adLoadRequested: true,
       adLoadSucceeded: false,
@@ -34,7 +42,7 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
       if (!active) return
       DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
         surface,
-        reason: gameOverReason || 'unknown',
+        reason: reasonRef.current || 'unknown',
         popupMounted: true,
         adLoadRequested: true,
         adLoadSucceeded: loaded,
@@ -52,9 +60,10 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
       active = false
       setReady(false)
     }
-  }, [gameOverReason, isPremium, loading, open, surface])
+  }, [isPremium, loading, open, surface])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return
 
     const slot = slotRef.current
@@ -72,7 +81,7 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
       }).then((rendered) => {
         DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
           surface,
-          reason: gameOverReason || 'unknown',
+          reason: reasonRef.current || 'unknown',
           popupMounted: true,
           adLoadRequested: true,
           adLoadSucceeded: true,
@@ -86,18 +95,35 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
       })
     }
 
+    // Throttle reposition-driven re-shows to one per frame (every scroll
+    // pixel previously re-invoked the native show bridge), and retry across
+    // a few frames so the first render landing mid modal spring animation
+    // (zero/wrong bounds) still positions the ad without user scrolling.
+    let rafId = 0
+    const schedule = () => {
+      if (rafId) return
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        render()
+      })
+    }
     const frame = requestAnimationFrame(render)
-    window.addEventListener('resize', render)
-    window.addEventListener('scroll', render, true)
+    const retryFrame = requestAnimationFrame(() => {
+      requestAnimationFrame(render)
+    })
+    window.addEventListener('resize', schedule)
+    window.addEventListener('scroll', schedule, true)
 
     return () => {
       active = false
       cancelAnimationFrame(frame)
-      window.removeEventListener('resize', render)
-      window.removeEventListener('scroll', render, true)
+      cancelAnimationFrame(retryFrame)
+      if (rafId) cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
       void hideNativeAd()
     }
-  }, [gameOverReason, isPremium, loading, open, ready, surface])
+  }, [isPremium, loading, open, ready, surface])
 
   if (!open || !ready || loading || isPremium || !Capacitor.isNativePlatform()) return null
 

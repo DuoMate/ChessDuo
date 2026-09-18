@@ -19,6 +19,7 @@ Framework-free domain logic — zero React/Next.js imports. Organized by bounded
 | `mobile-engine/` | `src/features/mobile-engine/CONTEXT.md` — Browser/capacitor evaluator factory |
 | `push-notifications/` | `src/features/push-notifications/CONTEXT.md` — FCM token registration, push sending, deep-link handler |
 | `billing/` | `src/features/billing/CONTEXT.md` — BillingProvider abstraction, Google Play subscriptions, SubscriptionService |
+| `app-update/` | `src/features/app-update/CONTEXT.md` — Version check + Play Store prompt (framework-free, v1 never blocks, no OTA) |
 
 ## Logic & Decisions
 - `GameInterface.ts` in `shared/` is the contract — both `OnlineGame` and `LocalGame` implement it.
@@ -30,6 +31,7 @@ Framework-free domain logic — zero React/Next.js imports. Organized by bounded
 - `chess.js` for board state, Stockfish (remote or local WASM) for evaluation
 
 ## Recent Changes
+- **2026-09-18**: New `app-update/` bounded context — version check + Play Store prompt (framework-free `decideUpdate` + fail-silent manifest fetch; v1 `current | optional` only, never blocks, no OTA; React/hook/UI live outside `features/`). See `docs/ARCHITECTURE.md §10`.
 - **2026-07-30**: Billing provider swapped from Google Play to Creem (MoR) — new `CreemBillingProvider`, redirect-based checkout, webhook-driven lifecycle. UI only talks to `SubscriptionService`, so no game components changed.
 - **2026-08-11**: Removed Creem billing, restored Google Play Billing as sole provider. Web users directed to download the Android app for premium. Deleted all Creem API routes and dependencies.
 - **2026-08-03**: Deleted `features/auth/` — `AuthGate` moved to `components/`, `useAuthSession` moved to `hooks/` (BV1/BV2 fix: framework-free invariant restored).

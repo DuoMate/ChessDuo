@@ -93,6 +93,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-09-18**: Coach confirm-move — `CoachGame` stages drops in `heldMove` when the `confirmMove` setting is on (previously ignored: instant submit, no bar). Shared `ConfirmMoveBar` + board remount on cancel (DuelGame semantics); held move cancels first on Back. Default stays OFF. Tests: `CoachGameConfirm.test.tsx`.
 - **2026-09-15**: AI Coach resignation now opens the shared `ResignConfirmModal` before calling `CoachGame.resign()`. The existing terminal game-over state and ad/upgrade surface remain unchanged.
 - **2026-09-13**: Web AdSense parity (`AdSenseSlot` + `AdSenseLoader`). Single manual responsive display unit beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the Premium upgrade screen; premium/native/missing-ID suppression mirrors native inversely; Auto ads stay off. Diagnostics distinguish game-over and upgrade surfaces. See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Active-match Back/Leave now converges on the existing `GameOverModal`, matching resignation and natural game over so the shared NativeAdSlot can render before the user chooses Home. Lobby leave still navigates immediately. Native-ad diagnostics report terminal reason, load state, and render state.
@@ -175,3 +176,4 @@ All React components — co-located by feature, not by type. Components handle r
 	and the existing `ChessBoard.highlightSquares` overlay. It reads only the current
 	`suggestion.topMoves[0].uci`; stale feedback cannot render a board highlight, and
 	the live FEN/game state remains unchanged.
+- **2026-09-18**: Terminal/ad unification — `CoachGame` active-game Leave converges on the existing inline game-over modal via `CoachGame.abandon()` (Match abandoned + ad + Back to Home); resign confirm toasts instead of silently no-op'ing on a null engine ref. `NativeAdSlot` no longer tears down on `gameOverReason` changes (ref-tracked for logging), throttles scroll/resize re-shows to one per frame with retry frames for the modal spring animation, and guards SSR. Boot-time `preloadNativeAd()` removed from `providers.tsx` (premium-ungated + stale across games) in favor of per-game `useGameOverAdPreload`. No game-over text/layout/navigation-semantics changes. Tests: `CoachGame.test.tsx` (Leave → abandoned terminal + ads).
