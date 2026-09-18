@@ -93,6 +93,7 @@ All React components — co-located by feature, not by type. Components handle r
 - DuelGame (1v1): the BoardTopBar shows You vs Opponent with their Google profile images (when signed in).
 
 ## Recent Changes
+- **2026-09-18**: Coach confirm-move — `CoachGame` stages drops in `heldMove` when the `confirmMove` setting is on (previously ignored: instant submit, no bar). Shared `ConfirmMoveBar` + board remount on cancel (DuelGame semantics); held move cancels first on Back. Default stays OFF. Tests: `CoachGameConfirm.test.tsx`.
 - **2026-09-15**: AI Coach resignation now opens the shared `ResignConfirmModal` before calling `CoachGame.resign()`. The existing terminal game-over state and ad/upgrade surface remain unchanged.
 - **2026-09-13**: Web AdSense parity (`AdSenseSlot` + `AdSenseLoader`). Single manual responsive display unit beside `NativeAdSlot` in `GameOverModal`, the Coach inline modal, and the Premium upgrade screen; premium/native/missing-ID suppression mirrors native inversely; Auto ads stay off. Diagnostics distinguish game-over and upgrade surfaces. See `docs/ARCHITECTURE.md §9.1`.
 - **2026-09-11**: Active-match Back/Leave now converges on the existing `GameOverModal`, matching resignation and natural game over so the shared NativeAdSlot can render before the user chooses Home. Lobby leave still navigates immediately. Native-ad diagnostics report terminal reason, load state, and render state.
