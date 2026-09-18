@@ -1,0 +1,29 @@
+# Module: App Update (version-check + Play Store prompt)
+
+## Purpose
+Framework-free version decision + fail-silent manifest fetch for the
+"stale installed APK" problem. The Android app bundles `out/` at build
+time, so Cloudflare web deploys never reach installed apps without a
+Play Store update. v1 NEVER blocks and NEVER replaces JS at runtime.
+
+## Files
+| File | Purpose |
+|------|---------|
+| `appVersion.ts` | `decideUpdate` (versionCode-first, semver fallback), `compareVersionNames` |
+| `versionManifest.ts` | `fetchVersionManifest` (no-store, bounded timeout, null on any failure) + pure `resolveManifestBaseUrl(siteUrl?, origin?)` |
+| `index.ts` | Barrel re-export |
+
+## Logic & Decisions
+- Decision is `current | optional` only — `minimumVersion*` manifest fields
+  are carried for future policy, ignored for blocking in v1.
+- Unknown installed version → `current` (never nag when we can't compare).
+- React/hook, throttling, routing guards, and UI live outside `features/`
+  (`src/hooks/useAppUpdate.ts`, `src/components/UpdatePrompt.tsx`).
+- Framework-free invariant: no `process.env` / `window` access inside
+  `features/` — env and origin are injected as arguments (see pure
+  `resolveManifestBaseUrl`), matching `src/CONTEXT.md` ("zero framework
+  dependency").
+- No auth/billing/ads/push/game imports. No `as any`.
+
+## Recent Changes
+- **2026-09-18**: New module — version-check + Play listing prompt (no OTA).

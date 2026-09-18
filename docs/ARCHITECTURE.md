@@ -108,11 +108,16 @@ src/
 │   │   ├── NotificationHandler.tsx      # Deep-link on notification tap
 │   │   ├── index.ts              # Public API (initPushNotifications, notify*)
 │   │   └── CONTEXT.md            # Module documentation
-│   └── billing/                  # Subscription billing (provider-agnostic)
+│   ├── billing/                  # Subscription billing (provider-agnostic)
 │       ├── types.ts              # BillingProvider interface, SubscriptionPlan, PurchaseResult
 │       ├── SubscriptionService.ts # High-level API: purchase/restore/isPremium/getPlans
 │       ├── SubscriptionStateMachine.ts # Pure lifecycle transitions
 │       ├── GooglePlayBillingProvider.ts  # Google Play Billing integration (Android)
+│       ├── index.ts              # Public API re-exports
+│       ├── CONTEXT.md            # Module documentation
+│   └── app-update/               # App version check + Play Store prompt (framework-free)
+│       ├── appVersion.ts         # decideUpdate (versionCode-first, semver fallback; never blocks in v1)
+│       ├── versionManifest.ts    # fail-silent manifest fetch (no-store, bounded timeout)
 │       ├── index.ts              # Public API re-exports
 │       └── CONTEXT.md            # Module documentation
 │
@@ -319,6 +324,17 @@ SubscriptionService
 - The `<ins>` uses Tailwind `block w-full` instead of Google's `style="display:block"` (identical rendering, satisfies the no-`style={{}}` rule); all other `data-*` attributes match the approved unit verbatim.
 - `public/ads.txt` carries the AdSense line; `app-ads.txt` stays AdMob-only. `_headers` CSP allowlists `pagead2.googlesyndication.com` + `googleads.g.doubleclick.net`.
 - Secrets `NEXT_PUBLIC_ADSENSE_CLIENT_ID` / `NEXT_PUBLIC_ADSENSE_SLOT_ID` are wired in `deploy-cf-pages.yml` only (web build); `build-release.yml` stays AdMob-only. Diagnostics use `[ADS][GAMEOVER]` for terminal surfaces and `[ADS][UPGRADE]` for the Premium upgrade surface, with `source: 'adsense'` on web.
+
+### 10. App Version Check + Play Store Prompt
+
+**RULE**: The Android app bundles `out/` at build time, so Cloudflare web deploys never reach installed apps without a Play Store update. Version prompting is a lightweight check + store redirect — never a runtime JS replacement (no OTA).
+
+- `src/features/app-update/` is framework-free (zero `process.env` / `window` access — env and origin are injected as arguments). `decideUpdate` returns `current | optional` only; v1 NEVER blocks, even below `minimumVersion*` (those manifest fields are carried for future policy).
+- The manifest fetch is fail-silent by contract: offline, timeout, HTTP error, or malformed payload resolves to `null` and startup continues on the installed version. Fetches use `cache: 'no-store'` with a bounded timeout.
+- Unknown installed version → `current` (never nag when comparison is impossible).
+- Native updates go through the Play Store listing via the existing `openPlayListing()` (`src/lib/rateApp.ts`: `market://` → Browser → HTTPS fallback). Never download APKs from an external server; never use Play Billing APIs for update detection (billing and updates are separate concerns).
+- The check runs async (never delays first paint), is throttled (no nagging every screen), and never fires during active games, auth/PKCE callbacks, or deep-link landings — React/hook, throttling, routing guards, and UI live outside `features/` (`src/hooks/useAppUpdate.ts`, `src/components/UpdatePrompt.tsx`).
+- Like all UI: `dark:` variants, ≥44px targets, `useGameToast()` for feedback, co-located `__tests__/`.
 
 ---
 
@@ -537,4 +553,4 @@ Before pushing, verify:
 
 ---
 
-*Last Updated: 2026-09-15 — Coach resignation now uses the shared confirmation flow; NativeAdSlot/AdSenseSlot also render on the non-premium Premium upgrade screen with a fresh request per surface; 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
+*Last Updated: 2026-09-18 — §10 App Version Check + Play Store prompt (`src/features/app-update/`: framework-free `decideUpdate` + fail-silent manifest fetch, v1 never blocks, no OTA); 2026-09-15 — Coach resignation now uses the shared confirmation flow; NativeAdSlot/AdSenseSlot also render on the non-premium Premium upgrade screen with a fresh request per surface; 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
