@@ -124,6 +124,8 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 62. `ede2465` ui: normalize radii outliers to token scale (U1)
 63. `1974784` ui: restrain modal shadows to elevation token (U2)
 64. `0119ef8` ui: Lucide icon sweep - transport, close, status, badge glyphs (I1)
+65. `9f68157` ui: empty-state illustration wells across routes (E1)
+66. `bb0d51b` ui: press-state feedback on lift buttons (E2)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
