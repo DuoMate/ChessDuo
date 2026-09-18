@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
+import { MODAL_SPRING, MODAL_BACKDROP } from './modalConstants'
 import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound, playIllegalSound, setSoundEnabled as setEngineSoundEnabled, soundEngine } from '@/lib/sounds'
 import { Chess } from 'chess.js'
 
@@ -645,27 +646,27 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className={`fixed inset-0 ${MODAL_BACKDROP} flex items-center justify-center z-50 p-4`}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-slate-900 p-4 sm:p-6 rounded-lg border border-slate-700 max-w-[calc(100vw-2rem)]"
+              transition={MODAL_SPRING}
+              className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg border-2 border-yellow-500 shadow-xl max-w-[calc(100vw-2rem)]"
             >
-              <h3 className="text-xl font-bold text-slate-100 mb-4 text-center">Promote Pawn</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
               <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4">
                 {(['q', 'r', 'b', 'n'] as PromotionPiece[]).map((piece) => (
                   <button
                     key={piece}
                     onClick={() => handlePromotionSelect(piece)}
-                    className="flex flex-col items-center px-2 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors min-h-[44px] min-w-[44px]"
+                    className="focus-ring flex flex-col items-center px-2 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg border border-gray-300 dark:border-slate-600 transition-colors min-h-[44px] min-w-[44px]"
                   >
-                    <span className="text-3xl md:text-4xl text-slate-100 mb-1">
+                    <span className="text-3xl md:text-4xl text-gray-900 dark:text-white mb-1">
                       {{ q: '♛', r: '♜', b: '♝', n: '♞' }[piece]}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-gray-500 dark:text-slate-300">
                       {{ q: 'Queen', r: 'Rook', b: 'Bishop', n: 'Knight' }[piece]}
                     </span>
                   </button>

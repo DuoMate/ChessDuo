@@ -40,6 +40,7 @@ import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from './MoveResolvedInline'
+import { MODAL_SPRING, MODAL_BACKDROP } from './modalConstants'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
 import { ChatPanel } from './ChatPanel'
@@ -145,13 +146,13 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className={`fixed inset-0 ${MODAL_BACKDROP} flex items-center justify-center z-50 p-4`}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        transition={MODAL_SPRING}
         className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg border-2 border-yellow-500 shadow-xl max-w-[calc(100vw-2rem)]"
       >
         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Promote Pawn</h3>
@@ -160,7 +161,7 @@ function PromotionModal({ onSelect }: { onSelect: (piece: PromotionPiece) => voi
             <button
               key={piece}
               onClick={() => onSelect(piece)}
-              className="flex flex-col items-center px-2 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
+              className="focus-ring flex flex-col items-center px-2 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg border border-gray-300 dark:border-gray-500 transition-colors min-h-[44px] min-w-[44px]"
             >
               <span className="text-4xl text-gray-900 dark:text-white mb-1">{symbol}</span>
               <span className="text-xs text-gray-500 dark:text-gray-300">{label}</span>
