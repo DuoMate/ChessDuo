@@ -115,6 +115,10 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 53. Merge `UI-UX-refactoring` → `develop` → `prod` (all pushed, builds green).
 54. `cfbaf21` ui: game chrome hierarchy - timer anchor + turn pill prominence (R1)
 55. `71ef84c` ui: pending cards presence + confirm bar emphasis (R2)
+56. `720f383` ui: bottom navs presence - taller tabs, larger icons, active pill (R3)
+57. `6dc252f` ui: resolution hierarchy - larger moves, headlines, spacing (R4)
+58. `f659e0f` ui: 4-player team headers with glyphs + seat counts (R5)
+55. `71ef84c` ui: pending cards presence + confirm bar emphasis (R2)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
