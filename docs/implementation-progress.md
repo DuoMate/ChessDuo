@@ -196,3 +196,13 @@ production `npm run build` green after PHASE 3. Full suite + build + safety swee
 - 2026-09-17: Audit complete for both tracks. Plans approved (coach: setup inside /coach, 5 home-UI levels, rematch preserves via persisted setup).
 - 2026-09-17: OAuth fix implemented + 5/5 tests green. CoachSetup + grid + /coach wiring implemented; coach suites 71/71 green; tsc clean.
 - 2026-09-17: Fix complies with arch rule via `AuthService.getSession()` (architecture.test green). Full-suite baseline compared via stash. Build green. Ready to push.
+
+## Resign-vs-timeout result fix (2026-09-18)
+- PHASE 1 — Terminal path audit: all modes traced (Quick/Duo/4P/Coach); see docs/game-result-terminal-path-audit.md
+- PHASE 2 — Root cause: H1 DB-fallback fabricated resignation (wrong winner/reason for timeouts seen via games row); H2 LocalGame.setGameOverTimeup had no terminal guard
+- PHASE 3 — Minimal fix: DB_GAME_OVER_GRACE_MS grace + broadcast reconcile (onlineGame.ts); early-return guard (localGame.ts); no engine/timeout-rule changes
+- PHASE 4 — Persistence verified: completed_games written verbatim from engine result (unchanged path)
+- PHASE 5 — History/stats verified: stored-winner consumers only, no material recalc
+- PHASE 6 — Regression tests: 4 new (1 localGame + H1 trio), 1 updated (H4 grace semantics); game-result suites green; tsc clean
+- PHASE 7 — All-mode verification: resign-ahead/behind → LOSS; timeout/checkmate/draw paths untouched
+- PHASE 8 — Final diff review: pending

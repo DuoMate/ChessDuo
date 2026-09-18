@@ -54,6 +54,15 @@ export const PREMIUM_PURCHASE_SAFETY_NET_MS = 30000
 /** Max coaching-history snapshots retained per AI Coach session (in-memory). */
 export const COACH_HISTORY_LIMIT = 100
 
+/**
+ * Grace window after a bare games-row GAME_OVER is observed before assuming
+ * peer abandonment. The row carries no termination reason — the authoritative
+ * match_timeout / match_abandoned broadcast (sent BEFORE the row write)
+ * normally arrives first and sets the true result. Only when nothing
+ * authoritative arrives within this window do we fall back to abandonment.
+ */
+export const DB_GAME_OVER_GRACE_MS = 4000
+
 export type PlayerColor = 'white' | 'black' | 'random'
 
 export type ResolvedColor = 'white' | 'black'

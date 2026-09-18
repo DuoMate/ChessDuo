@@ -6,7 +6,7 @@ import { GameStatus, MoveComparison } from '../../shared/gameTypes'
 import { createEvaluator, GameEvaluator } from '../../mobile-engine/evaluatorFactory'
 import { saveGameState, loadGameState } from '../../../lib/gamePersistence'
 import { calculateAccuracy, getAccuracyCategory } from '../../shared/accuracy'
-import { CHECKMATE_SCORE } from '../../shared/gameConstants'
+import { CHECKMATE_SCORE, DB_GAME_OVER_GRACE_MS } from '../../shared/gameConstants'
 import { isMoveLegalAt, sanToEvaluationUci } from '../../../lib/chessUtils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { DEBUG } from '../../../lib/debug'
@@ -938,10 +938,12 @@ export class OnlineGame {
       // Start the game
       this.gameState.startMatch()
       this._status = GameStatus.PLAYING
-      if (this._fastStartTimer) {
-        clearTimeout(this._fastStartTimer)
-        this._fastStartTimer = null
-      }
+    if (this._fastStartTimer) {
+      clearTimeout(this._fastStartTimer)
+      this._fastStartTimer = null
+    }
+    // H1: a pending DB-GAME_OVER fallback must not outlive the room.
+    this.clearGameStatusFallbackTimer()
 
       // Compute coordinator: alphabetically-first non-bot player
       // Stored once at game creation, never recomputed
@@ -2067,6 +2069,7 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason
+    this.clearGameStatusFallbackTimer()
     // Fallback: if no turns resolved but board has moves, derive from board history
     if (this.stats.movesPlayed === 0) {
       const boardMoves = this.gameState.board.history({ verbose: true }).length
@@ -2638,6 +2641,20 @@ export class OnlineGame {
   // a new match always gets a fresh instance.
   private _resignInProgress = false
 
+  // H1: pending DB-GAME_OVER fallback timer. A bare games-row status flip
+  // carries no termination reason — the authoritative match_timeout /
+  // match_abandoned broadcast normally arrives first. Fabricating a
+  // resignation immediately would mislabel timeouts/checkmates observed via
+  // the row (wrong winner, wrong reason, then persisted to history).
+  private _gameStatusFallbackTimer: ReturnType<typeof setTimeout> | null = null
+
+  private clearGameStatusFallbackTimer(): void {
+    if (this._gameStatusFallbackTimer) {
+      clearTimeout(this._gameStatusFallbackTimer)
+      this._gameStatusFallbackTimer = null
+    }
+  }
+
   /**
    * H4: single gate for games-table UPDATE events (postgres_changes).
    * Terminal-state safe + ignores our own resignation echo.
@@ -2649,11 +2666,27 @@ export class OnlineGame {
       if (DEBUG) console.warn('[GAME-STATUS] Own resignation echo ignored')
       return
     }
-    DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update')
-    // Determine resigning team from the broadcast payload if available,
-    // otherwise use the opposite of our team as fallback
-    const resigningTeam = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
-    this.handleMatchAbandoned({ playerId: 'unknown', team: resigningTeam as 'WHITE' | 'BLACK' })
+    // H1: a bare GAME_OVER row cannot identify the termination reason
+    // (resignation vs timeout vs checkmate) — fabricating "opponent resigned,
+    // I win" here mislabels timeouts observed via the row and the wrong
+    // result would persist to history/stats. The authoritative broadcast
+    // (match_timeout / match_abandoned) is sent BEFORE the row write, so
+    // await it for a bounded grace; assume peer abandonment only if nothing
+    // authoritative arrives (lost-broadcast peer-left case).
+    if (this._gameStatusFallbackTimer) return
+    DEBUG && console.log('[GAME-STATUS] Detected GAME_OVER via DB update — awaiting authoritative broadcast')
+    this._gameStatusFallbackTimer = setTimeout(() => {
+      this._gameStatusFallbackTimer = null
+      if (this._status === GameStatus.GAME_OVER) return
+      if (this._resignInProgress) {
+        if (DEBUG) console.warn('[GAME-STATUS] Own resignation echo ignored')
+        return
+      }
+      // Determine resigning team from the broadcast payload if available,
+      // otherwise use the opposite of our team as fallback
+      const resigningTeam = this._team === 'WHITE' ? 'BLACK' : 'WHITE'
+      this.handleMatchAbandoned({ playerId: 'unknown', team: resigningTeam as 'WHITE' | 'BLACK' })
+    }, DB_GAME_OVER_GRACE_MS)
   }
 
   async abandonMatch(): Promise<void> {
@@ -2723,6 +2756,7 @@ export class OnlineGame {
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = `Resigned - ${this._team === 'WHITE' ? 'Black' : 'White'} wins`
     this._gameOverReason = 'resignation'
+    this.clearGameStatusFallbackTimer()
     this.onAbandonCallback?.()
     await this.leaveRoom()
   }
@@ -2748,6 +2782,7 @@ export class OnlineGame {
 
   private handleMatchAbandoned(payload: { playerId: string; team?: 'WHITE' | 'BLACK' }): void {
     if (this._status === GameStatus.GAME_OVER) return
+    this.clearGameStatusFallbackTimer()
     this._status = GameStatus.GAME_OVER
     const winnerTeam = payload.team === 'WHITE' ? 'Black' : payload.team === 'BLACK' ? 'White' : 'Opponent'
     this._gameOverResult = `Resigned - ${winnerTeam} wins`
@@ -2774,6 +2809,7 @@ export class OnlineGame {
 
   private handleMatchTimeoutBroadcast(payload: { result: string; reason: string }): void {
     if (this._status === GameStatus.GAME_OVER) return
+    this.clearGameStatusFallbackTimer()
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = payload.result
     this._gameOverReason = payload.reason
