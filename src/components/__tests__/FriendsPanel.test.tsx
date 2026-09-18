@@ -4,6 +4,9 @@ import { FriendsPanel } from '../FriendsPanel'
 const getFriendsList = jest.fn().mockResolvedValue([])
 const getPendingRequests = jest.fn().mockResolvedValue({ incoming: [], outgoing: [] })
 const getBlockedUsers = jest.fn().mockResolvedValue([])
+// P1 perf: FriendsPanel loads via getFriendsBundle() (1× friendships +
+// 1× profiles.in) instead of the three list functions.
+const getFriendsBundle = jest.fn().mockResolvedValue({ friends: [], incoming: [], outgoing: [], blocked: [] })
 const getUnreadChallenges = jest.fn().mockResolvedValue([])
 
 jest.mock('next/navigation', () => ({
@@ -14,6 +17,7 @@ jest.mock('@/lib/friends', () => ({
   getFriendsList: (...args: unknown[]) => getFriendsList(...args),
   getPendingRequests: (...args: unknown[]) => getPendingRequests(...args),
   getBlockedUsers: (...args: unknown[]) => getBlockedUsers(...args),
+  getFriendsBundle: (...args: unknown[]) => getFriendsBundle(...args),
   searchUsers: jest.fn().mockResolvedValue([]),
   sendFriendRequest: jest.fn().mockResolvedValue({ error: null }),
   acceptFriendRequest: jest.fn().mockResolvedValue({ error: null }),
@@ -96,27 +100,25 @@ describe('FriendsPanel — refetch on resume / friend-request deep-link', () => 
     render(<FriendsPanel playerId="user1" />)
     await act(async () => {})
 
-    expect(getPendingRequests).toHaveBeenCalledTimes(1)
+    expect(getFriendsBundle).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       document.dispatchEvent(new Event('visibilitychange'))
     })
 
-    expect(getPendingRequests).toHaveBeenCalledTimes(2)
-    expect(getFriendsList).toHaveBeenCalledTimes(2)
-    expect(getBlockedUsers).toHaveBeenCalledTimes(2)
+    expect(getFriendsBundle).toHaveBeenCalledTimes(2)
   })
 
   it('refetches when a friend-request notification deep-link is consumed while mounted', async () => {
     render(<FriendsPanel playerId="user1" />)
     await act(async () => {})
 
-    expect(getPendingRequests).toHaveBeenCalledTimes(1)
+    expect(getFriendsBundle).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       window.dispatchEvent(new CustomEvent('chessduo:refresh-friends'))
     })
 
-    expect(getPendingRequests).toHaveBeenCalledTimes(2)
+    expect(getFriendsBundle).toHaveBeenCalledTimes(2)
   })
 })

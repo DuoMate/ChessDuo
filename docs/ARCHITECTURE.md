@@ -302,6 +302,10 @@ SubscriptionService
 - Join inserts use `room_players.upsert(..., { onConflict: 'room_id,player_id' })` — safe for rejoin and idempotent.
 - Challenge links: duel challenges pre-create a room + `duel_games` row and store `room_id` on the challenge; the acceptor joins THAT room (creator WHITE, acceptor BLACK) so both players meet in the same match. A `generateRoomCode()` fallback creates a fresh room if the pre-created one is gone.
 
+### 8.1 Canonical Supabase Read Path (RLS + RPC)
+
+**RULE**: All membership-gated reads go through the canonical helpers — never hand-roll per-row auth checks. `is_room_member`, `can_join_room`, `get_room_join_state` are `SECURITY DEFINER ... SET search_path TO 'public'` and marked `STABLE` (pure reads, safe to inline); `join_room_by_code` / `get_room_players` stay `VOLATILE` (writes / ordered side effects — never mark STABLE). RLS predicates use the init-once form `(select auth.uid())` / `(select auth.role())` — same logic as bare `auth.uid()`, evaluated once per statement instead of once per row. RLS stays enabled everywhere; nothing is widened (only the duplicate `completed_games` authenticated-SELECT was dropped in favor of the public `true` policy). Migrations live in `supabase/migrations/` and are applied manually in the Supabase dashboard (never auto-applied by the app).
+
 ### 9. Native AdMob Integration
 
 **RULE**: Game-over ads use an Android Native Advanced ad, never a full-screen interstitial.
@@ -345,6 +349,26 @@ SubscriptionService
 - Web bridge `src/lib/pip.ts` mirrors `nativeAd.ts`: native-only, best-effort, never throws, change-suppressed traffic. `shouldEnablePip()` is the pure eligibility rule (only `PLAYING`/`playing` + no blocking modal); `src/hooks/usePip.ts` publishes it and tracks mode. `PipOverlay` renders the live FEN (parsed defensively), a mapped turn label, and the existing `IsolatedMatchTimer` (move-count footer for untimed Coach).
 - Eligibility call sites (`Game.tsx`, `DuelGame.tsx`, `CoachGame.tsx`) derive from existing status + existing overlay state only. `GAME_OVER` (any terminal) always revokes eligibility. No destructive PiP actions — tap returns to the existing game screen.
 - Like all UI: `dark:` variants, `text-xs` minimum, co-located `__tests__/`. New game methods still go through `GameInterface` (PiP adds none).
+
+### 12. Data-Fetch & Round-Trip Rules (Supabase perf)
+
+**RULE**: Round trips dominate latency (tables are tiny — 1–54 rows each), so every screen shares one bundle per mount and selects narrow columns. Never `select('*')` on a list or poll path.
+
+- History: `getHistoryPageWithStats()` — ONE `room_players` SELECT + ONE narrow-column `completed_games` SELECT (no `move_comparisons` JSONB) serves both the recent-games list and viewer-relative stats. Never `Promise.all([getMatchHistory(), getPlayerStats()])` (was 4 sequential hops with JSONB twice). Replay detail (`getCompletedGame`) keeps `select('*')` — it needs the comparisons.
+- Friends: `getFriendsBundle()` — ONE `friendships` SELECT (explicit columns) + ONE `profiles.in(union)` split in memory into accepted/incoming/outgoing/blocked. Never 3× (friendships→profiles.in). Guard empty `.in()` lists (PostgREST rejects them) and cap per-status rows.
+- Badge: capped `messages` sender fetch (`limit 200`, totals via `count-head`) shared across hook instances (module-level 5s share); realtime stays debounced. Never an unbounded full-table fetch just to count.
+- Matchmaking: `findAvailableRoom` fetches `get_room_join_state` for candidates via `Promise.all` (order-preserving first-fit), never sequential await-in-loop.
+- Game/live: roster/poll selects use explicit columns (`player_id` / `move_san` / narrow duel cols); duel 2s poll stays bounded.
+- Profile: all single-user reads go through cached `fetchProfile()` (60s TTL, invalidated on upsert/update) — never a raw uncached `profiles SELECT` per mount (`page.tsx`, `FriendsPanel`, `Game`, `DuelGame` all share it).
+
+### 13. Caching & Single-Flight Rules
+
+**RULE**: Hot auth/premium state resolves once and is shared — TTLs skip redundant polling, realtime invalidation keeps correctness.
+
+- Session: `AuthService.getSession()` is single-flight with a 5s shared cache; `onAuthStateChange` events clear it (sign-in/out/refresh observed immediately). No layer calls `supabase.auth.getSession()` directly (enforced by `architecture.test.ts`).
+- Premium: `SubscriptionService` is single-flight with a 5-min TTL; `invalidate()` on `profiles UPDATE` realtime flip, purchase/restore/verify. Premium never blocks render (fail-closed `isPremium:false`, consumers null-out while loading).
+- History stats: 60s `statsCache`, invalidated on save; `getHistoryPageWithStats` reuses the cached value when warm.
+- Realtime: subscription effects use `[]` deps with ref-compare (never re-subscribe on value flips); `RealtimeService.cleanupChannel` does `unsubscribe + removeChannel + manager.remove`; no per-send channel creation (detach after `messages` broadcast).
 
 ---
 
@@ -544,6 +568,14 @@ authoritative game after a missed realtime event or an unreadable games row
 
 **Status**: IMPLEMENTED (2026-08-23)
 
+### ADR-007: Round-Trips over Indexes (Supabase perf audit)
+
+**Decision**: Optimize Supabase latency by collapsing DB round trips and narrowing payloads first; add indexes only on `EXPLAIN ANALYZE` evidence. The 2026-09-19 audit proved tables tiny (1–54 rows) with good MVP index coverage — perceived slowness came from 18–24 hops per cold startup (5–8× `getSession`, ≤3× `GET /status`, history 4 hops with `limit 1000 + move_comparisons` JSONB, friends 7–8 hops, unbounded badge fetch), not execution time.
+
+**Rules locked**: §8.1 canonical RPC/RLS path, §12 single-bundle + narrow-column lists, §13 single-flight session/premium/profile caches with realtime invalidation. RLS stays enabled; `(select auth.uid())` init-once form only. Duplicate-index drops ride in `supabase/migrations/2026-09-19_perf_rls_indexes.sql` (manual apply).
+
+**Status**: IMPLEMENTED (2026-09-19)
+
 ---
 
 ## Pre-commit Checklist
@@ -560,7 +592,10 @@ Before pushing, verify:
 - [ ] New game methods added to `GameInterface` and implemented in BOTH `OnlineGame` + `LocalGame`
 - [ ] Magic numbers moved to `gameConstants.ts`
 - [ ] No `as any` cast on game references (use `as GameInterface` instead)
+- [ ] No `select('*')` on new list/poll queries (explicit columns; JSONB detail-only)
+- [ ] New RPCs are `SECURITY DEFINER ... SET search_path TO 'public'` (`STABLE` only if pure read) with a `CONTEXT.md` entry
+- [ ] New screens share one bundle per mount (§12) and reuse cached session/premium/profile (§13)
 
 ---
 
-*Last Updated: 2026-09-18 — §10 App Version Check + Play Store prompt (`src/features/app-update/`: framework-free `decideUpdate` + fail-silent manifest fetch, v1 never blocks, no OTA); 2026-09-15 — Coach resignation now uses the shared confirmation flow; NativeAdSlot/AdSenseSlot also render on the non-premium Premium upgrade screen with a fresh request per surface; 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*
+*Last Updated: 2026-09-19 — ADR-007 Round-Trips over Indexes + §8.1 canonical RPC/RLS path + §12 data-fetch/round-trip rules + §13 caching/single-flight (history single-bundle, friends bundle, premium 5-min single-flight, session 5s cache, badge cap/share, matchmaking parallel, realtime cleanup); migration `supabase/migrations/2026-09-19_perf_rls_indexes.sql` (manual apply); 2026-09-18 — §10 App Version Check + Play Store prompt (`src/features/app-update/`: framework-free `decideUpdate` + fail-silent manifest fetch, v1 never blocks, no OTA); 2026-09-15 — Coach resignation now uses the shared confirmation flow; NativeAdSlot/AdSenseSlot also render on the non-premium Premium upgrade screen with a fresh request per surface; 2026-09-12 — §9 NativeAdSlot reuse in Coach inline game-over modal (daily-trial funnel) + `COACH_TRIAL_WINDOW_MS` shared constant; 2026-08-23 — ADR-006 Idempotent Resolution & Divergence Policy (legality gate, single-writer resolve, exactly-once application, stale-authority guard, schema-drift resilience); ADR-005 Resolution Ownership: lastMoveComparison (board) vs lastHumanResolution (panel), human-team gating + DB persistence (games.last_human_resolution)*

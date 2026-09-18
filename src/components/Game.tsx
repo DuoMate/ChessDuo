@@ -14,6 +14,7 @@ import { createBot } from '@/features/bots/chessBot'
 import { createBotConfig, getBotConfig } from '@/features/bots/botConfig'
 import { supabase, Room } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
+import { fetchProfile } from '@/lib/profileService'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { emitTrace } from '@/features/shared/gameTrace'
 import { traceDuo } from '@/lib/duoGameTrace'
@@ -432,17 +433,10 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       return
     }
     let active = true
-    supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', playerId)
-      .maybeSingle()
-      .then(({ data, error }) => {
+    // P0 perf: shared 60s profile cache (was a raw uncached SELECT per mount).
+    fetchProfile(playerId)
+      .then((data) => {
         if (!active) return
-        if (error) {
-          DEBUG && console.warn('[Profile] Failed to fetch user profile:', error.message)
-          return
-        }
         if (data) {
           setUserProfile({ username: data.username || null, avatarUrl: data.avatar_url || null })
         }

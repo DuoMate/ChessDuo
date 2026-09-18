@@ -132,7 +132,7 @@ export async function createOnlineRoom(options: {
       expires_at: expiresAt,
       host_team: hostTeam,
     })
-    .select()
+    .select('id, code')
     .single()
 
   if (roomError || !room) {

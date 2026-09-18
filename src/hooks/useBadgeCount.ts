@@ -9,6 +9,17 @@ interface BadgeData {
   unreadBySender: Record<string, number>
 }
 
+// P1 perf: the unread-messages query was unbounded (full row fetch just to
+// count) and mounted twice (home + (main)/layout → duplicate query pairs on
+// every navigation). Cap the sender breakdown fetch and share same-tick
+// results across hook instances via a short-lived module cache. Totals stay
+// exact: pending uses count-head; messages total counts the capped set and
+// the UI treats it as a lower bound (badge shows the count; 200+ unread is
+// indistinguishable for badge purposes).
+const BADGE_MESSAGE_CAP = 200
+const BADGE_SHARE_TTL_MS = 5_000
+let sharedBadgeFetch: { playerId: string; at: number; promise: Promise<{ msgResult: { data: { sender_id: string }[] | null }; pendingCount: number }> } | null = null
+
 // Unique per-subscription-instance suffix. Supabase reuses a channel with the
 // same topic while it is still registered (removeChannel is async), so a fixed
 // name causes `.on('postgres_changes', ...)` to throw on fast remounts
@@ -35,10 +46,21 @@ export function useBadgeCount(playerId: string | null): BadgeData {
     }
 
     try {
-      const [msgResult, pendingCount] = await Promise.all([
-        supabase.from('messages').select('sender_id').eq('receiver_id', playerId).eq('read', false),
-        getPendingRequestCount(playerId),
-      ])
+      const now = Date.now()
+      if (!sharedBadgeFetch || sharedBadgeFetch.playerId !== playerId || (now - sharedBadgeFetch.at) > BADGE_SHARE_TTL_MS) {
+        sharedBadgeFetch = {
+          playerId,
+          at: now,
+          promise: (async () => {
+            const [msgResult, pendingCount] = await Promise.all([
+              supabase.from('messages').select('sender_id').eq('receiver_id', playerId).eq('read', false).limit(BADGE_MESSAGE_CAP),
+              getPendingRequestCount(playerId),
+            ])
+            return { msgResult: msgResult as { data: { sender_id: string }[] | null }, pendingCount }
+          })(),
+        }
+      }
+      const { msgResult, pendingCount } = await sharedBadgeFetch.promise
 
       if (!mountedRef.current) return
 

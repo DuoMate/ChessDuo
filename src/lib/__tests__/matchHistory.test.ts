@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { getPlayerStats, saveCompletedGame, invalidateStatsCache, getMatchHistory } from '../matchHistory'
+import { getPlayerStats, saveCompletedGame, invalidateStatsCache, getMatchHistory, getHistoryPageWithStats } from '../matchHistory'
 
 const mockSelect = jest.fn()
 const mockEq = jest.fn()
@@ -320,5 +320,30 @@ describe('offline replay id persistence', () => {
     const payload = mockUpsert.mock.calls[0][0]
     expect(payload.id).toBeUndefined()
     expect(payload.room_id).toBe('room-1')
+  })
+})
+
+// ============================================================
+// GROUP 5 — P0 perf: single-bundle history page load
+// ============================================================
+describe('getHistoryPageWithStats (P0 perf)', () => {
+  it('serves list + stats from one bundle with narrow columns (no select *)', async () => {
+    stubHistory(['r1', 'r2', 'r3'], [
+      { id: 'g1', room_id: 'r1', winner: 'WHITE', white_sync_rate: 1, player1_accuracy: 80, player2_accuracy: 90, white_conflicts: 0, white_moves: 10, total_moves: 10, is_online: true, game_result: 'W', game_over_reason: null, played_at: '2026-09-18T00:00:03Z', created_at: '2026-09-18T00:00:03Z' },
+      { id: 'g2', room_id: 'r2', winner: 'BLACK', white_sync_rate: 0.5, player1_accuracy: 60, player2_accuracy: 70, white_conflicts: 1, white_moves: 12, total_moves: 12, is_online: true, game_result: 'B', game_over_reason: null, played_at: '2026-09-18T00:00:02Z', created_at: '2026-09-18T00:00:02Z' },
+      { id: 'g3', room_id: 'r3', winner: 'DRAW', white_sync_rate: 0.8, player1_accuracy: 50, player2_accuracy: 60, white_conflicts: 0, white_moves: 8, total_moves: 8, is_online: false, game_result: 'D', game_over_reason: null, played_at: '2026-09-18T00:00:01Z', created_at: '2026-09-18T00:00:01Z' },
+    ])
+
+    const { games, stats } = await getHistoryPageWithStats('user-1', 2, 1000)
+
+    // List sliced, stats over the full set.
+    expect(games).toHaveLength(2)
+    expect(stats?.totalGames).toBe(3)
+    // One membership query + one games query (was 2×(1+1) via getMatchHistory+getPlayerStats).
+    expect(mockEq).toHaveBeenCalledTimes(1)
+    expect(mockSelect).toHaveBeenCalledTimes(1)
+    // Narrow list columns — never select('*') on the list path.
+    expect(mockSelect).toHaveBeenCalledWith(expect.not.stringContaining('*'))
+    expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('player1_accuracy'))
   })
 })

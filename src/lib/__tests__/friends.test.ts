@@ -11,6 +11,7 @@ import {
   isFriend,
   searchUsers,
   getPendingRequests,
+  getFriendsBundle,
 } from '../friends'
 
 jest.mock('../../lib/supabase', () => ({
@@ -164,7 +165,9 @@ describe('getPendingRequests', () => {
     const chain = mockFromChain()
     chain.or.mockReturnValue({
       eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue({ data: null, error: null }),
+      order: jest.fn().mockReturnValue({
+        limit: jest.fn().mockResolvedValue({ data: null, error: null }),
+      }),
     })
     const result = await getPendingRequests('user1')
     expect(result.incoming).toEqual([])
@@ -176,6 +179,49 @@ describe('getInviteLink', () => {
   it('returns correct invite URL', () => {
     const link = getInviteLink('abc123')
     expect(link).toContain('/invite/abc123')
+  })
+})
+
+describe('getFriendsBundle (P1 perf)', () => {
+  it('splits one friendships fetch + one profiles fetch in memory (no select *)', async () => {
+    const rows = [
+      { sender_id: 'user1', receiver_id: 'user2', status: 'accepted', created_at: '2026-01-01', updated_at: '2026-01-02' },
+      { sender_id: 'user3', receiver_id: 'user1', status: 'pending', created_at: '2026-01-01', updated_at: '2026-01-02' },
+      { sender_id: 'user1', receiver_id: 'user4', status: 'pending', created_at: '2026-01-01', updated_at: '2026-01-02' },
+      { sender_id: 'user1', receiver_id: 'user5', status: 'blocked', created_at: '2026-01-01', updated_at: '2026-01-02' },
+    ]
+    const selectMock = jest.fn()
+    selectMock
+      .mockReturnValueOnce({
+        or: jest.fn().mockReturnValue({
+          order: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({ data: rows, error: null }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { id: 'user2', username: 'bob', avatar_url: null },
+            { id: 'user3', username: 'cara', avatar_url: null },
+            { id: 'user4', username: 'dan', avatar_url: null },
+            { id: 'user5', username: 'erin', avatar_url: null },
+          ],
+          error: null,
+        }),
+      })
+    ;(supabase.from as jest.Mock).mockReturnValue({ select: selectMock })
+
+    const bundle = await getFriendsBundle('user1')
+
+    expect(bundle.friends).toHaveLength(1)
+    expect(bundle.friends[0].friend_username).toBe('bob')
+    expect(bundle.incoming).toHaveLength(1)
+    expect(bundle.outgoing).toHaveLength(1)
+    expect(bundle.blocked).toHaveLength(1)
+    // Narrow columns on the friendships fetch — never select('*').
+    expect(selectMock.mock.calls[0][0]).not.toContain('*')
+    expect(supabase.from).toHaveBeenCalledTimes(2)
   })
 })
 

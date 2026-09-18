@@ -232,16 +232,25 @@ function resolveViewerTeam(
   return null
 }
 
-async function fetchCompletedGames(roomIds: string[], limit: number): Promise<CompletedGame[]> {
-  const { data, error } = await supabase
+// List views never need the heavy `move_comparisons` JSONB payload —
+// it is only required for the replay detail path (`getCompletedGame`).
+// Narrow list selects keep the 50/1000-row history queries small.
+const HISTORY_LIST_COLUMNS = 'id, room_id, winner, game_result, game_over_reason, white_moves, white_sync_rate, white_conflicts, player1_accuracy, player2_accuracy, total_moves, is_online, challenge_id, played_at, created_at, player_labels'
+
+async function fetchCompletedGames(roomIds: string[], limit: number, offset = 0): Promise<CompletedGame[]> {
+  if (roomIds.length === 0) return []
+  let query = supabase
     .from('completed_games')
-    .select('*')
+    .select(HISTORY_LIST_COLUMNS)
     .in('room_id', roomIds)
     .order('played_at', { ascending: false })
-    .limit(limit)
+
+  const { data, error } = offset > 0
+    ? await query.range(offset, offset + limit - 1)
+    : await query.limit(limit)
 
   if (error) throw error
-  return data || []
+  return (data || []) as CompletedGame[]
 }
 
 /**
@@ -396,4 +405,29 @@ export async function getPlayerStats(userId?: string): Promise<PlayerStats | nul
 
   statsCache.set(getStatsCacheKey(userId), { value, fetchedAt: Date.now() })
   return value
+}
+
+/**
+ * P0 perf: single-bundle history page load — ONE `room_players` SELECT +
+ * ONE narrow-column `completed_games` SELECT serves both the recent-games
+ * list (`listLimit`) and viewer-relative stats (computed over `statsLimit`
+ * rows). Replaces the previous `Promise.all([getMatchHistory(50),
+ * getPlayerStats()])` pattern which issued 2×(1+1) = 4 sequential DB hops
+ * and pulled `move_comparisons` JSONB twice. Stats semantics are unchanged
+ * (same 1000-row set + `resolveViewerTeam` counting as `getPlayerStats`).
+ */
+export async function getHistoryPageWithStats(
+  userId: string,
+  listLimit = 50,
+  statsLimit = 1000,
+): Promise<{ games: CompletedGame[]; stats: PlayerStats | null }> {
+  const cached = getCachedStats(userId)
+  const { games: bundleGames, viewerTeamsByRoom } = await loadHistoryBundle(userId, statsLimit)
+  const stats = cached !== 'expired'
+    ? cached
+    : computeStatsFromGames(bundleGames, viewerTeamsByRoom, true)
+  if (cached === 'expired') {
+    statsCache.set(getStatsCacheKey(userId), { value: stats, fetchedAt: Date.now() })
+  }
+  return { games: bundleGames.slice(0, listLimit), stats }
 }

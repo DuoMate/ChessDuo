@@ -15,9 +15,10 @@ export async function findAvailableRoom(playerId: string, timeSeconds?: number):
 
   // Only online-mode waiting rooms are quick-match candidates (4-player
   // lobbies share the rooms table and must not be auto-joined here).
+  // Narrow columns (was select('*')) — join logic needs identity + timing only.
   let query = supabase
     .from('rooms')
-    .select('*')
+    .select('id, code, status, created_by, created_at, time_seconds, expires_at, mode, host_team')
     .eq('status', 'waiting')
     .eq('mode', 'online')
     .or(`expires_at.is.null,expires_at.gt.${now}`)
@@ -32,13 +33,24 @@ export async function findAvailableRoom(playerId: string, timeSeconds?: number):
 
   if (error || !rooms || rooms.length === 0) return null
 
-  for (const room of rooms) {
-    if (room.created_by === playerId) continue
+  // P1 perf: join-state RPCs are independent per candidate room — fetch in
+  // parallel (was sequential await-in-loop, up to 5 round trips). Order is
+  // preserved: first fit in created_at order wins, own rooms skipped.
+  const candidates = rooms.filter(room => room.created_by !== playerId)
+  if (candidates.length === 0) return null
 
+  const joinStates = await Promise.all(
+    candidates.map(room =>
+      supabase.rpc('get_room_join_state', { p_room_id: room.id })
+        .then(({ data }) => ({ room, joinState: data }))
+        .catch(() => ({ room, joinState: null }))
+    ),
+  )
+
+  for (const { room, joinState } of joinStates) {
     // RLS restricts room_players to members, but a quick-match seeker is not
     // a member of the rooms it inspects. The public get_room_join_state RPC
     // (SECURITY DEFINER) reports team counts without requiring membership.
-    const { data: joinState } = await supabase.rpc('get_room_join_state', { p_room_id: room.id })
     const total = Number(joinState?.player_count ?? 0)
     if (total >= 4) continue
 
@@ -58,7 +70,7 @@ export async function findAvailableRoom(playerId: string, timeSeconds?: number):
 export async function checkMyRoomJoined(roomId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('room_players')
-    .select('*')
+    .select('player_id')
     .eq('room_id', roomId)
   if (error || !data) return false
   return data.length >= 2

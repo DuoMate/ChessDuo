@@ -6,7 +6,6 @@ import { Lock, Crown, BarChart3 } from 'lucide-react'
 import { MoveInsights } from './MoveInsights'
 import { Spinner } from './Spinner'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
-import { SubscriptionService } from '@/features/billing'
 
 interface InsightsGateProps {
   playerId: string
@@ -35,15 +34,14 @@ export function InsightsGate({ playerId, onStateChange, onUpgradeClick, ...compa
       setLoading(false)
       return
     }
-    Promise.all([
-      SubscriptionService.isPremium(),
-      getUserInsightsState(playerId),
-    ]).then(([premium, state]) => {
-      setIsPremium(premium)
+    // P0 perf: getUserInsightsState already resolves isPremium internally —
+    // a separate isPremium() call here doubled the premium check per mount.
+    getUserInsightsState(playerId).then((state) => {
+      setIsPremium(state.isPremium)
       setRevealsRemaining(state.revealsRemaining)
-      if (premium) setShowInsights(true)
+      if (state.isPremium) setShowInsights(true)
       setLoading(false)
-      onStateChange?.({ isPremium: premium, revealsRemaining: state.revealsRemaining })
+      onStateChange?.({ isPremium: state.isPremium, revealsRemaining: state.revealsRemaining })
     }).catch(() => {
       setLoading(false)
     })

@@ -16,18 +16,27 @@ export async function sendMessage(
       read: false,
       message_type: messageType,
     })
-    .select('*')
+    .select('id, sender_id, receiver_id, content, read, created_at, message_type')
     .single()
 
   if (error) return { data: null, error: error.message }
 
+  // P1 perf fix: the per-send broadcast channel was registered but never
+  // removed — every sent message leaked a channel. Detach after sending.
   const channel = supabase.channel(`messages:${receiverId}`)
   subscriptionManager.register(channel)
-  await channel.send({
-    type: 'broadcast',
-    event: 'new_message',
-    payload: data,
-  })
+  try {
+    await channel.send({
+      type: 'broadcast',
+      event: 'new_message',
+      payload: data,
+    })
+  } finally {
+    subscriptionManager.remove(channel)
+    try {
+      await supabase.removeChannel(channel)
+    } catch { /* removal best-effort */ }
+  }
 
   return { data, error: null }
 }
@@ -35,7 +44,7 @@ export async function sendMessage(
 export async function getConversation(userId: string, friendId: string, limit = 50): Promise<Message[]> {
   const { data } = await supabase
     .from('messages')
-    .select('*')
+    .select('id, sender_id, receiver_id, content, read, created_at, message_type')
     .or(`and(sender_id.eq.${userId},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${userId})`)
     .eq('message_type', 'chat')
     .order('created_at', { ascending: false })
