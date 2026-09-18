@@ -121,6 +121,8 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 59. `5ab1844` ui: editor/rate/gameon/promotion pairing + focus + shared modal constants (P1)
 60. `a262203` ui: mobile status bar timer contrast (P2)
 61. `a2f16ab` ui: shared PromotionModal for Game + DuelGame (S1)
+62. `ede2465` ui: normalize radii outliers to token scale (U1)
+63. `1974784` ui: restrain modal shadows to elevation token (U2)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
