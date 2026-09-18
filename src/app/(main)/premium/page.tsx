@@ -464,9 +464,9 @@ function PremiumSuccess({
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-3">
-            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
+            <Sparkles size={20} className="text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
             <h2 className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">You&apos;re Premium!</h2>
-            <span className="text-blue-600 dark:text-blue-400 text-xl">&#127793;</span>
+            <Sparkles size={20} className="text-blue-600 dark:text-blue-400 shrink-0" aria-hidden="true" />
           </div>
 
           <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-600 dark:text-blue-400 text-sm font-semibold mb-4">

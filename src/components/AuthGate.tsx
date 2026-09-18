@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, TriangleAlert } from 'lucide-react'
 import { useAuthSession } from '@/hooks/useAuthSession'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
@@ -105,7 +105,9 @@ export function AuthGate({
       return (
         <ErrorBoundary>
           <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
-            <div className="text-5xl mb-3">⚠️</div>
+          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+            <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+          </div>
             <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 text-center max-w-xs">We couldn&apos;t verify your session. Please try again.</p>
             <button

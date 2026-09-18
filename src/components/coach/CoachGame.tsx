@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Volume2, VolumeX, Flag, Crown } from 'lucide-react'
+import { ArrowLeft, Volume2, VolumeX, Flag, Crown, Trophy, Handshake, Skull } from 'lucide-react'
 import { ChessBoard } from '../ChessBoard'
 import { BoardBottomNav, type BoardTab } from '../BoardBottomNav'
 import { SlideOver } from '../SlideOver'
@@ -379,11 +379,11 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl dark:border-slate-700/60 dark:bg-slate-900 dark:shadow-none">
             <div
-              className="mb-2 text-4xl"
+              className="mb-2 flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-amber-500/15"
               role="img"
               aria-label={state?.result?.startsWith('Win') ? 'Victory' : state?.result?.startsWith('Draw') ? 'Draw' : 'Game over'}
             >
-              {state?.result?.startsWith('Win') ? '🏆' : state?.result?.startsWith('Draw') ? '🤝' : '♟️'}
+              {state?.result?.startsWith('Win') ? <Trophy size={28} className="text-amber-500 dark:text-amber-400" aria-hidden="true" /> : state?.result?.startsWith('Draw') ? <Handshake size={28} className="text-amber-500 dark:text-amber-400" aria-hidden="true" /> : <Skull size={28} className="text-slate-400 dark:text-slate-500" aria-hidden="true" />}
             </div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white">{state?.result ?? 'Game over'}</h2>
             {state && (
