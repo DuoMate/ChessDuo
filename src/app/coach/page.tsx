@@ -37,13 +37,16 @@ function CoachContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // URL params are deep-link/initial values only — the setup screen owns the
-  // explicit selection (same defaults/validation as the home screen).
+  // URL params are deep-link/initial values only — the Home cascade owns the
+  // explicit selection when `from=home` is present (same defaults/validation
+  // as the home screen). Direct visits keep the setup fallback.
   const initialLevel = validLevel(searchParams.get('level'))
   const initialColor = validColor(searchParams.get('color'))
+  const fromHome = searchParams.get('from') === 'home'
 
   // 'setup' → user picks side + difficulty; 'playing' → game runs the selection.
-  const [phase, setPhase] = useState<'setup' | 'playing'>('setup')
+  // Home cascade navigations skip setup (config already chosen inline).
+  const [phase, setPhase] = useState<'setup' | 'playing'>(() => (fromHome ? 'playing' : 'setup'))
   const [level, setLevel] = useState(initialLevel)
   const [playerColor, setPlayerColor] = useState<ResolvedColor>(() => resolvePlayerColor(initialColor))
 
@@ -63,7 +66,8 @@ function CoachContent() {
 
   useEffect(() => {
     if (sessionChecked && !playerId) {
-      const redirect = encodeURIComponent(`/coach?level=${initialLevel}&color=${initialColor}`)
+      const fromParam = fromHome ? '&from=home' : ''
+      const redirect = encodeURIComponent(`/coach?level=${initialLevel}&color=${initialColor}${fromParam}`)
       router.replace(`/?redirect=${redirect}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
