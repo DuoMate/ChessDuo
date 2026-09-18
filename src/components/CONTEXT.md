@@ -18,7 +18,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `MoveComparison.tsx` | Side-by-side accuracy comparison |
 | `TeamTimer.tsx` | Team-level countdown timer |
 | `MatchTimer.tsx` | Match-level countdown timer (circular SVG) |
-| `TeamIndicator.tsx` | Team crown/bot icons — legacy, replaced by `BoardTopBar` |
+| `TeamIndicator.tsx` | REMOVED (2026-09-18 revamp) — legacy team icons, unreferenced; `BoardTopBar` is canonical |
 | `TurnStatusArea.tsx` | Turn phase indicator |
 | `CapturedPieces.tsx` | Captured pieces display |
 | `PromotionModal.tsx` | Pawn promotion selector |
@@ -40,7 +40,7 @@ All React components — co-located by feature, not by type. Components handle r
 | `BotDifficultyGrid.tsx` | Shared 5-card Easy/Medium/Hard/Expert/Master grid (extracted from home; consumed by home + AI Coach setup). |
 | `difficultyLevels.ts` | Shared `DIFFICULTY_LEVELS` (single source of truth) + `SELECTED_LEVEL_KEY` (shared with home). |
 | `DesktopSidebar.tsx` | **NEW** — Left vertical navigation for browser viewports (Home/History/Friends/Profile, 220-240px wide, fixed). Replaces `SidebarNav` on `md:`+ breakpoints across all `(main)/` pages. |
-| `SidebarNav.tsx` | **LEGACY** — Narrow left vertical navigation (80-88px icons only). Kept for reference; replaced by `DesktopSidebar` on all `(main)/` pages. |
+| `SidebarNav.tsx` | REMOVED (2026-09-18 revamp) — legacy 80-88px nav, unreferenced; `DesktopSidebar` is canonical |
 | `BottomNav.tsx` | Mobile bottom navigation (used by DuelGame/ReplayView) |
 | `MobileStatusBar.tsx` | Mobile safe-area wrapper |
 | `NetworkOverlay.tsx` | Offline connection banner |
@@ -81,7 +81,7 @@ All React components — co-located by feature, not by type. Components handle r
 - `MoveResolvedInline` (was `MoveResolvedCard`) renders below the `PendingMovesRow` when `accuracyComparison` is available, with insights-style phrasing (move impact, sync/winner line, blunder warning, quality verdict).
 - `RoundHistorySidebar` is a right-side slide-over opened by the Moves tab.
 - `BoardBottomNav` replaces the old `BottomNav` in `Game.tsx`. 5 tabs: Moves / Game / Surrender (center) / Insights / Chat. DuelGame and ReplayView use a simplified variant.
-- `AccuracyBottomSheet` removed from the board page (logic moved into `MoveResolvedInline`). `TeamIndicator` retained for backward compat but no longer rendered in `Game.tsx`.
+- `AccuracyBottomSheet` removed from the board page (logic moved into `MoveResolvedInline`). `TeamIndicator` deleted (was retained for backward compat but never rendered).
 
 ### Quick Play team composition (visible layout)
 - White side: user (You) + 1 bot tile labelled "WhiteBot".
