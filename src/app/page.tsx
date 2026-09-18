@@ -126,7 +126,7 @@ export default function SetupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [gameMode, setGameMode] = useState<GameMode>(null)
-  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'duo' | 'four' | null>(null)
+  const [selectedGameMode, setSelectedGameMode] = useState<'quick' | 'duo' | 'four' | 'coach' | null>(null)
   const [selectedTime, setSelectedTime] = useState<number>(getInitialTime)
   const [playerId, setPlayerId] = useState<string | null>(null)
   const [username, setUsername] = useState<string>('')
@@ -349,9 +349,16 @@ export default function SetupPage() {
         setDuelFriend(null)
         return true
       }
+      // Collapse the inline Home cascade (Quick/Duo/Coach) instead of exiting
+      // the app. Without this the hardware Back would kill the app while a
+      // mode card is expanded.
+      if (selectedGameMode !== null) {
+        setSelectedGameMode(null)
+        return true
+      }
       return false
     },
-    showAuthOverlay || gameMode !== null || !!duelFriend
+    showAuthOverlay || gameMode !== null || !!duelFriend || selectedGameMode !== null
   )
 
   useEffect(() => {
@@ -859,13 +866,13 @@ export default function SetupPage() {
     }
   }
 
-  const handleGameModeClick = (mode: 'quick' | 'duo' | 'four') => {
+  const handleGameModeClick = (mode: 'quick' | 'duo' | 'four' | 'coach') => {
     if (selectedGameMode === mode) {
       // Already selected: for Four Player, start immediately
       if (mode === 'four') {
         handleStartFourPlayer(selectedTime)
       }
-      // For quick/duo, do nothing (user clicks Start Game in inline config)
+      // For quick/duo/coach, do nothing (user clicks Start Game in inline config)
     } else {
       setSelectedGameMode(mode)
     }
@@ -883,13 +890,17 @@ export default function SetupPage() {
       case 'four':
         handleStartFourPlayer(selectedTime)
         break
+      case 'coach':
+        handleStartCoach()
+        break
     }
   }
 
-  // Coach Mode is premium-only and requires a signed-in user. Launch it directly
-  // (it has its own premium gate) — no home-screen configuration panel.
+  // Coach Mode is premium-only and requires a signed-in user. Selection expands
+  // the inline Home cascade (same as Quick Play / Duo); Start navigates with
+  // `from=home` so /coach skips its setup fallback (deep-links still show it).
   const handleStartCoach = () => {
-    const route = `/coach?level=${selectedLevel}&color=${selectedColor}`
+    const route = `/coach?level=${selectedLevel}&color=${selectedColor}&from=home`
     if (!playerId) {
       storePendingAction({ type: 'navigate', route })
       setShowAuthOverlay(true)
@@ -1109,7 +1120,8 @@ if (!gameMode) {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
               <div className="space-y-1.5">
                 <GameModeCard
-                  onClick={handleStartCoach}
+                  onClick={() => handleGameModeClick('coach')}
+                  selected={selectedGameMode === 'coach'}
                   leftIcons={[{ type: 'human', avatar: 'ace' }]}
                   rightIcons={[{ type: 'bot' }]}
                   title="AI Coach"
@@ -1174,7 +1186,7 @@ if (!gameMode) {
               <p role="alert" className="text-center text-xs font-medium text-red-400">{joinError}</p>
             )}
 
-            {/* Configuration — slides in on Quick Play / Duo */}
+            {/* Configuration — slides in on Quick Play / Duo / AI Coach */}
             <AnimatePresence>
               {selectedGameMode && selectedGameMode !== 'four' && (
                 <motion.div
@@ -1223,7 +1235,7 @@ if (!gameMode) {
           </div>
 
           {/* Fixed Start Game button — stacked on top of the floating nav */}
-          {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
+          {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo' || selectedGameMode === 'coach') && (
             <div className="md:hidden fixed left-0 right-0 z-40 flex justify-center px-4 bottom-[calc(84px+env(safe-area-inset-bottom,0px))]">
               <div className="w-full max-w-lg">
                 <button
@@ -1240,7 +1252,7 @@ if (!gameMode) {
                   ) : (
                     <Play size={20} strokeWidth={2.5} fill="currentColor" />
                   )}
-                  {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                  {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : selectedGameMode === 'coach' ? 'Start AI Coach' : 'Start Game'}
                 </button>
               </div>
             </div>
@@ -1261,7 +1273,8 @@ if (!gameMode) {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Game Mode</p>
                 <div className="space-y-1.5">
                   <GameModeCard
-                    onClick={handleStartCoach}
+                    onClick={() => handleGameModeClick('coach')}
+                    selected={selectedGameMode === 'coach'}
                     leftIcons={[{ type: 'human', avatar: 'ace' }]}
                     rightIcons={[{ type: 'bot' }]}
                     title="AI Coach"
@@ -1297,7 +1310,7 @@ if (!gameMode) {
               </div>
 
               {/* Play / Start Game Button — inside Game Mode section, aligned with cards */}
-              {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo') && (
+              {(selectedGameMode === 'four' || selectedGameMode === 'quick' || selectedGameMode === 'duo' || selectedGameMode === 'coach') && (
                 <div className="mt-3">
                   <button
                     onClick={handlePlay}
@@ -1313,7 +1326,7 @@ if (!gameMode) {
                     ) : (
                       <Play size={20} strokeWidth={2.5} fill="currentColor" />
                     )}
-                    {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : 'Start Game'}
+                    {creatingTime ? 'Creating room...' : selectedGameMode === 'four' ? 'Play' : selectedGameMode === 'coach' ? 'Start AI Coach' : 'Start Game'}
                   </button>
                 </div>
               )}
