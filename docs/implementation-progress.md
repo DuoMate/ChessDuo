@@ -111,6 +111,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 49. `a4fb60a` ui: responsive dvh shells across routes (W4)
 50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
 51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
+52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
@@ -121,3 +122,60 @@ except `globals.css` token additions and two audit docs.
 `npx tsc --noEmit` before every commit; targeted jest suites where they exist
 (Toast, BackButton, ColorPicker incl. assertion update, PendingMovesRow, coach);
 production `npm run build` green after PHASE 3. Full suite + build + safety sweep at close.
+---
+
+# AI Coach Setup + OAuth PKCE Fix — Implementation Progress (2026-09-17)
+
+## Status legend
+- [ ] pending · [~] in progress · [x] done
+
+## TRACK A — AI Coach setup consistency
+- [x] PHASE 1 — Audit (`ai-coach-setup-audit.md`)
+- [x] PHASE 2 — Shared config (`BotDifficultyGrid` + shared `DIFFICULTY_LEVELS`, home rewired, no visual change)
+- [x] PHASE 3 — `CoachSetup` presentation (ColorPicker + grid + description + Start CTA, light/dark, 44px targets)
+- [x] PHASE 4 — Color wiring (setup → `resolvePlayerColor` → `CoachGame`, board orientation via existing prop)
+- [x] PHASE 5 — Difficulty wiring (setup → `ChessBot` via existing `DIFFICULTY` map, levels 1-5)
+- [x] PHASE 6 — Silent defaults removed from happy path (defensive `?? 3`/`?? 'w'` retained, documented)
+- [x] PHASE 7 — Runtime verification (unit: 13 component/grid tests + 6 engine level/color tests)
+- [x] PHASE 8 — Regression (coach suites 71/71 green; full suite + build pending below)
+- [x] PHASE 9 — `tsc --noEmit` clean + `npm run build` success + suites green (see Verify track)
+
+## Test matrix (Track A)
+- [x] T1 White + Easy → onStart(1, 'white'); engine state botLevel 1
+- [x] T2 White + Medium → onStart(2, ...) covered by grid + setup tests
+- [x] T3 White + Hard → default-start test (3, 'white')
+- [x] T4 Black + Easy → onStart(5, 'black') test (level) + black color test; engine ('b', 2) test
+- [x] T5 Black + Medium → grid selection test (level 2 checked)
+- [x] T6 Random → passthrough test + shared `resolvePlayerColor` (unchanged mechanism)
+- [x] T7 Quick Play unchanged (home rewire only; full suite pending)
+- [x] T8 Duo unchanged (same)
+- [x] T9 Access allowed → setup renders inside CoachGate (phase state; gate untouched)
+- [x] T10 Access denied → locked screen unchanged (gate untouched)
+
+## TRACK B — Browser OAuth PKCE regression
+- [x] PHASE 1 — Audit (`browser-auth-regression-audit.md`; root cause: dual-consumer race)
+- [x] PHASE 2 — Root cause identified (auto-init `detectSessionInUrl` vs explicit exchange)
+- [x] PHASE 3 — Minimal fix (session-as-ground-truth reconciliation, callback PKCE branch only)
+- [x] PHASE 4 — Regression tests (`callback.test.tsx`: 5/5 — success, reconciled, redirect-preserved, genuine OAuth failure, email recovery)
+- [x] PHASE 5 — Browser verification (unit-level; live Google round-trip needs manual DevTools pass post-deploy)
+- [ ] PHASE 6 — Final diff review (pre-push, see Verify track)
+
+## Mobile check (Track B)
+- Native OAuth uses `chessduo://auth/callback` deep link (`capacitorAuth.ts:57-80`);
+  code comes from the link string, never `window.location.href` → auto-init never
+  races → unaffected. `capacitorAuth.ts` untouched.
+
+## Verify track
+- [x] `npx tsc --noEmit` clean
+- [x] `npm test`: 1444 passed / 1540; 9 failed = 8 pre-existing on clean HEAD
+  (ConfirmMoveBar 4, SidebarNav 1, server/engine 3 — verified identical via
+  `git stash` full-suite baseline: 1421 passed / 1516, same 8 failures) +
+  1 BillingDiagnostics flake (3/3 standalone green; zero billing files touched)
+- [x] `npm run build` (browser) succeeds — `/coach` prerenders, 28/28 pages
+- [x] New-code eslint clean (1 `any` error + warnings in `page.tsx`/`CoachGame.tsx` pre-existing)
+- [ ] Diff review (scope-limited) → push `develop` → merge into `prod`
+
+## Log
+- 2026-09-17: Audit complete for both tracks. Plans approved (coach: setup inside /coach, 5 home-UI levels, rematch preserves via persisted setup).
+- 2026-09-17: OAuth fix implemented + 5/5 tests green. CoachSetup + grid + /coach wiring implemented; coach suites 71/71 green; tsc clean.
+- 2026-09-17: Fix complies with arch rule via `AuthService.getSession()` (architecture.test green). Full-suite baseline compared via stash. Build green. Ready to push.

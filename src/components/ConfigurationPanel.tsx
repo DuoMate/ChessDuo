@@ -4,18 +4,14 @@ import { Volume2, VolumeX, Shield, ShieldCheck } from 'lucide-react'
 import { PlayerColor } from '@/features/shared/gameConstants'
 import { useSettings } from '@/hooks/useSettings'
 import { ColorPicker } from './ColorPicker'
+import type { DifficultyLevelOption } from './difficultyLevels'
 
 interface ConfigurationPanelProps {
   selectedLevel: number
   onSelectLevel: (level: number) => void
   selectedColor: PlayerColor
   onSelectColor: (color: PlayerColor) => void
-  difficultyLevels: Array<{
-    level: number
-    label: string
-    Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
-    description: string
-  }>
+  difficultyLevels: DifficultyLevelOption[]
 }
 
 export function ConfigurationPanel({

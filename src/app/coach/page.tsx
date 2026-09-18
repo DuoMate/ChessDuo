@@ -6,22 +6,49 @@ import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
 import { PageLoading } from '@/components/PageLoading'
 import { AuthService } from '@/lib/authService'
-import { resolvePlayerColor } from '@/features/shared/gameConstants'
+import {
+  DEFAULT_PLAYER_COLOR,
+  SELECTED_COLOR_KEY,
+  resolvePlayerColor,
+  type PlayerColor,
+  type ResolvedColor,
+} from '@/features/shared/gameConstants'
+import { DIFFICULTY_LEVELS, SELECTED_LEVEL_KEY } from '@/components/difficultyLevels'
 import { CoachGate } from '@/components/coach/CoachGate'
+import { CoachSetup } from '@/components/coach/CoachSetup'
 
 const CoachGameComponent = dynamic(() => import('@/components/coach/CoachGame').then((mod) => ({ default: mod.CoachGame })), {
   loading: () => <PageLoading label="Loading coach…" />,
   ssr: false,
 })
 
+/** Setup accepts the same 5 home-UI levels (1-5); anything else falls back to 3 (mirrors home). */
+function validLevel(raw: string | null): number {
+  if (!raw) return 3
+  const parsed = parseInt(raw, 10)
+  return DIFFICULTY_LEVELS.some((d) => d.level === parsed) ? parsed : 3
+}
+
+function validColor(raw: string | null): PlayerColor {
+  return raw === 'white' || raw === 'black' || raw === 'random' ? raw : DEFAULT_PLAYER_COLOR
+}
+
 function CoachContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const levelParam = searchParams.get('level')
-  const level = levelParam ? Math.min(6, Math.max(1, parseInt(levelParam, 10) || 3)) : 3
-  const colorParam = (searchParams.get('color') as 'white' | 'black' | 'random' | null) ?? 'white'
-  const playerColor = resolvePlayerColor(colorParam)
+  // URL params are deep-link/initial values only — the Home cascade owns the
+  // explicit selection when `from=home` is present (same defaults/validation
+  // as the home screen). Direct visits keep the setup fallback.
+  const initialLevel = validLevel(searchParams.get('level'))
+  const initialColor = validColor(searchParams.get('color'))
+  const fromHome = searchParams.get('from') === 'home'
+
+  // 'setup' → user picks side + difficulty; 'playing' → game runs the selection.
+  // Home cascade navigations skip setup (config already chosen inline).
+  const [phase, setPhase] = useState<'setup' | 'playing'>(() => (fromHome ? 'playing' : 'setup'))
+  const [level, setLevel] = useState(initialLevel)
+  const [playerColor, setPlayerColor] = useState<ResolvedColor>(() => resolvePlayerColor(initialColor))
 
   const [sessionChecked, setSessionChecked] = useState(false)
   const [playerId, setPlayerId] = useState<string | null>(null)
@@ -39,7 +66,8 @@ function CoachContent() {
 
   useEffect(() => {
     if (sessionChecked && !playerId) {
-      const redirect = encodeURIComponent(`/coach?level=${level}&color=${colorParam}`)
+      const fromParam = fromHome ? '&from=home' : ''
+      const redirect = encodeURIComponent(`/coach?level=${initialLevel}&color=${initialColor}${fromParam}`)
       router.replace(`/?redirect=${redirect}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,15 +77,39 @@ function CoachContent() {
     return <PageLoading label="Signing in…" />
   }
 
+  const handleStart = (nextLevel: number, nextColor: PlayerColor) => {
+    // Remember the selection (same keys as the home screen) and resolve
+    // `random` once per game via the shared mechanism.
+    try {
+      localStorage.setItem(SELECTED_LEVEL_KEY, String(nextLevel))
+      localStorage.setItem(SELECTED_COLOR_KEY, nextColor)
+    } catch {
+      // Storage may throw in SSR/quota — the game still starts with the selection.
+    }
+    setLevel(nextLevel)
+    setPlayerColor(resolvePlayerColor(nextColor))
+    setPhase('playing')
+  }
+
   return (
     <ErrorBoundary fallback={<GameErrorFallback />}>
       <CoachGate playerId={playerId}>
-        <CoachGameComponent
-          playerId={playerId}
-          playerColor={playerColor}
-          botLevel={level}
-          onLeave={() => router.replace('/')}
-        />
+        {phase === 'setup' ? (
+          <CoachSetup
+            initialLevel={initialLevel}
+            initialColor={initialColor}
+            onStart={handleStart}
+            onBack={() => router.replace('/')}
+          />
+        ) : (
+          <CoachGameComponent
+            key={`${playerColor}-${level}`}
+            playerId={playerId}
+            playerColor={playerColor}
+            botLevel={level}
+            onLeave={() => router.replace('/')}
+          />
+        )}
       </CoachGate>
     </ErrorBoundary>
   )

@@ -97,13 +97,42 @@ export default function AuthCallbackPage() {
         // PKCE flow — OAuth/confirmation code in the query string.
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          if (exchangeError) {
+            // RACE RECONCILIATION (browser OAuth regression): auth-js
+            // auto-initialization (detectSessionInUrl, forced by
+            // createBrowserClient) may have already exchanged this same
+            // one-time code before this explicit exchange ran, consuming the
+            // PKCE verifier. The session is the ground truth — if it exists,
+            // sign-in genuinely completed, so route onward instead of showing
+            // a failure over a valid session.
+            if (isPkceVerifierMissing(exchangeError)) {
+              // NOTE: AuthService (not supabase.auth directly) — enforced by
+              // src/__tests__/architecture.test.ts. Same singleton/session.
+              const session = await AuthService.getSession()
+              if (session) {
+                logAuthDebug({
+                  stage: 'callback:race-reconciled',
+                  correlationId: cid,
+                  hasSession: true,
+                })
+                router.replace(safeNext ? `/?redirect=${encodeURIComponent(safeNext)}` : '/')
+                return
+              }
+            }
+            logAuthDebug({
+              stage: 'callback:exchangeCodeForSession',
+              correlationId: cid,
+              authErrorCode: exchangeError?.code ?? null,
+              authErrorMessage: exchangeError?.message ?? null,
+            })
+            throw exchangeError
+          }
           logAuthDebug({
             stage: 'callback:exchangeCodeForSession',
             correlationId: cid,
-            authErrorCode: exchangeError?.code ?? null,
-            authErrorMessage: exchangeError?.message ?? null,
+            authErrorCode: null,
+            authErrorMessage: null,
           })
-          if (exchangeError) throw exchangeError
           router.replace(safeNext ? `/?redirect=${encodeURIComponent(safeNext)}` : '/')
           return
         }
@@ -189,11 +218,11 @@ export default function AuthCallbackPage() {
     return (
       <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
         <div className="text-5xl mb-3" aria-hidden="true">⚠️</div>
-        <h1 className="text-xl font-bold mb-2">{isOAuth ? 'Couldn&apos;t sign in' : "Couldn't confirm your email"}</h1>
+        <h1 className="text-xl font-bold mb-2">{isOAuth ? "Couldn't sign in" : "Couldn't confirm your email"}</h1>
         <p role="alert" className="text-slate-500 dark:text-slate-400 text-sm mb-4 text-center max-w-xs">
           {isOAuth
-            ? 'Google sign-in didn&apos;t complete. Please try again.'
-            : 'This confirmation link didn&apos;t work. Request a new one or try signing in.'}
+            ? "Google sign-in didn't complete. Please try again."
+            : "This confirmation link didn't work. Request a new one or try signing in."}
         </p>
         {error?.message && (
           <details className="mb-6 max-w-xs text-center">

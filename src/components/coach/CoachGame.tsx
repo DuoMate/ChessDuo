@@ -154,7 +154,9 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
       game.destroy()
       coachVoice.stop()
     }
-    // Constructed once per mount — color/level are fixed at route entry.
+    // Constructed once per mount — color/level are explicit props from the
+    // CoachSetup selection (/coach phase state). The `= 3` prop default is
+    // defensive only and never fires on the setup path.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
