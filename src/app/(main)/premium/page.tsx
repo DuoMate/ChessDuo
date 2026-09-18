@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ErrorDetailModal } from '@/components/ErrorDetailModal'
 import { BackButton } from '@/components/BackButton'
-import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink } from 'lucide-react'
+import { Crown, BarChart3, Zap, Gamepad2, Ban, ChevronRight, RefreshCw, Check, Infinity, Brain, ShieldCheck, ArrowRight, Smartphone, ExternalLink, Sparkles } from 'lucide-react'
 import ChessDuoLogo from '@/components/ChessDuoLogo'
 import { PageLoading } from '@/components/PageLoading'
 import { SubscriptionService } from '@/features/billing'
@@ -398,9 +398,9 @@ export default function PremiumPage() {
                 {/* Premium Benefits */}
                 <div className="text-center mb-4">
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-amber-500 dark:text-amber-400">✦</span>
+                    <Sparkles size={14} className="text-amber-500 dark:text-amber-400" aria-hidden="true" />
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Premium Benefits</h3>
-                    <span className="text-amber-500 dark:text-amber-400">✦</span>
+                    <Sparkles size={14} className="text-amber-500 dark:text-amber-400" aria-hidden="true" />
                   </div>
                 </div>
 

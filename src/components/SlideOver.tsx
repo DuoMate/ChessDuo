@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -57,7 +58,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                     className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                     aria-label="Close"
                   >
-                    ✕
+                    <X size={18} />
                   </button>
                 </div>
               )}
@@ -98,7 +99,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                     className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
                     aria-label="Close"
                   >
-                    ✕
+                    <X size={18} />
                   </button>
                 </div>
               )}

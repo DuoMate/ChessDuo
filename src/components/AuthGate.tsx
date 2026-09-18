@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
 import { useAuthSession } from '@/hooks/useAuthSession'
 import { Auth } from '@/components/Auth'
 import { ChooseUsername } from '@/components/ChooseUsername'
@@ -195,7 +196,7 @@ export function AuthGate({
                 className="focus-ring absolute right-3 top-3 z-20 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
                 aria-label="Close sign in"
               >
-                <span className="text-lg">✕</span>
+                <X size={18} />
               </button>
               {authForm}
             </div>

@@ -31,7 +31,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { InitialsAvatar } from './InitialsAvatar'
 import { Spinner } from './Spinner'
 import { useToast } from './Toast'
-import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip } from 'lucide-react'
+import { Users, Search, SlidersHorizontal, Link2, Crown, MessageCircle, MoreVertical, Send, Paperclip, Zap, Ban } from 'lucide-react'
 
 // Unique per-subscription-instance suffix. Supabase reuses a channel with the
 // same topic while it is still registered (removeChannel is async), so a fixed
@@ -591,9 +591,9 @@ function FriendList({
             {pendingChallenges?.has(friend.friend_id) && onAcceptChallenge && (
               <button
                 onClick={(e) => { e.stopPropagation(); onAcceptChallenge(friend) }}
-                className="focus-ring min-h-[44px] px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-lg hover:bg-amber-500/25 transition-colors whitespace-nowrap"
+                className="focus-ring min-h-[44px] px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-lg hover:bg-amber-500/25 transition-colors whitespace-nowrap inline-flex items-center gap-1"
               >
-                ⚡ Accept
+                <Zap size={12} aria-hidden="true" /> Accept
               </button>
             )}
             <button
@@ -703,9 +703,9 @@ function BlockedTab({
   if (blocked.length === 0) {
     return (
       <div className="text-center py-8">
-        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center">
-          <span className="text-2xl">⊘</span>
-        </div>
+          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center">
+            <Ban size={24} className="text-slate-400" aria-hidden="true" />
+          </div>
         <p className="text-slate-700 dark:text-slate-300 text-sm font-medium mb-1">No blocked users</p>
         <p className="text-slate-500 text-xs">You haven&apos;t blocked anyone.</p>
       </div>
