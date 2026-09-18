@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import dynamic from 'next/dynamic'
 import { PageLoading } from '@/components/PageLoading'
 import { BackButton } from '@/components/BackButton'
+import { Clapperboard } from 'lucide-react'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
 const ReplayViewComponent = dynamic(() => import('@/components/ReplayView').then(mod => ({ default: mod.ReplayView })), {
@@ -99,7 +100,9 @@ export default function ReplayPageClient() {
       <ErrorBoundary>
         <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
           <div className="max-w-sm w-full text-center space-y-6">
-            <div className="text-5xl mb-2">🎬</div>
+            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15">
+              <Clapperboard size={28} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Match Replay</h1>
             <p className="text-gray-500 dark:text-gray-400">Sign in to view this match replay</p>
             <Auth onAuthComplete={handleAuthComplete} onNeedUsername={handleNeedUsername} />

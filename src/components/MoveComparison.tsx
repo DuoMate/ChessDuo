@@ -43,8 +43,8 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
             >
               {isSync ? (
                 <div className="flex items-center justify-center gap-2">
-                  <Swords size={18} className="text-amber-600 dark:text-amber-400" />
-                  <h3 className="text-amber-600 dark:text-amber-400 font-semibold text-sm uppercase tracking-wider">
+                  <Swords size={20} className="text-amber-600 dark:text-amber-400" />
+                  <h3 className="text-amber-600 dark:text-amber-400 font-bold text-base uppercase tracking-wider">
                     Synchronized!
                   </h3>
                 </div>
@@ -54,16 +54,16 @@ export function MoveComparisonPanel({ comparison, isVisible, onAnimationComplete
                     animate={{ rotate: [0, -10, 10, -5, 0] }}
                     transition={{ delay: 0.2, duration: 0.6 }}
                   >
-                    <Crown size={20} className="text-amber-600 dark:text-amber-400" />
+                    <Crown size={22} className="text-amber-600 dark:text-amber-400" />
                   </motion.div>
-                  <h3 className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm uppercase tracking-wider">
+                  <h3 className="text-emerald-600 dark:text-emerald-400 font-bold text-base uppercase tracking-wider">
                     You Won This Turn!
                   </h3>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <Users size={18} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
-                  <h3 className="text-blue-600 dark:text-blue-400 font-semibold text-sm uppercase tracking-wider">
+                  <Users size={20} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                  <h3 className="text-blue-600 dark:text-blue-400 font-bold text-base uppercase tracking-wider">
                     Teammate Won This Turn!
                   </h3>
                 </div>

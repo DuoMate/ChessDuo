@@ -134,7 +134,7 @@ function MoveColumn({
       <span className={`text-xs font-bold uppercase tracking-wider ${labelClass}`}>{label}</span>
       <div className="flex min-w-0 max-w-full items-center gap-1.5">
         <span className="shrink-0 text-2xl leading-none">{pieceChar(move.piece, move.color)}</span>
-        <span className="min-w-0 truncate text-lg font-extrabold text-slate-900 dark:text-slate-100" title={move.san}>{move.san}</span>
+        <span className="min-w-0 truncate text-xl font-extrabold text-slate-900 dark:text-slate-100" title={move.san}>{move.san}</span>
       </div>
       <span className={`text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400`}>Accuracy</span>
       <span className={`text-2xl font-extrabold ${accClass}`}>{accuracy.toFixed(1)}</span>
@@ -230,7 +230,7 @@ function MoveResolvedInlineInner({ data, onNext }: MoveResolvedInlineProps) {
         />
       </div>
 
-      <div className="mt-3 px-2 py-2.5 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900/50 space-y-1.5">
+      <div className="mt-4 px-3 py-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900/50 space-y-2">
         {insight.headline && (
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] font-medium">
             <insight.HeadlineIcon size={14} className={insight.headlineColor} />

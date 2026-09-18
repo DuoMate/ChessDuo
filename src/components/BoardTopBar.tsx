@@ -187,13 +187,13 @@ function BoardTopBarInner({
         {/* Center: timer — isolated when timerNode provided (1 Hz self-tick, parent doesn't rerender) */}
         <div className="flex items-center gap-1 shrink-0">
           {timerNode ?? (
-            <div className="flex flex-col items-center justify-center px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[60px]">
-              <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+            <div className="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl border-2 border-slate-200 dark:border-slate-700/70 bg-white dark:bg-slate-900/60 min-w-[76px] shadow-sm dark:shadow-none">
+              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="9" />
                   <polyline points="12 7 12 12 15 14" />
                 </svg>
-                <span className="font-game text-sm font-bold tabular-nums">
+                <span className="font-game text-base font-extrabold tabular-nums">
                   {Math.floor(matchTimeRemaining / 60)}:{(matchTimeRemaining % 60).toString().padStart(2, '0')}
                 </span>
               </div>
@@ -262,11 +262,11 @@ function BoardTopBarInner({
             className="flex items-center justify-center mt-1 will-change-transform"
             style={{ willChange: 'transform, opacity' }}
           >
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${currentTurn === Team.WHITE ? 'border-[var(--color-team-a-border)] bg-[var(--color-team-a-soft)]' : 'border-[var(--color-team-b-border)] bg-[var(--color-team-b-soft)]'}`}>
-              <span className={`text-sm leading-none ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
+            <div className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full border-2 ${currentTurn === Team.WHITE ? 'border-[var(--color-team-a-border)] bg-[var(--color-team-a-soft)]' : 'border-[var(--color-team-b-border)] bg-[var(--color-team-b-soft)]'}`}>
+              <span className={`text-base leading-none ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? '♔' : '♚'}
               </span>
-              <span className={`text-xs font-bold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
+              <span className={`text-sm font-extrabold uppercase tracking-wider ${currentTurn === Team.WHITE ? 'text-[var(--color-team-a)]' : 'text-[var(--color-team-b)]'}`}>
                 {currentTurn === Team.WHITE ? 'White' : 'Black'} to move
               </span>
             </div>

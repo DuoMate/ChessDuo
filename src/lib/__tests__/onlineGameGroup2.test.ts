@@ -266,14 +266,24 @@ describe('H4: own-resignation echo guard (games-table UPDATE)', () => {
     expect(notifySpy).not.toHaveBeenCalled()
   })
 
-  it('still processes genuine opponent GAME_OVER updates when not resigning', () => {
-    const game = makeGame('player1', 'WHITE')
-    testG(game)._status = GameStatus.PLAYING
+  it('still processes genuine opponent GAME_OVER updates when not resigning (after grace, no broadcast)', () => {
+    jest.useFakeTimers()
+    try {
+      const game = makeGame('player1', 'WHITE')
+      testG(game)._status = GameStatus.PLAYING
 
-    ;(game as any).handleGameStatusUpdate('GAME_OVER')
+      ;(game as any).handleGameStatusUpdate('GAME_OVER')
 
-    expect(game.status).toBe(GameStatus.GAME_OVER)
-    expect(game.getGameOverReason()).toBe('abandoned')
+      // H1: no fabricated result until the grace window expires
+      expect(game.status).toBe(GameStatus.PLAYING)
+
+      jest.advanceTimersByTime(10_000)
+
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+      expect(game.getGameOverReason()).toBe('abandoned')
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('ignores non-GAME_OVER status updates entirely', () => {

@@ -43,13 +43,13 @@ export function GameOnOverlay({ onComplete }: GameOnOverlayProps) {
               }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <Crown size={64} className="text-amber-400 drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]" />
+              <Crown size={64} className="text-amber-500 dark:text-amber-400 drop-shadow-[0_0_16px_rgba(251,191,36,0.5)]" />
             </motion.div>
             <motion.h1
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.4 }}
-              className="text-4xl font-black text-amber-400 tracking-wider drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]"
+              className="text-4xl font-black text-amber-500 dark:text-amber-400 tracking-wider drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]"
             >
               Game On!
             </motion.h1>

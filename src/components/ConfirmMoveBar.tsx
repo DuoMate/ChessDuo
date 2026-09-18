@@ -27,11 +27,11 @@ function ConfirmMoveBarInner({ visible, onConfirm, onCancel, disabled }: Confirm
             <button
               type="button"
               onClick={onCancel}
-              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] text-white/85 hover:text-white bg-transparent hover:bg-white/10 active:bg-white/20 transition-colors focus-visible:outline-none focus-visible:bg-white/15"
+              className="flex flex-1 items-center justify-center gap-2 min-h-[60px] text-white/85 hover:text-white bg-transparent hover:bg-white/10 active:bg-white/20 transition-colors focus-visible:outline-none focus-visible:bg-white/15"
               aria-label="Cancel move"
             >
-              <X size={20} strokeWidth={2.5} />
-              <span className="text-sm font-bold">Cancel</span>
+              <X size={22} strokeWidth={2.5} />
+              <span className="text-[15px] font-bold">Cancel</span>
             </button>
 
             <div className="w-px bg-white/20" />
@@ -40,11 +40,11 @@ function ConfirmMoveBarInner({ visible, onConfirm, onCancel, disabled }: Confirm
               type="button"
               onClick={onConfirm}
               disabled={disabled}
-              className="flex flex-1 items-center justify-center gap-2 min-h-[56px] text-white font-bold transition-[background-color,opacity] duration-150 ease-out hover:bg-white/10 active:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:bg-white/15"
+              className="flex flex-1 items-center justify-center gap-2 min-h-[60px] text-white font-extrabold transition-[background-color,opacity] duration-150 ease-out hover:bg-white/10 active:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:bg-white/15"
               aria-label="Confirm move"
             >
-              <Check size={20} strokeWidth={3} />
-              <span className="text-sm font-bold">Confirm</span>
+              <Check size={22} strokeWidth={3} />
+              <span className="text-[15px] font-extrabold">Confirm</span>
             </button>
           </div>
         </motion.div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getMatchHistory, getPlayerStats, CompletedGame } from '@/lib/matchHistory'
 import { motion } from 'framer-motion'
-import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight } from 'lucide-react'
+import { History, Trophy, Skull, Handshake, Clock, Target, TrendingUp, ChevronRight, Globe, Bot } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 
 interface HistoryPanelProps {
@@ -209,7 +209,7 @@ export function HistoryPanel({ playerId, onClose }: HistoryPanelProps) {
                         {resultText}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <span><span aria-hidden="true">{game.is_online ? '🌐' : '🤖'}</span> {game.is_online ? 'Online' : 'Offline'}</span>
+                        <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="inline-flex">{game.is_online ? <Globe size={12} /> : <Bot size={12} />}</span> {game.is_online ? 'Online' : 'Offline'}</span>
                         <span>·</span>
                         <span>{new Date(game.played_at).toLocaleDateString()}</span>
                       </div>

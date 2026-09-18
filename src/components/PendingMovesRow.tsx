@@ -78,12 +78,12 @@ function MoveCardInner({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay }}
-      className={`flex h-full min-h-[64px] items-center gap-2 rounded-xl border px-3 py-2 ${
+      className={`flex h-full min-h-[72px] items-center gap-3 rounded-2xl border px-4 py-2.5 ${
         submitted
-          ? 'border-green-500/40 bg-green-500/10'
+          ? 'border-green-500/40 bg-green-500/10 shadow-sm dark:shadow-none'
           : accentSubmitted
-            ? 'border-amber-500/40 bg-amber-500/10'
-            : 'border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-800/50'
+            ? 'border-amber-500/40 bg-amber-500/10 shadow-sm dark:shadow-none'
+            : 'border-slate-200 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-800/50 dark:shadow-none'
       }`}
     >
       <div className="flex w-7 shrink-0 items-center justify-center self-center">{icon}</div>
@@ -95,7 +95,7 @@ function MoveCardInner({
         {name ? (
           <p className="min-w-0 truncate text-[11px] leading-4 text-slate-600 dark:text-slate-300">{name}</p>
         ) : null}
-        <p className="min-w-0 truncate text-sm font-bold text-slate-900 dark:text-slate-100">{status}</p>
+        <p className="min-w-0 truncate text-base font-extrabold text-slate-900 dark:text-slate-100">{status}</p>
       </div>
 
       {submitted && <SubmittedBadge />}
@@ -134,7 +134,7 @@ function PendingMovesRowInner({
             teammateSubmitted ? (
               <span className="text-2xl leading-none">{pieceChar(teammateMove?.piece, teammateMove?.color)}</span>
             ) : (
-              <Clock size={20} className="text-amber-400 animate-pulse" />
+              <Clock size={22} className="text-amber-500 dark:text-amber-400 animate-pulse motion-reduce:animate-none" />
             )
           }
           label={teammateLabel}

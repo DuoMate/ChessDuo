@@ -324,7 +324,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-10 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)]"
+          className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-10 shadow-[var(--shadow-modal)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[var(--shadow-modal)]"
         >
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-400/15 via-transparent to-indigo-500/15" />
           <div className="relative flex flex-col items-center text-center">
@@ -345,7 +345,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+        className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[var(--shadow-modal)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[var(--shadow-modal)] sm:p-8"
       >
         {onClose && (
           <button
@@ -376,7 +376,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
             whileTap={{ scale: 0.98 }}
             onClick={handleGoogleSignIn}
             disabled={googleLoading || loading}
-            className="focus-ring mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-100 dark:hover:bg-slate-700/80"
+            className="focus-ring mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-100 dark:hover:bg-slate-700/80"
           >
             <svg className="h-5 w-5 shrink-0" width="20" height="20" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -502,7 +502,7 @@ export function Auth({ onAuthComplete, defaultSignup = false, redirectUrl, onNee
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading || checkingUsername || !canSubmit}
-              className="focus-ring flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:-translate-y-0.5 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="focus-ring flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>

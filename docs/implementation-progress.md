@@ -112,6 +112,23 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 50. `ac949c7` ui: game chrome polish - tabular timers, advantage contrast, result well (W5)
 51. `6cabacc` ui: reduced-motion guards for looping indicators (W6)
 52. Downmerge `origin/develop` (coach home cascade, OAuth PKCE fix, coach setup consistency) — conflicts: progress doc kept both sections; callback takes develop apostrophes + revamp pairs; local difficulty selector removed for shared `BotDifficultyGrid` (brand tokens + focus re-applied, test updated); new `CoachSetup` CTA aligned to locked green + focus.
+53. Merge `UI-UX-refactoring` → `develop` → `prod` (all pushed, builds green).
+54. `cfbaf21` ui: game chrome hierarchy - timer anchor + turn pill prominence (R1)
+55. `71ef84c` ui: pending cards presence + confirm bar emphasis (R2)
+56. `720f383` ui: bottom navs presence - taller tabs, larger icons, active pill (R3)
+57. `6dc252f` ui: resolution hierarchy - larger moves, headlines, spacing (R4)
+58. `f659e0f` ui: 4-player team headers with glyphs + seat counts (R5)
+59. `5ab1844` ui: editor/rate/gameon/promotion pairing + focus + shared modal constants (P1)
+60. `a262203` ui: mobile status bar timer contrast (P2)
+61. `a2f16ab` ui: shared PromotionModal for Game + DuelGame (S1)
+62. `ede2465` ui: normalize radii outliers to token scale (U1)
+63. `1974784` ui: restrain modal shadows to elevation token (U2)
+64. `0119ef8` ui: Lucide icon sweep - transport, close, status, badge glyphs (I1)
+65. `9f68157` ui: empty-state illustration wells across routes (E1)
+66. `bb0d51b` ui: press-state feedback on lift buttons (E2)
+67. Owner confirms Option A green CTA (already implemented W3 + CoachSetup fix); recorded in theme audit.
+68. `f751f37` ui: premium glassmorphism treatment for pricing + success cards (G1)
+69. `8d64045` chore: remove dead SidebarNav + TeamIndicator (+ tests, doc refs)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
@@ -179,3 +196,13 @@ production `npm run build` green after PHASE 3. Full suite + build + safety swee
 - 2026-09-17: Audit complete for both tracks. Plans approved (coach: setup inside /coach, 5 home-UI levels, rematch preserves via persisted setup).
 - 2026-09-17: OAuth fix implemented + 5/5 tests green. CoachSetup + grid + /coach wiring implemented; coach suites 71/71 green; tsc clean.
 - 2026-09-17: Fix complies with arch rule via `AuthService.getSession()` (architecture.test green). Full-suite baseline compared via stash. Build green. Ready to push.
+
+## Resign-vs-timeout result fix (2026-09-18)
+- PHASE 1 — Terminal path audit: all modes traced (Quick/Duo/4P/Coach); see docs/game-result-terminal-path-audit.md
+- PHASE 2 — Root cause: H1 DB-fallback fabricated resignation (wrong winner/reason for timeouts seen via games row); H2 LocalGame.setGameOverTimeup had no terminal guard
+- PHASE 3 — Minimal fix: DB_GAME_OVER_GRACE_MS grace + broadcast reconcile (onlineGame.ts); early-return guard (localGame.ts); no engine/timeout-rule changes
+- PHASE 4 — Persistence verified: completed_games written verbatim from engine result (unchanged path)
+- PHASE 5 — History/stats verified: stored-winner consumers only, no material recalc
+- PHASE 6 — Regression tests: 4 new (1 localGame + H1 trio), 1 updated (H4 grace semantics); game-result suites green; tsc clean
+- PHASE 7 — All-mode verification: resign-ahead/behind → LOSS; timeout/checkmate/draw paths untouched
+- PHASE 8 — Final diff review: pending

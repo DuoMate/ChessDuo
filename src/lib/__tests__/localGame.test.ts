@@ -353,4 +353,15 @@ describe('Game Status and Timer Interaction', () => {
     expect(typeof remaining).toBe('number')
     expect(remaining).toBeGreaterThanOrEqual(0)
   })
+
+  test('explicit resignation survives a late timeout tick (resign while ahead stays a loss)', () => {
+    const game = new LocalGame()
+    game.setGameOverResult('Resigned - Black wins')
+    game.setGameOverReason('resignation')
+
+    game.setGameOverTimeup('White wins on time', 'timeout')
+
+    expect(game.getResult()).toBe('Resigned - Black wins')
+    expect(game.getGameOverReason()).toBe('resignation')
+  })
 })

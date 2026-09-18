@@ -420,7 +420,7 @@ function ChessBoardInner({
       {/* P1 perf: no backdrop-blur under the board — the cm-chessboard view is
           opaque and covers this frame entirely, so the blur only cost GPU
           (full-board backdrop sampling on every frame) with zero visual effect. */}
-      <div className="absolute inset-0 rounded-[24px] border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/70" />
+      <div className="absolute inset-0 rounded-3xl border border-slate-200/80 bg-white/70 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/70" />
       <div
         ref={containerRef}
         className="absolute inset-1 overflow-hidden rounded-[22px]"

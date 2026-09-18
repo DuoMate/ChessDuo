@@ -264,3 +264,56 @@ describe('C4: reason-string consistency', () => {
     expect(game.getGameOverReason()).toBe('abandoned')
   })
 })
+
+describe('H1: DB GAME_OVER fallback must not fabricate a resignation result', () => {
+  it('does not set any result immediately on a bare DB GAME_OVER (awaits authoritative broadcast)', () => {
+    const game = makeGame('player1', 'WHITE')
+    testG(game)._status = GameStatus.PLAYING
+
+    ;(game as any).handleGameStatusUpdate('GAME_OVER')
+
+    // Still playing locally — no fabricated "Resigned - X wins"
+    expect(game.status).toBe(GameStatus.PLAYING)
+    expect(testG(game)._gameOverResult).toBe('')
+    expect(testG(game)._gameOverReason).toBe('')
+  })
+
+  it('assumes peer abandonment only after the grace window with no broadcast', () => {
+    jest.useFakeTimers()
+    try {
+      const game = makeGame('player1', 'WHITE')
+      testG(game)._status = GameStatus.PLAYING
+
+      ;(game as any).handleGameStatusUpdate('GAME_OVER')
+      expect(game.status).toBe(GameStatus.PLAYING)
+
+      jest.advanceTimersByTime(10_000)
+
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+      expect(game.getResult()).toBe('Resigned - White wins')
+      expect(game.getGameOverReason()).toBe('abandoned')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('authoritative timeout broadcast during the grace window wins over the fallback', () => {
+    jest.useFakeTimers()
+    try {
+      const game = makeGame('player1', 'WHITE')
+      testG(game)._status = GameStatus.PLAYING
+
+      ;(game as any).handleGameStatusUpdate('GAME_OVER')
+      ;(game as any).handleMatchTimeoutBroadcast({ result: 'Black wins on time', reason: 'timeout' })
+
+      // Even after the grace window, the true timeout result stands
+      jest.advanceTimersByTime(10_000)
+
+      expect(game.status).toBe(GameStatus.GAME_OVER)
+      expect(game.getResult()).toBe('Black wins on time')
+      expect(game.getGameOverReason()).toBe('timeout')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+})

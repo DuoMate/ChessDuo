@@ -1,6 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useCallback } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -44,7 +45,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={PANEL_SPRING}
-              className="fixed inset-x-0 top-0 bottom-0 z-50 overflow-y-auto bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl dark:bg-slate-950/90"
+              className="fixed inset-x-0 top-0 bottom-0 z-50 overflow-y-auto bg-white/90 shadow-[var(--shadow-modal)] backdrop-blur-2xl dark:bg-slate-950/90"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
               {title && (
@@ -57,7 +58,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                     className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                     aria-label="Close"
                   >
-                    ✕
+                    <X size={18} />
                   </button>
                 </div>
               )}
@@ -85,7 +86,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={PANEL_SPRING}
-            className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-sm overflow-y-auto border-l border-slate-200/80 bg-white/90 shadow-[0_24px_90px_rgba(2,6,23,0.28)] backdrop-blur-2xl dark:border-slate-700/80 dark:bg-slate-950/90"
+            className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-sm overflow-y-auto border-l border-slate-200/80 bg-white/90 shadow-[var(--shadow-modal)] backdrop-blur-2xl dark:border-slate-700/80 dark:bg-slate-950/90"
           >
             <div className="p-4">
               {title && (
@@ -98,7 +99,7 @@ export function SlideOver({ open, onClose, title, children }: SlideOverProps) {
                     className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
                     aria-label="Close"
                   >
-                    ✕
+                    <X size={18} />
                   </button>
                 </div>
               )}

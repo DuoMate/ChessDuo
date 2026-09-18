@@ -10,7 +10,7 @@ import { ChooseUsername } from '@/components/ChooseUsername'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { PageLoading } from '@/components/PageLoading'
 import { Spinner } from '@/components/Spinner'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users, Handshake, Mail, TriangleAlert } from 'lucide-react'
 import InstallBanner from '@/components/InstallBanner'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 
@@ -152,7 +152,9 @@ export default function InvitePageClient() {
         <ErrorBoundary>
           <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-4">
-              <div className="text-5xl mb-2">⚠️</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+                <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+              </div>
               <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Cannot Add Yourself</h1>
               <p className="text-gray-500 dark:text-gray-400">You cannot add yourself as a friend</p>
               <GoHomeButton />
@@ -179,7 +181,9 @@ export default function InvitePageClient() {
         <ErrorBoundary>
           <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg-alt)] text-gray-900 dark:text-white flex flex-col items-center justify-center p-4 pb-20">
             <div className="max-w-sm w-full text-center space-y-6">
-              <div className="text-5xl mb-2">👥</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15">
+                <Users size={28} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              </div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
               {targetUsername && (
                 <p className="text-gray-500 dark:text-gray-400">{targetUsername} invited you to be friends</p>
@@ -209,7 +213,9 @@ export default function InvitePageClient() {
 
           {status === 'confirm' && (
             <>
-              <div className="text-5xl mb-2">👥</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15">
+                <Users size={28} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Friend Invite</h1>
               <p className="text-gray-500 dark:text-gray-400">
                 {targetUsername ? `${targetUsername} invited you to be friends` : 'You have been invited to be friends'}
@@ -227,7 +233,9 @@ export default function InvitePageClient() {
 
           {status === 'already_friends' && (
             <>
-              <div className="text-5xl mb-2">🤝</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
+                <Handshake size={28} className="text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+              </div>
               <h1 className="text-2xl font-bold text-amber-600 dark:text-yellow-400">Already Friends!</h1>
               <p className="text-gray-500 dark:text-gray-400">
                 {targetUsername ? `You and ${targetUsername} are already friends` : 'You are already friends with this player'}
@@ -238,7 +246,9 @@ export default function InvitePageClient() {
 
           {status === 'sent' && (
             <>
-              <div className="text-5xl mb-2">✉️</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15">
+                <Mail size={28} className="text-blue-600 dark:text-blue-400" aria-hidden="true" />
+              </div>
               <h1 className="text-2xl font-bold text-amber-600 dark:text-yellow-400">Friend Request Sent!</h1>
               <p className="text-gray-500 dark:text-gray-400">
                 {targetUsername ? `Friend request sent to ${targetUsername}` : 'Friend request sent'}
@@ -250,7 +260,9 @@ export default function InvitePageClient() {
 
           {status === 'error' && (
             <>
-              <div className="text-5xl mb-2">⚠️</div>
+              <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15">
+                <TriangleAlert size={28} className="text-rose-600 dark:text-rose-400" aria-hidden="true" />
+              </div>
               <h1 className="text-xl font-bold text-red-600 dark:text-red-400">Something went wrong</h1>
               <p className="text-gray-500 dark:text-gray-400">{errorMsg || 'Could not send friend request'}</p>
               <GoHomeButton />

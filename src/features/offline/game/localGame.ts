@@ -196,6 +196,10 @@ export class LocalGame {
   }
 
   setGameOverTimeup(result: string, reason: string): void {
+    // Terminal-result precedence (mirrors getResult/getGameOverReason): an
+    // explicitly recorded resignation/abandonment must never be overwritten
+    // by a late timeout tick — resigning while ahead stays a loss.
+    if (this._gameOverResult || this._gameOverReason) return
     this._status = GameStatus.GAME_OVER
     this._gameOverResult = result
     this._gameOverReason = reason

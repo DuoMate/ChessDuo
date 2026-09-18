@@ -61,7 +61,7 @@ export function HomeBottomNav({ unreadMessages }: HomeBottomNavProps) {
                 disabled={!!navigatingTo}
                 className={`focus-ring relative flex-1 flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-all min-h-[44px] min-w-[44px] ${
                   active(path)
-                    ? 'text-blue-600 dark:text-blue-400'
+                    ? 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400'
                     : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                 } ${navigatingTo ? 'pointer-events-none' : ''}`}
               >

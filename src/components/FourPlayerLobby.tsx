@@ -305,7 +305,8 @@ export function FourPlayerLobby({
       }`}
     >
       <p className="text-[11px] font-bold tracking-wider uppercase text-slate-500 dark:text-slate-400 mb-2">
-        {team}
+        <span aria-hidden="true">{team === 'WHITE' ? '♔ ' : '♚ '}</span>
+        {team} · {(team === 'WHITE' ? whitePlayers : blackPlayers).length}/2
       </p>
       {(team === 'WHITE' ? whitePlayers : blackPlayers).map(p => (
         <div
@@ -357,7 +358,7 @@ export function FourPlayerLobby({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="my-auto w-full max-w-lg overflow-hidden rounded-[32px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[0_20px_80px_rgba(2,6,23,0.36)] sm:p-8"
+        className="my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[var(--shadow-modal)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-[var(--shadow-modal)] sm:p-8"
       >
         {view === 'loading' && (
           <div className="flex flex-col items-center gap-3 py-8">
@@ -531,7 +532,7 @@ export function FourPlayerLobby({
                   disabled={!teamsReady}
                   aria-disabled={!teamsReady}
                   title={teamsReady ? 'Start the match' : 'Waiting for teams to be ready'}
-                  className="focus-ring min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  className="focus-ring min-h-[44px] rounded-2xl bg-emerald-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
                 >
                   ▶ Start Match
                 </motion.button>
