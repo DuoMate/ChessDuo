@@ -3,6 +3,9 @@
 import { memo } from 'react'
 import { Eye, EyeOff, Sparkles, Volume2, Trophy } from 'lucide-react'
 import type { Suggestion, CoachFeedback, MoveVerdict } from '@/features/coach'
+import { COACH_MOVE_RANKS, getCoachRank } from './coachMoveRanks'
+import { CoachMoveRankBadge } from './CoachMoveRankBadge'
+import { CoachMoveLegend } from './CoachMoveLegend'
 
 export const VERDICT_STYLES: Record<MoveVerdict, { label: string; badge: string; text: string }> = {
   best: { label: 'Best move', badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30', text: 'text-emerald-600 dark:text-emerald-400' },
@@ -13,13 +16,23 @@ export const VERDICT_STYLES: Record<MoveVerdict, { label: string; badge: string;
   blunder: { label: 'Blunder', badge: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30', text: 'text-rose-600 dark:text-rose-400' },
 }
 
+const RANK_CARD_CLASSES: Record<1 | 2 | 3, string> = {
+  1: 'border-emerald-500/30 bg-emerald-500/[0.07] dark:bg-emerald-400/[0.07]',
+  2: 'border-sky-500/30 bg-sky-500/[0.07] dark:bg-sky-400/[0.07]',
+  3: 'border-amber-500/30 bg-amber-500/[0.07] dark:bg-amber-400/[0.07]',
+}
+
 interface CoachPanelProps {
   suggestion: Suggestion | null
   feedback: CoachFeedback | null
   analyzing: boolean
   isPlayerTurn: boolean
   onSpeak?: (text: string) => void
+  showBestMoves?: boolean
+  onToggleBestMoves?: () => void
+  /** @deprecated use showBestMoves */
   showBestMove?: boolean
+  /** @deprecated use onToggleBestMoves */
   onToggleBestMove?: () => void
 }
 
@@ -29,51 +42,85 @@ function CoachPanelInner({
   analyzing,
   isPlayerTurn,
   onSpeak,
-  showBestMove = false,
+  showBestMoves,
+  onToggleBestMoves,
+  showBestMove,
   onToggleBestMove,
 }: CoachPanelProps) {
-  const currentBestMove = isPlayerTurn ? suggestion?.topMoves[0] : undefined
+  // Backward compat for existing callers/tests using the singular names.
+  const expanded = showBestMoves ?? showBestMove ?? false
+  const onToggle = onToggleBestMoves ?? onToggleBestMove
+  // Stale-suggestion guard: only the current player's live suggestion is visualizable.
+  const topMoves = isPlayerTurn ? (suggestion?.topMoves ?? []).slice(0, 3) : []
 
   return (
     <div className="space-y-3">
-      {/* Suggestion — shown while it's the player's turn to move */}
+      {/* Suggestion — cards + evaluation hidden until the user opts in */}
       {isPlayerTurn && suggestion && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/60 dark:shadow-none">
+        <section
+          aria-label="AI Coach recommendation"
+          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/60 dark:shadow-none"
+        >
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
               <Sparkles size={14} aria-hidden="true" className="text-blue-500 dark:text-blue-400" /> Coach recommends
             </span>
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{suggestion.evaluationDisplay}</span>
-          </div>
-          <div className="space-y-1.5" role="list" aria-label="Top recommended moves">
-            {suggestion.topMoves.length === 0 ? (
-              <p className="text-xs text-slate-500">{analyzing ? 'Analyzing position…' : 'No recommendation available'}</p>
-            ) : (
-              suggestion.topMoves.map((m, i) => (
-                <div key={m.uci} role="listitem" aria-label={`Option ${i + 1}: ${m.san}, ${m.display}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700/40 dark:bg-slate-800/40">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-200 text-[11px] font-bold text-slate-600 dark:bg-slate-700/70 dark:text-slate-300">{i + 1}</span>
-                    <span className="min-w-0 truncate text-sm font-bold text-slate-900 dark:text-slate-100">{m.san}</span>
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{m.display}</span>
-                </div>
-              ))
+            {expanded && topMoves.length > 0 && (
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{suggestion.evaluationDisplay}</span>
             )}
           </div>
-          {currentBestMove && onToggleBestMove && (
+
+          {expanded && topMoves.length > 0 && (
             <>
-              <button
-                onClick={onToggleBestMove}
-                aria-label={showBestMove ? 'Hide Best Move' : `Show Best Move ${currentBestMove.san} on the board`}
-                className="focus-ring mt-3 flex min-h-[44px] min-w-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-[var(--shadow-glow-emerald)] transition-colors hover:bg-emerald-400"
-              >
-                {showBestMove ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-                {showBestMove ? 'Hide Best Move' : 'Show Best Move'}
-              </button>
-              <p className="mt-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
-                Preview {currentBestMove.san} on the board, then play it when ready.
-              </p>
+              <div className="space-y-1.5" role="list" aria-label="Top recommended moves" id="coach-top3">
+                {topMoves.map((m, i) => {
+                  const meta = getCoachRank(i)
+                  const rank = meta.rank
+                  return (
+                    <div
+                      key={m.uci}
+                      role="listitem"
+                      aria-label={`Option ${rank}: ${m.san}, ${m.display}, ${meta.label}`}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${RANK_CARD_CLASSES[rank]}`}
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CoachMoveRankBadge rank={rank} />
+                        <span className="min-w-0 truncate text-sm font-bold text-slate-900 dark:text-slate-100">{m.san}</span>
+                        <span className="shrink-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{meta.label}</span>
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{m.display}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-2">
+                <CoachMoveLegend />
+              </div>
             </>
+          )}
+
+          {topMoves.length === 0 ? (
+            <p className="text-xs text-slate-500">{analyzing ? 'Analyzing position…' : 'No recommendation available'}</p>
+          ) : (
+            onToggle && (
+              <>
+                <button
+                  onClick={onToggle}
+                  aria-expanded={expanded}
+                  aria-controls="coach-top3"
+                  aria-label={expanded ? 'Hide 3 Best Moves' : 'Show 3 Best Moves on the board'}
+                  className="focus-ring mt-3 flex min-h-[44px] min-w-[44px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-[var(--shadow-glow-emerald)] transition-colors hover:bg-emerald-400"
+                >
+                  {expanded ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                  {expanded ? 'Hide 3 Best Moves' : 'Show 3 Best Moves'}
+                </button>
+                <p className="mt-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
+                  {expanded
+                    ? `Showing ${COACH_MOVE_RANKS.length} ranked moves — match ①②③ with the board.`
+                    : 'AI Coach found 3 good moves — reveal them when ready.'}
+                </p>
+              </>
+            )
           )}
         </section>
       )}

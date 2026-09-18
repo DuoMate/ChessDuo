@@ -21,11 +21,19 @@ export interface PendingOverlay {
   showTeammateLabel?: boolean
 }
 
+export interface CoachMoveMarker {
+  from: string
+  to: string
+  rank: 1 | 2 | 3
+}
+
 export interface HighlightSquares {
   winnerFrom?: string
   winnerTo?: string
   loserFrom?: string
   loserTo?: string
+  /** Ranked Top-3 coach previews — visual only, never mutates board state. */
+  coachMoves?: CoachMoveMarker[] | null
 }
 
 /**
@@ -236,6 +244,22 @@ function ChessBoardInner({
     if (!boardRef.current) return
 
     boardRef.current.removeMarkers()
+
+    const coachMoves = highlightSquares?.coachMoves ?? null
+    if (coachMoves && coachMoves.length > 0) {
+      // Ranked Top-3 preview: distinct marker TYPES per rank (frame /
+      // framePrimary / circle) so rank never depends on color alone. Custom
+      // colored borders + numbered badges render in the overlay below.
+      for (const move of coachMoves.slice(0, 3)) {
+        const marker =
+          move.rank === 2 ? MARKER_TYPE.framePrimary
+          : move.rank === 3 ? MARKER_TYPE.circle
+          : MARKER_TYPE.frame
+        boardRef.current.addMarker(marker, move.from)
+        boardRef.current.addMarker(marker, move.to)
+      }
+      return
+    }
 
     if (highlightSquares) {
       if (highlightSquares.winnerFrom && highlightSquares.winnerTo) {
@@ -598,7 +622,57 @@ function ChessBoardInner({
         )}
       </div>
 
-      {highlightSquares?.winnerFrom && highlightSquares?.winnerTo && !showRetraction && (
+      {highlightSquares?.coachMoves && highlightSquares.coachMoves.length > 0 && !showRetraction && (
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          {highlightSquares.coachMoves.slice(0, 3).map((move) => {
+            // Same-destination overlap: stack badges diagonally so no rank hides another.
+            const sameToCount = highlightSquares.coachMoves!
+              .slice(0, 3)
+              .filter((m) => m.to === move.to)
+              .findIndex((m) => m.from === move.from && m.rank === move.rank)
+            const borderVar =
+              move.rank === 2 ? 'var(--color-coach-insight)'
+              : move.rank === 3 ? 'var(--color-coach-alt)'
+              : 'var(--color-coach-best)'
+            return (
+              <motion.div
+                key={`coach-${move.rank}-${move.from}-${move.to}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="absolute rounded-lg border-4 will-change-transform"
+                // Dynamic square geometry + rank color: position derives from
+                // the move square/orientation, color from the rank token —
+                // Tailwind cannot express either statically.
+                style={{
+                  width: '12.5%',
+                  height: '12.5%',
+                  left: `${((move.to.charCodeAt(0) - 97) * (orientation === 'black' ? -1 : 1) + (orientation === 'black' ? 7 : 0)) * 12.5}%`,
+                  top: `${((parseInt(move.to[1]) - 1) * (orientation === 'black' ? 1 : -1) + (orientation === 'black' ? 0 : 7)) * 12.5}%`,
+                  borderColor: borderVar,
+                  // z-20s: rank 1 paints above 2/3 on shared squares, all below overlays (>50 never used).
+                  zIndex: 24 - move.rank,
+                  willChange: 'transform, opacity',
+                }}
+              >
+                <span
+                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black text-white ring-2 ring-white dark:ring-slate-900"
+                  // Dynamic per-rank fill + diagonal nudge for shared squares.
+                  style={{
+                    backgroundColor: borderVar,
+                    marginTop: `${Math.max(0, sameToCount) * 20}px`,
+                    zIndex: 24 - move.rank,
+                  }}
+                >
+                  {move.rank}
+                </span>
+              </motion.div>
+            )
+          })}
+        </div>
+      )}
+
+      {(!highlightSquares?.coachMoves || highlightSquares.coachMoves.length === 0) && highlightSquares?.winnerFrom && highlightSquares?.winnerTo && !showRetraction && (
         <div className="absolute inset-0 pointer-events-none">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -642,6 +716,13 @@ export const ChessBoard = memo(ChessBoardInner, (prev, next) => {
     prev.highlightSquares?.winnerTo === next.highlightSquares?.winnerTo &&
     prev.highlightSquares?.loserFrom === next.highlightSquares?.loserFrom &&
     prev.highlightSquares?.loserTo === next.highlightSquares?.loserTo &&
+    (prev.highlightSquares?.coachMoves?.length ?? 0) === (next.highlightSquares?.coachMoves?.length ?? 0) &&
+    (prev.highlightSquares?.coachMoves ?? []).every(
+      (m, i) =>
+        m.from === next.highlightSquares?.coachMoves?.[i]?.from &&
+        m.to === next.highlightSquares?.coachMoves?.[i]?.to &&
+        m.rank === next.highlightSquares?.coachMoves?.[i]?.rank,
+    ) &&
     prev.onAnimationComplete === next.onAnimationComplete &&
     prev.onMove === next.onMove
   )
