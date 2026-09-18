@@ -127,6 +127,8 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 65. `9f68157` ui: empty-state illustration wells across routes (E1)
 66. `bb0d51b` ui: press-state feedback on lift buttons (E2)
 67. Owner confirms Option A green CTA (already implemented W3 + CoachSetup fix); recorded in theme audit.
+68. `f751f37` ui: premium glassmorphism treatment for pricing + success cards (G1)
+69. `8d64045` chore: remove dead SidebarNav + TeamIndicator (+ tests, doc refs)
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,
