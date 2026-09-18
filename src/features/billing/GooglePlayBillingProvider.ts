@@ -81,14 +81,58 @@ function diagnosticMessage(error: unknown): string {
 }
 
 export function classifyPurchaseError(error: unknown): Pick<PurchaseResult, 'error' | 'errorDetail'> | null {
-  const err = error as { message?: unknown; code?: unknown }
-  const message = typeof err.message === 'string' ? err.message : String(error)
-  const code = typeof err.code === 'string' ? err.code : ''
+  // User cancellation is a normal return from Google Play — never an error.
+  // The native bridge surfaces it in several shapes depending on plugin /
+  // platform version, so normalize before matching:
+  // - thrown Error with `code` string ('USER_CANCELED' / 'USER_CANCELLED')
+  // - numeric Play Billing response code 1 (USER_CANCELED) in `code` or
+  //   `responseCode`, as number or numeric string
+  // - plain string rejection
+  // - `{ userCancelled: true }` flag some plugin versions resolve with
+  if (error == null) return null
+  if (typeof error === 'string') {
+    if (/cancel/i.test(error)) {
+      return { error: 'Purchase cancelled', errorDetail: 'cancelled' }
+    }
+    return null
+  }
+  const err = error as {
+    message?: unknown
+    code?: unknown
+    responseCode?: unknown
+    responsecode?: unknown
+    userCancelled?: unknown
+    userCanceled?: unknown
+  }
+  if (err.userCancelled === true || err.userCanceled === true) {
+    return { error: 'Purchase cancelled', errorDetail: 'cancelled' }
+  }
+  const message = typeof err.message === 'string' ? err.message : ''
+  const codeRaw = err.code ?? err.responseCode ?? err.responsecode ?? ''
+  const code = typeof codeRaw === 'number' ? String(codeRaw) : typeof codeRaw === 'string' ? codeRaw : ''
+  // Numeric 1 is Play Billing BillingResponseCode.USER_CANCELED.
+  if (code.trim() === '1') {
+    return { error: 'Purchase cancelled', errorDetail: 'cancelled' }
+  }
   const combined = `${code} ${message}`
   if (combined.includes('USER_CANCELED') || combined.includes('USER_CANCELLED') || /cancel/i.test(combined)) {
     return { error: 'Purchase cancelled', errorDetail: 'cancelled' }
   }
   return null
+}
+
+/**
+ * The native sheet can also dismiss by resolving with an empty result
+ * (no throw, no product identifier) instead of rejecting with a cancel
+ * code. No purchase token means no charge — treat it as a silent
+ * cancellation, not a billing failure.
+ */
+export function isEmptyPurchaseResult(result: unknown): boolean {
+  if (result == null) return true
+  if (typeof result !== 'object') return true
+  const r = result as { productIdentifier?: unknown; userCancelled?: unknown; userCanceled?: unknown }
+  if (r.userCancelled === true || r.userCanceled === true) return true
+  return typeof r.productIdentifier !== 'string' || r.productIdentifier.length === 0
 }
 
 export function formatBillingTrace(trace: BillingTraceEvent[]): string {
@@ -462,9 +506,11 @@ export const GooglePlayBillingProvider: BillingProvider = {
       }))
       traceEvent('launch_billing_flow_returned', `productId=${productId}`)
 
-      if (!result || !result.productIdentifier) {
-        billingError('purchase', 'failed', 'empty purchase result from store')
-        return { success: false, error: 'Google Play purchase could not be started. Please check your Google Play account and try again.', errorDetail: 'failed' }
+      if (isEmptyPurchaseResult(result)) {
+        // User backed out of the Play sheet: the bridge resolved without a
+        // purchase (no throw, no product). Silent return — no error UI.
+        billingLog('callback', `responseCode=CANCELED productId=${productId}`)
+        return { success: false, error: 'Purchase cancelled', errorDetail: 'cancelled' }
       }
 
       billingLog('callback', `responseCode=OK productId=${result.productIdentifier}`)

@@ -55,6 +55,7 @@ jobs:
 
       - name: Create .env.production
         run: |
+          source android-version.properties
           cat > .env.production <<- EOF
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -63,6 +64,8 @@ jobs:
           NEXT_PUBLIC_VAPID_PUBLIC_KEY=${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
           NEXT_PUBLIC_ADMOB_APP_ID=${{ secrets.NEXT_PUBLIC_ADMOB_APP_ID }}
           NEXT_PUBLIC_ADMOB_NATIVE_ID=${{ secrets.NEXT_PUBLIC_ADMOB_NATIVE_ID }}
+          NEXT_PUBLIC_APP_VERSION=${versionName}
+          NEXT_PUBLIC_VERSION_CODE=${versionCode}
           EOF
 
       - name: Validate AdMob secrets

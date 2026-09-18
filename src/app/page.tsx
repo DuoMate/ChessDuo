@@ -1392,15 +1392,17 @@ if (!gameMode) {
           <DesktopSidebar unreadMessages={unreadMessages} />
         )}
 
-        {/* Legal footer */}
-        <footer className="px-4 pt-1 md:pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:pb-4">
+        {/* Legal footer — mobile bottom padding clears the fixed HomeBottomNav
+            pill (h-14 + bottom inset) so links are never hidden behind it.
+            Desktop keeps the original tight padding. */}
+        <footer className="px-4 pt-1 md:pt-2 pb-[calc(max(0.5rem,env(safe-area-inset-bottom,0px))+84px)] md:pb-4">
           <div className="max-w-lg mx-auto md:max-w-none text-center md:text-left">
             <nav className="flex items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
-              <a href="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</a>
+              <a href="/privacy" className="inline-flex min-h-[44px] items-center hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</a>
               <span aria-hidden="true">·</span>
-              <a href="/terms" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</a>
+              <a href="/terms" className="inline-flex min-h-[44px] items-center hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Terms of Service</a>
               <span aria-hidden="true">·</span>
-              <span>ChessDuo by Navron</span>
+              <span className="inline-flex min-h-[44px] items-center">ChessDuo by Navron</span>
             </nav>
           </div>
         </footer>

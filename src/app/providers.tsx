@@ -18,6 +18,8 @@ import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 import { PremiumProvider } from '@/hooks/usePremium'
 import { PremiumCornerBadge } from '@/components/PremiumCornerBadge'
+import { useAppUpdate } from '@/hooks/useAppUpdate'
+import { UpdatePrompt } from '@/components/UpdatePrompt'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -100,6 +102,7 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   useScrollToTop()
   useNotificationRedirect()
+  const { status, manifest, dismiss, openStore } = useAppUpdate()
 
   return (
     <NetworkAwareToastProvider>
@@ -107,6 +110,12 @@ export default function Providers({ children }: { children: ReactNode }) {
         <SplashHandler />
         <PremiumCornerBadge />
         {children}
+        <UpdatePrompt
+          open={status === 'optional'}
+          notes={manifest?.notes}
+          onUpdate={() => { void openStore() }}
+          onLater={dismiss}
+        />
       </PremiumProvider>
     </NetworkAwareToastProvider>
   )

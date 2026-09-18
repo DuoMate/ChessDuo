@@ -173,18 +173,24 @@ export default function PremiumPage() {
     }
     setSubscribing(true)
     setError(null)
+    setErrorDetail(null)
     purchasePendingRef.current = true
     // Safety net only: every settled path below reports its real stage/code.
     // This timer guarantees the button can never spin forever if the native
     // bridge or a network call never settles.
+    let settled = false
     let safetyNet: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       safetyNet = null
+      // If the purchase already settled (notably user cancellation, which
+      // resolves silently), never surface a stale timeout error.
+      if (settled) return
       if (mountedRef.current) {
         setSubscribing(false)
         setError('Google Play purchase timed out. Please check your Google Play account and try again.')
       }
     }, PREMIUM_PURCHASE_SAFETY_NET_MS)
     const clearSafetyNet = () => {
+      settled = true
       if (safetyNet) { clearTimeout(safetyNet); safetyNet = null }
     }
     try {
@@ -196,6 +202,9 @@ export default function PremiumPage() {
       if (!result.success) {
         if (result.errorDetail === 'cancelled') {
           // User cancellation is a normal return from Google Play.
+          // Return silently to the Premium screen: no error banner, and
+          // clear any transient purchase error state.
+          if (mountedRef.current) { setError(null); setErrorDetail(null) }
         } else if (result.errorDetail === 'already_owned') {
           await SubscriptionService.restore()
           const newStatus = await SubscriptionService.getStatus()
@@ -264,7 +273,10 @@ export default function PremiumPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex min-h-dvh flex-col pb-20 bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
+      {/* Bottom padding accounts for the fixed HomeBottomNav pill height +
+          safe-area inset so footer content scrolled to the very bottom is
+          never hidden behind the navigation. */}
+      <div className="flex min-h-dvh flex-col pb-[calc(5rem+max(12px,env(safe-area-inset-bottom,12px)))] bg-[var(--color-page-bg)] text-slate-900 dark:text-white">
         <div className="flex-1 p-4">
           <div className="max-w-md mx-auto flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">

@@ -2,6 +2,34 @@
 
 ## Status: complete (pending device validation + migration apply)
 
+### PiP reliability fix — DONE (branch `fix/pip-autienter-reliability`)
+- Root cause of "no PiP window at all" on Android 12+ prod builds: (1) first
+  `setEligible(true)` could race plugin attach (`getActivity()==null` → params
+  skipped) while the web dedupe cache suppressed every retry, so auto-enter
+  was never enabled and `onUserLeaveHint` early-returns on API 31+ (zero entry
+  path); (2) manifest `supportsPictureInPicture` sed could tag the wrong
+  activity; (3) `setup-capacitor.sh` never ran `patch-main-activity.sh`.
+- `src/lib/pip.ts`: retry-safe `setPipEligible` (cache updates only on native
+  success) + new `reaffirmPipEligible()` (bypasses dedupe) + `isPipSupported()`.
+- `src/hooks/usePip.ts`: re-asserts eligibility on `App.appStateChange` resume
+  (dynamic import, mirrors `useCapacitorBackButton`); unmount still revokes.
+- `android-patches/PipPlugin.java`: deferred apply when activity null +
+  `handleOnResume` re-assert (idempotent) + `Log.d` diagnostics; exit-refresh
+  deduped through `applyAutoEnterParams()`.
+- Manifest patches in `setup/build-aab/build-apk` now target the
+  `android:name=".MainActivity"` line and warn loudly when missing;
+  `setup-capacitor.sh` runs `patch-main-activity.sh` when MainActivity exists.
+- Manual entry fallback: `GameMenu` optional "Enter PiP" row (native-gated via
+  `isPipSupported()`), threaded through `GameTopBarSection` into Game/Duel;
+  Coach header gains a native-only PiP button. Presentation-only, no game logic.
+- Tests (TDD: watched fail, then pass): `pip.test.ts` retry-after-failure +
+  reaffirm-bypass-dedupe; `GameMenu.test.tsx` Enter-PiP row show/call/hide.
+- Verify: `tsc` clean; PiP-area suites 62/62; full `npm test` failures identical
+  to baseline (server/engine, ConfirmMoveBar, delete-account, invite,
+  BillingDiagnostics flake); lint counts identical to baseline (27 errors).
+- Scope: no changes to chess rules, Stockfish, sync, Supabase, timers,
+  matchmaking, auth, billing, AdMob, notifications, results, routing, browser.
+
 ### Task 0 — Audit: DONE
 - Traced Coach entry→start→move→end→GameOver→(no ad)→premium gate→billing; browser split; auth identity.
 - Root cause (resignation-ad): Quick/Duo fixed in `4ee6b93`; Coach never requested an ad (inline modal, no NativeAdSlot) — category A (code-does-not-request).

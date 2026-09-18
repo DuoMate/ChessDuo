@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Flag, Settings, Volume2, VolumeX, User } from 'lucide-react'
+import { Menu, X, Flag, Settings, Volume2, VolumeX, User, PictureInPicture2 } from 'lucide-react'
 
 interface GameMenuProps {
   onResign?: () => void
@@ -10,9 +10,15 @@ interface GameMenuProps {
   soundEnabled?: boolean
   onToggleSound?: () => void
   onOpenProfile?: () => void
+  /**
+   * Manual PiP entry (native only). Rendered only when provided — callers
+   * gate on `isPipSupported()` so web builds never show a dead row.
+   * Best-effort fallback for Home-gesture auto-enter; never touches game state.
+   */
+  onEnterPip?: () => void
 }
 
-export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound, onOpenProfile }: GameMenuProps) {
+export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound, onOpenProfile, onEnterPip }: GameMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -86,6 +92,18 @@ export function GameMenu({ onResign, onOpenSettings, soundEnabled, onToggleSound
               <Settings size={16} className="text-slate-500 dark:text-slate-400" />
               Settings
             </button>
+            {onEnterPip && (
+              <>
+                <div className="h-px bg-slate-200 dark:bg-slate-700" />
+                <button
+                  onClick={() => { onEnterPip(); setOpen(false) }}
+                  className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 min-h-[44px]"
+                >
+                  <PictureInPicture2 size={16} className="text-slate-500 dark:text-slate-400" />
+                  Enter PiP
+                </button>
+              </>
+            )}
             {onResign && (
               <>
                 <div className="h-px bg-slate-200 dark:bg-slate-700" />

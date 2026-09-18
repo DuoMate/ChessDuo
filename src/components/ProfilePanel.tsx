@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Crown, History, LogOut, Moon, Share2, ShieldCheck, Sun, User, Pencil } from 'lucide-react'
 import { ProfileEditor } from './ProfileEditor'
 import { RateChessDuoRow } from './RateChessDuoRow'
+import { AppVersionLabel } from './AppVersionLabel'
 import { getMatchHistory, CompletedGame } from '@/lib/matchHistory'
 import { fetchProfile, invalidateProfileCache } from '@/lib/profileService'
 import { getProfileLink } from '@/lib/friends'
@@ -253,6 +254,8 @@ export function ProfilePanel({ playerId, onViewHistory, onSignOut, onClose }: Pr
             <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
           </button>
         )}
+
+        <AppVersionLabel />
       </div>
     </div>
   )

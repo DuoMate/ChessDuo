@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Volume2, VolumeX, Flag, Crown, Trophy, Handshake, Skull } from 'lucide-react'
+import { ArrowLeft, Volume2, VolumeX, Flag, Crown, Trophy, Handshake, Skull, PictureInPicture2 } from 'lucide-react'
 import { ChessBoard } from '../ChessBoard'
 import { BoardBottomNav, type BoardTab } from '../BoardBottomNav'
 import { SlideOver } from '../SlideOver'
@@ -23,6 +23,7 @@ import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { usePipEligibility, usePipMode } from '@/hooks/usePip'
+import { enterPip, isPipSupported } from '@/lib/pip'
 import { PipOverlay } from '../PipOverlay'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -385,6 +386,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
               <Flag size={18} />
             </button>
           )}
+          {/* Manual PiP entry fallback (native only) — best-effort, game state untouched. */}
+          {status === 'playing' && isPipSupported() && (
+            <button
+              onClick={() => void enterPip()}
+              aria-label="Enter Picture-in-Picture"
+              className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              <PictureInPicture2 size={20} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -407,11 +418,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         {/* Per-surface board cap: coach keeps 560px (coach panel sits below
             the board); full game uses 720px, replay 600px. */}
         <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
-          {previewing && (
-            <p className="mb-1 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Reviewing history — board input paused
-            </p>
-          )}
+          {/* Reserved status area: always mounted with fixed min-height so
+              showing/hiding the review message never shifts the board.
+              Mirrors the BoardTopBar isThinking reserved-space pattern. */}
+          <div aria-live="polite" className="mb-1 flex min-h-[20px] items-center justify-center">
+            {previewing && (
+              <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Reviewing history — board input paused
+              </p>
+            )}
+          </div>
           <ChessBoard
             key={boardKey}
             fen={playbackFen ?? state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
