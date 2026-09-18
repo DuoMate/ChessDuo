@@ -185,9 +185,15 @@ if [ -f "$MANIFEST" ] && ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null;
 fi
 
 # ─── Live-game PiP manifest (supportsPictureInPicture + config) ──
+# Targeted at MainActivity only — a blanket s|<activity | match could tag
+# the wrong activity if the generated manifest ever gains more.
 if [ -f "$MANIFEST" ] && ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
-  sed -i 's|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
-  ok "supportsPictureInPicture enabled on activity (live-game PiP)"
+  if ! grep -q 'android:name="\.MainActivity"' "$MANIFEST" 2>/dev/null; then
+    log "MainActivity entry not found in manifest — PiP flag NOT applied"
+  else
+    sed -i '/android:name="\.MainActivity"/ s|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
+    ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+  fi
 fi
 if [ -f "$MANIFEST" ] && grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \
     && ! grep -q 'smallestScreenSize' "$MANIFEST" 2>/dev/null; then

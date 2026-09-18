@@ -16,6 +16,7 @@ import { type BoardTopBarPlayer } from './BoardTopBar'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { PipOverlay } from './PipOverlay'
 import { usePipEligibility, usePipMode } from '@/hooks/usePip'
+import { enterPip, isPipSupported } from '@/lib/pip'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -96,6 +97,13 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
   // Consumes existing status only — never drives game state.
   usePipEligibility(status === 'playing' && !showSettings && !showResignConfirm && !showLeaveModal)
   const isPipMode = usePipMode()
+  // Manual PiP entry fallback (native only) for the GameMenu row. Stable ref
+  // keeps the memoized top-bar section held; undefined on web so the row hides.
+  // Declared before any early return so hook order stays unconditional.
+  const handleDuelEnterPip = useCallback(() => {
+    void enterPip()
+  }, [])
+  const duelPipEntryHandler = isPipSupported() ? handleDuelEnterPip : undefined
   // Warm the Game Over native ad for eligible free users while the duel is
   // active. Best-effort: never blocks gameplay, game-over, or navigation.
   useGameOverAdPreload(status === 'playing')
@@ -602,6 +610,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onOpenSettings={openDuelSettings}
           soundEnabled={settings.soundEnabled}
           onToggleSound={toggleDuelSound}
+          onEnterPip={duelPipEntryHandler}
           shellClassName="w-full bg-[var(--color-page-bg)] border-b border-white/5 px-3 py-2"
         />
 

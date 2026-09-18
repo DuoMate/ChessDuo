@@ -17,6 +17,7 @@ jest.mock('lucide-react', () => ({
   Volume2: () => React.createElement('div', { 'data-testid': 'volume-icon' }),
   VolumeX: () => React.createElement('div', { 'data-testid': 'volume-off-icon' }),
   User: () => React.createElement('div', { 'data-testid': 'user-icon' }),
+  PictureInPicture2: () => React.createElement('div', { 'data-testid': 'pip-icon' }),
 }))
 
 import { GameMenu } from '../GameMenu'
@@ -47,5 +48,25 @@ describe('GameMenu', () => {
     fireEvent.click(screen.getByLabelText('Menu'))
     fireEvent.click(screen.getByText('Settings'))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows Enter PiP when onEnterPip is provided', () => {
+    render(<GameMenu onOpenSettings={jest.fn()} onEnterPip={jest.fn()} />)
+    fireEvent.click(screen.getByLabelText('Menu'))
+    expect(screen.getByText('Enter PiP')).toBeInTheDocument()
+  })
+
+  it('calls onEnterPip when Enter PiP is clicked', () => {
+    const onEnterPip = jest.fn()
+    render(<GameMenu onOpenSettings={jest.fn()} onEnterPip={onEnterPip} />)
+    fireEvent.click(screen.getByLabelText('Menu'))
+    fireEvent.click(screen.getByText('Enter PiP'))
+    expect(onEnterPip).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides Enter PiP when onEnterPip is not provided', () => {
+    render(<GameMenu onOpenSettings={jest.fn()} />)
+    fireEvent.click(screen.getByLabelText('Menu'))
+    expect(screen.queryByText('Enter PiP')).not.toBeInTheDocument()
   })
 })

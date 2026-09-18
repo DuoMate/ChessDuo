@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Volume2, VolumeX, Flag, Crown, Trophy, Handshake, Skull } from 'lucide-react'
+import { ArrowLeft, Volume2, VolumeX, Flag, Crown, Trophy, Handshake, Skull, PictureInPicture2 } from 'lucide-react'
 import { ChessBoard } from '../ChessBoard'
 import { BoardBottomNav, type BoardTab } from '../BoardBottomNav'
 import { SlideOver } from '../SlideOver'
@@ -23,6 +23,7 @@ import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
 import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { usePipEligibility, usePipMode } from '@/hooks/usePip'
+import { enterPip, isPipSupported } from '@/lib/pip'
 import { PipOverlay } from '../PipOverlay'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
@@ -383,6 +384,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
               className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-rose-600 dark:text-rose-400 transition-colors hover:text-rose-500"
             >
               <Flag size={18} />
+            </button>
+          )}
+          {/* Manual PiP entry fallback (native only) — best-effort, game state untouched. */}
+          {status === 'playing' && isPipSupported() && (
+            <button
+              onClick={() => void enterPip()}
+              aria-label="Enter Picture-in-Picture"
+              className="focus-ring flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              <PictureInPicture2 size={20} />
             </button>
           )}
         </div>
