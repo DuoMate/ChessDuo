@@ -171,14 +171,28 @@ if [ -f "$MANIFEST" ]; then
   # ─── Live-game Picture-in-Picture (supportsPictureInPicture + config) ──
   # Presentation only: lets the existing game activity enter PiP while a
   # match is active. Entry is gated at runtime by PipPlugin eligibility.
+  # The flag is applied ONLY to the MainActivity entry — a blanket
+  # s|<activity | match could tag the wrong activity if the generated
+  # manifest ever gains more (which silently breaks PiP with no diagnostics).
   if ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
-    sed -i 's|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
-    ok "supportsPictureInPicture enabled on activity (live-game PiP)"
+    if ! grep -q 'android:name="\.MainActivity"' "$MANIFEST" 2>/dev/null; then
+      warn "MainActivity entry not found in manifest — PiP flag NOT applied"
+    else
+      sed -i '/android:name="\.MainActivity"/ s|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
+      ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+    fi
   fi
   if grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \
       && ! grep -q 'smallestScreenSize' "$MANIFEST" 2>/dev/null; then
     sed -i 's|android:configChanges="\([^"]*\)"|android:configChanges="\1\|smallestScreenSize\|screenLayout\|orientation"|' "$MANIFEST"
     ok "activity configChanges extended for PiP (no recreation on enter/exit)"
+  fi
+
+  # ─── Patch MainActivity (Google auth intents + Native AdMob + PiP) ──
+  # setup-capacitor.sh previously never ran this — Studio/dev builds from a
+  # fresh `cap add` had no PipPlugin registration and PiP silently did nothing.
+  if [ -f "android/app/src/main/java/com/navron/chessduo/MainActivity.java" ]; then
+    bash "$PROJECT_ROOT/scripts/patch-main-activity.sh" || warn "MainActivity patch skipped"
   fi
 fi
 

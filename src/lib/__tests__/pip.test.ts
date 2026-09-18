@@ -3,6 +3,7 @@ import { GameStatus } from '@/features/shared/gameTypes'
 import {
   enterPip,
   getPipModeActive,
+  reaffirmPipEligible,
   resetPipEligibleCache,
   setPipEligible,
   shouldEnablePip,
@@ -75,6 +76,31 @@ describe('pip bridge', () => {
     await setPipEligible(false)
     expect(pipPlugin.setEligible).toHaveBeenCalledTimes(2)
     expect(pipPlugin.setEligible).toHaveBeenCalledWith({ eligible: false })
+  })
+
+  it('retries publishing the same value after a native failure', async () => {
+    // Regression: the first publish can race plugin attach (activity null)
+    // and reject. The dedupe cache must not suppress the retry, otherwise
+    // auto-enter params are never set and Home never enters PiP.
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    pipPlugin.setEligible.mockRejectedValueOnce(new Error('bridge not ready'))
+
+    await setPipEligible(true)
+    await setPipEligible(true)
+
+    expect(pipPlugin.setEligible).toHaveBeenCalledTimes(2)
+    expect(pipPlugin.setEligible).toHaveBeenLastCalledWith({ eligible: true })
+  })
+
+  it('reaffirms the last published value even without a change', async () => {
+    // Used on app resume: re-assert auto-enter params idempotently.
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+
+    await setPipEligible(true)
+    await reaffirmPipEligible()
+
+    expect(pipPlugin.setEligible).toHaveBeenCalledTimes(2)
+    expect(pipPlugin.setEligible).toHaveBeenLastCalledWith({ eligible: true })
   })
 
   it('never throws and never touches native on web builds', async () => {

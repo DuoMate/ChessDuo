@@ -45,6 +45,11 @@ interface GameTopBarSectionProps {
   onToggleSound: () => void
   onOpenProfile?: () => void
   /**
+   * Manual PiP entry (native only). Threaded to GameMenu, which renders the
+   * row only when provided. Callers gate on `isPipSupported()`.
+   */
+  onEnterPip?: () => void
+  /**
    * P7: wrapper classes differ per game mode (Game vs DuelGame) — passed as
    * stable string literals so the memo holds. Defaults preserve Game's visuals.
    */
@@ -69,6 +74,7 @@ function GameTopBarSectionInner({
   soundEnabled,
   onToggleSound,
   onOpenProfile,
+  onEnterPip,
   shellClassName = 'w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2',
 }: GameTopBarSectionProps) {
   return (
@@ -96,6 +102,7 @@ function GameTopBarSectionInner({
             soundEnabled={soundEnabled}
             onToggleSound={onToggleSound}
             onOpenProfile={onOpenProfile}
+            onEnterPip={onEnterPip}
           />
         </div>
       </div>

@@ -21,6 +21,14 @@ function canUsePip(): boolean {
 }
 
 /**
+ * True only on native builds where the `Pip` Capacitor plugin can exist.
+ * Used to gate PiP entry UI so web builds never show a dead button.
+ */
+export function isPipSupported(): boolean {
+  return canUsePip()
+}
+
+/**
  * Pure eligibility rule — SINGLE SOURCE OF TRUTH for tests and hooks.
  *
  * PiP is available only while a real match is actively running (`PLAYING` /
@@ -39,17 +47,43 @@ export function shouldEnablePip(status: GameStatus | string, hasBlockingModal: b
  * PiP failure must never block game start, moves, game-over, or navigation.
  * Redundant updates are suppressed so the bridge only fires on real changes
  * (no per-tick native traffic).
+ *
+ * Retry-safe: the dedupe cache is updated only after the native call
+ * succeeds. The first publish can race plugin attach (activity null) and
+ * reject — leaving the cache untouched lets the next render retry instead
+ * of suppressing the auto-enter params forever (which made Home never
+ * enter PiP with zero diagnostics).
  */
 export async function setPipEligible(eligible: boolean): Promise<void> {
   if (lastEligibleSent === eligible) return
-  lastEligibleSent = eligible
-  if (!canUsePip()) return
+  if (!canUsePip()) {
+    lastEligibleSent = eligible
+    return
+  }
 
   try {
     await Pip.setEligible({ eligible })
+    lastEligibleSent = eligible
   } catch {
-    // Native bridge unavailable (web build, old APK without the plugin) —
-    // the game continues normally without PiP.
+    // Native bridge unavailable (old APK without the plugin, activity not
+    // attached yet) — the game continues normally without PiP. The cache
+    // is deliberately NOT updated so the next call retries.
+  }
+}
+
+/**
+ * Re-assert the last published eligibility value, bypassing the dedupe
+ * cache. Called on app resume so auto-enter params are re-applied even if
+ * the original publish raced activity attach. No-op when nothing was ever
+ * published or on web builds. Never throws.
+ */
+export async function reaffirmPipEligible(): Promise<void> {
+  if (lastEligibleSent === null || !canUsePip()) return
+
+  try {
+    await Pip.setEligible({ eligible: lastEligibleSent })
+  } catch {
+    // Best-effort — game flow is never affected.
   }
 }
 

@@ -56,6 +56,7 @@ import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { PipOverlay } from './PipOverlay'
 import { usePipEligibility, usePipMode } from '@/hooks/usePip'
+import { enterPip, isPipSupported } from '@/lib/pip'
 import { Lock, BarChart3 } from 'lucide-react'
 
 // ============================================================
@@ -2671,6 +2672,12 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
     () => settings.setSoundEnabled(!settings.soundEnabled),
     [settings.setSoundEnabled, settings.soundEnabled]
   )
+  // Manual PiP entry fallback (native only) for the GameMenu row. Stable ref
+  // keeps the memoized top-bar section held; undefined on web so the row hides.
+  const handleEnterPip = useCallback(() => {
+    void enterPip()
+  }, [])
+  const pipEntryHandler = isPipSupported() ? handleEnterPip : undefined
 
   const roundHistoryEntries: RoundHistoryEntry[] = useMemo(() => {
     const moves = moveHistoryRef.current
@@ -2784,6 +2791,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           soundEnabled={settings.soundEnabled}
           onToggleSound={toggleSound}
           onOpenProfile={openProfile}
+          onEnterPip={pipEntryHandler}
         />
 
         {/* Chess Board — 80% of viewport.

@@ -43,35 +43,53 @@ public class PipPlugin extends Plugin {
 
     private boolean eligible = false;
     private boolean inPip = false;
+    /**
+     * Set when setEligible arrives before the activity is attached. Applied
+     * on the next onResume so a publish that raced plugin attach can never
+     * leave auto-enter disabled for the rest of the game.
+     */
+    private boolean pendingApply = false;
+
+    /**
+     * Apply auto-enter params for the given eligibility value. Idempotent —
+     * safe to call on every resume. Pre-12 devices use onUserLeaveHint
+     * instead (no setAutoEnterEnabled API), so this is a no-op there.
+     */
+    private void applyAutoEnterParams(boolean value) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+        if (getActivity() == null) {
+            pendingApply = true;
+            Log.d(TAG, "applyAutoEnter deferred (activity null), eligible=" + value);
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            try {
+                PictureInPictureParams params = new PictureInPictureParams.Builder()
+                    .setAspectRatio(new Rational(ASPECT_NUM, ASPECT_DEN))
+                    .setAutoEnterEnabled(value)
+                    .setSeamlessResizeEnabled(true)
+                    .build();
+                getActivity().setPictureInPictureParams(params);
+                Log.d(TAG, "auto-enter params applied, eligible=" + value);
+            } catch (Exception e) {
+                Log.w(TAG, "setAutoEnter failed (best-effort)", e);
+            }
+        });
+    }
 
     @PluginMethod
     public void setEligible(PluginCall call) {
         boolean value = call.getBoolean("eligible", false);
         eligible = value;
         if (getActivity() == null) {
+            pendingApply = true;
+            Log.d(TAG, "setEligible(" + value + "): activity null, deferred to onResume");
             call.resolve();
             return;
         }
         // Android 12+ (API 31): smooth auto-enter on Home/swipe gestures while
         // eligible. Best-effort — never throws into game flow.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                getActivity().runOnUiThread(() -> {
-                    try {
-                        PictureInPictureParams params = new PictureInPictureParams.Builder()
-                            .setAspectRatio(new Rational(ASPECT_NUM, ASPECT_DEN))
-                            .setAutoEnterEnabled(eligible)
-                            .setSeamlessResizeEnabled(true)
-                            .build();
-                        getActivity().setPictureInPictureParams(params);
-                    } catch (Exception e) {
-                        Log.w(TAG, "setAutoEnter failed (best-effort)", e);
-                    }
-                });
-            } catch (Exception e) {
-                Log.w(TAG, "setEligible dispatch failed (best-effort)", e);
-            }
-        }
+        applyAutoEnterParams(value);
         call.resolve();
     }
 
@@ -82,9 +100,11 @@ public class PipPlugin extends Plugin {
             return;
         }
         if (!eligible) {
+            Log.d(TAG, "enter rejected: not eligible (no active game)");
             call.reject("PiP is not eligible (no active game)");
             return;
         }
+        Log.d(TAG, "enter requested, eligible=true");
         try {
             PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder()
                 .setAspectRatio(new Rational(ASPECT_NUM, ASPECT_DEN));
@@ -120,22 +140,7 @@ public class PipPlugin extends Plugin {
         // Leaving PiP revokes auto-enter eligibility until the web layer
         // re-asserts it (it only does so while PLAYING with no modal open).
         if (!inPip && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && getActivity() != null) {
-            try {
-                getActivity().runOnUiThread(() -> {
-                    try {
-                        PictureInPictureParams params = new PictureInPictureParams.Builder()
-                            .setAspectRatio(new Rational(ASPECT_NUM, ASPECT_DEN))
-                            .setAutoEnterEnabled(eligible)
-                            .setSeamlessResizeEnabled(true)
-                            .build();
-                        getActivity().setPictureInPictureParams(params);
-                    } catch (Exception e) {
-                        Log.w(TAG, "pip exit params refresh failed (best-effort)", e);
-                    }
-                });
-            } catch (Exception e) {
-                Log.w(TAG, "pip exit dispatch failed (best-effort)", e);
-            }
+            applyAutoEnterParams(eligible);
         }
         JSObject event = new JSObject();
         event.put("inPip", inPip);
@@ -150,6 +155,27 @@ public class PipPlugin extends Plugin {
     /** Read by MainActivity for diagnostics/tests. */
     public boolean isInPip() {
         return inPip;
+    }
+
+    /**
+     * Re-assert auto-enter params on every resume (idempotent). Covers the
+     * case where setEligible arrived before the activity was attached, and
+     * any params lost across backgrounding. Presentation only — never
+     * touches game state.
+     */
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        if (getActivity() == null) return;
+        if (pendingApply) {
+            pendingApply = false;
+            Log.d(TAG, "onResume: applying deferred eligible=" + eligible);
+        } else if (eligible) {
+            Log.d(TAG, "onResume: re-asserting eligible=true");
+        } else {
+            return;
+        }
+        applyAutoEnterParams(eligible);
     }
 
     @Override
