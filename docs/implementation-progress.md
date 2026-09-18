@@ -126,6 +126,7 @@ Scope: presentation only. No routing/auth/realtime/game-logic/billing/ads change
 64. `0119ef8` ui: Lucide icon sweep - transport, close, status, badge glyphs (I1)
 65. `9f68157` ui: empty-state illustration wells across routes (E1)
 66. `bb0d51b` ui: press-state feedback on lift buttons (E2)
+67. Owner confirms Option A green CTA (already implemented W3 + CoachSetup fix); recorded in theme audit.
 
 ## What was intentionally NOT changed
 Routing, navigation behavior, auth/OAuth/session, realtime, game state/rules/timers,

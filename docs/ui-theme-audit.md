@@ -70,8 +70,9 @@ Risk: many panels are dark-only (no `dark:` = base dark classes), so they break 
 purple dropped.** `team-b` tokens repointed to neutral slate (light `#475569`, dark
 `#cbd5e1`, with matching soft/border washes). Team distinction now rides on icon +
 label + position + border weight, never color alone. `coach-voice` violet is retained
-as AI-identity (not a team signal). CTA standard locked to the green gradient;
-brand blue reserved for selection/links/information.
+as AI-identity (not a team signal). CTA standard locked to the green gradient
+(owner-confirmed Option A); implemented on Home Play (mobile + desktop) and
+CoachSetup Start; brand blue reserved for selection/links/information.
 
 ## 4. Existing shared colors
 
