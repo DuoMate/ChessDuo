@@ -15,6 +15,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --legacy-peer-deps
+      - name: Stamp web build version
+        run: |
+          source android-version.properties
+          echo "NEXT_PUBLIC_APP_VERSION=${versionName}" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_VERSION_CODE=${versionCode}" >> "$GITHUB_ENV"
       - run: npx opennextjs-cloudflare build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -24,6 +29,8 @@ jobs:
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
           NEXT_PUBLIC_ADSENSE_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_ADSENSE_CLIENT_ID }}
           NEXT_PUBLIC_ADSENSE_SLOT_ID: ${{ secrets.NEXT_PUBLIC_ADSENSE_SLOT_ID }}
+          NEXT_PUBLIC_APP_VERSION: ${{ env.NEXT_PUBLIC_APP_VERSION }}
+          NEXT_PUBLIC_VERSION_CODE: ${{ env.NEXT_PUBLIC_VERSION_CODE }}
       - name: Validate Google Play verification secrets
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}

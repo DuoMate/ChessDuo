@@ -28,6 +28,7 @@ All utility modules, service integrations, and data access layers. Includes Supa
 | `rateLimit.ts` | API rate limiting |
 | `debug.ts` | Debug utilities (conditional logging) |
 | `appUrl.ts` | App URL helpers (deep links) |
+| `appVersionInfo.ts` | Bundled release stamp (`NEXT_PUBLIC_APP_VERSION/CODE`) + settings label formatter |
 | `share.ts` | Cross-platform share helper — native sheet via `@capacitor/share`, Web Share API, clipboard fallback |
 | `rateApp.ts` | Play-listing bridge for the Profile "Rate us" row — native `market://`, Browser-plugin/web HTTPS fallback, never throws |
 | `nativeAd.ts` | Web-safe bridge for the bounded Android Native Advanced AdMob view |

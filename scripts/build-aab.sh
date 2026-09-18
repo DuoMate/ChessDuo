@@ -125,6 +125,15 @@ if [ -d "src/app/api" ]; then
   mv src/app/api /tmp/chessduo-api-routes
   ok "API routes excluded for static build"
 fi
+# Stamp the bundled web UI with its own release identity so the
+# version check can compare the installed build against version.json.
+if [ -f "android-version.properties" ]; then
+  # shellcheck disable=SC1091
+  source android-version.properties
+  export NEXT_PUBLIC_APP_VERSION="$versionName"
+  export NEXT_PUBLIC_VERSION_CODE="$versionCode"
+  ok "App version stamped: $versionName ($versionCode)"
+fi
 NEXT_OUTPUT=export npx next build
 ok "Next.js build complete"
 # Restore API routes

@@ -63,6 +63,8 @@ All React components — co-located by feature, not by type. Components handle r
 | `AdSenseSlot.tsx` | Optional web responsive AdSense display slot beside `NativeAdSlot` (game-over modals only) |
 | `AdSenseLoader.tsx` | Web-only AdSense base-script loader (non-premium, client ID required) |
 | `PipOverlay.tsx` | Live-game Android PiP compact view — FEN mini-board + turn label + clock/footer, `visible` only inside the PiP window |
+| `UpdatePrompt.tsx` | Optional native-update dialog — Update/Later, ChessDuo modal styling, driven by `useAppUpdate` |
+| `AppVersionLabel.tsx` | Small "ChessDuo · Version x" footer for Profile surfaces (build stamp, native `App.getInfo()` upgrade) |
 
 ## Logic & Decisions
 - Components access game logic through `GameInterface` — never use `as any`.

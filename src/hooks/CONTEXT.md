@@ -16,6 +16,7 @@ Custom React hooks for viewport detection, navigation guards, network status, Ca
 | `useAuthSession.ts` | Auth session lifecycle — initial session fetch, auth state changes, username gate |
 | `useSettings.ts` | User settings hook (autoQueen, lowTimeWarning, confirmMove, soundEnabled, theme) — localStorage-backed |
 | `usePip.ts` | Live-game PiP — `usePipEligibility(eligible)` publishes to native, `usePipMode()` tracks PiP window state |
+| `useAppUpdate.ts` | Native-only Play Store update check — delayed, fail-silent, skips games/auth/invites, once per session |
 
 ## Logic & Decisions
 - `useNavigationGuard` uses `beforeunload` event + Next.js router events.

@@ -6,6 +6,11 @@
   Cache-Control: public,max-age=31536000,immutable
   Content-Type: image/webp
 
+# ── Version manifest: always fresh, never stale ──
+/version.json
+  Content-Type: application/json
+  Cache-Control: no-store, must-revalidate
+
 # ── Deep linking verification files ──
 /.well-known/apple-app-site-association
   Content-Type: application/json

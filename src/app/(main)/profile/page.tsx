@@ -9,6 +9,7 @@ import { RealtimeService } from '@/lib/realtimeService'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { ProfileEditor } from '@/components/ProfileEditor'
 import { RateChessDuoRow } from '@/components/RateChessDuoRow'
+import { AppVersionLabel } from '@/components/AppVersionLabel'
 import { BackButton } from '@/components/BackButton'
 import { InitialsAvatar } from '@/components/InitialsAvatar'
 import { Spinner } from '@/components/Spinner'
@@ -291,6 +292,8 @@ function ProfileContent({ playerId }: { playerId: string }) {
               </div>
               <span className="text-slate-400 dark:text-slate-500 shrink-0">&rsaquo;</span>
             </button>
+
+            <AppVersionLabel />
           </motion.div>
         </div>
       </div>
