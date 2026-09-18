@@ -4,7 +4,11 @@ import { CoachGame } from '../CoachGame'
 
 type Listener = (state: Record<string, unknown>) => void
 
-const mockEngineState = (status: 'idle' | 'playing' | 'game_over') => ({
+const mockEngineState = (
+  status: 'idle' | 'playing' | 'game_over',
+  result: string | null = status === 'game_over' ? 'Loss by resignation' : null,
+  gameOverReason: string | null = status === 'game_over' ? 'resignation' : null,
+) => ({
   fen: 'start',
   status,
   playerColor: 'w',
@@ -13,8 +17,8 @@ const mockEngineState = (status: 'idle' | 'playing' | 'game_over') => ({
   lastMove: null,
   suggestion: null,
   feedback: null,
-  result: status === 'game_over' ? 'Loss by resignation' : null,
-  gameOverReason: status === 'game_over' ? 'resignation' : null,
+  result,
+  gameOverReason,
   moveHistory: [],
   blunders: 0,
   mistakes: 0,
@@ -26,6 +30,10 @@ const mockEngineState = (status: 'idle' | 'playing' | 'game_over') => ({
 let mockActiveListener: Listener | null = null
 const mockResign = jest.fn(() => {
   mockActiveListener?.(mockEngineState('game_over'))
+  return Promise.resolve()
+})
+const mockAbandon = jest.fn(() => {
+  mockActiveListener?.(mockEngineState('game_over', 'Match abandoned', 'abandoned'))
   return Promise.resolve()
 })
 
@@ -43,6 +51,7 @@ jest.mock('@/features/coach', () => ({
     }
 
     resign = mockResign
+    abandon = mockAbandon
     destroy() {}
   },
   coachVoice: {
@@ -94,6 +103,7 @@ describe('CoachGame resignation flow', () => {
   beforeEach(() => {
     mockActiveListener = null
     mockResign.mockClear()
+    mockAbandon.mockClear()
   })
 
   it('shows the terminal popup and both ad surfaces after confirming resignation', async () => {
@@ -104,6 +114,23 @@ describe('CoachGame resignation flow', () => {
 
     await waitFor(() => expect(mockResign).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('Loss by resignation')).toBeInTheDocument()
+    expect(screen.getByTestId('native-ad-slot')).toBeInTheDocument()
+    expect(screen.getByTestId('adsense-slot')).toBeInTheDocument()
+  })
+
+  it('routes active-game Leave through abandon into the terminal popup instead of Home', async () => {
+    const onLeave = jest.fn()
+    render(<CoachGame playerId="player-1" playerColor="white" onLeave={onLeave} />)
+
+    // Wait for playing state (Resign button only renders while playing).
+    fireEvent.click(await screen.findByRole('button', { name: 'Resign' }))
+    fireEvent.click(screen.getByText('Cancel'))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }))
+
+    await waitFor(() => expect(mockAbandon).toHaveBeenCalledTimes(1))
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(await screen.findByText('Match abandoned')).toBeInTheDocument()
     expect(screen.getByTestId('native-ad-slot')).toBeInTheDocument()
     expect(screen.getByTestId('adsense-slot')).toBeInTheDocument()
   })

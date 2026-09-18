@@ -49,6 +49,7 @@ import { LeaveConfirmModal } from './LeaveConfirmModal'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useGameToast } from './Toast'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
+import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { getUserInsightsState, incrementInsightsReveals } from '@/lib/insights'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
@@ -220,6 +221,9 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   })
 
   const toast = useGameToast()
+  // Warm the Game Over native ad for eligible free users while the match is
+  // active. Best-effort: never blocks gameplay, game-over, or navigation.
+  useGameOverAdPreload(gameState.status === GameStatus.PLAYING)
   const [accuracyComparison, setAccuracyComparison] = useState<MoveComparison | null>(null)
   const [accuracyHistory, setAccuracyHistory] = useState<MoveComparison[]>([])
   const [showGameOn, setShowGameOn] = useState(false)

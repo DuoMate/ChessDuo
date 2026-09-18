@@ -20,6 +20,7 @@ import { AdSenseSlot } from '../AdSenseSlot'
 import { ResignConfirmModal } from '../ResignConfirmModal'
 import { useGameToast } from '../Toast'
 import { usePremium } from '@/hooks/usePremium'
+import { useGameOverAdPreload } from '@/hooks/useGameOverAdPreload'
 import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import { useCapacitorBackButton } from '@/hooks/useCapacitorBackButton'
 import { useSettings } from '@/hooks/useSettings'
@@ -72,6 +73,10 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   const status = state?.status ?? 'idle'
   const isPlayerTurn = !!state && state.turn === state.playerColor && state.status === 'playing'
   const showMonetization = status === 'game_over' && isTrialGame && !premiumLoading && !isPremium
+
+  // Warm the Game Over native ad for eligible free users while the game is
+  // active. Best-effort: never blocks gameplay, resignation, or navigation.
+  useGameOverAdPreload(status === 'playing')
 
   // Position timeline: [initialFen, fenAfterPly0, ...]. Replayed from SANs —
   // the engine stores no per-ply fens, and this derivation never writes back.
@@ -319,7 +324,12 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         open={showResignConfirm}
         onConfirm={() => {
           setShowResignConfirm(false)
-          void gameRef.current?.resign()
+          const game = gameRef.current
+          if (!game) {
+            toast.warning('Could not resign — please try again')
+            return
+          }
+          void game.resign()
         }}
         onCancel={() => setShowResignConfirm(false)}
       />
@@ -369,7 +379,15 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
                 Keep Playing
               </button>
               <button
-                onClick={onLeave}
+                onClick={() => {
+                  // Active-game Leave converges on the existing game-over
+                  // modal (Match abandoned + ad + Back to Home), matching
+                  // Quick Play / Duo / Duel — never straight Home.
+                  setShowLeave(false)
+                  const game = gameRef.current
+                  if (game) void game.abandon()
+                  else onLeave()
+                }}
                 className="focus-ring min-h-[44px] flex-1 rounded-xl bg-rose-600 text-sm font-bold text-white transition-colors hover:bg-rose-500"
               >
                 Leave

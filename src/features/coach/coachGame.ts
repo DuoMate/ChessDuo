@@ -206,6 +206,20 @@ export class CoachGame {
     this.emit()
   }
 
+  /**
+   * Active-game Leave converges on the shared terminal pipeline (same as
+   * Quick Play / Duo / Duel active-leave → Match Abandoned). Terminal-only:
+   * never touches moves, analysis, scoring, or timers. No-op unless playing,
+   * so it can never overwrite an already-recorded terminal result.
+   */
+  async abandon(): Promise<void> {
+    if (this.status !== 'playing') return
+    this.result = 'Match abandoned'
+    this.gameOverReason = 'abandoned'
+    this.status = 'game_over'
+    this.emit()
+  }
+
   destroy(): void {
     this.engine.terminate()
   }

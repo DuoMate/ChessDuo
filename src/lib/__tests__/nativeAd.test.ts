@@ -60,4 +60,35 @@ describe('nativeAd', () => {
     expect(nativeAdPlugin.show).not.toHaveBeenCalled()
     expect(nativeAdPlugin.hide).not.toHaveBeenCalled()
   })
+
+  it('discards a stale preloaded ad after its TTL so the next game fetches fresh', async () => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+
+    // Fresh module instance so earlier tests' cached ad cannot leak in.
+    let freshPreload: typeof preloadNativeAd
+    let freshPlugin: { preload: jest.Mock }
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require('../nativeAd') as typeof import('../nativeAd')
+      freshPreload = mod.preloadNativeAd
+      const results = (registerPlugin as jest.Mock).mock.results
+      freshPlugin = results[results.length - 1].value as { preload: jest.Mock }
+    })
+
+    await freshPreload!()
+    expect(freshPlugin!.preload).toHaveBeenCalledTimes(1)
+    // Same game session reuses the cached ad — no second native request.
+    await freshPreload!()
+    expect(freshPlugin!.preload).toHaveBeenCalledTimes(1)
+
+    // Simulate the cached ad aging past its TTL: next game fetches fresh.
+    const realNow = Date.now
+    jest.spyOn(Date, 'now').mockReturnValue(realNow() + 61 * 60 * 1000)
+    try {
+      await freshPreload!()
+      expect(freshPlugin!.preload).toHaveBeenCalledTimes(2)
+    } finally {
+      jest.restoreAllMocks()
+    }
+  })
 })

@@ -18,7 +18,6 @@ import { createEvaluator } from '@/features/mobile-engine/evaluatorFactory'
 import { useNotificationRedirect } from '@/hooks/useNotificationRedirect'
 import { PremiumProvider } from '@/hooks/usePremium'
 import { PremiumCornerBadge } from '@/components/PremiumCornerBadge'
-import { preloadNativeAd } from '@/lib/nativeAd'
 
 function NetworkAwareToastProvider({ children }: { children: ReactNode }) {
   return (
@@ -37,7 +36,10 @@ export default function Providers({ children }: { children: ReactNode }) {
     registerCapacitorAuthListener({ navigate: (path) => router.replace(path) }).catch(() => {})
     registerBackButtonListener()
     SubscriptionService.setProvider(GooglePlayBillingProvider)
-    void preloadNativeAd()
+    // NOTE: no boot-time native-ad preload here. The Game Over ad is warmed
+    // per-game via useGameOverAdPreload (eligible free native users only),
+    // so premium users never trigger an AdMob request and a preload from a
+    // previous game can never go stale across sessions.
 
     // Pre-warm Stockfish WASM evaluator so it's ready when bots need to move
     // (especially critical when human plays as Black - White bots move first).

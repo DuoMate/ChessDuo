@@ -80,6 +80,28 @@ describe('CoachGame', () => {
     expect(game.getState().result).toBe('Loss by resignation')
   })
 
+  it('abandons the game to the shared terminal state without touching move logic', async () => {
+    const game = new CoachGame({ playerColor: 'w', botLevel: 3, engine: mockEngine(), bot: mockBot() })
+    await game.start()
+    await game.abandon()
+
+    const state = game.getState()
+    expect(state.status).toBe('game_over')
+    expect(state.result).toBe('Match abandoned')
+    expect(state.gameOverReason).toBe('abandoned')
+  })
+
+  it('abandon is a no-op once the game is already over', async () => {
+    const game = new CoachGame({ playerColor: 'w', botLevel: 3, engine: mockEngine(), bot: mockBot() })
+    await game.start()
+    await game.resign()
+    await game.abandon()
+
+    // Resignation result must win — abandon must not overwrite a terminal result.
+    expect(game.getState().result).toBe('Loss by resignation')
+    expect(game.getState().gameOverReason).toBe('resignation')
+  })
+
   it.each([1, 2, 3, 4, 5])('carries the selected setup botLevel %i into game state', async (botLevel) => {
     const game = new CoachGame({ playerColor: 'w', botLevel, engine: mockEngine(), bot: mockBot() })
     await game.start()
