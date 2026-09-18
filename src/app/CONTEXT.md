@@ -77,6 +77,7 @@ Next.js App Router routes, root layout, global providers, CSS, and API endpoints
 	calls keep in-game readiness unchanged.
 - **2026-07-17**: Fixed push notifications and subscription auth timing — `initPushNotifications` and `SubscriptionService.initialize()` now only run after `onAuthStateChange` confirms a valid session token. Prevents empty-token calls from blocking future registration attempts.
 - **2026-07-17**: Fixed RLS bypass in all API routes — Bearer token auth path now passes user's JWT to `createClient` via `global.headers.Authorization`, ensuring `auth.uid()` works correctly in RLS policies for DB operations.
+- **2026-09-19**: **Home legal-footer clearance** — mobile footer bottom padding now adds 84px above `max(0.5rem,env(safe-area-inset-bottom))` so Privacy/Terms/Navron clear the fixed `HomeBottomNav` pill on gesture/3-button nav; links gain 44px tap targets (`inline-flex min-h-[44px] items-center`). Copy/design/desktop unchanged.
 
 ## Dependencies
 - Next.js 16 App Router, Supabase Auth, Google Play Billing (Android)

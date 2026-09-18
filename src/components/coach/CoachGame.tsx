@@ -407,11 +407,16 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         {/* Per-surface board cap: coach keeps 560px (coach panel sits below
             the board); full game uses 720px, replay 600px. */}
         <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
-          {previewing && (
-            <p className="mb-1 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Reviewing history — board input paused
-            </p>
-          )}
+          {/* Reserved status area: always mounted with fixed min-height so
+              showing/hiding the review message never shifts the board.
+              Mirrors the BoardTopBar isThinking reserved-space pattern. */}
+          <div aria-live="polite" className="mb-1 flex min-h-[20px] items-center justify-center">
+            {previewing && (
+              <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Reviewing history — board input paused
+              </p>
+            )}
+          </div>
           <ChessBoard
             key={boardKey}
             fen={playbackFen ?? state?.fen ?? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'}
