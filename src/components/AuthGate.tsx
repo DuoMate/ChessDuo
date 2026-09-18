@@ -191,7 +191,7 @@ export function AuthGate({
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm"
         >
-          <div className="flex items-center justify-center min-h-full p-4">
+          <div className="flex items-center justify-center min-h-full p-4 pt-[max(1rem,env(safe-area-inset-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] overflow-y-auto">
             <div className="relative w-full max-w-sm">
               <button
                 onClick={onBack}
@@ -211,7 +211,7 @@ export function AuthGate({
   return (
     <ErrorBoundary>
       <div className="min-h-dvh bg-[var(--color-page-bg)] text-slate-900 dark:text-white pb-20">
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
           <BackButton label="Back" onClick={onBack} />
         </div>
         {authForm}

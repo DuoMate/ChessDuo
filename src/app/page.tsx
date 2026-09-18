@@ -1367,7 +1367,7 @@ if (!gameMode) {
                   className="overflow-hidden border-l border-slate-200/60 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-900/50"
                 >
                   <div className="w-[360px] h-full overflow-y-auto">
-                    <div className="sticky top-0 px-5 pt-4 pb-2 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/50">
+                    <div className="sticky top-0 px-5 pb-2 pt-[max(1rem,env(safe-area-inset-top,0px))] bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/50">
                       <h2 className="text-sm font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400">Configuration</h2>
                     </div>
                     <ConfigurationPanel
@@ -1392,7 +1392,7 @@ if (!gameMode) {
         )}
 
         {/* Legal footer */}
-        <footer className="pb-2 md:pb-4 pt-1 md:pt-2 px-4">
+        <footer className="px-4 pt-1 md:pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:pb-4">
           <div className="max-w-lg mx-auto md:max-w-none text-center md:text-left">
             <nav className="flex items-center justify-center md:justify-start gap-4 text-xs text-slate-400 dark:text-slate-500">
               <a href="/privacy" className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Privacy Policy</a>
@@ -1416,7 +1416,7 @@ if (!gameMode) {
 // ============================================
 function HeaderBar() {
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-center px-4 py-3 bg-white/90 border-b border-slate-200 dark:bg-[var(--color-page-bg)]/90 dark:border-0 backdrop-blur-xl">
+    <div className="sticky top-0 z-30 flex items-center justify-center px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] bg-white/90 border-b border-slate-200 dark:bg-[var(--color-page-bg)]/90 dark:border-0 backdrop-blur-xl">
       <ChessDuoLogo size="md" />
     </div>
   )

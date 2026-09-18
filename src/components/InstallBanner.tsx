@@ -42,7 +42,7 @@ export default function InstallBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -80, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="sticky top-0 z-50 w-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 py-2.5 shadow-lg"
+          className="sticky top-0 z-50 w-full bg-gradient-to-r from-indigo-600 to-blue-500 px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top,0px))] shadow-lg"
         >
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">

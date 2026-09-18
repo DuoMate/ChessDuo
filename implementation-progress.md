@@ -349,3 +349,46 @@
   full-load flake passes alone. CoachPanel test aligned to new accessible name.
 - Touched-file lint: zero new errors (2 mid-phase `set-state-in-effect` fixed same-phase
   by moving resets into retry handlers).
+
+---
+
+# Android 15 Edge-to-Edge Safe-Area Fix (2026-09-18, branch `develop`)
+
+> Scope lock: UI/safe-area ONLY, aligned to `docs/ARCHITECTURE.md`.
+> Full report: `android-edge-to-edge-audit.md`.
+
+## Root cause: DONE (proved before fixing)
+- `targetSdk 36` enforces edge-to-edge on Android 15+; `EdgeToEdge.enable()` +
+  `viewportFit:'cover'` + Capacitor `SystemBars` passthrough are all correct.
+- Gap was web-only: top `env(safe-area-inset-top)` existed solely in
+  `(main)/layout.tsx`, so Home `HeaderBar`, Game/Duel/Replay shells, Coach
+  header, `RoundHistorySidebar`, `InstallBanner`, and Auth surfaces rendered
+  under the status bar. Bottom coverage was already good except `BottomNav`'s
+  `0px` floor and `ReplayView`'s missing `pb-24`.
+
+## Fix: DONE (11 files, Tailwind classes only, 19+/19-)
+- Top insets via existing `env()` + `max()` floors (desktop pixel-identical):
+  `page.tsx` (HeaderBar, config header, legal footer), `Game.tsx`,
+  `DuelGame.tsx` (shell + waiting), `ReplayView.tsx` (+ `pb-24` parity),
+  `coach/CoachGame.tsx`, `RoundHistorySidebar.tsx`, `InstallBanner.tsx`,
+  `AuthGate.tsx`.
+- `Auth.tsx`: cards `max-h-[90svh] overflow-y-auto` (matches `GameOverModal`);
+  overlay insets + scroll.
+- `BottomNav.tsx`: `0px` → `max(12px,env(bottom,12px))` floor via Tailwind
+  (inline `style` removed, per F2 precedent). `loading.tsx`: `min-h-dvh w-full`.
+- Untouched: routes, auth, game engine, Stockfish, Coach logic, billing, AdMob,
+  notifications, deep links, Supabase/Realtime, `capacitor.config.ts`,
+  `patch-main-activity.sh`, manifest/styles/gradle, `SlideOver`/`ChatPanel`/
+  `GameOverModal`/`Toast` (already inset-aware).
+
+## Verification: DONE
+- `npx tsc --noEmit`: clean.
+- `npm test`: 1470 passed; `server/engine` + `ConfirmMoveBar` fail identically
+  on clean-baseline stash run (pre-existing, unrelated); `BillingDiagnostics`
+  passes alone with these changes (full-run parallel flake).
+- `git diff --stat`: 11 UI files only, no logic/backend/native changes.
+
+## Remaining
+- Signed-device run (Android 15+ gesture/3-button, small + large screens,
+  scroll + game + modal) with before/after screenshots; production AAB build;
+  Play Console warning re-check after upload.

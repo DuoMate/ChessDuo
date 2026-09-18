@@ -340,7 +340,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   return (
     <div className="min-h-dvh bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
       {/* Header */}
-      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-4 pt-4">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
         <button
           onClick={() => (status === 'playing' ? setShowLeave(true) : onLeave())}
           aria-label="Back to home"

@@ -2740,7 +2740,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pb-24">
+      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pt-[env(safe-area-inset-top,0px)] pb-24">
         {/* Compact top bar — header + team avatars + timer + controls.
             P5: memoized section — skips reconciliation unless its own slice changed. */}
         <GameTopBarSection
