@@ -20,9 +20,9 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 
 | Surface | Trips / mount or tick | Interval | Finding |
 |---|---|---|---|
-| Duel poll (`duelGame.ts`) | 1× `duel_games` / tick | 2s | ✅ PERF-02: `*` → `status,player_black` (only cols consumed) |
-| Matchmaking tick (`MatchmakingQueue.tsx:87`) | `findAvailableRoom` (1 rooms + ≤4 parallel RPCs) + `checkMyRoomJoined` + `rooms` / tick | 3s | ✅ PERF-02: `rooms` `*` → `id,code` (all `handleRoomJoined` consumes); ✅ PERF-03: `checkMyRoomJoined` + `.limit(2)`, room-create insert-return → `id,code`. Overlap guard → Phase 3 |
-| Four-player tick (`FourPlayerLobby.tsx:137`) | `fetchPlayers` (2 trips) + `rooms.select(status)` = 3 / tick | 2s | OK narrow; overlap guard → Phase 3 |
+| Duel poll (`duelGame.ts`) | 1× `duel_games` / tick, overlap-skipped | 2s | ✅ PERF-02: `*` → `status,player_black`. ✅ PERF-05: slow ticks never stack (skip + `pollOverlaps` telemetry); start detection + realtime untouched. Hidden poll kept (game-start latency matters; browser throttles anyway) |
+| Matchmaking tick (`MatchmakingQueue.tsx:87`) | `findAvailableRoom` (1 rooms + ≤4 parallel RPCs) + `checkMyRoomJoined` + `rooms` / tick, overlap-skipped, hidden-paused | 3s | ✅ PERF-02: `rooms` `*` → `id,code`. ✅ PERF-03: `checkMyRoomJoined` + `.limit(2)`, room-create → `id,code`. ✅ PERF-05: overlap skip + no hidden-tab polling (pre-game UI only; resumes next foreground tick) |
+| Four-player tick (`FourPlayerLobby.tsx:137`) | `fetchPlayers` (2 trips) + `rooms.select(status)` = 3 / tick, overlap-skipped, hidden-paused | 2s | ✅ PERF-05: overlap skip + no hidden-tab polling (pre-game lobby only; resumes next foreground tick). Realtime replacement deferred — would need architecture proof per STOP rules |
 | Room routing (`page.tsx:444`) | 1–2× `rooms` (code + id fallback) / join | on demand | ✅ PERF-02: `*` → `id,code,mode,time_seconds` (all consumed) |
 | History bundle (`matchHistory.ts:262`) | 1× memberships + 1× games (narrow, no JSONB) / load | on demand | ✅ PERF-02: memberships + server `.limit(200)` (= `MAX_ROOM_LOOKUP` cap, identical semantics) |
 | Friends bundle (`friends.ts:137`) | 1× friendships + 1× profiles.in / load | on demand | ✅ PERF-04: bundle + `loadChallenges()` launched together (independent tables/state; bundle still gates `setLoading`). Test: concurrency assertion in `FriendsPanel.test.tsx` (TDD red→green) |

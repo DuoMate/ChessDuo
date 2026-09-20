@@ -86,9 +86,12 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
     if (status !== 'waiting') return
 
     const interval = setInterval(async () => {
-      // PERF-01 measure-only: count ticks/timings/overlaps, no behavior change.
+      // PERF-05: no hidden-tab polling (pre-game UI only — zero gameplay
+      // impact); the interval resumes on the next foreground tick.
+      if (typeof document !== 'undefined' && document.hidden) return
       incPollTick('matchmaking')
-      const entered = tryEnterPoll('matchmaking')
+      // PERF-05: skip overlapping ticks — a slow 3s poll must never stack.
+      if (!tryEnterPoll('matchmaking')) return
       const t0 = startMark()
       try {
         const match = await findAvailableRoom(playerId, timeSeconds)
@@ -116,7 +119,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
         }
       } finally {
         logTiming('matchmaking', 'tick', t0)
-        if (entered) exitPoll('matchmaking')
+        exitPoll('matchmaking')
       }
     }, 3000)
 

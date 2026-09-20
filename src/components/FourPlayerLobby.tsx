@@ -136,9 +136,12 @@ export function FourPlayerLobby({
     if (view !== 'lobby') return
 
     const interval = setInterval(async () => {
-      // PERF-01 measure-only: count ticks/timings/overlaps, no behavior change.
+      // PERF-05: no hidden-tab polling (pre-game lobby only — zero gameplay
+      // impact); the interval resumes on the next foreground tick.
+      if (typeof document !== 'undefined' && document.hidden) return
       incPollTick('fourplayer')
-      const entered = tryEnterPoll(`fourplayer:${roomId}`)
+      // PERF-05: skip overlapping ticks — a slow 2s poll must never stack.
+      if (!tryEnterPoll(`fourplayer:${roomId}`)) return
       const t0 = startMark()
       try {
         const currentPlayers = await fetchPlayers()
@@ -161,7 +164,7 @@ export function FourPlayerLobby({
         }
       } finally {
         logTiming('fourplayer', 'tick', t0)
-        if (entered) exitPoll(`fourplayer:${roomId}`)
+        exitPoll(`fourplayer:${roomId}`)
       }
     }, 2000)
 
