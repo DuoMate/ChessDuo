@@ -12,6 +12,13 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
   const slotRef = useRef<HTMLDivElement>(null)
   const { isPremium, loading } = usePremium()
   const [ready, setReady] = useState(false)
+  // ADS-02: at most one delayed re-show per show-effect lifetime. A failed
+  // show consumes the cache and kicks a background refill; this single retry
+  // (not a loop) gives the refill a chance to land without depending on the
+  // user scrolling. Never manufactures impressions: the placement stays open
+  // and visible throughout.
+  const reshowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reshowDoneRef = useRef(false)
   // gameOverReason is display/logging-only: track it in a ref so a reason
   // change while open never tears down a loaded ad or re-fires show (show
   // consumes the ad, so a teardown + re-show without fresh fill would blank it).
@@ -80,7 +87,18 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
         width: bounds.width,
         height: bounds.height,
       }).then((rendered) => {
+        if (!active) return
         const lastError = rendered ? null : getLastAdError()
+        // ADS-02: one delayed re-show if this attempt failed — the failed
+        // show already triggered a background refill, so a single later
+        // attempt can recover a visible ad (e.g. transient native loss).
+        if (!rendered && !reshowDoneRef.current) {
+          reshowDoneRef.current = true
+          reshowTimerRef.current = setTimeout(() => {
+            reshowTimerRef.current = null
+            render()
+          }, 2500)
+        }
         DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
           surface,
           reason: reasonRef.current || 'unknown',
@@ -121,6 +139,11 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
       cancelAnimationFrame(frame)
       cancelAnimationFrame(retryFrame)
       if (rafId) cancelAnimationFrame(rafId)
+      if (reshowTimerRef.current) {
+        clearTimeout(reshowTimerRef.current)
+        reshowTimerRef.current = null
+      }
+      reshowDoneRef.current = false
       window.removeEventListener('resize', schedule)
       window.removeEventListener('scroll', schedule, true)
       void hideNativeAd()

@@ -38,10 +38,10 @@ AD_REQUEST_STARTED (id) → AD_LOAD_FAILED (code/domain/message) → bounded bac
 
 | # | Failure point | Evidence location | Status |
 |---|---|---|---|
-| F1 | Show-failure consumes cache, `ready` stays true → blank placeholder, retries re-show empty | `nativeAd.ts:74-77`, `NativeAdSlot.tsx:65-126` | FIX ADS-02: re-preload on show failure |
-| F2 | Single attempt per game-start + per slot-open; transient fail = blank game-over | `useGameOverAdPreload.ts:31`, `NativeAdSlot.tsx:41` | FIX ADS-02: bounded retry/backoff (never loop from `onAdFailedToLoad`) |
+| F1 | Show-failure consumes cache, `ready` stays true → blank placeholder, retries re-show empty | `nativeAd.ts:74-77`, `NativeAdSlot.tsx:65-126` | ✅ ADS-02: bridge cooldown-refill (≤1/min) + slot single delayed re-show; no loops, no manufactured requests |
+| F2 | Single attempt per game-start + per slot-open; transient fail = blank game-over | `useGameOverAdPreload.ts:31`, `NativeAdSlot.tsx:41` | ✅ ADS-02: bounded retry (3 attempts, 500/1500ms backoff, central; never from `onAdFailedToLoad`) |
 | F3 | JS loses error detail (`errorCode: null` always) — bug vs no-fill indistinguishable | `NativeAdSlot.tsx:35,89` | FIX ADS-01: plumb `{code,message}` to logs |
-| F4 | Java same-ID reuse ignores 1h TTL — stale-serve risk past JS expiry | `NativeAdPlugin.java:49-53` vs `nativeAd.ts:26` | FIX ADS-02: Java-side expiry |
+| F4 | Java same-ID reuse ignores 1h TTL — stale-serve risk past JS expiry | `NativeAdPlugin.java:49-53` vs `nativeAd.ts:26` | ✅ ADS-02: `loadedAtMs` + `LOADED_AD_TTL_MS` in plugin (reuse + show paths destroy stale; mirrors JS TTL; device build is the compile gate) |
 | F5 | Upgrade surface cold start (no warmup hook; slot-open load only) | `premium/page.tsx:405` | ACCEPTED (same-screen decision): shared fixes only, no new warmup placement |
 | F6 | No premium check inside bridge (caller-gated only) | `nativeAd.ts:32-34` | ACCEPTED: all callers gated; harden only if a new caller appears |
 | F7 | Abandoned preload never explicitly destroyed (lobby leave w/o game-over) | Java holds until overwrite/destroy | FIX ADS-03: destroy-on-abandon + consume→preload-next |

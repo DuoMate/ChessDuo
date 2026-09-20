@@ -39,9 +39,16 @@ public class NativeAdPlugin extends Plugin {
      * console blocking/sensitive-category controls for anything finer.
      */
     private static final String MAX_AD_CONTENT_RATING = RequestConfiguration.MAX_AD_CONTENT_RATING_T;
+    /**
+     * How long a preloaded (not yet shown) ad is trusted (ADS-02). Mirrors
+     * NATIVE_AD_TTL_MS in src/lib/nativeAd.ts so neither layer can serve a
+     * stale ad the other side already discarded.
+     */
+    private static final long LOADED_AD_TTL_MS = 60L * 60L * 1000L;
     private NativeAd loadedAd;
     private NativeAdView visibleAdView;
     private String loadedAdUnitId;
+    private long loadedAtMs;
     private boolean sdkInitialized;
 
     @PluginMethod
@@ -57,9 +64,14 @@ public class NativeAdPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             initializeSdk();
             if (loadedAd != null && adUnitId.equals(loadedAdUnitId)) {
-                Log.d(TAG, "[ADS][GAMEOVER] adLoadSucceeded=true nativeAdPresent=true reused=true");
-                call.resolve();
-                return;
+                if (System.currentTimeMillis() - loadedAtMs <= LOADED_AD_TTL_MS) {
+                    Log.d(TAG, "[ADS][GAMEOVER] adLoadSucceeded=true nativeAdPresent=true reused=true");
+                    call.resolve();
+                    return;
+                }
+                // Stale preloaded ad — destroy it so this call fetches fresh.
+                Log.d(TAG, "[ADS][GAMEOVER] loadedAdExpired=true");
+                destroyLoadedAd();
             }
 
             AdLoader loader = new AdLoader.Builder(getContext(), adUnitId)
@@ -67,6 +79,7 @@ public class NativeAdPlugin extends Plugin {
                     destroyLoadedAd();
                     loadedAd = ad;
                     loadedAdUnitId = adUnitId;
+                    loadedAtMs = System.currentTimeMillis();
                     Log.d(TAG, "[ADS][GAMEOVER] adLoadSucceeded=true nativeAdPresent=true");
                     call.resolve();
                 })
@@ -88,6 +101,14 @@ public class NativeAdPlugin extends Plugin {
         Log.d(TAG, "[ADS][GAMEOVER] nativeAdPresent=" + (loadedAd != null));
         if (loadedAd == null) {
             call.reject("Native AdMob ad is not ready");
+            return;
+        }
+        if (System.currentTimeMillis() - loadedAtMs > LOADED_AD_TTL_MS) {
+            // Stale ad must never render — destroy it so the JS layer records
+            // the failure and refills for the next placement.
+            Log.d(TAG, "[ADS][GAMEOVER] loadedAdExpired=true");
+            destroyLoadedAd();
+            call.reject("Native AdMob ad expired before display");
             return;
         }
 
@@ -118,6 +139,7 @@ public class NativeAdPlugin extends Plugin {
             visibleAdView = adView;
             loadedAd = null;
             loadedAdUnitId = null;
+            loadedAtMs = 0;
             Log.d(TAG, "[ADS][GAMEOVER] nativeAdViewRendered=true");
             call.resolve();
         });
@@ -238,5 +260,6 @@ public class NativeAdPlugin extends Plugin {
         loadedAd.destroy();
         loadedAd = null;
         loadedAdUnitId = null;
+        loadedAtMs = 0;
     }
 }

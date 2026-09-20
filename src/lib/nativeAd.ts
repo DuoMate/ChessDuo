@@ -61,6 +61,27 @@ function logBridge(stage: string, requestId: number, extra?: Record<string, unkn
  */
 export const NATIVE_AD_TTL_MS = 60 * 60 * 1000
 
+/**
+ * Bounded preload retry (ADS-02). Transient load failures (network blips,
+ * cold SDK) get a second chance without spinning: at most this many native
+ * attempts per preload() call, with backoff between them. Never retries from
+ * a native onAdFailedToLoad loop — the bound lives here, centrally.
+ */
+export const PRELOAD_MAX_ATTEMPTS = 3
+const PRELOAD_RETRY_DELAYS_MS = [500, 1500]
+
+/**
+ * Cooldown for show-failure refills (ADS-02). A failed show consumes the
+ * cache; the refill below restores availability for the NEXT placement —
+ * but show can fail repeatedly (e.g. torn-down view), so refills are
+ * rate-limited to one per window. This recovers availability without
+ * manufacturing ad requests.
+ */
+const SHOW_REFILL_COOLDOWN_MS = 60 * 1000
+let lastRefillAtMs = 0
+
+const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms) })
+
 function getAdUnitId(): string {
   return process.env.NEXT_PUBLIC_ADMOB_NATIVE_ID?.trim() || ''
 }
@@ -69,7 +90,7 @@ function canUseNativeAd(): boolean {
   return typeof window !== 'undefined' && Capacitor.isNativePlatform() && !!getAdUnitId()
 }
 
-export async function preloadNativeAd(): Promise<boolean> {
+export async function preloadNativeAd(opts?: { retryDelaysMs?: number[]; maxAttempts?: number }): Promise<boolean> {
   if (!canUseNativeAd()) return false
 
   const adUnitId = getAdUnitId()
@@ -79,29 +100,38 @@ export async function preloadNativeAd(): Promise<boolean> {
   loadedAtMs = null
   if (preloadPromise) return preloadPromise
 
+  const retryDelays = opts?.retryDelaysMs ?? PRELOAD_RETRY_DELAYS_MS
+  const maxAttempts = opts?.maxAttempts ?? PRELOAD_MAX_ATTEMPTS
   preloadPromise = (async () => {
     const requestId = ++adRequestCounter
     logBridge('AD_REQUEST_STARTED', requestId, { op: 'preload' })
-    try {
-      await NativeAd.preload({ adUnitId })
-      loadedAdUnitId = adUnitId
-      loadedAtMs = Date.now()
-      lastAdError = null
-      logBridge('AD_LOAD_SUCCESS', requestId, { op: 'preload' })
-      return true
-    } catch (e) {
-      // Native ad loading is best effort and must never affect game flow.
-      lastAdError = toAdError(e)
-      logBridge('AD_LOAD_FAILED', requestId, { op: 'preload', ...lastAdError })
-      loadedAdUnitId = null
-      loadedAtMs = null
-      return false
-    } finally {
-      preloadPromise = null
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await NativeAd.preload({ adUnitId })
+        loadedAdUnitId = adUnitId
+        loadedAtMs = Date.now()
+        lastAdError = null
+        logBridge('AD_LOAD_SUCCESS', requestId, { op: 'preload', attempt })
+        return true
+      } catch (e) {
+        lastAdError = toAdError(e)
+        logBridge('AD_LOAD_FAILED', requestId, { op: 'preload', attempt, ...lastAdError })
+        if (attempt < maxAttempts) {
+          await sleep(retryDelays[attempt - 1] ?? 0)
+        }
+      }
     }
+    // Best effort: load failures must never affect game flow.
+    loadedAdUnitId = null
+    loadedAtMs = null
+    return false
   })()
 
-  return preloadPromise
+  try {
+    return await preloadPromise
+  } finally {
+    preloadPromise = null
+  }
 }
 
 export async function showNativeAd(bounds: NativeAdBounds): Promise<boolean> {
@@ -119,12 +149,32 @@ export async function showNativeAd(bounds: NativeAdBounds): Promise<boolean> {
     return true
   } catch (e) {
     // No-fill or native SDK failure leaves the existing popup usable.
+    // The spent cache is refilled (cooldown-guarded) so the NEXT placement
+    // has an ad — without manufacturing requests on every failed show.
     lastAdError = toAdError(e)
     logBridge('AD_LOAD_FAILED', requestId, { op: 'show', ...lastAdError })
     loadedAdUnitId = null
     loadedAtMs = null
+    maybeRefillAfterShowFailure()
     return false
   }
+}
+
+/**
+ * Cooldown-guarded background refill after a failed show (ADS-02). Fire and
+ * forget: best effort, never throws, single-flight deduped by preload().
+ * Single attempt (no backoff sleeps) so background recovery can never leak
+ * slow timers across game sessions; the next foreground preload carries the
+ * full retry bound.
+ */
+function maybeRefillAfterShowFailure(): void {
+  const now = Date.now()
+  if (now - lastRefillAtMs < SHOW_REFILL_COOLDOWN_MS) return
+  lastRefillAtMs = now
+  logBridge('NEXT_AD_PRELOAD_STARTED', ++adRequestCounter, { op: 'refill-after-show-failure' })
+  void preloadNativeAd({ maxAttempts: 1 }).catch(() => {
+    // Best effort — preload() already records the error for diagnostics.
+  })
 }
 
 export async function hideNativeAd(): Promise<void> {
