@@ -49,8 +49,8 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 | Room-code resolve duration | TODO | — | `[PERF] room-routing resolve` |
 | History bundle duration | TODO | — | `[PERF] history bundle` |
 | Friends bundle duration | TODO | — | `[PERF] friends bundle` |
-| `npx tsc --noEmit` | must pass | ✅ PERF-01/02/03 (1 pre-existing env error) | per commit |
-| `npm test` | no new failures | ✅ PERF-01/02/03 (baseline-identical) | per commit |
+| `npx tsc --noEmit` | must pass | ✅ PERF-01→06 + ADS-01→04 (1 pre-existing env error) | per commit |
+| `npm test` | no new failures | ✅ PERF-01→06 + ADS-01→04 (baseline-identical, 1510 passed) | per commit |
 | `npm run build` | must pass | ⛔ BLOCKED (pre-existing: uninstalled native packages) | per phase |
 
 ## Phase 4 session/waterfall verdicts (PERF-06)
