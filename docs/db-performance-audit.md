@@ -1,7 +1,7 @@
-# DB / Network Performance Audit — static baselines (PERF-01, Phase 0)
+# DB / Network Performance Audit — static baselines (PERF-01 Phase 0 + PERF-02/03 results)
 
-> Branch: `perf/db-network-optimization`. Scope: measure-only instrumentation, zero behavior change.
-> Governing rules: `docs/ARCHITECTURE.md` §12 (§12 single-bundle + narrow columns), §13 (single-flight caches),
+> Branch: `perf/db-network-optimization`.
+> Governing rules: `docs/ARCHITECTURE.md` §12 (single-bundle + narrow columns), §13 (single-flight caches),
 > §8/§8.1 (RLS-safe join, canonical RPC path), ADR-007 (round-trips over indexes).
 > This file does NOT replace `performance-audit.md` (UI audit, 2026-09-15) — it tracks DB/network work.
 > No runtime numbers below are manufactured: trip counts are counted from source; timing TODOs are
@@ -16,20 +16,22 @@ Measure points: duel poll, matchmaking tick, four-player tick, room-code routing
 history bundle, friends bundle. All no-ops in production without `?debug=1`.
 Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 
-## Static baselines (trips counted from source)
+## Findings (trips counted from source; ✅ = fixed, ⏸ = intentionally stopped)
 
 | Surface | Trips / mount or tick | Interval | Finding |
 |---|---|---|---|
-| Duel poll (`duelGame.ts:281`) | 1× `duel_games.select('*')` / tick | 2s | VIOLATION §12: `*` on poll; narrow to `status,player_black` (Phase 1) |
-| Matchmaking tick (`MatchmakingQueue.tsx:87`) | `findAvailableRoom` (1 rooms + ≤4 parallel RPCs) + `checkMyRoomJoined` + `rooms.select('*')` ≈ up to 7 / tick | 3s | VIOLATION §12: `*` in poll; no overlap guard (Phase 1+3) |
-| Four-player tick (`FourPlayerLobby.tsx:137`) | `fetchPlayers` (2 trips) + `rooms.select(status)` = 3 / tick | 2s | SUSPECT: narrow but poll-heavy; overlap guard first (Phase 3) |
-| Room routing (`page.tsx:444`) | 1–2× `rooms.select('*')` (code + id fallback) / join | on demand | VIOLATION §12: narrow to `id,code,mode,time_seconds` (Phase 1) |
-| History bundle (`matchHistory.ts:262`) | 1× memberships + 1× games (narrow, no JSONB) / load | on demand | OK per §12; memberships needs server `.limit(200)` (Phase 1) |
-| Friends bundle (`friends.ts:137`) | 1× friendships + 1× profiles.in / load | on demand | OK per §12; FriendsPanel chains `loadChallenges()` sequentially (Phase 2) |
-| Online polls (`onlineGame.ts:860,1053,1288`) | 3× `select('*')` sites | gameplay | VIOLATION §12: narrow to `player_id,team,status` / submission cols (Phase 1, ADR-006 safe) |
-| Challenge list (`challenges.ts:108`) | `select('*').limit(20)` | on demand | VIOLATION §12: narrow list cols (Phase 1) |
-| Four-player room lookup (`fourPlayerActions.ts:236`) | `rooms.select('*')` | on demand | VIOLATION §12: narrow (Phase 1) |
-| Messages (`messages.ts:67,84`) | uncapped sender/content selects | on demand | SUSPECT: cap `.limit(200)` (Phase 1) |
+| Duel poll (`duelGame.ts`) | 1× `duel_games` / tick | 2s | ✅ PERF-02: `*` → `status,player_black` (only cols consumed) |
+| Matchmaking tick (`MatchmakingQueue.tsx:87`) | `findAvailableRoom` (1 rooms + ≤4 parallel RPCs) + `checkMyRoomJoined` + `rooms` / tick | 3s | ✅ PERF-02: `rooms` `*` → `id,code` (all `handleRoomJoined` consumes); ✅ PERF-03: `checkMyRoomJoined` + `.limit(2)`, room-create insert-return → `id,code`. Overlap guard → Phase 3 |
+| Four-player tick (`FourPlayerLobby.tsx:137`) | `fetchPlayers` (2 trips) + `rooms.select(status)` = 3 / tick | 2s | OK narrow; overlap guard → Phase 3 |
+| Room routing (`page.tsx:444`) | 1–2× `rooms` (code + id fallback) / join | on demand | ✅ PERF-02: `*` → `id,code,mode,time_seconds` (all consumed) |
+| History bundle (`matchHistory.ts:262`) | 1× memberships + 1× games (narrow, no JSONB) / load | on demand | ✅ PERF-02: memberships + server `.limit(200)` (= `MAX_ROOM_LOOKUP` cap, identical semantics) |
+| Friends bundle (`friends.ts:137`) | 1× friendships + 1× profiles.in / load | on demand | OK per §12; bundle+challenges sequential → Phase 2 |
+| Online polls (`onlineGame.ts`) | 3 narrow sites | gameplay | ✅ PERF-03: start-gate + sync roster → `player_id,team` (`status` lived only in a DEBUG log, dropped there); restore → `player_id,turn_number,move_san,move_from,move_to,piece` (exactly `handleSubmissionFromDB`'s reads; unused `game_id` trimmed from its private param). ADR-006 untouched |
+| Challenge room pre-create (`challenges.ts:37`, `challenge/[code]/client.tsx:101`) | 1× rooms insert-return each | on demand | ✅ PERF-02: `*` → `id` / `id,code` (only cols consumed) |
+| Four-player join (`fourPlayerActions.ts:234`) | 1× rooms / join | on demand | ✅ PERF-02: `*` → `id,code,time_seconds` (only cols consumed) |
+| Challenge list (`challenges.ts:108`) | `select('*').limit(20)` | on demand | ⏸ STOP: no production caller (only its own test) — zero user impact |
+| Challenge detail (`challenges.ts:63,86`) | single-row `select('*')` | on demand | ⏸ STOP: `ChallengeLink` return-type contract — narrowing changes public shape |
+| Messages (`messages.ts:65,82`) | uncapped sender/content selects | on demand | ⏸ STOP: `getUnreadCounts` has no caller; challenge volume tiny — cap would change semantics without evidence |
 
 ## Runtime measurements (fill via `?debug=1`)
 
@@ -41,12 +43,12 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 | Room-code resolve duration | TODO | — | `[PERF] room-routing resolve` |
 | History bundle duration | TODO | — | `[PERF] history bundle` |
 | Friends bundle duration | TODO | — | `[PERF] friends bundle` |
-| `npx tsc --noEmit` | must pass | — | per commit |
-| `npm test` | no new failures | — | per commit |
-| `npm run build` | must pass | — | per phase |
+| `npx tsc --noEmit` | must pass | ✅ PERF-01/02/03 (1 pre-existing env error) | per commit |
+| `npm test` | no new failures | ✅ PERF-01/02/03 (baseline-identical) | per commit |
+| `npm run build` | must pass | ⛔ BLOCKED (pre-existing: uninstalled native packages) | per phase |
 
 ## Stop conditions honored
 
 No schema/RLS/RPC-volatility change; no auth/OAuth/PKCE/deep-link change; no game-sync
 semantic change (ADR-005/006); no billing/ads/push touch; no new state/data framework;
-no generic DB abstraction. Phase 1+ only for items with measured evidence above.
+no generic DB abstraction.

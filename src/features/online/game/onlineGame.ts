@@ -854,13 +854,14 @@ export class OnlineGame {
       DEBUG && console.log('[ONLINE] Presence roster:', Array.from(presenceRoster.entries()))
 
       // Authoritative roster from room_players (membership is guaranteed by the
-      // atomic join RPC before a client enters /game).
+      // atomic join RPC before a client reaches /game). PERF-03: narrow to the
+      // only columns consumed below (player_id + team).
       const { data: players } = await supabase
         .from('room_players')
-        .select('*')
+        .select('player_id,team')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
-      DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team, status: p.status }))))
+      DEBUG && console.log('[ONLINE] startGameWhenReady — room_players query returned:', players?.length, 'rows', JSON.stringify(players?.map(p => ({ player_id: p.player_id, team: p.team }))))
 
       // Merge teams: DB rows win (persistent + authoritative), presence
       // backfills any human whose row is not yet committed.
@@ -1047,10 +1048,11 @@ export class OnlineGame {
     DEBUG && console.log('[ONLINE] Syncing game state (late joiner)...')
     this.duoLog('GAME', 'SYNC_STARTED', {})
     try {
-      // Query room_players to get all human players
+      // Query room_players to get all human players. PERF-03: narrow to the
+      // only columns consumed below (player_id + team).
       const { data: players } = await supabase
         .from('room_players')
-        .select('*')
+        .select('player_id,team')
         .eq('room_id', this._room!.id)
         .order('player_id', { ascending: true })
 
@@ -1283,9 +1285,10 @@ export class OnlineGame {
   private async restoreCurrentTurnSubmissions(): Promise<boolean> {
     if (!this._gameId) return false
     try {
+      // PERF-03: narrow to exactly the columns handleSubmissionFromDB reads.
       const { data, error } = await supabase
         .from('turn_submissions')
-        .select('*')
+        .select('player_id,turn_number,move_san,move_from,move_to,piece')
         .eq('game_id', this._gameId)
         .eq('turn_number', this._currentTurnNumber)
 
@@ -1297,10 +1300,7 @@ export class OnlineGame {
 
       if (data && data.length > 0) {
         for (const sub of data) {
-          this.handleSubmissionFromDB(sub as {
-            game_id: string; turn_number: number; player_id: string
-            move_san: string; move_from: string; move_to: string; piece: string
-          })
+          this.handleSubmissionFromDB(sub)
         }
         DEBUG && console.log('[ONLINE] Restored', data.length, 'submissions for turn', this._currentTurnNumber)
         this.duoLog('MOVE', 'RESTORE_SUBMISSIONS', { restored: data.length, turnNumber: this._currentTurnNumber })
@@ -1930,7 +1930,6 @@ export class OnlineGame {
   }
 
   private handleSubmissionFromDB(submission: {
-    game_id: string
     turn_number: number
     player_id: string
     move_san: string
