@@ -6,6 +6,7 @@ import { findAvailableRoom, createQuickMatchRoom, joinQuickMatchRoom, checkMyRoo
 import { supabase } from '@/lib/supabase'
 import { Room } from '@/lib/supabase'
 import { Spinner } from '@/components/Spinner'
+import { exitPoll, incPollTick, logTiming, startMark, tryEnterPoll } from '@/lib/perfHarness'
 
 type Status = 'searching' | 'creating' | 'waiting' | 'joining' | 'error'
 
@@ -85,28 +86,37 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
     if (status !== 'waiting') return
 
     const interval = setInterval(async () => {
-      const match = await findAvailableRoom(playerId, timeSeconds)
-      if (match) {
-        const joined = await joinQuickMatchRoom(match.room.id, playerId, match.team, match.slot)
-        if (joined) {
-          onRoomJoined(match.room, match.team, playerId)
+      // PERF-01 measure-only: count ticks/timings/overlaps, no behavior change.
+      incPollTick('matchmaking')
+      const entered = tryEnterPoll('matchmaking')
+      const t0 = startMark()
+      try {
+        const match = await findAvailableRoom(playerId, timeSeconds)
+        if (match) {
+          const joined = await joinQuickMatchRoom(match.room.id, playerId, match.team, match.slot)
+          if (joined) {
+            onRoomJoined(match.room, match.team, playerId)
+          }
+          return
         }
-        return
-      }
 
-      // Also check if opponent joined the room we created
-      if (roomIdRef.current) {
-        const joined = await checkMyRoomJoined(roomIdRef.current)
-        if (joined) {
-          const { data: roomData } = await supabase
-            .from('rooms')
-            .select('*')
-            .eq('id', roomIdRef.current)
-            .single()
-          if (roomData) {
-            onRoomJoined(roomData as Room, 'WHITE', playerId)
+        // Also check if opponent joined the room we created
+        if (roomIdRef.current) {
+          const joined = await checkMyRoomJoined(roomIdRef.current)
+          if (joined) {
+            const { data: roomData } = await supabase
+              .from('rooms')
+              .select('*')
+              .eq('id', roomIdRef.current)
+              .single()
+            if (roomData) {
+              onRoomJoined(roomData as Room, 'WHITE', playerId)
+            }
           }
         }
+      } finally {
+        logTiming('matchmaking', 'tick', t0)
+        if (entered) exitPoll('matchmaking')
       }
     }, 3000)
 

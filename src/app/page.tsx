@@ -35,6 +35,7 @@ import { ConfigurationPanel } from '@/components/ConfigurationPanel'
 import { BotDifficultyGrid } from '@/components/BotDifficultyGrid'
 import { DIFFICULTY_LEVELS, SELECTED_LEVEL_KEY } from '@/components/difficultyLevels'
 import { motion, AnimatePresence } from 'framer-motion'
+import { incDbRequest, logTiming, startMark } from '@/lib/perfHarness'
 
 export const dynamic = 'force-dynamic'
 
@@ -440,7 +441,9 @@ export default function SetupPage() {
 
         // Resolve code-or-id to a room for four-player routing and UUID links.
         // The atomic join RPC is the authority for join-ability/team/slot.
+        // PERF-01 measure-only: timing + request counts, no behavior change.
         let room = null
+        const t0 = startMark()
         const { data: byCode, error: byCodeError } = await supabase
           .from('rooms')
           .select('*')
@@ -448,6 +451,7 @@ export default function SetupPage() {
           .eq('status', 'waiting')
           .or(`expires_at.is.null,expires_at.gt.${now}`)
           .maybeSingle()
+        incDbRequest('room-routing', 'byCode')
         if (byCode) {
           room = byCode
         } else if (!byCodeError) {
@@ -458,10 +462,12 @@ export default function SetupPage() {
             .eq('status', 'waiting')
             .or(`expires_at.is.null,expires_at.gt.${now}`)
             .maybeSingle()
+          incDbRequest('room-routing', 'byId-fallback')
           if (byId) {
             room = byId
           }
         }
+        logTiming('room-routing', 'resolve', t0)
 
         if (room) {
           if (room.mode === 'fourplayer') {

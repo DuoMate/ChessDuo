@@ -8,6 +8,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { subscriptionManager } from './subscriptionManager'
 import { RealtimeService } from './realtimeService'
 import { realtimeMetrics } from './realtimeMetrics'
+import { exitPoll, incDbRequest, incPollTick, logTiming, startMark, tryEnterPoll } from './perfHarness'
 
 export interface DuelPlayerState {
   id: string
@@ -283,11 +284,18 @@ export class DuelGame {
         clearInterval(this._pollingInterval!)
         return
       }
+      // PERF-01 measure-only: count ticks/timings/overlaps, no behavior change.
+      incPollTick('duel')
+      const entered = tryEnterPoll(`duel:${this._roomId}`)
+      const t0 = startMark()
       const { data } = await supabase
         .from('duel_games')
         .select('*')
         .eq('room_id', this._roomId)
         .single()
+      incDbRequest('duel', 'poll')
+      logTiming('duel', 'poll', t0)
+      if (entered) exitPoll(`duel:${this._roomId}`)
       if (data && data.player_black && data.status === 'playing') {
         this.startGame()
         clearInterval(this._pollingInterval!)

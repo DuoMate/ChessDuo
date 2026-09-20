@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { incDbRequest, logTiming, startMark } from './perfHarness'
 
 export interface CompletedGame {
   id: string
@@ -265,17 +266,23 @@ async function loadHistoryBundle(
 ): Promise<{ games: CompletedGame[]; viewerTeamsByRoom: Map<string, string> }> {
   let dbGames: CompletedGame[] = []
   const viewerTeamsByRoom = new Map<string, string>()
+  // PERF-01 measure-only: timing + request counts, no behavior change.
+  const t0 = startMark()
   try {
     const memberships = await getUserRoomMemberships(userId)
+    incDbRequest('history', 'memberships')
     for (const m of memberships) {
       if (m.room_id && m.team) viewerTeamsByRoom.set(m.room_id, m.team)
     }
     const capped = memberships.slice(0, MAX_ROOM_LOOKUP)
     if (capped.length > 0) {
       dbGames = await fetchCompletedGames(capped.map(m => m.room_id), limit)
+      incDbRequest('history', 'games')
     }
   } catch (e) {
     console.error('[MatchHistory] Supabase query failed, falling back to localStorage:', e)
+  } finally {
+    logTiming('history', 'bundle', t0)
   }
 
   const dbRoomIds = new Set(dbGames.map(g => g.room_id))

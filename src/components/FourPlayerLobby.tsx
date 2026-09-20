@@ -9,6 +9,7 @@ import { Spinner } from '@/components/Spinner'
 import { supabase } from '@/lib/supabase'
 import { getAppBaseUrl } from '@/lib/appUrl'
 import { shareLink } from '@/lib/share'
+import { exitPoll, incDbRequest, incPollTick, logTiming, startMark, tryEnterPoll } from '@/lib/perfHarness'
 import {
   getLobbyPlayers,
   joinLobby,
@@ -135,22 +136,32 @@ export function FourPlayerLobby({
     if (view !== 'lobby') return
 
     const interval = setInterval(async () => {
-      const currentPlayers = await fetchPlayers()
-      if (!currentPlayers) return
+      // PERF-01 measure-only: count ticks/timings/overlaps, no behavior change.
+      incPollTick('fourplayer')
+      const entered = tryEnterPoll(`fourplayer:${roomId}`)
+      const t0 = startMark()
+      try {
+        const currentPlayers = await fetchPlayers()
+        if (!currentPlayers) return
 
-      const { data: room } = await supabase
-        .from('rooms')
-        .select('status')
-        .eq('id', roomId)
-        .single()
+        const { data: room } = await supabase
+          .from('rooms')
+          .select('status')
+          .eq('id', roomId)
+          .single()
+        incDbRequest('fourplayer', 'room-status')
 
-      if (room?.status === 'playing') {
-        clearInterval(interval)
-        const me = currentPlayers.find(p => p.playerId === playerId)
-        if (me?.team) {
-    router.replace(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}&fourplayer=1`)
+        if (room?.status === 'playing') {
+          clearInterval(interval)
+          const me = currentPlayers.find(p => p.playerId === playerId)
+          if (me?.team) {
+            router.replace(`/game?mode=online&room=${roomId}&code=${roomCode}&team=${me.team}&playerId=${playerId}&time=${timeSeconds}&fourplayer=1`)
+          }
+          return
         }
-        return
+      } finally {
+        logTiming('fourplayer', 'tick', t0)
+        if (entered) exitPoll(`fourplayer:${roomId}`)
       }
     }, 2000)
 
