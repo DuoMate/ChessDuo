@@ -34,7 +34,6 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 | Messages (`messages.ts:65,82`) | uncapped sender/content selects | on demand | ⏸ STOP: `getUnreadCounts` has no caller; challenge volume tiny — cap would change semantics without evidence |
 
 ## Phase 2 parallelization verdicts (PERF-04)
-
 - ✅ FriendsPanel `loadData`: bundle + challenges concurrent (proven: separate tables, separate setters, timing preserved).
 - ✅ Game team labels: white + black username fetches via `Promise.all` (proven: same-table independent reads, merged afterwards; no component harness exists for this path — guarded by tsc + suite).
 - ⏸ STOP `handleAcceptChallenge` (room upsert → duel update → mark-read): independent tables but sequential WRITES — parallelizing would change partial-failure semantics. Left sequential.
@@ -54,8 +53,14 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 | `npm test` | no new failures | ✅ PERF-01/02/03 (baseline-identical) | per commit |
 | `npm run build` | must pass | ⛔ BLOCKED (pre-existing: uninstalled native packages) | per phase |
 
-## Stop conditions honored
+## Phase 4 session/waterfall verdicts (PERF-06)
 
+- ✅ Removed dead `supabase` imports in `game/page.tsx` + `duel/page.tsx` (zero references; hygiene only).
+- ⏸ STOP `usePremium` double `getSession()`: same-tick calls collapse via AuthService single-flight (proven no-op gain); outer call owns the signed-out fast path — removing it risks premium fail-closed semantics.
+- ⏸ STOP game/duel/coach session-gated render: unblocking the dynamic chunk before identity validation risks mounting the engine with the wrong player + redirect races with pending room/invite actions. Needs runtime proof + auth review first.
+- ⏸ STOP middleware: already `/history`-only; no measured latency attributable to it.
+
+## Stop conditions honored
 No schema/RLS/RPC-volatility change; no auth/OAuth/PKCE/deep-link change; no game-sync
 semantic change (ADR-005/006); no billing/ads/push touch; no new state/data framework;
 no generic DB abstraction.
