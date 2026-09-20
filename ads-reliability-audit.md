@@ -44,7 +44,7 @@ AD_REQUEST_STARTED (id) → AD_LOAD_FAILED (code/domain/message) → bounded bac
 | F4 | Java same-ID reuse ignores 1h TTL — stale-serve risk past JS expiry | `NativeAdPlugin.java:49-53` vs `nativeAd.ts:26` | ✅ ADS-02: `loadedAtMs` + `LOADED_AD_TTL_MS` in plugin (reuse + show paths destroy stale; mirrors JS TTL; device build is the compile gate) |
 | F5 | Upgrade surface cold start (no warmup hook; slot-open load only) | `premium/page.tsx:405` | ACCEPTED (same-screen decision): shared fixes only, no new warmup placement |
 | F6 | No premium check inside bridge (caller-gated only) | `nativeAd.ts:32-34` | ACCEPTED: all callers gated; harden only if a new caller appears |
-| F7 | Abandoned preload never explicitly destroyed (lobby leave w/o game-over) | Java holds until overwrite/destroy | FIX ADS-03: destroy-on-abandon + consume→preload-next |
+| F7 | Abandoned preload never explicitly destroyed (lobby leave w/o game-over) | Java holds until overwrite/destroy | ✅ ADS-03: `discardLoadedAd` on both layers + auto-call on premium flip; lobby-abandon remainder TTL-bounded (accepted) |
 
 ## 4. Suspected causes of "empty ad area, repeatedly"
 
@@ -69,3 +69,29 @@ rating T on requests; ads serve normally otherwise.
 ## 6. Metrics (device runs)
 
 Funnel per eligible game-over: REQUEST → LOAD (ok/fail+code) → READY → ATTACHED → VISIBLE → IMPRESSION → CONSUMED → NEXT_READY. Target: raise eligible→impression rate via availability, never via refresh/click tricks.
+
+## 7. Consume → refill (ADS-03, implemented)
+
+Successful show proactively loads the NEXT ad (single attempt, single-flight
+deduped — full retry bound lives at the next warmup/slot-open). MAX_READY stays
+1. Premium flip destroys the cached ad on both layers and all future preloads
+are already premium-gated — premium stays fully ad-free with zero entitlement
+changes. No user-facing ad errors anywhere (verified by grep: no toast/alert
+in slot, bridge, or warmup hook).
+
+## 8. Game-over coverage (ADS-04, audited — no gaps found)
+
+- Quick/Duo/4P (`Game.tsx:2712`): every terminal (checkmate/timeout/resign/draw)
+  sets `GAME_OVER` → single `GameOverModal` with slot. No change needed.
+- Duel (`DuelGame.tsx:685`): engine terminals sync winner+result+status; leave-abort
+  synthesizes `game_over/abandoned` with all three fields. No change needed.
+- Coach (inline `:509`): `game_over` terminal + `abandon()` convergence render the
+  slot; premium offer gated separately. No change needed.
+- Upgrade (`premium/page.tsx:403`): existing slot behavior preserved (same-screen
+  decision). No change needed.
+
+## 9. Status
+
+F1 ✅ F2 ✅ F3 ✅ F4 ✅ F5 accepted F6 accepted F7 ✅ (bounded remainder).
+Remaining: device funnel runs (eligible→impression per end-type), Ad Inspector
+rating-T confirmation, release-build compile of the Java patch.

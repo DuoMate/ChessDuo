@@ -153,6 +153,20 @@ public class NativeAdPlugin extends Plugin {
         });
     }
 
+    /**
+     * Discards a preloaded-but-never-shown ad (ADS-03). Called when the
+     * cached ad must not serve afterwards (premium upgrade) — the JS layer
+     * already cleared its cache; this frees the native object. Idempotent.
+     */
+    @PluginMethod
+    public void discardLoadedAd(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            destroyLoadedAd();
+            Log.d(TAG, "[ADS][GAMEOVER] loadedAdDiscarded=true");
+            call.resolve();
+        });
+    }
+
     @Override
     protected void handleOnDestroy() {
         hideVisibleAd();

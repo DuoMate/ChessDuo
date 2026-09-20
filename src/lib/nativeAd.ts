@@ -12,6 +12,7 @@ interface NativeAdPlugin {
   preload(options: { adUnitId: string }): Promise<void>
   show(options: NativeAdBounds): Promise<void>
   hide(): Promise<void>
+  discardLoadedAd(): Promise<void>
 }
 
 const NativeAd = registerPlugin<NativeAdPlugin>('NativeAd')
@@ -146,6 +147,12 @@ export async function showNativeAd(bounds: NativeAdBounds): Promise<boolean> {
     loadedAtMs = null
     lastAdError = null
     logBridge('AD_CONSUMED', requestId, { op: 'show' })
+    // ADS-03 consume → refill: proactively load the NEXT ad for the next
+    // eligible placement (single attempt, single-flight deduped — the next
+    // warmup/slot-open carries the full retry bound). MAX_READY stays 1.
+    void preloadNativeAd({ maxAttempts: 1 }).catch(() => {
+      // Best effort — preload() already records the error for diagnostics.
+    })
     return true
   } catch (e) {
     // No-fill or native SDK failure leaves the existing popup usable.
@@ -184,5 +191,23 @@ export async function hideNativeAd(): Promise<void> {
     await NativeAd.hide()
   } catch {
     // The native view may already be gone during route teardown.
+  }
+}
+
+/**
+ * Discards a preloaded-but-never-shown ad (ADS-03). Used when the user
+ * becomes premium (cached ads must never serve afterwards) — future
+ * preloads are already gated by callers checking premium state. Clears both
+ * layers best-effort and never throws. No user-facing effect.
+ */
+export async function discardPreloadedAd(): Promise<void> {
+  loadedAdUnitId = null
+  loadedAtMs = null
+  if (!canUseNativeAd()) return
+
+  try {
+    await NativeAd.discardLoadedAd()
+  } catch {
+    // Native side may be gone (teardown) — the JS cache is already clear.
   }
 }
