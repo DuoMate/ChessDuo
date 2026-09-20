@@ -8,6 +8,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { subscriptionManager } from './subscriptionManager'
 import { RealtimeService } from './realtimeService'
 import { realtimeMetrics } from './realtimeMetrics'
+import { exitPoll, incDbRequest, incPollTick, logTiming, startMark, tryEnterPoll } from './perfHarness'
 
 export interface DuelPlayerState {
   id: string
@@ -283,14 +284,26 @@ export class DuelGame {
         clearInterval(this._pollingInterval!)
         return
       }
-      const { data } = await supabase
-        .from('duel_games')
-        .select('*')
-        .eq('room_id', this._roomId)
-        .single()
-      if (data && data.player_black && data.status === 'playing') {
-        this.startGame()
-        clearInterval(this._pollingInterval!)
+      incPollTick('duel')
+      // PERF-05: skip overlapping ticks — a slow 2s poll must never stack
+      // concurrent requests. Skipped ticks only delay the next check by ≤2s;
+      // game-start detection and realtime remain untouched.
+      if (!tryEnterPoll(`duel:${this._roomId}`)) return
+      const t0 = startMark()
+      try {
+        const { data } = await supabase
+          .from('duel_games')
+          .select('status,player_black')
+          .eq('room_id', this._roomId)
+          .single()
+        incDbRequest('duel', 'poll')
+        if (data && data.player_black && data.status === 'playing') {
+          this.startGame()
+          clearInterval(this._pollingInterval!)
+        }
+      } finally {
+        logTiming('duel', 'poll', t0)
+        exitPoll(`duel:${this._roomId}`)
       }
     }, 2000)
   }

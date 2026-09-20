@@ -233,7 +233,7 @@ export async function joinFourPlayerByCode(options: {
 
   const { data: room } = await supabase
     .from('rooms')
-    .select('*')
+    .select('id,code,time_seconds')
     .eq('code', code)
     .eq('status', 'waiting')
     .maybeSingle()

@@ -1,6 +1,7 @@
 import {
   createFourPlayerRoom,
   joinFourPlayerRoom,
+  joinFourPlayerByCode,
   leaveFourPlayerRoom,
   getFourPlayerSeats,
   areAllSeatsFilled,
@@ -234,5 +235,39 @@ describe('fourPlayerActions', () => {
       ]
       expect(areAllSeatsFilled(seats)).toBe(false)
     })
+  })
+})
+
+describe('joinFourPlayerByCode (PERF-02 narrow)', () => {
+  it('selects only the columns it consumes (no select *)', async () => {
+    const selectCols: string[] = []
+    const mockMaybeSingle = jest.fn().mockResolvedValue({
+      data: { id: 'room-1', code: 'ABC123', time_seconds: 600 },
+      error: null,
+    })
+    const mockEq2 = jest.fn().mockReturnValue({ maybeSingle: mockMaybeSingle })
+    const mockEq1 = jest.fn().mockReturnValue({ eq: mockEq2 })
+    const mockSelect = jest.fn((cols: string) => {
+      selectCols.push(cols)
+      return { eq: mockEq1 }
+    })
+    ;(supabase.from as jest.Mock).mockImplementation(() => ({ select: mockSelect }))
+
+    const result = await joinFourPlayerByCode({ code: 'ABC123', playerId: 'p1' })
+    expect(result).toEqual({ roomId: 'room-1', roomCode: 'ABC123', timeSeconds: 600 })
+    expect(selectCols).toHaveLength(1)
+    expect(selectCols[0]).not.toContain('*')
+    expect(selectCols[0]).toBe('id,code,time_seconds')
+  })
+
+  it('returns null when no room matches', async () => {
+    const mockMaybeSingle = jest.fn().mockResolvedValue({ data: null, error: null })
+    const mockEq2 = jest.fn().mockReturnValue({ maybeSingle: mockMaybeSingle })
+    const mockEq1 = jest.fn().mockReturnValue({ eq: mockEq2 })
+    ;(supabase.from as jest.Mock).mockImplementation(() => ({
+      select: jest.fn().mockReturnValue({ eq: mockEq1 }),
+    }))
+
+    await expect(joinFourPlayerByCode({ code: 'NOPE', playerId: 'p1' })).resolves.toBeNull()
   })
 })

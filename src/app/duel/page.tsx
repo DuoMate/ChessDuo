@@ -7,7 +7,6 @@ import { DEFAULT_TEAM_TIMER_SECONDS } from '@/features/shared/gameConstants'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { TriangleAlert, Lock } from 'lucide-react'
 import { PageLoading } from '@/components/PageLoading'
-import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 
 const DuelGameComponent = dynamic(() => import('@/components/DuelGame').then(mod => ({ default: mod.DuelGame })), {

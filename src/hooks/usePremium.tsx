@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef, ty
 import { SubscriptionService } from '@/features/billing'
 import { RealtimeService } from '@/lib/realtimeService'
 import { AuthService } from '@/lib/authService'
+import { discardPreloadedAd } from '@/lib/nativeAd'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface PremiumContextValue {
@@ -26,6 +27,16 @@ export function PremiumProvider({ children }: { children: ReactNode }) {
   // A ref carries the latest value into the stable subscription callback.
   const isPremiumRef = useRef(isPremium)
   isPremiumRef.current = isPremium
+  // ADS-03: when the user becomes premium, destroy any unused preloaded ad
+  // so it can never serve afterwards. Future preloads are already gated by
+  // isPremium checks in the slot + warmup hook. Best effort, silent.
+  const wasPremiumRef = useRef(false)
+  useEffect(() => {
+    if (isPremium && !wasPremiumRef.current) {
+      void discardPreloadedAd()
+    }
+    wasPremiumRef.current = isPremium
+  }, [isPremium])
 
   const checkPremium = useCallback(async () => {
     if (checkingRef.current) return

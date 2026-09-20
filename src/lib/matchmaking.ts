@@ -68,10 +68,12 @@ export async function findAvailableRoom(playerId: string, timeSeconds?: number):
 }
 
 export async function checkMyRoomJoined(roomId: string): Promise<boolean> {
+  // PERF-03: only the >= 2 verdict is consumed, so bound the scan server-side.
   const { data, error } = await supabase
     .from('room_players')
     .select('player_id')
     .eq('room_id', roomId)
+    .limit(2)
   if (error || !data) return false
   return data.length >= 2
 }
@@ -113,7 +115,7 @@ export async function createQuickMatchRoom(playerId: string, timeSeconds: number
     const { data: room, error } = await supabase
       .from('rooms')
       .insert({ code, status: 'waiting', created_by: playerId, time_seconds: timeSeconds, expires_at: expiresAt, host_team: 'WHITE' })
-      .select()
+      .select('id,code')
       .single()
 
     if (error) {
