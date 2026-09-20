@@ -21,6 +21,7 @@ import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.nativead.AdChoicesView;
 import com.google.android.gms.ads.nativead.MediaView;
 import com.google.android.gms.ads.nativead.NativeAd;
@@ -29,6 +30,15 @@ import com.google.android.gms.ads.nativead.NativeAdView;
 @CapacitorPlugin(name = "NativeAd")
 public class NativeAdPlugin extends Plugin {
     private static final String TAG = "ChessDuoAds";
+    /**
+     * Maximum ad content rating (ADS-02a policy). Teen and below only:
+     * G + PG + T allowed, MA excluded. Centralized here so the policy changes
+     * in exactly one place. Defense-in-depth with the AdMob Console setting
+     * (also T) — the SDK request-level filter overrides the console value.
+     * T is a maximum filter, not a per-ad appropriateness guarantee; use
+     * console blocking/sensitive-category controls for anything finer.
+     */
+    private static final String MAX_AD_CONTENT_RATING = RequestConfiguration.MAX_AD_CONTENT_RATING_T;
     private NativeAd loadedAd;
     private NativeAdView visibleAdView;
     private String loadedAdUnitId;
@@ -131,6 +141,12 @@ public class NativeAdPlugin extends Plugin {
     private void initializeSdk() {
         if (sdkInitialized) return;
         sdkInitialized = true;
+        RequestConfiguration requestConfiguration = MobileAds.getRequestConfiguration()
+                .toBuilder()
+                .setMaxAdContentRating(MAX_AD_CONTENT_RATING)
+                .build();
+        MobileAds.setRequestConfiguration(requestConfiguration);
+        Log.d(TAG, "[ADS][GAMEOVER] contentRatingMax=" + MAX_AD_CONTENT_RATING);
         MobileAds.initialize(getContext(), status -> { });
     }
 

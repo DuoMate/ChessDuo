@@ -52,8 +52,14 @@ AD_REQUEST_STARTED (id) → AD_LOAD_FAILED (code/domain/message) → bounded bac
 - If show fails once (zero bounds mid-animation) → cache consumed, stuck blank (F1) even with a good fill.
 - Genuine AdMob no-fill/inventory remains possible per user/device — must be recorded accurately (F3), not treated as bug.
 
-## 5. Proposed fix (ADS-02/03)
+## 5. Proposed fix (ADS-02/03 + ADS-02a content rating)
 
+ADS-02a (implemented): max ad content rating T enforced in code —
+`NativeAdPlugin.MAX_AD_CONTENT_RATING` (`MAX_AD_CONTENT_RATING_T`) applied via
+`MobileAds.setRequestConfiguration()` in `initializeSdk()` before init + before any
+request. Console setting (also T) retained as defense-in-depth. No unit/format/ID/
+premium/preload behavior change. Device verification: Ad Inspector must show max
+rating T on requests; ads serve normally otherwise.
 1. Structured errors through the bridge (`getLastAdError()` + request IDs, ADS-01).
 2. Bounded retry/backoff + show-failure re-preload (ADS-02).
 3. Java 1h expiry + destroy-on-abandon (ADS-02/03).

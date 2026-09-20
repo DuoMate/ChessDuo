@@ -317,6 +317,7 @@ SubscriptionService
 - Android is generated during builds. `scripts/install-native-ad.sh` copies `android-patches/NativeAdPlugin.java`, adds the Google Mobile Ads SDK, and injects `NEXT_PUBLIC_ADMOB_APP_ID` into the manifest.
 - `NEXT_PUBLIC_ADMOB_NATIVE_ID` must be a Native Advanced ad unit. `NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID` is not used for bounded popup placement.
 - Native ad loading and teardown are best effort and never gate game-over state, navigation, or popup controls.
+- Ad content rating is capped at Teen, enforced in code: `NativeAdPlugin.initializeSdk()` applies `RequestConfiguration.setMaxAdContentRating(MAX_AD_CONTENT_RATING_T)` (centralized `MAX_AD_CONTENT_RATING` constant in `android-patches/NativeAdPlugin.java` — the single policy point) before `MobileAds.initialize()`. Defense-in-depth with the AdMob Console setting (also T); the SDK request-level filter overrides the console value. G/PG/T allowed, MA excluded. T is a maximum filter, not a per-ad appropriateness guarantee. Verify via Ad Inspector that requests carry the rating.
 
 ### 9.1 Web AdSense Game-Over Parity
 
