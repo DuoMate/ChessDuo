@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { usePremium } from '@/hooks/usePremium'
-import { hideNativeAd, preloadNativeAd, showNativeAd } from '@/lib/nativeAd'
+import { hideNativeAd, preloadNativeAd, showNativeAd, getLastAdError } from '@/lib/nativeAd'
 import { DEBUG } from '@/lib/debug'
 
 type AdSurface = 'game_over' | 'upgrade'
@@ -40,6 +40,7 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
     }))
     preloadNativeAd().then((loaded) => {
       if (!active) return
+      const lastError = loaded ? null : getLastAdError()
       DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
         surface,
         reason: reasonRef.current || 'unknown',
@@ -47,8 +48,8 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
         adLoadRequested: true,
         adLoadSucceeded: loaded,
         adLoadFailed: !loaded,
-        errorCode: null,
-        errorMessage: loaded ? null : 'Native ad preload failed; see Android logcat',
+        errorCode: lastError?.code ?? null,
+        errorMessage: loaded ? null : (lastError?.message ?? 'Native ad preload failed; see Android logcat'),
         nativeAdPresent: loaded,
         nativeAdViewRendered: false,
         popupVisible: open,
@@ -79,6 +80,7 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
         width: bounds.width,
         height: bounds.height,
       }).then((rendered) => {
+        const lastError = rendered ? null : getLastAdError()
         DEBUG && console.log(`[ADS][${surface === 'upgrade' ? 'UPGRADE' : 'GAMEOVER'}]`, JSON.stringify({
           surface,
           reason: reasonRef.current || 'unknown',
@@ -86,8 +88,8 @@ export function NativeAdSlot({ open, gameOverReason, surface = 'game_over' }: { 
           adLoadRequested: true,
           adLoadSucceeded: true,
           adLoadFailed: false,
-          errorCode: null,
-          errorMessage: null,
+          errorCode: lastError?.code ?? null,
+          errorMessage: lastError?.message ?? null,
           nativeAdPresent: true,
           nativeAdViewRendered: rendered,
           popupVisible: open,

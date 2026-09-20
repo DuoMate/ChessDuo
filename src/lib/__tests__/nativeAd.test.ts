@@ -1,5 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
-import { hideNativeAd, preloadNativeAd, showNativeAd } from '../nativeAd'
+import { getLastAdError, hideNativeAd, preloadNativeAd, showNativeAd } from '../nativeAd'
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: jest.fn() },
@@ -90,5 +90,53 @@ describe('nativeAd', () => {
     } finally {
       jest.restoreAllMocks()
     }
+  })
+})
+describe('nativeAd diagnostics (ADS-01)', () => {
+  const bounds = { x: 0, y: 0, width: 300, height: 180 }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.NEXT_PUBLIC_ADMOB_NATIVE_ID = 'ca-app-pub-test/native'
+  })
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_ADMOB_NATIVE_ID
+  })
+
+  it('records the native error code/message when preload fails', async () => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    // Clear any cached ad left by earlier tests so this preload hits native.
+    await showNativeAd(bounds)
+    nativeAdPlugin.preload.mockRejectedValueOnce(
+      Object.assign(new Error('No fill'), { code: 'ERROR_CODE_NO_FILL' }),
+    )
+
+    await expect(preloadNativeAd()).resolves.toBe(false)
+    expect(getLastAdError()).toEqual({ code: 'ERROR_CODE_NO_FILL', message: 'No fill' })
+  })
+
+  it('clears the recorded error after a successful preload', async () => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    await showNativeAd(bounds)
+    nativeAdPlugin.preload.mockRejectedValueOnce(new Error('transient'))
+
+    await expect(preloadNativeAd()).resolves.toBe(false)
+    expect(getLastAdError()).not.toBeNull()
+    await expect(preloadNativeAd()).resolves.toBe(true)
+    expect(getLastAdError()).toBeNull()
+  })
+
+  it('records the native error when show fails', async () => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    await showNativeAd(bounds)
+    nativeAdPlugin.preload.mockResolvedValueOnce(undefined)
+    nativeAdPlugin.show.mockRejectedValueOnce(
+      Object.assign(new Error('show failed'), { code: 'ERROR_CODE_INTERNAL_ERROR' }),
+    )
+
+    await expect(preloadNativeAd()).resolves.toBe(true)
+    await expect(showNativeAd(bounds)).resolves.toBe(false)
+    expect(getLastAdError()).toEqual({ code: 'ERROR_CODE_INTERNAL_ERROR', message: 'show failed' })
   })
 })
