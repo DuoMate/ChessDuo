@@ -106,7 +106,7 @@ export function MatchmakingQueue({ playerId, username, timeSeconds, onRoomJoined
           if (joined) {
             const { data: roomData } = await supabase
               .from('rooms')
-              .select('*')
+              .select('id,code')
               .eq('id', roomIdRef.current)
               .single()
             if (roomData) {

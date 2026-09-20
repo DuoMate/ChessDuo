@@ -446,7 +446,7 @@ export default function SetupPage() {
         const t0 = startMark()
         const { data: byCode, error: byCodeError } = await supabase
           .from('rooms')
-          .select('*')
+          .select('id,code,mode,time_seconds')
           .eq('code', codeParam)
           .eq('status', 'waiting')
           .or(`expires_at.is.null,expires_at.gt.${now}`)
@@ -457,7 +457,7 @@ export default function SetupPage() {
         } else if (!byCodeError) {
           const { data: byId } = await supabase
             .from('rooms')
-            .select('*')
+            .select('id,code,mode,time_seconds')
             .eq('id', codeParam)
             .eq('status', 'waiting')
             .or(`expires_at.is.null,expires_at.gt.${now}`)

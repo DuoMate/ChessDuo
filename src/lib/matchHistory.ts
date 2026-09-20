@@ -206,6 +206,7 @@ async function getUserRoomMemberships(userId: string): Promise<RoomMembership[]>
     .from('room_players')
     .select('room_id, team')
     .eq('player_id', userId)
+    .limit(MAX_ROOM_LOOKUP)
 
   if (error) throw error
   return data || []

@@ -290,7 +290,7 @@ export class DuelGame {
       const t0 = startMark()
       const { data } = await supabase
         .from('duel_games')
-        .select('*')
+        .select('status,player_black')
         .eq('room_id', this._roomId)
         .single()
       incDbRequest('duel', 'poll')
