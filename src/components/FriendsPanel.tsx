@@ -107,13 +107,18 @@ export function FriendsPanel({ playerId, unreadBySender = {}, onClose, openChat 
   const loadData = useCallback(async () => {
     // P1 perf: single bundle (1× friendships + 1× profiles.in) instead of
     // 3× (friendships→profiles.in) = 6 hops for accepted/pending/blocked.
-    const bundle = await getFriendsBundle(playerId)
+    // PERF-04: bundle + challenges are independent reads (separate tables +
+    // separate state) — launch together so the messages round trip overlaps
+    // the bundle's. Bundle still gates setStates/setLoading exactly as before.
+    const bundlePromise = getFriendsBundle(playerId)
+    const challengesPromise = loadChallenges()
+    const bundle = await bundlePromise
     if (!mountedRef.current) return
     setFriends(bundle.friends)
     setPending({ incoming: bundle.incoming, outgoing: bundle.outgoing })
     setBlocked(bundle.blocked)
     setLoading(false)
-    loadChallenges()
+    await challengesPromise
   }, [playerId, loadChallenges])
 
   useEffect(() => {

@@ -25,13 +25,20 @@ Test: `src/lib/__tests__/perfHarness.test.ts` (5 tests, TDD red→green).
 | Four-player tick (`FourPlayerLobby.tsx:137`) | `fetchPlayers` (2 trips) + `rooms.select(status)` = 3 / tick | 2s | OK narrow; overlap guard → Phase 3 |
 | Room routing (`page.tsx:444`) | 1–2× `rooms` (code + id fallback) / join | on demand | ✅ PERF-02: `*` → `id,code,mode,time_seconds` (all consumed) |
 | History bundle (`matchHistory.ts:262`) | 1× memberships + 1× games (narrow, no JSONB) / load | on demand | ✅ PERF-02: memberships + server `.limit(200)` (= `MAX_ROOM_LOOKUP` cap, identical semantics) |
-| Friends bundle (`friends.ts:137`) | 1× friendships + 1× profiles.in / load | on demand | OK per §12; bundle+challenges sequential → Phase 2 |
+| Friends bundle (`friends.ts:137`) | 1× friendships + 1× profiles.in / load | on demand | ✅ PERF-04: bundle + `loadChallenges()` launched together (independent tables/state; bundle still gates `setLoading`). Test: concurrency assertion in `FriendsPanel.test.tsx` (TDD red→green) |
 | Online polls (`onlineGame.ts`) | 3 narrow sites | gameplay | ✅ PERF-03: start-gate + sync roster → `player_id,team` (`status` lived only in a DEBUG log, dropped there); restore → `player_id,turn_number,move_san,move_from,move_to,piece` (exactly `handleSubmissionFromDB`'s reads; unused `game_id` trimmed from its private param). ADR-006 untouched |
 | Challenge room pre-create (`challenges.ts:37`, `challenge/[code]/client.tsx:101`) | 1× rooms insert-return each | on demand | ✅ PERF-02: `*` → `id` / `id,code` (only cols consumed) |
 | Four-player join (`fourPlayerActions.ts:234`) | 1× rooms / join | on demand | ✅ PERF-02: `*` → `id,code,time_seconds` (only cols consumed) |
 | Challenge list (`challenges.ts:108`) | `select('*').limit(20)` | on demand | ⏸ STOP: no production caller (only its own test) — zero user impact |
 | Challenge detail (`challenges.ts:63,86`) | single-row `select('*')` | on demand | ⏸ STOP: `ChallengeLink` return-type contract — narrowing changes public shape |
 | Messages (`messages.ts:65,82`) | uncapped sender/content selects | on demand | ⏸ STOP: `getUnreadCounts` has no caller; challenge volume tiny — cap would change semantics without evidence |
+
+## Phase 2 parallelization verdicts (PERF-04)
+
+- ✅ FriendsPanel `loadData`: bundle + challenges concurrent (proven: separate tables, separate setters, timing preserved).
+- ✅ Game team labels: white + black username fetches via `Promise.all` (proven: same-table independent reads, merged afterwards; no component harness exists for this path — guarded by tsc + suite).
+- ⏸ STOP `handleAcceptChallenge` (room upsert → duel update → mark-read): independent tables but sequential WRITES — parallelizing would change partial-failure semantics. Left sequential.
+- ⏸ STOP ProfilePanel: history effect and status/profile effect already run concurrently; `getMatchHistory(5)` vs `getHistoryPageWithStats(5)` is trip-identical (same bundle). No win available.
 
 ## Runtime measurements (fill via `?debug=1`)
 
