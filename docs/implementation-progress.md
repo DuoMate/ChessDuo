@@ -2,6 +2,13 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## UI-BOARD-FIRST — mobile gameplay layout redesign (2026-09-21)
+- **Audit**: the board was constrained by AI Coach's `max-w-md` (448px) + `px-4` (up to 23% side gutter on S24-Ultra-class widths), per-mode arbitrary caps (`720/600/560px`) and `95vw/80vh`, plus oversized vertical chrome (coach header, always-expanded `p-4` coach card, `pb-24`). Board measured 86.7–93.8% of viewport width; AI Coach worst on wide phones.
+- **Implementation**: `GameBoardSection` inline `maxWidth` → responsive class prop (`max-w-[calc(100dvh-var(--game-chrome))] md:max-w-[720px]`) + growing centered region with 8px inset; `globals.css` `--game-chrome/--coach-chrome`; Game/Duel `px-2`; compact top-bar; Coach full-width on phones + compact header + collapsed single-row `CoachPanel`. Desktop (`md:`) caps/insets preserved. Back/Fwd **stay in the bottom action pill** (unchanged).
+- **Regression + fix**: an intermediate revision moved Back/Fwd into a compact `BoardMoveNav` row that disabled Forward at the last index, blocking the review-exit branch (`setPlaybackIndex(null); setPlaybackFen(null)`) while `playbackFen != null` kept the board disabled — pieces couldn't be moved after Back/Fwd in Quick Play/Duo/4P/Duel. Reverted: `BoardMoveNav` deleted, `BoardBottomNav` restored to its original always-enabled Back/Fwd (verified against `develop`). Board-first sizing retained.
+- **Result**: board ≈ viewport − 16px (≥95.9% portrait; 96.7% on 480px) vs 86.7–93.8% before; coach card collapsed to ~one row; move-history review behavior identical to before across Quick/Duo/4P/Duel/Coach.
+- **Validation**: tsc clean (pre-existing `coachVoice` only); `BoardPageComponents` (BoardBottomNav Back/Fwd handlers), `GameSections`, `CoachPanel`, `CoachGame`, `DuelGame`, `ReplayView` suites green; full suite no new failures. Device matrix = owner step. See `docs/mobile-game-layout-audit.md`.
+
 ## ANDROID-PIP-RCA-FIX — PiP manifest flag never applied (2026-09-21)
 - **Incident**: PiP never engages on any Android version (Home gesture does nothing, no overlay swap).
 - **Root cause**: `android:supportsPictureInPicture="true"` was never written to the release manifest. The Capacitor 8.3.4 template emits the manifest multi-line (`<activity` on its own line, `android:name=".MainActivity"` later), so `sed '/android:name="\.MainActivity"/ s|<activity |…'` never matched — the two tokens are on different lines and `<activity` is at EOL. PiP was broken from inception (`2d63770` used the same ineffective pattern).

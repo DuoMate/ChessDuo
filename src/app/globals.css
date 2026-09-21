@@ -23,6 +23,15 @@
   --color-surface-alt: #f4f6fb;
   --color-shadow: rgba(15, 23, 42, 0.12);
 
+  /* ── Mobile gameplay vertical-chrome reserves (BOARD FIRST) ──
+     Reserved vertical space (header + in-flow status rows + fixed bottom
+     nav + safe areas) used by the board's height cap on short/landscape
+     viewports: width = min(100%, 100dvh - var(--*-chrome)). Portrait phones
+     are width-bound so these only bind in landscape/short viewports, keeping
+     the board square and scroll-free without an arbitrary px width cap. */
+  --game-chrome: 200px;
+  --coach-chrome: 150px;
+
   /* ── Semantic design tokens (presentation-only, PHASE 3) ──
      Components should use these roles, never raw hex.
      Existing variables above are preserved untouched. */

@@ -357,7 +357,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   return (
     <div className="min-h-dvh bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
       {/* Header */}
-      <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top,0px))]">
+      <div className="mx-auto flex w-full max-w-none items-center justify-between gap-2 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] md:max-w-md md:px-4">
         <button
           onClick={() => (status === 'playing' ? setShowLeave(true) : onLeave())}
           aria-label="Back to home"
@@ -413,11 +413,13 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         onCancel={() => setShowResignConfirm(false)}
       />
 
-      {/* Board + coach panel */}
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pb-8 pt-3">
-        {/* Per-surface board cap: coach keeps 560px (coach panel sits below
-            the board); full game uses 720px, replay 600px. */}
-        <div className="mx-auto w-full max-w-[min(95vw,80vh,560px)]">
+      {/* Board + coach panel — BOARD FIRST: full width on phones (8px inset),
+          desktop keeps the md cap. */}
+      <div className="mx-auto flex w-full max-w-none flex-col gap-2 px-2 pb-4 pt-2 md:max-w-md md:gap-4 md:px-4 md:pb-8 md:pt-3">
+        {/* Per-surface board cap: portrait phones fill the width; landscape /
+            short viewports are height-bound via --coach-chrome so the board
+            stays square and scroll-free. Desktop keeps the 560px cap. */}
+        <div className="mx-auto w-full max-w-[calc(100dvh-var(--coach-chrome,0px))] md:max-w-[560px]">
           {/* Reserved status area: always mounted with fixed min-height so
               showing/hiding the review message never shifts the board.
               Mirrors the BoardTopBar isThinking reserved-space pattern. */}
