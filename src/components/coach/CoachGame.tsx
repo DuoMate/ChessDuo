@@ -355,9 +355,9 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
   }, [showBestMoves, isPlayerTurn, state?.suggestion])
 
   return (
-    <div className="min-h-dvh bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
+    <div className="min-h-dvh flex flex-col bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
       {/* Header */}
-      <div className="mx-auto flex w-full max-w-none items-center justify-between gap-2 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] md:max-w-md md:px-4">
+      <div className="mx-auto flex w-full max-w-none shrink-0 items-center justify-between gap-2 px-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] md:max-w-[600px] md:px-4">
         <button
           onClick={() => (status === 'playing' ? setShowLeave(true) : onLeave())}
           aria-label="Back to home"
@@ -413,9 +413,13 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
         onCancel={() => setShowResignConfirm(false)}
       />
 
-      {/* Board + coach panel — BOARD FIRST: full width on phones (8px inset),
-          desktop keeps the md cap. */}
-      <div className="mx-auto flex w-full max-w-none flex-col gap-2 px-2 pb-4 pt-2 md:max-w-md md:gap-4 md:px-4 md:pb-8 md:pt-3">
+      {/* Board + coach panel — BOARD FIRST: the board + compact coach group is
+          vertically centered in the available height (balanced whitespace
+          instead of a bottom void). The board keeps its width-based size; the
+          group scrolls if recommendations/history grow, so the board never
+          resizes. Bottom padding clears the fixed BoardBottomNav. */}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col pb-[calc(env(safe-area-inset-bottom,0px)+84px)]">
+        <div className="my-auto mx-auto flex w-full flex-col gap-2 px-2 pt-2 md:max-w-[600px] md:gap-4 md:px-4 md:pt-3">
         {/* Per-surface board cap: portrait phones fill the width; landscape /
             short viewports are height-bound via --coach-chrome so the board
             stays square and scroll-free. Desktop keeps the 560px cap. */}
@@ -450,6 +454,7 @@ export function CoachGame({ playerId, playerColor, botLevel = 3, onLeave }: Coac
           showBestMoves={showBestMoves}
           onToggleBestMoves={() => setShowBestMoves((visible) => !visible)}
         />
+        </div>
       </div>
 
       {/* Leave confirmation */}

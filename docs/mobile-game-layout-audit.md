@@ -33,7 +33,10 @@ unchanged. Engine/timers/resign/game-over/ads/Supabase/Realtime untouched.
 
 Board width = `min(parent width, 100dvh − var(--*-chrome))`; portrait is
 width-bound (only the 8px inset remains), landscape/short viewports are
-height-bound so the board stays square and scroll-free.
+height-bound so the board stays square and scroll-free. On wide devices
+(`md:`/tablet) the single board cap governs (Quick/Duo/4P 720, Duel 600,
+Coach 560) and the board is centered — Coach's old `md:max-w-md` (448px) double
+cap was removed.
 
 ## 4. Layout changes
 
@@ -41,8 +44,9 @@ height-bound so the board stays square and scroll-free.
   responsive class prop `boardMaxClassName` (default
   `max-w-[calc(100dvh-var(--game-chrome,0px))] md:max-w-[720px]`); outer region
   default `flex flex-1 min-h-0 items-center justify-center px-2`.
-- **`globals.css`**: added `--game-chrome: 200px` / `--coach-chrome: 150px`
-  vertical-chrome reserves (single documented source).
+- **`globals.css`**: `--game-chrome: 200px` / `--coach-chrome: 140px`
+  vertical-chrome reserves (single documented source; header+nav only — never
+  the coach panel).
 - **`Game.tsx` / `DuelGame.tsx`**: inner shell `px-3`→`px-2`, `flex-1 min-h-0`;
   board passes through the shared responsive region; Duel keeps its desktop
   600px cap via `boardMaxClassName`. **Back/Fwd stay in the existing bottom
@@ -56,10 +60,19 @@ height-bound so the board stays square and scroll-free.
   kept `isBoardEnabled=false` — i.e. pieces could not be moved after Back/Fwd.
   The relocation was reverted and Back/Fwd restored to the pill.)
 - **`GameSections` top-bar shell**: `px-3 py-2` → `px-2 py-1.5`.
-- **`CoachGame.tsx`**: container/header `max-w-md` on phones → full width,
-  `px-4`→`px-2`, header `pt-[max(1rem,…)]`→`pt-[max(0.5rem,…)]`, board cap
-  `min(95vw,80vh,560px)` → `calc(100dvh-var(--coach-chrome))` / `md:560px`.
-  Desktop (`md:`) keeps the previous caps.
+- **`CoachGame.tsx`**: full-width on phones, `px-2`, compact header, board cap
+  `calc(100dvh-var(--coach-chrome))` / `md:560px`. **Vertical centering:** the
+  root is now a full-height flex column; the board + compact coach group is
+  wrapped in a `flex-1 min-h-0 overflow-y-auto` region with an `my-auto` inner
+  group, so leftover height splits **above the board and below the panel**
+  (balanced whitespace) instead of a bottom void, with bottom padding clearing
+  the fixed `BoardBottomNav`; the group scrolls if recommendations grow, so the
+  board never resizes. **Wide-device cap:** the container's `md:max-w-md`
+  (448px) double cap was removed (→ `md:max-w-[600px]`) so the single board cap
+  `md:max-w-[560px]` governs on tablets/foldables. `--coach-chrome` reduced to
+  `140px` (header + nav only — **not** panel space), so the board is width-bound
+  in portrait and the guard only protects landscape/short viewports.
+  Desktop (`md:`) caps preserved.
 - **`CoachPanel.tsx`**: "Coach recommends" defaults to a **single compact row**
   (`✨ Coach recommends` + `Show 3 Best Moves`), expanding to the existing top-3
   cards + legend on tap; `p-4`→`p-3`. Top-3/UCI/eval/voice/highlights untouched.
@@ -90,4 +103,4 @@ web/desktop pixel parity.
 - Duel's board `enabled` does not gate on `playbackFen` (pre-existing, unchanged)
   — review-exit still works via the restored bottom-pill Forward button.
 
-*Last Updated: 2026-09-21 — BOARD FIRST mobile layout redesign; Back/Fwd review-exit regression fixed by restoring the bottom-pill controls.*
+*Last Updated: 2026-09-21 — BOARD FIRST mobile layout redesign; Back/Fwd review-exit regression fixed by restoring the bottom-pill controls; board + compact coach group now vertically centered in the available height (balanced whitespace, no bottom void), `--coach-chrome` reduced to header+nav, and the Coach `md:max-w-md` double cap removed.*

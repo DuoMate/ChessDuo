@@ -30,7 +30,7 @@
      are width-bound so these only bind in landscape/short viewports, keeping
      the board square and scroll-free without an arbitrary px width cap. */
   --game-chrome: 200px;
-  --coach-chrome: 150px;
+  --coach-chrome: 140px;
 
   /* ── Semantic design tokens (presentation-only, PHASE 3) ──
      Components should use these roles, never raw hex.
