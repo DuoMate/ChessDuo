@@ -47,4 +47,19 @@ describe('settings', () => {
     expect(result.current.lowTimeWarning).toBe(false)
     expect(getSetting('lowTimeWarning')).toBe(false)
   })
+
+  test('playMyMove defaults to OFF', () => {
+    expect(getSetting('playMyMove')).toBe(false)
+    const { result } = renderHook(() => useSettings())
+    expect(result.current.playMyMove).toBe(false)
+  })
+
+  test('useSettings toggles playMyMove and persists it', () => {
+    const { result } = renderHook(() => useSettings())
+    act(() => {
+      result.current.setPlayMyMove(true)
+    })
+    expect(result.current.playMyMove).toBe(true)
+    expect(getSetting('playMyMove')).toBe(true)
+  })
 })

@@ -365,3 +365,80 @@ describe('Game Status and Timer Interaction', () => {
     expect(game.getGameOverReason()).toBe('resignation')
   })
 })
+
+// "Play My Move" (Quick Play opt-in) — the human's legal move is always the
+// applied move; the teammate bot's move is the shadow/hint only.
+describe('Play My Move (Quick Play opt-in)', () => {
+  function setup(playMyMove: boolean) {
+    const game = new LocalGame(600, 'white', playMyMove)
+    game.addPlayer('player1', Team.WHITE) // human
+    game.addPlayer('player2', Team.WHITE) // teammate bot
+    game.addPlayer('player3', Team.BLACK)
+    game.addPlayer('player4', Team.BLACK)
+    game.start()
+    // Deterministic evaluator: index 1 (player2 / teammate) always scores best,
+    // so OFF would let the bot override and ON must still play the human move.
+    ;(game as unknown as { evaluator: unknown }).evaluator = {
+      evaluateMoves: jest.fn(async (ucis: string[]) =>
+        ucis.map((u, i) => ({ move: u, score: i === 1 ? 900 : -900 })),
+      ),
+    }
+    return game
+  }
+
+  test('default constructor arg is OFF (existing behavior unchanged)', () => {
+    const game = new LocalGame()
+    expect((game as unknown as { _playMyMove: boolean })._playMyMove).toBe(false)
+  })
+
+  test('OFF: the teammate bot move can override the human move', async () => {
+    const game = setup(false)
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+
+    await game.lockAndResolve()
+
+    const comp = game.lastMoveComparison!
+    expect(comp.winningMove).toBe('d4')
+    expect(comp.winnerId).toBe('player2')
+    expect(comp.loserId).toBe('player1')
+  })
+
+  test('ON: the human move is authoritative; the bot move is the shadow only', async () => {
+    const game = setup(true)
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'd4')
+
+    await game.lockAndResolve()
+
+    const comp = game.lastMoveComparison!
+    expect(comp.winningMove).toBe('e4')
+    expect(comp.winnerId).toBe('player1')
+    expect(comp.loserId).toBe('player2')
+    expect(comp.loserFrom).toBe('d2')
+    expect(comp.loserTo).toBe('d4')
+    // Board applied the human move; the bot's move was NOT played.
+    expect(game.board.get('e4')).toBeTruthy()
+    expect(game.board.get('d4')).toBeFalsy()
+    // Engine still ran: the bot's best move is available for the hint.
+    expect(comp.bestEngineMove).toBeTruthy()
+  })
+
+  test('ON: opponent (non-human) turns are unaffected', async () => {
+    const game = setup(true)
+    // Human team turn (sync) -> advances to Black.
+    game.selectMove('player1', 'e4')
+    game.selectMove('player2', 'e4')
+    await game.lockAndResolve()
+    expect(game.currentTurn).toBe(Team.BLACK)
+
+    // Opponent turn: both opponent slots submit the same move.
+    game.selectMove('player3', 'e5')
+    game.selectMove('player4', 'e5')
+    await game.lockAndResolve()
+
+    const comp = game.lastMoveComparison!
+    expect(comp.winnerId).toBe('player1') // isSync path, unchanged
+    expect(game.board.get('e5')).toBeTruthy()
+  })
+})
