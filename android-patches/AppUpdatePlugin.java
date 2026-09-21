@@ -204,7 +204,7 @@ public class AppUpdatePlugin extends Plugin {
             try {
                 registerInstallListener();
                 AppUpdateOptions options = AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build();
-                manager().startUpdateFlowForResult(info, options, activity, UPDATE_REQUEST_CODE);
+                manager().startUpdateFlowForResult(info, activity, options, UPDATE_REQUEST_CODE);
                 Log.d(TAG, "startFlexibleUpdate: flow started");
                 JSObject result = new JSObject();
                 result.put("started", true);
