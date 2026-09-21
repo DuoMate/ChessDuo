@@ -2,6 +2,13 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## QUICK-PLAY-PLAY-MY-MOVE — opt-in player-authoritative move (2026-09-21)
+- **Feature**: Quick Play "Play My Move" — when ON, the player's legal move is always the played move; the bot still calculates its best move and it is shown via the existing shadow/hint. Default OFF; Quick Play only.
+- **Triage**: `docs/quick-play-play-my-move-triage.md` — resolution boundary = `LocalGame.resolvePendingMoves()` winner selection (teammate bot could override) + teammate checkmate short-circuit; shadow = existing `loserFrom/To`.
+- **Implementation**: `Settings.playMyMove` (default false) + `useSettings`; Home `ConfigurationPanel` toggle (Quick-Play-only via `showPlayMyMove`); `LocalGame` `_playMyMove` ctor param snapshotted in `Game.tsx` at game creation; `resolvePendingMoves` forces the human move when `_playMyMove && currentTeam===humanTeam` and routes the teammate bot's move to the shadow (skip teammate checkmate short-circuit). No `GameInterface` change; bot engine/difficulty/eval/timers/game-over/persistence/replay unchanged.
+- **Scope proof**: `LocalGame` is constructed only for Quick Play; Duo/4P/Duel/Coach use other engines → unreachable.
+- **Validation**: new `localGame` (default OFF / OFF override / ON forced / opponent unaffected), `settings` default+persist, `ConfigurationPanel` toggle tests green; tsc clean (pre-existing `coachVoice` only); full suite no new failures. Device + cross-mode pass = owner step. See `docs/quick-play-play-my-move-triage.md`, ARCHITECTURE §14.
+
 ## UI-BOARD-FIRST — mobile gameplay layout redesign (2026-09-21)
 - **Audit**: the board was constrained by AI Coach's `max-w-md` (448px) + `px-4` (up to 23% side gutter on S24-Ultra-class widths), per-mode arbitrary caps (`720/600/560px`) and `95vw/80vh`, plus oversized vertical chrome (coach header, always-expanded `p-4` coach card, `pb-24`). Board measured 86.7–93.8% of viewport width; AI Coach worst on wide phones.
 - **Implementation**: `GameBoardSection` inline `maxWidth` → responsive class prop (`max-w-[calc(100dvh-var(--game-chrome))] md:max-w-[720px]`) + growing centered region with 8px inset; `globals.css` `--game-chrome/--coach-chrome`; Game/Duel `px-2`; compact top-bar; Coach full-width on phones + compact header + collapsed single-row `CoachPanel`. Desktop (`md:`) caps/insets preserved. Back/Fwd **stay in the bottom action pill** (unchanged).

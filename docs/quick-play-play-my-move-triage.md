@@ -85,4 +85,49 @@ Timers live in `Game.tsx` (untouched). Game-over is derived from
 
 Flip the default to `false` (or revert the branch). No DB/env/CI changes.
 
-*Triage baseline for the implementation in the following commits.*
+## 11. Implementation result
+
+Shipped (branch `feat/quick-play-play-my-move`):
+
+- **Setting** — `Settings.playMyMove` (default `false`) in `settingsStorage.ts`;
+  `useSettings` exposes `playMyMove`/`setPlayMyMove`; Home `ConfigurationPanel`
+  gained an optional `showPlayMyMove` prop and the **PLAY MY MOVE** switch
+  ("Your move is always played. The bot shows its best move as a hint."),
+  rendered only for Quick Play (`page.tsx` passes
+  `showPlayMyMove={selectedGameMode === 'quick'}`). Not added to `SettingsPanel`.
+- **Snapshot** — `Game.tsx` constructs
+  `new LocalGame(timeLimitSeconds, playerColor, !fourplayer && getSetting('playMyMove'))`;
+  held immutably in `LocalGame._playMyMove`.
+- **Resolution** — `LocalGame.resolvePendingMoves()`:
+  `forcePlayerMove = _playMyMove && currentTeam === humanTeam`; when true
+  `winningMove`/`winnerId`/`loserId`/`loserFrom`/`loserTo` are forced to the
+  human/player2 pairing and the teammate checkmate short-circuit is skipped.
+  `gameState.resolve(winningMove)`, `_lastMoveComparison`, stats, game-over,
+  timers, persistence unchanged.
+- **Shadow** — the existing `loserFrom/To` → `ChessBoard` retraction +
+  `MovePlayback` hint; no new mechanism.
+- **Analytics** — skipped (no analytics SDK in the repo).
+
+## 12. Test results
+
+- `src/lib/__tests__/localGame.test.ts` — new `Play My Move` block: default ctor
+  OFF; OFF lets the bot override; ON forces the human move (winnerId player1,
+  loserId player2, board reflects the player move, `bestEngineMove` populated);
+  opponent turns unaffected.
+- `src/lib/__tests__/settings.test.ts` — `playMyMove` defaults false and
+  persists via `useSettings`.
+- `src/components/__tests__/ConfigurationPanel.test.tsx` — the switch renders
+  only for Quick Play and toggles.
+- `npx tsc --noEmit` clean (pre-existing `coachVoice` only); full `npm test` no
+  new failures.
+
+## 13. Cross-mode regression
+
+Duo / 4-Player / 1v1 / AI Coach use `OnlineGame` / `DuelGameEngine` /
+`CoachGameEngine` and never construct `LocalGame`, so they are unreachable by
+the new branch. Default OFF keeps existing Quick Play identical.
+
+## 14. Remaining validation (owner/device)
+
+Real-device pass: Quick Play OFF (identical) and ON (player move applied, bot
+shadow hint) + one regression pass each through Duo / 4 Player / AI Coach.
