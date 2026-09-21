@@ -35,9 +35,17 @@ export class LocalGame {
   private _lastHumanResolution: MoveComparison | null = null
   private initialized = false
   private _playerColor: ResolvedColor
+  /**
+   * Quick Play "Play My Move" — snapshotted per game at construction. When
+   * true, on the human team's turn the human's legal move is always the move
+   * applied; the teammate bot's move is recorded as the shadow/hint only.
+   * Default false → existing behavior. Quick Play (offline) only.
+   */
+  private _playMyMove: boolean
 
-  constructor(timeLimitSeconds: number = 600, playerColor: PlayerColor = 'white') {
+  constructor(timeLimitSeconds: number = 600, playerColor: PlayerColor = 'white', playMyMove: boolean = false) {
     this._playerColor = resolvePlayerColor(playerColor)
+    this._playMyMove = playMyMove
     this.gameState = new GameState(timeLimitSeconds)
 
     this.evaluator = createEvaluator()
@@ -265,6 +273,11 @@ export class LocalGame {
 
     const isSync = player1Move === player2Move
 
+    // Play My Move (Quick Play opt-in): on the HUMAN team's turn the human's
+    // legal move is always authoritative; the teammate bot's move (player2)
+    // becomes the shadow/hint only. Opponent turns are never affected.
+    const forcePlayerMove = this._playMyMove && currentTeam === (this.getTeam() as unknown as Team)
+
     DEBUG && console.log(`\n${'='.repeat(60)}`)
     DEBUG && console.log(`[TURN] ${teamColor} team to move`)
     DEBUG && console.log(`[MOVES] ${getPlayerLabel(player1Id)}: ${player1Move} | ${getPlayerLabel(player2Id)}: ${player2Move}`)
@@ -298,26 +311,31 @@ export class LocalGame {
         }
       } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (1):', e) }
       chess.load(turnStartFen)
-      try {
-        chess.move(player2Move)
-        if (chess.isCheckmate()) {
-          this._lastMove = { from: player2From, to: player2To }
-          this._lastMoveComparison = {
-            player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
-            player1Accuracy: 0, player2Accuracy: 100, player1Loss: CHECKMATE_SCORE, player2Loss: 0,
-            player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
-            winningMove: player2Move, winningScore: CHECKMATE_SCORE, isSync: false,
-            bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
-            turnStartFen, winnerId: 'player2', loserId: 'player1',
-            loserFrom: player1From, loserTo: player1To,
-            alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
+      // Play My Move: the human move is authoritative, so the teammate bot's
+      // checkmate must NOT short-circuit the applied move. Fall through to the
+      // normal evaluation (which still scores the bot's move for the hint).
+      if (!forcePlayerMove) {
+        try {
+          chess.move(player2Move)
+          if (chess.isCheckmate()) {
+            this._lastMove = { from: player2From, to: player2To }
+            this._lastMoveComparison = {
+              player1Move, player2Move, player1Score: 0, player2Score: CHECKMATE_SCORE,
+              player1Accuracy: 0, player2Accuracy: 100, player1Loss: CHECKMATE_SCORE, player2Loss: 0,
+              player1Category: getAccuracyCategory(CHECKMATE_SCORE), player2Category: getAccuracyCategory(0),
+              winningMove: player2Move, winningScore: CHECKMATE_SCORE, isSync: false,
+              bestEngineMove: player2Uci, bestEngineScore: CHECKMATE_SCORE,
+              turnStartFen, winnerId: 'player2', loserId: 'player1',
+              loserFrom: player1From, loserTo: player1To,
+              alternatives: [], youMatchedEngine: false, teammateMatchedEngine: true,
+            }
+            this.gameState.resolve(player2Move)
+            if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
+            return { winnerId: 'player2' as const, winningMove: player2Move }
           }
-          this.gameState.resolve(player2Move)
-          if (this.gameState.board.isGameOver()) this._status = GameStatus.GAME_OVER
-          return { winnerId: 'player2' as const, winningMove: player2Move }
-        }
-      } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
-      chess.load(turnStartFen)
+        } catch (e) { DEBUG && console.error('[LocalGame] Checkmate evaluation failed (2):', e) }
+        chess.load(turnStartFen)
+      }
 
       let evalResults: { move: string; score: number }[]
       try {
@@ -358,15 +376,17 @@ export class LocalGame {
      DEBUG && console.log(`  [${getPlayerLabel(player1Id)}] ${player1Move} (${player1Uci}): score=${player1Score} | loss=${player1Loss}cp | accuracy=${player1Accuracy.toFixed(1)}%`)
      DEBUG && console.log(`  [${getPlayerLabel(player2Id)}] ${player2Move} (${player2Uci}): score=${player2Score} | loss=${player2Loss}cp | accuracy=${player2Accuracy.toFixed(1)}%`)
     
-    const winningMove = player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move)
-     const winningScore = winningMove === player1Move ? player1Score : player2Score
-     const chosenLoss = winningMove === player1Move ? player1Loss : player2Loss
-     const winnerId: 'player1' | 'player2' = isSync ? 'player1' : (winningMove === player1Move ? 'player1' : 'player2')
-     const loserId: 'player1' | 'player2' | null = isSync ? null : (winningMove === player1Move ? 'player2' : 'player1')
-     const loserFrom = isSync ? '' : (winningMove === player1Move ? player2From : player1From)
-     const loserTo = isSync ? '' : (winningMove === player1Move ? player2To : player1To)
+    const winningMove = forcePlayerMove
+      ? player1Move
+      : (player1Loss < player2Loss ? player1Move : (player2Loss < player1Loss ? player2Move : player1Move))
+     const winningScore = forcePlayerMove ? player1Score : (winningMove === player1Move ? player1Score : player2Score)
+     const chosenLoss = forcePlayerMove ? player1Loss : (winningMove === player1Move ? player1Loss : player2Loss)
+     const winnerId: 'player1' | 'player2' = forcePlayerMove ? 'player1' : (isSync ? 'player1' : (winningMove === player1Move ? 'player1' : 'player2'))
+     const loserId: 'player1' | 'player2' | null = forcePlayerMove ? (isSync ? null : 'player2') : (isSync ? null : (winningMove === player1Move ? 'player2' : 'player1'))
+     const loserFrom = forcePlayerMove ? (isSync ? '' : player2From) : (isSync ? '' : (winningMove === player1Move ? player2From : player1From))
+     const loserTo = forcePlayerMove ? (isSync ? '' : player2To) : (isSync ? '' : (winningMove === player1Move ? player2To : player1To))
      
-    DEBUG && console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}`)
+    DEBUG && console.log(`\n[RESULT] ${isSync ? 'SYNCED' : 'Winner: ' + getPlayerLabel(winnerId)} with move ${winningMove}${forcePlayerMove ? ' (Play My Move: player move authoritative)' : ''}`)
       DEBUG && console.log(`  Centipawn Loss: ${chosenLoss} | Accuracy: ${calculateAccuracy(chosenLoss).toFixed(1)}%`)
       DEBUG && console.log(`${'='.repeat(60)}\n`)
 

@@ -36,6 +36,7 @@ import { GameTopBarSection, GameBoardSection } from './GameSections'
 import { SettingsPanel } from './SettingsPanel'
 import { ResignConfirmModal } from './ResignConfirmModal'
 import { useSettings } from '@/hooks/useSettings'
+import { getSetting } from '@/lib/settingsStorage'
 import { type BoardTopBarPlayer } from './BoardTopBar'
 import { type HumanAvatar } from '@/features/shared/avatars'
 import { PendingMovesRow, type PendingMove } from './PendingMovesRow'
@@ -141,7 +142,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
   const router = useRouter()
   DEBUG && console.log('[Game] Component rendered with:', { level, roomCode, mode, roomId, team, playerId: playerIdFromProps, fourplayer })
   
-  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimitSeconds, playerColor) : null)
+  const [game] = useState(() => mode !== 'online' ? new LocalGame(timeLimitSeconds, playerColor, !fourplayer && getSetting('playMyMove')) : null)
   const [onlineGame] = useState(() => {
     DEBUG && console.log('[Game] Creating OnlineGame, mode:', mode)
     return mode === 'online' ? new OnlineGame(timeLimitSeconds) : null
