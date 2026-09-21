@@ -1383,6 +1383,7 @@ if (!gameMode) {
                       selectedColor={selectedColor}
                       onSelectColor={setSelectedColor}
                       difficultyLevels={DIFFICULTY_LEVELS}
+                      showPlayMyMove={selectedGameMode === 'quick'}
                     />
                   </div>
                 </motion.div>

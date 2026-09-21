@@ -47,16 +47,26 @@ export function useSettings() {
     })
   }, [])
 
+  const setPlayMyMove = useCallback((value: boolean) => {
+    setSettingsState(prev => {
+      const updated = { ...prev, playMyMove: value }
+      saveSettings(updated)
+      return updated
+    })
+  }, [])
+
   return {
     autoQueen: settings.autoQueen,
     lowTimeWarning: settings.lowTimeWarning,
     confirmMove: settings.confirmMove,
     soundEnabled: settings.soundEnabled,
     theme: settings.theme,
+    playMyMove: settings.playMyMove,
     setAutoQueen,
     setLowTimeWarning,
     setTheme,
     setConfirmMove,
     setSoundEnabled,
+    setPlayMyMove,
   }
 }

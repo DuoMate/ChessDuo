@@ -8,6 +8,13 @@ export interface Settings {
   confirmMove: boolean
   soundEnabled: boolean
   theme: Theme
+  /**
+   * Quick Play "Play My Move" (opt-in): the player's legal move is always the
+   * move that gets played; the bot still calculates its best move and shows it
+   * as the existing shadow/hint only. Default OFF — existing behavior is
+   * unchanged. Scoped to Quick Play (offline LocalGame).
+   */
+  playMyMove: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -16,6 +23,7 @@ const DEFAULTS: Settings = {
   confirmMove: false,
   soundEnabled: true,
   theme: 'dark',
+  playMyMove: false,
 }
 
 export function loadSettings(): Settings {
@@ -29,6 +37,7 @@ export function loadSettings(): Settings {
         confirmMove: parsed.confirmMove ?? DEFAULTS.confirmMove,
         soundEnabled: parsed.soundEnabled ?? DEFAULTS.soundEnabled,
         theme: parsed.theme === 'light' ? 'light' : (parsed.theme === 'dark' ? 'dark' : DEFAULTS.theme),
+        playMyMove: parsed.playMyMove ?? DEFAULTS.playMyMove,
       }
     }
   } catch (e) { console.error('[Settings] Failed to parse localStorage:', e) }

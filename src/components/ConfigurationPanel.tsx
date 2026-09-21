@@ -1,6 +1,6 @@
 'use client'
 
-import { Volume2, VolumeX, Shield, ShieldCheck } from 'lucide-react'
+import { Volume2, VolumeX, Shield, ShieldCheck, Sparkles } from 'lucide-react'
 import { PlayerColor } from '@/features/shared/gameConstants'
 import { useSettings } from '@/hooks/useSettings'
 import { ColorPicker } from './ColorPicker'
@@ -12,6 +12,11 @@ interface ConfigurationPanelProps {
   selectedColor: PlayerColor
   onSelectColor: (color: PlayerColor) => void
   difficultyLevels: DifficultyLevelOption[]
+  /**
+   * Quick Play only: renders the opt-in "Play My Move" switch. Additive and
+   * default false — Duo / AI Coach see zero visual change.
+   */
+  showPlayMyMove?: boolean
 }
 
 export function ConfigurationPanel({
@@ -20,8 +25,9 @@ export function ConfigurationPanel({
   selectedColor,
   onSelectColor,
   difficultyLevels,
+  showPlayMyMove = false,
 }: ConfigurationPanelProps) {
-  const { confirmMove, setConfirmMove, soundEnabled, setSoundEnabled } = useSettings()
+  const { confirmMove, setConfirmMove, soundEnabled, setSoundEnabled, playMyMove, setPlayMyMove } = useSettings()
   const selectedDifficulty = difficultyLevels.find(d => d.level === selectedLevel)
 
   return (
@@ -117,6 +123,40 @@ export function ConfigurationPanel({
               />
             </button>
           </div>
+
+          {/* Play My Move — Quick Play only (opt-in gameplay variant) */}
+          {showPlayMyMove && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Sparkles
+                  size={20}
+                  className={`shrink-0 ${playMyMove ? 'text-blue-500 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Play My Move</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Your move is always played. The bot shows its best move as a hint.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={playMyMove}
+                aria-label="Play My Move"
+                onClick={() => setPlayMyMove(!playMyMove)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  playMyMove
+                    ? 'bg-blue-500'
+                    : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    playMyMove ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
 
           {/* Sound Effects */}
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50 p-4 min-h-[44px]">
