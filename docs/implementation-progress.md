@@ -2,6 +2,23 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## ADS-05 — Android production NPE crash regression (2026-09-21)
+- **Incident**: v391 on Android 16 (SDK 36) `NullPointerException` at
+  `NativeAdPlugin.buildAdView(NativeAdPlugin.java:194)` from `lambda$showAd$2:98`
+  (the `show()` `runOnUiThread` runnable).
+- **Root cause**: stale mutable field race — `show()` null-checks `loadedAd` synchronously,
+  then the queued runnable re-reads the field at execution time; concurrent `show()` calls,
+  a preload/discard, or `handleOnDestroy()` clears `loadedAd` before the runnable runs →
+  `buildAdView(null)` → NPE at `headline.setText(ad.getHeadline())`.
+- **Fix (minimal, `android-patches/NativeAdPlugin.java` only)**: snapshot `loadedAd` into a
+  local at the top of the `show()` runnable (reject gracefully if null) and add
+  `if (ad == null) return null;` at the top of `buildAdView()`. No redesign, no blanket
+  try/catch, no product behaviour change, no impression/preload change.
+- **Docs**: `docs/android-production-regression-36h.md`.
+- **Verify**: `npx tsc --noEmit` clean; `npm test` no new failures (no JS changed).
+  Release build (`bash scripts/build-aab.sh`) requires `android/` + `ANDROID_HOME` +
+  keystore — owner/CI step.
+
 ## Batch 1 — Shared board + piece rendering ✅
 - `ChessBoard.tsx`: comparator now covers `pendingOverlay.color` + `myPendingOverlay.color`.
 - `PendingMovesRow.tsx`: memoized `SubmittedBadge` + `MoveCard`.
