@@ -51,8 +51,8 @@ https://chessduo.navron.org/
 - **Dark Navy Theme**: Consistent `#0a0e1a` background across all browser pages
 - **Mobile**: HomeBottomNav floating pill style unchanged
 
-**⚠️ Mobile Apps Pending**:
-- Android APK build scripts ready (`npm run cap:build`), Play Store submission pending
+** Mobile Apps is published **:
+- Android APK build scripts ready (`npm run cap:build`), Play Store production build is ready
 - iOS IPA build not started
 
 ## Features
