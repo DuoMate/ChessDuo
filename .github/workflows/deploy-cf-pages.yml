@@ -20,6 +20,28 @@ jobs:
           source android-version.properties
           echo "NEXT_PUBLIC_APP_VERSION=${versionName}" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_VERSION_CODE=${versionCode}" >> "$GITHUB_ENV"
+      # ── Regenerate public/version.json from android-version.properties ──
+      # The version bump lives in build-release.yml, whose "chore: auto-bump
+      # version [skip ci]" commits never trigger this workflow — so a
+      # hand-committed version.json could go stale and the in-app update
+      # prompt would silently never fire (users on ≥ the last deployed
+      # version always compare as "current"). Deriving the hosted manifest
+      # from the release source of truth at deploy time keeps it in lockstep
+      # with the actual Play release regardless of commit ordering.
+      - name: Regenerate version manifest from release source of truth
+        run: |
+          source android-version.properties
+          cat > public/version.json <<- EOF
+          {
+            "latestVersion": "${versionName}",
+            "latestVersionCode": ${versionCode},
+            "minimumVersion": "1.0.300",
+            "minimumVersionCode": 300,
+            "playUrl": "https://play.google.com/store/apps/details?id=com.navron.chessduo",
+            "notes": "Regenerated at deploy time from android-version.properties — do not edit by hand."
+          }
+          EOF
+          echo "[INFO] version.json regenerated: ${versionName} (${versionCode})"
       - run: npx opennextjs-cloudflare build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

@@ -10,6 +10,21 @@ jest.mock('@/lib/share', () => ({
   isNativePlatform: jest.fn(() => true),
 }))
 
+jest.mock('@/lib/nativeAppUpdate', () => {
+  const status = { available: false, updateAvailability: 0 }
+  return {
+    isNativeAppUpdateSupported: jest.fn(() => true),
+    checkNativeUpdate: jest.fn(async () => status),
+    startNativeFlexibleUpdate: jest.fn(async () => false),
+    completeNativeUpdate: jest.fn(async () => true),
+    cleanupNativeUpdate: jest.fn(async () => undefined),
+    subscribeNativeUpdateState: jest.fn(() => () => {}),
+    __setNativeStatus: (s: never) => {
+      Object.assign(status, s)
+    },
+  }
+})
+
 jest.mock('next/navigation', () => ({
   usePathname: jest.fn(() => '/'),
 }))
@@ -20,6 +35,11 @@ const { usePathname } = jest.requireMock('next/navigation') as {
 
 const { isNativePlatform } = jest.requireMock('@/lib/share') as {
   isNativePlatform: jest.Mock
+}
+
+const nativeBridge = jest.requireMock('@/lib/nativeAppUpdate') as {
+  checkNativeUpdate: jest.Mock
+  __setNativeStatus: (s: { available: boolean; flexibleAllowed?: boolean; availableVersionCode?: number; updateAvailability?: number }) => void
 }
 
 const MANIFEST = {
@@ -49,6 +69,7 @@ describe('useAppUpdate', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'https://chessduo.navron.org'
     process.env.NEXT_PUBLIC_APP_VERSION = '1.0.386'
     process.env.NEXT_PUBLIC_VERSION_CODE = '386'
+    nativeBridge.__setNativeStatus({ available: false })
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
     isNativePlatform.mockReturnValue(true)
     ;(usePathname as jest.Mock).mockReturnValue('/')
@@ -71,6 +92,45 @@ describe('useAppUpdate', () => {
       expect(result.current.status).toBe('optional'),
     )
     expect(result.current.manifest?.latestVersionCode).toBe(387)
+  })
+
+  it('reports optional (native-aware) when Play has a flexible update available', async () => {
+    nativeBridge.__setNativeStatus({
+      available: true,
+      flexibleAllowed: true,
+      availableVersionCode: 393,
+    })
+    const { result } = renderHook(() => useAppUpdate())
+
+    act(() => {
+      jest.advanceTimersByTime(3000)
+    })
+
+    await waitFor(() =>
+      expect(result.current.status).toBe('optional'),
+    )
+    expect(result.current.nativeAvailable).toBe(true)
+    expect(result.current.nativeVersionCode).toBe(393)
+    // Native truth wins: no remote-manifest dependency for the prompt.
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('stays current when Play reports no flexible update for this account (no manifest fetch)', async () => {
+    nativeBridge.__setNativeStatus({ available: false, updateAvailability: 1 })
+    const fetchSpy = jest.fn()
+    global.fetch = fetchSpy as unknown as typeof fetch
+    const { result } = renderHook(() => useAppUpdate())
+
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(0)
+    })
+    expect(result.current.status).toBe('current')
+    // Authoritative Play answer must never be second-guessed by a stale manifest.
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('stays current when the manifest cannot be reached (offline)', async () => {

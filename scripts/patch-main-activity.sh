@@ -48,6 +48,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeAdPlugin.class);
+        registerPlugin(AppUpdatePlugin.class);
         registerPlugin(PipPlugin.class);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);

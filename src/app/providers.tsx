@@ -102,7 +102,14 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   useScrollToTop()
   useNotificationRedirect()
-  const { status, manifest, dismiss, openStore } = useAppUpdate()
+  const {
+    status,
+    manifest,
+    dismiss,
+    startUpdate,
+    completeAndRestart,
+    flowState,
+  } = useAppUpdate()
 
   return (
     <NetworkAwareToastProvider>
@@ -113,7 +120,9 @@ export default function Providers({ children }: { children: ReactNode }) {
         <UpdatePrompt
           open={status === 'optional'}
           notes={manifest?.notes}
-          onUpdate={() => { void openStore() }}
+          flowState={flowState}
+          onUpdate={() => { void startUpdate() }}
+          onRestart={() => { void completeAndRestart() }}
           onLater={dismiss}
         />
       </PremiumProvider>

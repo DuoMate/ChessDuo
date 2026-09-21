@@ -1,21 +1,68 @@
 'use client'
 
 import { memo } from 'react'
-import { ArrowUpCircle } from 'lucide-react'
+import { ArrowUpCircle, RefreshCw } from 'lucide-react'
 
 interface UpdatePromptProps {
   open: boolean
   notes?: string
+  flowState?: 'idle' | 'downloading' | 'downloaded' | 'installing' | 'installed' | 'failed' | 'canceled' | 'pending' | 'unknown'
   onUpdate: () => void
+  onRestart?: () => void
   onLater: () => void
 }
 
 /**
  * Optional native-update prompt. Rendered only when useAppUpdate reports
  * `optional` outside games/auth flows. Matches existing modal styling.
+ *
+ * With the native Google Play In-App Update flow, "Update" starts the official
+ * flexible download (Play owns the download UI); once the install listener
+ * reports DOWNLOADED the dialog switches to "Restart to update", which calls
+ * `completeUpdate()`. "Later" and Play's own cancellation are normal user
+ * choices and keep the app fully usable.
  */
-function UpdatePromptInner({ open, notes, onUpdate, onLater }: UpdatePromptProps) {
+function UpdatePromptInner({
+  open,
+  notes,
+  flowState = 'idle',
+  onUpdate,
+  onRestart,
+  onLater,
+}: UpdatePromptProps) {
   if (!open) return null
+
+  const downloaded = flowState === 'downloaded' || flowState === 'installing'
+  const inProgress =
+    flowState === 'downloading' || flowState === 'installing' || flowState === 'pending'
+
+  const body = downloaded ? (
+    <>
+      <h2
+        id="app-update-title"
+        className="text-base font-bold text-slate-900 dark:text-white"
+      >
+        Update ready to install
+      </h2>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        ChessDuo has been downloaded. Restart to install the new version.
+      </p>
+    </>
+  ) : (
+    <>
+      <h2
+        id="app-update-title"
+        className="text-base font-bold text-slate-900 dark:text-white"
+      >
+        New version available
+      </h2>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        {inProgress
+          ? 'Downloading the update in the background…'
+          : 'ChessDuo has been updated with improvements and fixes.'}
+      </p>
+    </>
+  )
 
   return (
     <div
@@ -29,20 +76,10 @@ function UpdatePromptInner({ open, notes, onUpdate, onLater }: UpdatePromptProps
           <div className="w-12 h-12 rounded-full bg-blue-500/15 flex items-center justify-center flex-shrink-0">
             <ArrowUpCircle size={22} className="text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="min-w-0">
-            <h2
-              id="app-update-title"
-              className="text-base font-bold text-slate-900 dark:text-white"
-            >
-              New version available
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              ChessDuo has been updated with improvements and fixes.
-            </p>
-          </div>
+          <div className="min-w-0">{body}</div>
         </div>
 
-        {notes ? (
+        {!downloaded && !inProgress && notes ? (
           <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 line-clamp-3">
             {notes}
           </p>
@@ -55,12 +92,29 @@ function UpdatePromptInner({ open, notes, onUpdate, onLater }: UpdatePromptProps
           >
             Later
           </button>
-          <button
-            onClick={onUpdate}
-            className="focus-ring flex-1 min-h-[44px] rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
-          >
-            Update
-          </button>
+          {downloaded ? (
+            <button
+              onClick={onRestart}
+              className="focus-ring flex-1 min-h-[44px] rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+            >
+              {flowState === 'installing' ? (
+                'Installing…'
+              ) : (
+                <>
+                  <RefreshCw size={14} className="mr-1 inline" aria-hidden="true" />
+                  Restart
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={onUpdate}
+              disabled={inProgress}
+              className="focus-ring flex-1 min-h-[44px] rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Update
+            </button>
+          )}
         </div>
       </div>
     </div>

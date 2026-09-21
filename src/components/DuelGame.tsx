@@ -593,7 +593,7 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
 
   return (
     <div className="min-h-dvh flex flex-col bg-[var(--color-page-bg)] text-slate-900 dark:text-slate-100">
-      <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col px-3 pt-[env(safe-area-inset-top,0px)] pb-24">
+      <div className="max-w-3xl w-full mx-auto flex-1 min-h-0 flex flex-col px-2 pt-[env(safe-area-inset-top,0px)] pb-24">
         {/* P7: shared memoized top-bar section. shellClassName preserves
             DuelGame's exact wrapper visuals (differs from Game's). */}
         <GameTopBarSection
@@ -624,9 +624,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           </span>
         </div>
 
-        {/* Chess Board — 80% of viewport.
-            P7: shared memoized board section; outerClassName + maxWidth preserve
-            DuelGame's exact layout (no px-3, 600px cap, unlike Game's). */}
+        {/* Chess Board — BOARD FIRST: shared memoized board section; the
+            default outer region is a growing, centered 8px-inset area and the
+            responsive cap fills phone width / height-bounds landscape. */}
         <GameBoardSection
           boardKey={boardKey}
           fen={playbackFen || fen}
@@ -639,8 +639,9 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onMove={handleMove}
           onAnimationComplete={noopDuelAnimationComplete}
           isMobile={isMobile}
-          maxWidth="min(95vw, 80vh, 600px)"
-          outerClassName="flex justify-center"
+          // BOARD FIRST: default outer region (flex-1, 8px inset) + responsive
+          // cap; desktop keeps Duel's historical 600px board.
+          boardMaxClassName="max-w-[calc(100dvh-var(--game-chrome,0px))] md:max-w-[600px]"
         />
 
         <AnimatePresence>

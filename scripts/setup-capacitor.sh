@@ -154,6 +154,7 @@ else
         warn "Skipping Native AdMob setup; set NEXT_PUBLIC_ADMOB_APP_ID before building Android"
     fi
     bash "$PROJECT_ROOT/scripts/install-pip.sh" || warn "PiP plugin install skipped (android/ not ready yet)"
+    bash "$PROJECT_ROOT/scripts/install-app-update.sh" || warn "In-App Update plugin install skipped (android/ not ready yet)"
     ok "Android project created"
 fi
 
@@ -171,15 +172,23 @@ if [ -f "$MANIFEST" ]; then
   # ─── Live-game Picture-in-Picture (supportsPictureInPicture + config) ──
   # Presentation only: lets the existing game activity enter PiP while a
   # match is active. Entry is gated at runtime by PipPlugin eligibility.
-  # The flag is applied ONLY to the MainActivity entry — a blanket
-  # s|<activity | match could tag the wrong activity if the generated
-  # manifest ever gains more (which silently breaks PiP with no diagnostics).
+  # The flag is applied ONLY to the MainActivity entry. The Capacitor
+  # template emits the manifest multi-line (<activity on its own line,
+  # android:name=".MainActivity" on a later line), so a sed that anchors on
+  # the name line can never find "<activity " on the same line and silently
+  # no-ops. _REGRESSION (ADS-05-era audit): PiP was broken from inception
+  # because this flag was never actually written. We now insert the attribute
+  # directly after the <activity opening tag and then verify it landed.
   if ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
     if ! grep -q 'android:name="\.MainActivity"' "$MANIFEST" 2>/dev/null; then
       warn "MainActivity entry not found in manifest — PiP flag NOT applied"
     else
-      sed -i '/android:name="\.MainActivity"/ s|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
-      ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+      sed -i '0,/^[[:space:]]*<activity/{s|<activity|<activity android:supportsPictureInPicture="true"|}' "$MANIFEST"
+      if grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
+        ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+      else
+        warn "PiP flag could NOT be applied to the manifest — activity layout mismatch"
+      fi
     fi
   fi
   if grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \

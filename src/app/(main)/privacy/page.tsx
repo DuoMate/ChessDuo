@@ -1,9 +1,12 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 
 export default function PrivacyPage() {
+  const router = useRouter()
+
   return (
     <ErrorBoundary>
       <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
@@ -17,7 +20,16 @@ export default function PrivacyPage() {
         <p className="text-xs text-slate-400 dark:text-slate-500 mb-8">Last updated: September 1, 2026</p>
         <p className="text-sm mb-8">
           Read our{' '}
-          <a href="/terms" className="text-yellow-600 dark:text-yellow-400 hover:underline">Terms of Service</a>.
+          <a
+            href="/terms"
+            onClick={(e) => {
+              e.preventDefault()
+              router.push('/terms')
+            }}
+            className="text-yellow-600 dark:text-yellow-400 hover:underline"
+          >
+            Terms of Service
+          </a>.
         </p>
 
         <section className="space-y-6 text-gray-600 dark:text-gray-300 leading-relaxed">

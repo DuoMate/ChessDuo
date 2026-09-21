@@ -1,9 +1,12 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BackButton } from '@/components/BackButton'
 
 export default function TermsPage() {
+  const router = useRouter()
+
   return (
     <ErrorBoundary>
       <div className="min-h-dvh bg-gray-50 dark:bg-[var(--color-page-bg)] text-gray-900 dark:text-white">
@@ -20,7 +23,14 @@ export default function TermsPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">1. Acceptance of Terms</h2>
             <p>
               By accessing or using ChessDuo (the &quot;Service&quot;), you agree to be bound by these Terms of Service and our{' '}
-              <a href="/privacy" className="text-yellow-600 dark:text-yellow-400 hover:underline">Privacy Policy</a>.
+              <a
+                href="/privacy"
+                onClick={(e) => {
+                  e.preventDefault()
+                  router.push('/privacy')
+                }}
+                className="text-yellow-600 dark:text-yellow-400 hover:underline"
+              >Privacy Policy</a>.
               If you do not agree to these terms, please do not use the Service.
             </p>
           </div>

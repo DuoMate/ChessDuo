@@ -10,25 +10,20 @@ export const PLAY_MARKET_URI = `market://details?id=${PLAY_APP_ID}`
 export type OpenListingResult = 'opened' | 'unavailable'
 
 /**
- * Opens the ChessDuo Google Play listing so the user can rate & review.
+ * Opens the ChessDuo Google Play listing so the user can update or rate.
  * Best effort — never throws, never affects app flow.
  *
- * Native: `market://` deep link (lands in the Play Store app, where the
- * user is already signed in). Web / Play-app-missing: HTTPS listing URL
- * via the Capacitor Browser plugin (Custom Tabs) or a plain new tab.
+ * Native: HTTPS Play listing via the Capacitor Browser plugin (Custom Tabs),
+ * which reliably lands on the Play Store page where the user is signed in.
+ * `window.open(url, '_system')` is intentionally NOT used on native: the
+ * Capacitor WebView has no popup/new-window handler (no onCreateWindow
+ * override), so the market:// deep link silently never fires and — because
+ * it returns instead of throwing — the old Browser fallback never ran. The
+ * HTTPS URL is guaranteed-openable on every device. Web: plain new tab.
  */
 export async function openPlayListing(): Promise<OpenListingResult> {
   if (typeof window === 'undefined') return 'unavailable'
   if (isNativePlatform() && Capacitor.isNativePlatform()) {
-    try {
-      // Fires the Play Store intent on GMS devices. window.open never
-      // navigates the current WebView away, so an unhandled scheme fails
-      // silently here and the HTTPS fallback below still applies on throw.
-      window.open(PLAY_MARKET_URI, '_system')
-      return 'opened'
-    } catch {
-      // Play Store app missing or scheme unhandled — fall through to HTTPS
-    }
     try {
       const { Browser } = await import('@capacitor/browser')
       await Browser.open({ url: PLAY_LISTING_URL })

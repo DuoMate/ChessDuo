@@ -2,6 +2,42 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## UI-BOARD-FIRST — mobile gameplay layout redesign (2026-09-21)
+- **Audit**: the board was constrained by AI Coach's `max-w-md` (448px) + `px-4` (up to 23% side gutter on S24-Ultra-class widths), per-mode arbitrary caps (`720/600/560px`) and `95vw/80vh`, plus oversized vertical chrome (coach header, always-expanded `p-4` coach card, `pb-24`). Board measured 86.7–93.8% of viewport width; AI Coach worst on wide phones.
+- **Implementation**: `GameBoardSection` inline `maxWidth` → responsive class prop (`max-w-[calc(100dvh-var(--game-chrome))] md:max-w-[720px]`) + growing centered region with 8px inset; `globals.css` `--game-chrome/--coach-chrome`; Game/Duel `px-2`; compact top-bar; Coach full-width on phones + compact header + collapsed single-row `CoachPanel`. Desktop (`md:`) caps/insets preserved. Back/Fwd **stay in the bottom action pill** (unchanged).
+- **Regression + fix**: an intermediate revision moved Back/Fwd into a compact `BoardMoveNav` row that disabled Forward at the last index, blocking the review-exit branch (`setPlaybackIndex(null); setPlaybackFen(null)`) while `playbackFen != null` kept the board disabled — pieces couldn't be moved after Back/Fwd in Quick Play/Duo/4P/Duel. Reverted: `BoardMoveNav` deleted, `BoardBottomNav` restored to its original always-enabled Back/Fwd (verified against `develop`). Board-first sizing retained.
+- **Result**: board ≈ viewport − 16px (≥95.9% portrait; 96.7% on 480px) vs 86.7–93.8% before; coach card collapsed to ~one row; move-history review behavior identical to before across Quick/Duo/4P/Duel/Coach.
+- **Validation**: tsc clean (pre-existing `coachVoice` only); `BoardPageComponents` (BoardBottomNav Back/Fwd handlers), `GameSections`, `CoachPanel`, `CoachGame`, `DuelGame`, `ReplayView` suites green; full suite no new failures. Device matrix = owner step. See `docs/mobile-game-layout-audit.md`.
+
+## ANDROID-PIP-RCA-FIX — PiP manifest flag never applied (2026-09-21)
+- **Incident**: PiP never engages on any Android version (Home gesture does nothing, no overlay swap).
+- **Root cause**: `android:supportsPictureInPicture="true"` was never written to the release manifest. The Capacitor 8.3.4 template emits the manifest multi-line (`<activity` on its own line, `android:name=".MainActivity"` later), so `sed '/android:name="\.MainActivity"/ s|<activity |…'` never matched — the two tokens are on different lines and `<activity` is at EOL. PiP was broken from inception (`2d63770` used the same ineffective pattern).
+- **Fix**: target the `<activity` opening tag (`sed -i '0,/^[[:space:]]*<activity/{s|<activity|<activity android:supportsPictureInPicture="true"|}'`) + post-write grep verification, in all three scripts (`setup-capacitor.sh`, `build-aab.sh`, `build-apk.sh`). `configChanges` already covers `smallestScreenSize|screenLayout|orientation` in the template.
+- **Verify**: sed logic validated against the extracted template (count = 1). Web suites green. Real-device entry/exit = owner/CI step. See `docs/android-pip-rca.md`.
+
+## ANDROID-UPDATE-RCA-FIX — native Play In-App Updates (Option B) (2026-09-21)
+- **Incident**: users never notified of newer versions; Update opens nothing on Android.
+- **Root cause**: update detection used a web-served `version.json` (never per-account/rollout-aware) + a dead `window.open('market://','_system')` action (Capacitor WebView has no popup handler).
+- **Fix (native-first)**: new `android-patches/AppUpdatePlugin.java` (Google Play In-App Updates, FLEXIBLE: `check`/`startFlexibleUpdate`/`completeUpdate`, `stateChanged` + `flowResult` events, cancellation is a normal choice) + `scripts/install-app-update.sh` (gradle `com.google.android.play:app-update:2.1.0`) + registration in `patch-main-activity.sh` (Capacitor routes the flow result via `handleOnActivityResult`). New `src/lib/nativeAppUpdate.ts` (web-safe bridge) + `useAppUpdate` native-primary (manifest fallback only when the native check is indeterminate) + `UpdatePrompt` Update→download→Restart-to-install. `rateApp.openPlayListing()` opens the HTTPS Play listing via `@capacitor/browser`.
+- **Verify**: `nativeAppUpdate.test.ts` (9), `useAppUpdate.test.tsx` (6), `rateApp.test.ts` (5) green; tsc clean; full suite no new failures. Real Play track rollout = owner/CI step. See `docs/android-update-rca.md`.
+
+## ADS-05 — Android production NPE crash regression (2026-09-21)
+- **Incident**: v391 on Android 16 (SDK 36) `NullPointerException` at
+  `NativeAdPlugin.buildAdView(NativeAdPlugin.java:194)` from `lambda$showAd$2:98`
+  (the `show()` `runOnUiThread` runnable).
+- **Root cause**: stale mutable field race — `show()` null-checks `loadedAd` synchronously,
+  then the queued runnable re-reads the field at execution time; concurrent `show()` calls,
+  a preload/discard, or `handleOnDestroy()` clears `loadedAd` before the runnable runs →
+  `buildAdView(null)` → NPE at `headline.setText(ad.getHeadline())`.
+- **Fix (minimal, `android-patches/NativeAdPlugin.java` only)**: snapshot `loadedAd` into a
+  local at the top of the `show()` runnable (reject gracefully if null) and add
+  `if (ad == null) return null;` at the top of `buildAdView()`. No redesign, no blanket
+  try/catch, no product behaviour change, no impression/preload change.
+- **Docs**: `docs/android-production-regression-36h.md`.
+- **Verify**: `npx tsc --noEmit` clean; `npm test` no new failures (no JS changed).
+  Release build (`bash scripts/build-aab.sh`) requires `android/` + `ANDROID_HOME` +
+  keystore — owner/CI step.
+
 ## Batch 1 — Shared board + piece rendering ✅
 - `ChessBoard.tsx`: comparator now covers `pendingOverlay.color` + `myPendingOverlay.color`.
 - `PendingMovesRow.tsx`: memoized `SubmittedBadge` + `MoveCard`.

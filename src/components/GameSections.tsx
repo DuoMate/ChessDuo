@@ -75,7 +75,7 @@ function GameTopBarSectionInner({
   onToggleSound,
   onOpenProfile,
   onEnterPip,
-  shellClassName = 'w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-3 py-2',
+  shellClassName = 'w-full bg-white dark:bg-[var(--color-page-bg)] border-b border-slate-200 dark:border-white/5 px-2 py-1.5',
 }: GameTopBarSectionProps) {
   return (
     <div className={shellClassName}>
@@ -124,8 +124,16 @@ interface GameBoardSectionProps {
   onMove: (move: string, promotion?: PromotionPiece) => void
   onAnimationComplete: () => void
   isMobile: boolean
-  maxWidth: string
-  /** P7: outer flex wrapper differs per mode (Game has px-3, DuelGame does not). */
+  /**
+   * BOARD FIRST: responsive size cap for the square board wrapper.
+   * Default is width-bound on portrait phones (fills the parent width with
+   * only the outer inset remaining) and height-bound on short/landscape
+   * viewports via the `--game-chrome` reserve. Desktop keeps the historical
+   * 720px cap. Callers with a different reserved space pass their own class
+   * (e.g. replay's 600px desktop cap).
+   */
+  boardMaxClassName?: string
+  /** Outer flex region. Defaults to a growing, centered board-first region. */
   outerClassName?: string
 }
 
@@ -141,14 +149,13 @@ function GameBoardSectionInner({
   onMove,
   onAnimationComplete,
   isMobile,
-  maxWidth,
-  outerClassName = 'flex justify-center px-3',
+  boardMaxClassName = 'max-w-[calc(100dvh-var(--game-chrome,0px))] md:max-w-[720px]',
+  outerClassName = 'flex flex-1 min-h-0 items-center justify-center px-2',
 }: GameBoardSectionProps) {
   return (
     <div className={outerClassName}>
       <div
-        className="w-full aspect-square flex-shrink-0 relative"
-        style={{ maxWidth }}
+        className={`w-full aspect-square flex-shrink-0 relative ${boardMaxClassName}`}
       >
         <div className="absolute inset-0 rounded-2xl ring-1 ring-slate-200 dark:ring-white/10 shadow-[0_0_40px_rgba(15,23,42,0.12)] dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] overflow-hidden bg-slate-100 dark:bg-slate-900/30">
           {isMobile ? (

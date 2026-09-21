@@ -122,11 +122,28 @@ public class NativeAdPlugin extends Plugin {
         }
 
         getActivity().runOnUiThread(() -> {
+            // ADS-05 crash hotfix: `loadedAd` is a mutable field that can be
+            // cleared between the synchronous null check above and this
+            // runnable's execution (another show() consuming it, a concurrent
+            // preload/discard, or handleOnDestroy during teardown). Snapshot
+            // it into a local so a stale field never NPEs inside buildAdView.
+            NativeAd ad = loadedAd;
+            if (ad == null) {
+                Log.d(TAG, "[ADS][GAMEOVER] loadedAdDroppedBeforeRender=true");
+                call.reject("Native AdMob ad is not ready");
+                return;
+            }
+
             View webView = getBridge().getWebView();
             ViewGroup adContainer = (ViewGroup) webView.getParent();
             hideVisibleAd();
 
-            NativeAdView adView = buildAdView(loadedAd);
+            NativeAdView adView = buildAdView(ad);
+            if (adView == null) {
+                Log.d(TAG, "[ADS][GAMEOVER] nativeAdViewBuildFailed=true");
+                call.reject("Native AdMob ad is not ready");
+                return;
+            }
             float density = getActivity().getResources().getDisplayMetrics().density;
             ViewGroup.LayoutParams layout = new ViewGroup.LayoutParams(
                 Math.round((float) width * density),
@@ -187,6 +204,10 @@ public class NativeAdPlugin extends Plugin {
     }
 
     private NativeAdView buildAdView(NativeAd ad) {
+        // ADS-05 crash hotfix: guard ever dereferencing a null NativeAd (the
+        // proven NPE at headline.setText(ad.getHeadline()) in production 391).
+        // The caller aborts the render attempt if this returns null.
+        if (ad == null) return null;
         NativeAdView adView = new NativeAdView(getContext());
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE);
