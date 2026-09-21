@@ -51,7 +51,6 @@ function boardProps() {
     onMove: noopMove,
     onAnimationComplete: noop,
     isMobile: false as boolean,
-    maxWidth: 'min(95vw, 80vh, 720px)',
   }
 }
 
@@ -146,11 +145,17 @@ describe('GameSections memo (P0/P5 regression lock)', () => {
   test('P7 visual parity: board outer wrapper is configurable per mode', () => {
     const { container } = render(React.createElement(GameBoardSection, {
       ...boardProps(),
-      maxWidth: 'min(95vw, 80vh, 600px)',
+      boardMaxClassName: 'max-w-[calc(100dvh-var(--game-chrome,0px))] md:max-w-[600px]',
       outerClassName: 'flex justify-center',
     }))
     const outer = container.firstChild as HTMLElement
     expect(outer.className).toBe('flex justify-center')
+    // BOARD FIRST: the square board wrapper now sizes via a responsive class
+    // (not an inline maxWidth), so it can fill phone width / height-bound here.
+    const board = outer.firstChild as HTMLElement
+    expect(board.className).toContain('aspect-square')
+    expect(board.className).toContain('max-w-[calc(100dvh-var(--game-chrome,0px))]')
+    expect(board.getAttribute('style')).toBeNull()
   })
 
   test('Lifecycle polish: board never overlays a status pill (hint lives below turn pill)', () => {

@@ -44,6 +44,7 @@ import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from
 import { PromotionModal } from './PromotionModal'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
+import { BoardMoveNav } from './BoardMoveNav'
 import { ChatPanel } from './ChatPanel'
 import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -2773,7 +2774,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
         <GameOnOverlay onComplete={handleGameOnComplete} />
       )}
 
-      <div className="max-w-5xl w-full mx-auto flex-1 flex flex-col pt-[env(safe-area-inset-top,0px)] pb-24">
+      <div className="max-w-5xl w-full mx-auto flex-1 min-h-0 flex flex-col pt-[env(safe-area-inset-top,0px)] pb-24">
         {/* Compact top bar — header + team avatars + timer + controls.
             P5: memoized section — skips reconciliation unless its own slice changed. */}
         <GameTopBarSection
@@ -2819,12 +2820,21 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
               onMove={handleMove}
               onAnimationComplete={handleResolutionComplete}
               isMobile={isMobile}
-              // Per-surface board cap: full game keeps 720px (meta lives in
-              // top bar + bottom nav); replay uses 600px, coach 560px.
-              maxWidth="min(95vw, 80vh, 720px)"
+              // BOARD FIRST: default boardMaxClassName fills the width on
+              // portrait phones / height-bounds on landscape with a small inset.
             />
           )
         })()}
+
+        {/* Compact move-history nav — Back/Fwd moved out of the bottom pill so
+            secondary navigation never competes with the board. */}
+        <BoardMoveNav
+          current={(playbackIndex ?? Math.max(0, moveHistoryRef.current.length - 1)) + 1}
+          total={moveHistoryRef.current.length}
+          onBack={handleBoardBackMove}
+          onForward={handleBoardForwardMove}
+          className="shrink-0 pb-1"
+        />
 
         {/* Pending moves row */}
         {gameState.status === GameStatus.PLAYING && (
@@ -2867,6 +2877,7 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onForward={handleBoardForward}
           onBackMove={handleBoardBackMove}
           onForwardMove={handleBoardForwardMove}
+          showMoveControls={false}
           insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>

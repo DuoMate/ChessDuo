@@ -2,6 +2,12 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## UI-BOARD-FIRST — mobile gameplay layout redesign (2026-09-21)
+- **Audit**: the board was constrained by AI Coach's `max-w-md` (448px) + `px-4` (up to 23% side gutter on S24-Ultra-class widths), per-mode arbitrary caps (`720/600/560px`) and `95vw/80vh`, plus oversized vertical chrome (coach header, always-expanded `p-4` coach card, `pb-24`). Board measured 86.7–93.8% of viewport width; AI Coach worst on wide phones.
+- **Implementation**: `GameBoardSection` inline `maxWidth` → responsive class prop (`max-w-[calc(100dvh-var(--game-chrome))] md:max-w-[720px]`) + growing centered region with 8px inset; `globals.css` `--game-chrome/--coach-chrome`; Game/Duel `px-2` + compact `<BoardMoveNav>` (existing Back/Fwd handlers) with `BoardBottomNav showMoveControls={false}` (Replay unchanged); compact top-bar; Coach full-width on phones + compact header + collapsed single-row `CoachPanel`. Desktop (`md:`) caps/insets preserved.
+- **Result**: board ≈ viewport − 16px (≥95.9% portrait; 96.7% on 480px) vs 86.7–93.8% before; coach card collapsed to ~one row; Back/Fwd moved out of the bottom pill.
+- **Validation**: tsc clean (pre-existing `coachVoice` only); `GameSections` (updated), new `BoardMoveNav`, `CoachPanel`, `BoardPageComponents`, `CoachGame`, `DuelGame`, `ReplayView` suites green; full suite no new failures. Device matrix = owner step. See `docs/mobile-game-layout-audit.md`.
+
 ## ANDROID-PIP-RCA-FIX — PiP manifest flag never applied (2026-09-21)
 - **Incident**: PiP never engages on any Android version (Home gesture does nothing, no overlay swap).
 - **Root cause**: `android:supportsPictureInPicture="true"` was never written to the release manifest. The Capacitor 8.3.4 template emits the manifest multi-line (`<activity` on its own line, `android:name=".MainActivity"` later), so `sed '/android:name="\.MainActivity"/ s|<activity |…'` never matched — the two tokens are on different lines and `<activity` is at EOL. PiP was broken from inception (`2d63770` used the same ineffective pattern).
