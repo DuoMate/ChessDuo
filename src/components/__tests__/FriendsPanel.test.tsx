@@ -121,4 +121,22 @@ describe('FriendsPanel — refetch on resume / friend-request deep-link', () => 
 
     expect(getFriendsBundle).toHaveBeenCalledTimes(2)
   })
+
+  it('launches bundle + challenges concurrently (PERF-04 parallel reads)', async () => {
+    let resolveBundle!: (v: unknown) => void
+    const bundlePromise = new Promise((resolve) => { resolveBundle = resolve })
+    getFriendsBundle.mockReturnValueOnce(bundlePromise)
+
+    render(<FriendsPanel playerId="user1" />)
+    await act(async () => {})
+
+    // Bundle still pending — challenges must already be in flight (not
+    // waiting behind the bundle's round trips).
+    expect(getUnreadChallenges).toHaveBeenCalled()
+
+    await act(async () => {
+      resolveBundle({ friends: [], incoming: [], outgoing: [], blocked: [] })
+    })
+    await act(async () => {})
+  })
 })

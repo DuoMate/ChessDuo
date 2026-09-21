@@ -52,6 +52,31 @@ describe('createChallenge', () => {
     expect(data).toBeNull()
     expect(error).toBe('DB error')
   })
+
+  it('pre-created duel room insert selects only id (PERF-02 narrow)', async () => {
+    const selects: { table: string; cols: string }[] = []
+    mockFrom.mockImplementation((table: string) => ({
+      insert: () => ({
+        select: (cols: string) => {
+          selects.push({ table, cols })
+          return {
+            single: () => Promise.resolve({
+              data: table === 'rooms'
+                ? { id: 'room-1' }
+                : { id: 'ch-1', code: 'ABCDEFGH' },
+              error: null,
+            }),
+          }
+        },
+      }),
+    }))
+
+    await createChallenge('user1', 'online', 600, 'friend1')
+    const roomSelect = selects.find(s => s.table === 'rooms')
+    expect(roomSelect).toBeDefined()
+    expect(roomSelect!.cols).not.toContain('*')
+    expect(roomSelect!.cols).toBe('id')
+  })
 })
 
 describe('getChallengeUrl', () => {

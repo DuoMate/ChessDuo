@@ -5,7 +5,6 @@ import { Suspense, useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { ErrorBoundary, GameErrorFallback } from '@/components/ErrorBoundary'
 import { PageLoading } from '@/components/PageLoading'
-import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/authService'
 
 const GameComponent = dynamic(() => import('@/components/Game').then(mod => ({ default: mod.Game })), {

@@ -484,8 +484,11 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
       const blackPlayers = g.getPlayers(Team.BLACK)
       const blackHasBots = blackPlayers.some(id => !isHumanId(id))
 
-      const whiteUsernames = await fetchUsernames(whitePlayers)
-      const blackUsernames = await fetchUsernames(blackPlayers)
+      // PERF-04: independent reads against the same table — run together.
+      const [whiteUsernames, blackUsernames] = await Promise.all([
+        fetchUsernames(whitePlayers),
+        fetchUsernames(blackPlayers),
+      ])
 
       let whiteLabel = 'White Team'
       let blackLabel = 'Black Team'

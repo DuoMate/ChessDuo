@@ -3,6 +3,9 @@ import { getPlayerStats, saveCompletedGame, invalidateStatsCache, getMatchHistor
 
 const mockSelect = jest.fn()
 const mockEq = jest.fn()
+const mockMembershipEq = jest.fn()
+const mockMembershipLimit = jest.fn()
+mockMembershipEq.mockReturnValue({ limit: mockMembershipLimit })
 const mockInsert = jest.fn()
 const mockUpsert = jest.fn()
 const mockIn = jest.fn()
@@ -14,7 +17,7 @@ jest.mock('@/lib/supabase', () => ({
     from: jest.fn((table: string) => {
       if (table === 'room_players') {
         return {
-          select: jest.fn(() => ({ eq: mockEq })),
+          select: jest.fn(() => ({ eq: mockMembershipEq })),
         }
       }
       if (table === 'completed_games') {
@@ -30,7 +33,7 @@ jest.mock('@/lib/supabase', () => ({
 }))
 
 function stubHistory(roomIds: string[], games: unknown[]) {
-  mockEq.mockResolvedValue({ data: roomIds.map(id => ({ room_id: id })), error: null })
+  mockMembershipLimit.mockResolvedValue({ data: roomIds.map(id => ({ room_id: id })), error: null })
   mockSelect.mockReturnValue({ in: mockIn })
   mockIn.mockReturnValue({ order: mockOrder })
   mockOrder.mockReturnValue({ limit: mockLimit })
@@ -148,7 +151,7 @@ describe('getPlayerStats cache', () => {
 // ============================================================
 describe('H2: viewer-team-aware player stats', () => {
   function stubMemberships(rows: Array<{ room_id: string; team?: string }>) {
-    mockEq.mockResolvedValue({ data: rows, error: null })
+    mockMembershipLimit.mockResolvedValue({ data: rows, error: null })
     mockSelect.mockReturnValue({ in: mockIn })
     mockIn.mockReturnValue({ order: mockOrder })
     mockOrder.mockReturnValue({ limit: mockLimit })
@@ -236,7 +239,7 @@ describe('H2: viewer-team-aware player stats', () => {
 describe('H3: merged history', () => {
   it('keeps local-only/offline games alongside DB games and dedupes by room', async () => {
     const now = new Date().toISOString()
-    mockEq.mockResolvedValue({ data: [{ room_id: 'r1', team: 'WHITE' }], error: null })
+    mockMembershipLimit.mockResolvedValue({ data: [{ room_id: 'r1', team: 'WHITE' }], error: null })
     mockSelect.mockReturnValue({ in: mockIn })
     mockIn.mockReturnValue({ order: mockOrder })
     mockOrder.mockReturnValue({ limit: mockLimit })
@@ -266,7 +269,7 @@ describe('H3: merged history', () => {
 
   it('caps the room-membership lookup at 200 rooms', async () => {
     const rows = Array.from({ length: 250 }, (_, i) => ({ room_id: `room-${i}`, team: 'WHITE' }))
-    mockEq.mockResolvedValue({ data: rows, error: null })
+    mockMembershipLimit.mockResolvedValue({ data: rows, error: null })
     mockSelect.mockReturnValue({ in: mockIn })
     mockIn.mockReturnValue({ order: mockOrder })
     mockOrder.mockReturnValue({ limit: mockLimit })
@@ -340,7 +343,9 @@ describe('getHistoryPageWithStats (P0 perf)', () => {
     expect(games).toHaveLength(2)
     expect(stats?.totalGames).toBe(3)
     // One membership query + one games query (was 2×(1+1) via getMatchHistory+getPlayerStats).
-    expect(mockEq).toHaveBeenCalledTimes(1)
+    expect(mockMembershipEq).toHaveBeenCalledTimes(1)
+    // Membership scan is bounded server-side (matches the in-memory cap).
+    expect(mockMembershipLimit).toHaveBeenCalledWith(200)
     expect(mockSelect).toHaveBeenCalledTimes(1)
     // Narrow list columns — never select('*') on the list path.
     expect(mockSelect).toHaveBeenCalledWith(expect.not.stringContaining('*'))

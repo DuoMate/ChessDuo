@@ -101,7 +101,7 @@ export default function ChallengePageClient() {
         const { data: created, error: roomError } = await supabase
           .from('rooms')
           .insert({ code: roomCode, status: 'waiting', created_by: challengeInfo.creator_id, host_team: 'WHITE' })
-          .select('*')
+          .select('id,code')
           .single()
 
         if (roomError || !created) throw new Error('Failed to create room')

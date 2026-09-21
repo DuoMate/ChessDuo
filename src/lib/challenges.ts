@@ -37,7 +37,7 @@ export async function createChallenge(
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .insert({ code: roomCode, status: 'waiting', created_by: creatorId, host_team: 'WHITE' })
-      .select('*')
+      .select('id')
       .single()
 
     if (roomError) return { data: null, error: roomError.message }

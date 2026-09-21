@@ -1,5 +1,6 @@
 import { supabase, Friendship } from './supabase'
 import { getAppBaseUrl } from './appUrl'
+import { incDbRequest, logTiming, startMark } from './perfHarness'
 
 export async function sendFriendRequest(senderId: string, receiverId: string): Promise<{ error: string | null }> {
   if (senderId === receiverId) return { error: 'Cannot add yourself as a friend' }
@@ -141,24 +142,35 @@ export async function getFriendsBundle(userId: string): Promise<{
   blocked: FriendWithProfile[]
 }> {
   const empty = { friends: [], incoming: [], outgoing: [], blocked: [] }
+  // PERF-01 measure-only: timing + request counts, no behavior change.
+  const t0 = startMark()
   const { data: friendships } = await supabase
     .from('friendships')
     .select(FRIENDSHIP_LIST_COLUMNS)
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
     .order('updated_at', { ascending: false })
     .limit(FRIENDS_BUNDLE_LIMIT_PER_STATUS * 3)
+  incDbRequest('friends', 'bundle-friendships')
 
-  if (!friendships || friendships.length === 0) return empty
+  if (!friendships || friendships.length === 0) {
+    logTiming('friends', 'bundle-empty', t0)
+    return empty
+  }
 
   const otherIds = [...new Set(friendships.map(f =>
     f.sender_id === userId ? f.receiver_id : f.sender_id
   ))]
-  if (otherIds.length === 0) return empty
+  if (otherIds.length === 0) {
+    logTiming('friends', 'bundle-empty', t0)
+    return empty
+  }
 
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, username, avatar_url')
     .in('id', otherIds)
+  incDbRequest('friends', 'bundle-profiles')
+  logTiming('friends', 'bundle', t0)
 
   const profileMap = new Map<string, string>(
     profiles?.map((p: { id: string; username: string }) => [p.id, p.username] as [string, string]) || [],
