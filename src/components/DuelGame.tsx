@@ -12,7 +12,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Swords } from 'lucide-react'
 import { ConfirmMoveBar } from './ConfirmMoveBar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
-import { BoardMoveNav } from './BoardMoveNav'
 import { type BoardTopBarPlayer } from './BoardTopBar'
 import { IsolatedMatchTimer } from './IsolatedMatchTimer'
 import { PipOverlay } from './PipOverlay'
@@ -645,15 +644,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           boardMaxClassName="max-w-[calc(100dvh-var(--game-chrome,0px))] md:max-w-[600px]"
         />
 
-        {/* Compact move-history nav — Back/Fwd moved out of the bottom pill. */}
-        <BoardMoveNav
-          current={(playbackIndex ?? Math.max(0, moveHistory.length - 1)) + 1}
-          total={moveHistory.length}
-          onBack={handleDuelBackMove}
-          onForward={handleDuelForwardMove}
-          className="shrink-0 pb-1"
-        />
-
         <AnimatePresence>
           {showAccuracy && (
             <motion.div
@@ -681,7 +671,6 @@ export function DuelGame({ roomId, roomCode, playerId, team, timeLimit, onLeave 
           onForward={handleDuelForward}
           onBackMove={handleDuelBackMove}
           onForwardMove={handleDuelForwardMove}
-          showMoveControls={false}
         />
 
         {/* Floating Confirm Move Bar — overlays above BoardBottomNav */}

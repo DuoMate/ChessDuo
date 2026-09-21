@@ -45,11 +45,16 @@ height-bound so the board stays square and scroll-free.
   vertical-chrome reserves (single documented source).
 - **`Game.tsx` / `DuelGame.tsx`**: inner shell `px-3`→`px-2`, `flex-1 min-h-0`;
   board passes through the shared responsive region; Duel keeps its desktop
-  600px cap via `boardMaxClassName`; compact `<BoardMoveNav>` under the board.
-- **`BoardMoveNav` (new)**: compact `← n / total →` using the existing
-  `onBackMove`/`onForwardMove` handlers, ≥44px targets, subtle styling.
-- **`BoardBottomNav`**: new `showMoveControls` (default `true` → ReplayView
-  unchanged); Game/Duel pass `false`, leaving the pill as Moves/Chat/Insights.
+  600px cap via `boardMaxClassName`. **Back/Fwd stay in the existing bottom
+  action pill** (unchanged location/handlers) so move-history review behaves
+  exactly as before across every mode.
+- **`BoardBottomNav`**: unchanged contract (Moves / Chat / Insights / Back /
+  Fwd). (An earlier revision of this branch moved Back/Fwd into a new compact
+  `BoardMoveNav` row under the board; that control disabled Forward at the last
+  index, which blocked the review-exit branch in `handleBoardForwardMove`
+  (`setPlaybackIndex(null); setPlaybackFen(null)`) while `playbackFen != null`
+  kept `isBoardEnabled=false` — i.e. pieces could not be moved after Back/Fwd.
+  The relocation was reverted and Back/Fwd restored to the pill.)
 - **`GameSections` top-bar shell**: `px-3 py-2` → `px-2 py-1.5`.
 - **`CoachGame.tsx`**: container/header `max-w-md` on phones → full width,
   `px-4`→`px-2`, header `pt-[max(1rem,…)]`→`pt-[max(0.5rem,…)]`, board cap
@@ -82,5 +87,7 @@ web/desktop pixel parity.
   push content past one screen; the shell uses `min-h-dvh` (scrolls only then)
   rather than clipping. Normal portrait gameplay does not scroll.
 - Real-device screenshots/before-after capture is an owner/device step.
+- Duel's board `enabled` does not gate on `playbackFen` (pre-existing, unchanged)
+  — review-exit still works via the restored bottom-pill Forward button.
 
-*Last Updated: 2026-09-21 — BOARD FIRST mobile layout redesign.*
+*Last Updated: 2026-09-21 — BOARD FIRST mobile layout redesign; Back/Fwd review-exit regression fixed by restoring the bottom-pill controls.*

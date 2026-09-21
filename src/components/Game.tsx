@@ -44,7 +44,6 @@ import { MoveResolvedInline, buildResolutionData, type MoveResolutionData } from
 import { PromotionModal } from './PromotionModal'
 import { RoundHistorySidebar, type RoundHistoryEntry } from './RoundHistorySidebar'
 import { BoardBottomNav, type BoardTab } from './BoardBottomNav'
-import { BoardMoveNav } from './BoardMoveNav'
 import { ChatPanel } from './ChatPanel'
 import { MoveInsights } from './MoveInsights'
 import { LeaveConfirmModal } from './LeaveConfirmModal'
@@ -2826,16 +2825,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           )
         })()}
 
-        {/* Compact move-history nav — Back/Fwd moved out of the bottom pill so
-            secondary navigation never competes with the board. */}
-        <BoardMoveNav
-          current={(playbackIndex ?? Math.max(0, moveHistoryRef.current.length - 1)) + 1}
-          total={moveHistoryRef.current.length}
-          onBack={handleBoardBackMove}
-          onForward={handleBoardForwardMove}
-          className="shrink-0 pb-1"
-        />
-
         {/* Pending moves row */}
         {gameState.status === GameStatus.PLAYING && (
           <div className="py-2">
@@ -2877,7 +2866,6 @@ export function Game({ level, roomCode, mode, roomId, team, playerId: playerIdFr
           onForward={handleBoardForward}
           onBackMove={handleBoardBackMove}
           onForwardMove={handleBoardForwardMove}
-          showMoveControls={false}
           insightsLocked={insightsState.revealsRemaining !== null && insightsState.revealsRemaining <= 0 && !insightsState.isPremium}
         />
       </div>

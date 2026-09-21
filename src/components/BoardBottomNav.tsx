@@ -19,16 +19,9 @@ interface BoardBottomNavProps {
    * that omit it see zero visual change.
    */
   disabledTabs?: BoardTab[]
-  /**
-   * BOARD FIRST: when false, the Back/Fwd controls are omitted — the live
-   * game surfaces render them in the compact `BoardMoveNav` row directly under
-   * the board so secondary navigation never competes with the board. Defaults
-   * to true so ReplayView (which has no separate row) is unchanged.
-   */
-  showMoveControls?: boolean
 }
 
-function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked, disabledTabs = [], showMoveControls = true }: BoardBottomNavProps) {
+function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, onForwardMove, unreadChat, insightsLocked, disabledTabs = [] }: BoardBottomNavProps) {
   const isDisabled = (tab: BoardTab) => disabledTabs.includes(tab)
   const inactiveTab = 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
   const tabClass = (tab: BoardTab, activeStyles: string, inactiveStyles: string = inactiveTab) =>
@@ -96,8 +89,6 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
         </button>
 
         {/* Back */}
-        {showMoveControls && (
-          <>
         <button
           type="button"
           onClick={onBackMove}
@@ -118,8 +109,6 @@ function BoardBottomNavInner({ activeTab, onTabChange, onForward, onBackMove, on
           <ChevronRight size={20} strokeWidth={2.5} />
           <span className="text-xs font-bold leading-none">Fwd</span>
         </button>
-          </>
-        )}
       </div>
     </nav>
   )
