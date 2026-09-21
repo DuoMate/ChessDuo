@@ -44,24 +44,28 @@ describe('rateApp', () => {
     expect(openSpy).toHaveBeenCalledWith(PLAY_LISTING_URL, '_blank', 'noopener')
   })
 
-  it('tries the market:// deep link first on native', async () => {
+  it('opens the HTTPS listing via the Browser plugin on native', async () => {
     MockCapacitor.isNativePlatform.mockReturnValue(true)
-    const result = await openPlayListing()
-    expect(result).toBe('opened')
-    expect(openSpy).toHaveBeenCalledWith(PLAY_MARKET_URI, '_system')
-  })
-
-  it('falls back to the Browser plugin when market:// throws on native', async () => {
-    MockCapacitor.isNativePlatform.mockReturnValue(true)
-    openSpy.mockImplementationOnce(() => {
-      throw new Error('unhandled scheme')
-    })
     const { Browser } = jest.requireMock('@capacitor/browser') as {
       Browser: { open: jest.Mock }
     }
     const result = await openPlayListing()
     expect(result).toBe('opened')
+    // Capacitor's WebView ignores window.open(url, '_system') popups (no
+    // onCreateWindow), so native reliably uses Browser.open(HTTPS listing).
     expect(Browser.open).toHaveBeenCalledWith({ url: PLAY_LISTING_URL })
+    expect(openSpy).not.toHaveBeenCalledWith(PLAY_MARKET_URI, '_system')
+  })
+
+  it('falls back to a new tab when the Browser plugin fails on native', async () => {
+    MockCapacitor.isNativePlatform.mockReturnValue(true)
+    const { Browser } = jest.requireMock('@capacitor/browser') as {
+      Browser: { open: jest.Mock }
+    }
+    Browser.open.mockRejectedValueOnce(new Error('plugin unavailable'))
+    const result = await openPlayListing()
+    expect(result).toBe('opened')
+    expect(openSpy).toHaveBeenCalledWith(PLAY_LISTING_URL, '_blank', 'noopener')
   })
 
   it('never throws when every opener fails', async () => {

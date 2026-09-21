@@ -38,3 +38,12 @@ Play Store update. v1 NEVER blocks and NEVER replaces JS at runtime.
 - **2026-09-19**: Wired end-to-end — `public/version.json` remote truth +
   `useAppUpdate` hook + `UpdatePrompt` UI in `providers.tsx` (native-only,
   fail-silent, game/auth-safe) + build-time version stamping.
+- **2026-09-21**: **De-scoped to fallback-only.** Update detection is now
+  native-first (Google Play In-App Updates, FLEXIBLE — `AppUpdatePlugin.java` +
+  `src/lib/nativeAppUpdate.ts`): `useAppUpdate` prompts only on Play's
+  per-account `UPDATE_AVAILABLE && flexibleAllowed`, and this module's
+  `decideUpdate`/manifest path runs **only when the native check is
+  indeterminate** (older APK without the plugin, web, sideload, degraded
+  Play). The manifest is still regenerated at deploy time from
+  `android-version.properties` so even the fallback is never stale. See
+  `docs/android-update-rca.md`.

@@ -2,6 +2,18 @@
 
 Branch: `perf/unified-gameplay-rendering` · Base: `ux-polish-phases-1-4` (clean tree, `npx tsc --noEmit` green at start).
 
+## ANDROID-PIP-RCA-FIX — PiP manifest flag never applied (2026-09-21)
+- **Incident**: PiP never engages on any Android version (Home gesture does nothing, no overlay swap).
+- **Root cause**: `android:supportsPictureInPicture="true"` was never written to the release manifest. The Capacitor 8.3.4 template emits the manifest multi-line (`<activity` on its own line, `android:name=".MainActivity"` later), so `sed '/android:name="\.MainActivity"/ s|<activity |…'` never matched — the two tokens are on different lines and `<activity` is at EOL. PiP was broken from inception (`2d63770` used the same ineffective pattern).
+- **Fix**: target the `<activity` opening tag (`sed -i '0,/^[[:space:]]*<activity/{s|<activity|<activity android:supportsPictureInPicture="true"|}'`) + post-write grep verification, in all three scripts (`setup-capacitor.sh`, `build-aab.sh`, `build-apk.sh`). `configChanges` already covers `smallestScreenSize|screenLayout|orientation` in the template.
+- **Verify**: sed logic validated against the extracted template (count = 1). Web suites green. Real-device entry/exit = owner/CI step. See `docs/android-pip-rca.md`.
+
+## ANDROID-UPDATE-RCA-FIX — native Play In-App Updates (Option B) (2026-09-21)
+- **Incident**: users never notified of newer versions; Update opens nothing on Android.
+- **Root cause**: update detection used a web-served `version.json` (never per-account/rollout-aware) + a dead `window.open('market://','_system')` action (Capacitor WebView has no popup handler).
+- **Fix (native-first)**: new `android-patches/AppUpdatePlugin.java` (Google Play In-App Updates, FLEXIBLE: `check`/`startFlexibleUpdate`/`completeUpdate`, `stateChanged` + `flowResult` events, cancellation is a normal choice) + `scripts/install-app-update.sh` (gradle `com.google.android.play:app-update:2.1.0`) + registration in `patch-main-activity.sh` (Capacitor routes the flow result via `handleOnActivityResult`). New `src/lib/nativeAppUpdate.ts` (web-safe bridge) + `useAppUpdate` native-primary (manifest fallback only when the native check is indeterminate) + `UpdatePrompt` Update→download→Restart-to-install. `rateApp.openPlayListing()` opens the HTTPS Play listing via `@capacitor/browser`.
+- **Verify**: `nativeAppUpdate.test.ts` (9), `useAppUpdate.test.tsx` (6), `rateApp.test.ts` (5) green; tsc clean; full suite no new failures. Real Play track rollout = owner/CI step. See `docs/android-update-rca.md`.
+
 ## ADS-05 — Android production NPE crash regression (2026-09-21)
 - **Incident**: v391 on Android 16 (SDK 36) `NullPointerException` at
   `NativeAdPlugin.buildAdView(NativeAdPlugin.java:194)` from `lambda$showAd$2:98`

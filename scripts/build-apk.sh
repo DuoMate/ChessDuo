@@ -156,6 +156,9 @@ bash "$PROJECT_ROOT/scripts/install-native-ad.sh"
 # ─── Install live-game PiP plugin (presentation-only bridge) ──
 bash "$PROJECT_ROOT/scripts/install-pip.sh"
 
+# ─── Install Google Play In-App Update plugin (per-account update truth) ──
+bash "$PROJECT_ROOT/scripts/install-app-update.sh"
+
 # ─── Add deep link intent filters (App Links + custom schemes) ──
 bash "$PROJECT_ROOT/scripts/add-deep-link.sh"
 ok "Deep link intent filters added"

@@ -154,6 +154,7 @@ else
         warn "Skipping Native AdMob setup; set NEXT_PUBLIC_ADMOB_APP_ID before building Android"
     fi
     bash "$PROJECT_ROOT/scripts/install-pip.sh" || warn "PiP plugin install skipped (android/ not ready yet)"
+    bash "$PROJECT_ROOT/scripts/install-app-update.sh" || warn "In-App Update plugin install skipped (android/ not ready yet)"
     ok "Android project created"
 fi
 
