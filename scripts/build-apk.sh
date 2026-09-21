@@ -185,14 +185,22 @@ if [ -f "$MANIFEST" ] && ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST" 2>/dev/null;
 fi
 
 # ─── Live-game PiP manifest (supportsPictureInPicture + config) ──
-# Targeted at MainActivity only — a blanket s|<activity | match could tag
-# the wrong activity if the generated manifest ever gains more.
+# Targeted at MainActivity only. The Capacitor template emits the manifest
+# multi-line (<activity on its own line, android:name=".MainActivity" on a
+# later line), so a sed anchored on the name line can never find "<activity "
+# on the same line and silently no-ops — PiP was broken from inception for
+# this reason. Insert the attribute directly after the <activity opening tag
+# and then verify it landed.
 if [ -f "$MANIFEST" ] && ! grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
   if ! grep -q 'android:name="\.MainActivity"' "$MANIFEST" 2>/dev/null; then
     log "MainActivity entry not found in manifest — PiP flag NOT applied"
   else
-    sed -i '/android:name="\.MainActivity"/ s|<activity |<activity android:supportsPictureInPicture="true" |' "$MANIFEST"
-    ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+    sed -i '0,/^[[:space:]]*<activity/{s|<activity|<activity android:supportsPictureInPicture="true"|}' "$MANIFEST"
+    if grep -q 'android:supportsPictureInPicture="true"' "$MANIFEST" 2>/dev/null; then
+      ok "supportsPictureInPicture enabled on MainActivity (live-game PiP)"
+    else
+      err "PiP flag could NOT be applied to the manifest — activity layout mismatch"
+    fi
   fi
 fi
 if [ -f "$MANIFEST" ] && grep -q 'android:configChanges=' "$MANIFEST" 2>/dev/null \
